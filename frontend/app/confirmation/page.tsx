@@ -1,8 +1,18 @@
-import { useEffect, useState } from 'react'
+"use client";
+import { Suspense } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
 export default function ConfirmationPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="loading loading-spinner loading-lg text-green-600"></div></div>}>
+      <ConfirmationPageContent />
+    </Suspense>
+  );
+}
+
+function ConfirmationPageContent() {
   const [order, setOrder] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -58,5 +68,5 @@ export default function ConfirmationPage() {
         </div>
       </div>
     </div>
-  )
-} 
+  );
+}
