@@ -1,0 +1,11 @@
+node_modules/
+.next/
+dist/
+build/
+.env
+.env.local
+firebase-adminsdk*.json
+*.pem
+npm-debug.log
+.DS_Store
+Thumbs.db
