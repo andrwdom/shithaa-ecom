@@ -14,14 +14,16 @@ export default function Footer() {
               <Truck className="h-6 w-6 lg:h-8 lg:w-8 text-white" />
             </div>
             <h3 className="font-bold mb-2 lg:mb-3 text-base lg:text-lg font-serif">Fast Delivery</h3>
-            <p className="text-gray-400 text-sm lg:text-base">Free shipping within Tamil Nadu</p>
+            <p className="text-gray-400 text-sm lg:text-base">Products will be delivered within 3-4 working days</p>
           </div>
           <div className="text-center group">
             <div className="w-16 h-16 mx-auto mb-6 bg-gray-800 rounded-lg flex items-center justify-center group-hover:bg-gray-700 transition-colors duration-300">
               <RotateCcw className="h-8 w-8 text-white" />
             </div>
             <h3 className="font-bold mb-3 text-lg font-serif">Easy Returns</h3>
-            <p className="text-gray-400">7-day hassle-free return policy</p>
+            <p className="text-gray-400 text-sm lg:text-base">
+              Returns/refunds are only for damaged or defective products, within 7 days of delivery. Refunds are processed within 7-10 business days after approval.
+            </p>
           </div>
           <div className="text-center group">
             <div className="w-16 h-16 mx-auto mb-6 bg-gray-800 rounded-lg flex items-center justify-center group-hover:bg-gray-700 transition-colors duration-300">
@@ -35,7 +37,7 @@ export default function Footer() {
         <div className="grid md:grid-cols-4 gap-6 lg:gap-8">
           {/* Brand */}
           <div className="space-y-4 lg:space-y-6">
-            <h3 className="text-2xl lg:text-3xl font-bold text-white tracking-wider font-serif">SHITHA</h3>
+            <h3 className="text-2xl lg:text-3xl font-bold text-white tracking-wider font-serif">SHITHAA</h3>
             <p className="text-gray-400 leading-relaxed text-sm lg:text-base">
               Premium maternity wear designed for the modern mother. Comfort meets elegance in every piece we create
               with love.
@@ -106,12 +108,12 @@ export default function Footer() {
                 </a>
               </li>
               <li>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors">
+                <a href="/return-policy" className="text-gray-400 hover:text-white transition-colors">
                   Return Policy
                 </a>
               </li>
               <li>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors">
+                <a href="/shipping-info" className="text-gray-400 hover:text-white transition-colors">
                   Shipping Info
                 </a>
               </li>

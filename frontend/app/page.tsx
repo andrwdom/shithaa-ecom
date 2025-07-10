@@ -10,7 +10,7 @@ import Footer from "@/components/footer"
 import CategorySidebar from "@/components/category-sidebar"
 import CartSidebar from "@/components/cart-sidebar"
 import PageLoading from "@/components/page-loading"
-import TestimonialsSection from "@/components/testimonials-section"
+// import TestimonialsSection from "@/components/testimonials-section"
 
 interface CartItem {
   id: number
@@ -104,7 +104,7 @@ export default function Home() {
       <div className="min-h-screen bg-white">
         <HeroSection />
         <CategoryStrip onCategoryClick={handleCategorySelect} currentCategory={undefined} />
-        <TestimonialsSection />
+        {/* <TestimonialsSection />  // Temporarily removed for payment gateway API verification */}
         <FAQAccordion />
 
         <CartSidebar
