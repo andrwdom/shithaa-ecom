@@ -21,7 +21,7 @@ export default function TermsPage() {
         <div className="space-y-6 text-base leading-relaxed">
           <p>Welcome to Shithaa.in  These Terms and Conditions ("Terms") govern your use of our website located at www.Shithaa.in and the services we offer. By accessing or using the Site, you agree to be bound by these Terms.</p>
           <ol className="list-decimal pl-6 space-y-2">
-            <li><b>General Information</b><br/>This website is operated by Shitha clothing. Throughout the site, the terms "we", "us" and "our" refer to Shitha clothing</li>
+            <li><b>General Information</b><br/>This website is shithaa Operated by S KARTHIKA . Throughout the site, the terms "we", "us" and "our" refer to Shitha clothing</li>
             <li><b>Use of Our Website</b><br/>By using this website, you represent that you are at least the age of majority in your state or province of residence. You agree not to use our products for any illegal or unauthorized purpose.</li>
             <li><b>Products & Pricing</b><br/>All dresses and related products are subject to availability.<br/>We reserve the right to change prices and product descriptions at any time without notice.<br/>We try to display product colors accurately, but cannot guarantee your device's display will reflect colors exactly.</li>
             <li><b>Orders</b><br/>Once you place an order, you will receive an order confirmation via email or SMS.<br/>We reserve the right to refuse or cancel any order at our discretion.<br/>If your order is canceled after payment, we will initiate a full refund.</li>
