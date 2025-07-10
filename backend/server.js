@@ -90,7 +90,7 @@ app.use((req, res, next) => {
         "img-src 'self' data: https: http:; " +
         "script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; " +
         "style-src 'self' 'unsafe-inline' https:; " +
-        "connect-src 'self' https://shitha-frontend.vercel.app https://admin.shitha.com https://shitha.com http://localhost:5173 http://localhost:5174 http://localhost:3000 http://localhost:3001;"
+        "connect-src 'self' https://shithaa.in https://admin.shithaa.in https://shitha-frontend.vercel.app https://admin.shithaa.com https://shithaa.com http://localhost:5173 http://localhost:5174 http://localhost:3000 http://localhost:3001;"
     );
     next();
 });
@@ -100,7 +100,12 @@ const allowedOrigins = [
     'http://localhost:5173',
     'http://localhost:5174',
     'http://localhost:3000',
-    // Add production domains as needed
+    'http://localhost:3001',
+    'https://shithaa.in',
+    'https://admin.shithaa.in',
+    'https://shitha-frontend.vercel.app',
+    'https://admin.shithaa.com',
+    'https://shithaa.com',
 ];
 
 const corsOptions = {
@@ -181,7 +186,7 @@ app.use((err, req, res, next) => {
         });
         
         // Send CORS headers even for errors
-        res.setHeader('Access-Control-Allow-Origin', req.headers.origin || 'https://admin.shitha.com');
+        res.setHeader('Access-Control-Allow-Origin', req.headers.origin || 'https://admin.shithaa.com');
         res.setHeader('Access-Control-Allow-Credentials', 'true');
         
         res.status(403).json({

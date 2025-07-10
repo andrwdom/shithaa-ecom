@@ -209,7 +209,7 @@ const Orders = ({ token, setToken }) => {
     if (!email) return '';
     if (userNameCache[email]) return userNameCache[email];
     try {
-      const res = await axios.get(`${backendUrl}/api/users/public-profile?email=${encodeURIComponent(email)}`);
+      const res = await axios.get(`${backendUrl}/api/user/public-profile?email=${encodeURIComponent(email)}`);
       if (res.data && res.data.success && res.data.profile && res.data.profile.name) {
         setUserNameCache(prev => ({ ...prev, [email]: res.data.profile.name }));
         return res.data.profile.name;

@@ -28,6 +28,8 @@ const Add = ({token}) => {
    const [newCategoryDescription, setNewCategoryDescription] = useState("");
    const [addingCategory, setAddingCategory] = useState(false);
 
+   const [selectedCategorySlug, setSelectedCategorySlug] = useState("");
+
    const CATEGORY_OPTIONS = [
      "Maternity Feeding Wear",
      "Zipless Feeding Lounge Wear",
@@ -39,6 +41,15 @@ const Add = ({token}) => {
    // Helper: all possible sizes
    const ALL_SIZES = ["S", "M", "L", "XL", "XXL"];
 
+   useEffect(() => {
+     // Fetch categories from backend
+     axios.get(`${backendUrl}/api/categories`).then(res => {
+       if (res.data.success && Array.isArray(res.data.data)) {
+         setCategories(res.data.data);
+       }
+     });
+   }, []);
+
    const onSubmitHandler = async (e) => {
     e.preventDefault();
     if (loading) return;
@@ -48,8 +59,8 @@ const Add = ({token}) => {
       formData.append("name",name)
       formData.append("description",description)
       formData.append("price",price)
-      formData.append("category", category);
-      formData.append("categorySlug", category.toLowerCase().replace(/ /g, '-'));
+      formData.append("category", category); // display name
+      formData.append("categorySlug", selectedCategorySlug); // correct slug
       formData.append("bestseller",bestseller)
       formData.append("sizes", JSON.stringify(sizes.filter(s => s.stock > 0)))
       formData.append("availableSizes", JSON.stringify(sizes.filter(s => s.stock > 0).map(s => s.size)))
@@ -72,6 +83,7 @@ const Add = ({token}) => {
         setImage4(false)
         setPrice('')
         setCategory('')
+        setSelectedCategorySlug("");
         setSizes([])
         setBestseller(false)
       } else {
@@ -163,14 +175,18 @@ const Add = ({token}) => {
           <div>
             <p className='mb-2'>Category</p>
             <select
-              value={category}
-              onChange={e => setCategory(e.target.value)}
+              value={selectedCategorySlug}
+              onChange={e => {
+                setSelectedCategorySlug(e.target.value);
+                const cat = categories.find(c => c.slug === e.target.value);
+                setCategory(cat ? cat.name : "");
+              }}
               className='w-full px-3 py-2 border rounded bg-white text-gray-900'
               required
             >
               <option value="" disabled>Select a Category</option>
-              {CATEGORY_OPTIONS.map(option => (
-                <option key={option} value={option}>{option}</option>
+              {categories.map(option => (
+                <option key={option.slug} value={option.slug}>{option.name}</option>
               ))}
             </select>
           </div>
