@@ -1,6 +1,6 @@
-import { v2 as cloudinary } from "cloudinary"
 import productModel from "../models/productModel.js"
 import { successResponse, errorResponse, paginatedResponse } from '../utils/response.js'
+import path from "path";
 
 // GET /api/products/:id - RESTful single product fetch
 export const getProductById = async (req, res) => {
@@ -161,34 +161,8 @@ export const addProduct = async (req, res) => {
             });
         }
 
-        // Upload images to cloudinary
-        let imagesUrl;
-        try {
-            console.log('Starting image upload to Cloudinary');
-            imagesUrl = await Promise.all(
-                images.map(async (item) => {
-                    if (!item.path) {
-                        console.error('Invalid image file:', item);
-                        throw new Error('Invalid image file');
-                    }
-                    console.log('Uploading image:', item.path);
-                    let result = await cloudinary.uploader.upload(item.path, { 
-                        resource_type: 'image',
-                        folder: 'shitha/products'
-                    });
-                    console.log('Image uploaded successfully:', result.secure_url);
-                    return result.secure_url;
-                })
-            );
-            console.log('All images uploaded successfully:', imagesUrl);
-        } catch (error) {
-            console.error('Cloudinary Upload Error:', error);
-            return res.status(500).json({
-                success: false,
-                message: "Failed to upload images",
-                error: error.message
-            });
-        }
+        // Build image URLs for VPS
+        const imagesUrl = images.map(img => `https://api.mysite.com/images/products/${img.filename}`);
 
         // Parse features if provided
         let parsedFeatures = [];
@@ -342,18 +316,7 @@ export const updateProduct = async (req, res) => {
 
             if (newImages.length > 0) {
                 try {
-                    const uploadedImages = await Promise.all(
-                        newImages.map(async (item) => {
-                            if (!item.path) {
-                                throw new Error('Invalid image file');
-                            }
-                            let result = await cloudinary.uploader.upload(item.path, { 
-                                resource_type: 'image',
-                                folder: 'shitha/products'
-                            });
-                            return result.secure_url;
-                        })
-                    );
+                    const uploadedImages = newImages.map(img => `https://api.mysite.com/images/products/${img.filename}`);
                     imagesUrl = uploadedImages;
                 } catch (error) {
                     return res.status(500).json({

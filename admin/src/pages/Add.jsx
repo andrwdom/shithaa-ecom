@@ -23,11 +23,6 @@ const Add = ({token}) => {
    // New: categories from backend
    const [categories, setCategories] = useState([]);
 
-   const [newCategoryName, setNewCategoryName] = useState("");
-   const [newCategorySlug, setNewCategorySlug] = useState("");
-   const [newCategoryDescription, setNewCategoryDescription] = useState("");
-   const [addingCategory, setAddingCategory] = useState(false);
-
    const [selectedCategorySlug, setSelectedCategorySlug] = useState("");
 
    const CATEGORY_OPTIONS = [
@@ -99,48 +94,13 @@ const Add = ({token}) => {
     setLoading(false);
    }
 
-   const addCategoryHandler = async (e) => {
-     e.preventDefault();
-     if (!newCategoryName || !newCategorySlug) return toast.error('Name and slug required');
-     setAddingCategory(true);
-     try {
-       const res = await axios.post(`${backendUrl}/api/categories`, {
-         name: newCategoryName,
-         slug: newCategorySlug,
-         description: newCategoryDescription
-       });
-       if (res.data.success) {
-         toast.success('Category added');
-         setCategories(prev => [...prev, res.data.data]);
-         setNewCategoryName("");
-         setNewCategorySlug("");
-         setNewCategoryDescription("");
-       } else {
-         toast.error(res.data.message);
-       }
-     } catch (err) {
-       toast.error('Failed to add category');
-     }
-     setAddingCategory(false);
-   };
-
   return (
     <>
-      {/* Add Category Form (outside main form) */}
-      <div className='w-full max-w-[400px] mb-6'>
-        <form onSubmit={addCategoryHandler} className='flex flex-col gap-2 bg-gray-50 p-2 rounded'>
-          <p className='font-semibold'>Add New Category</p>
-          <input value={newCategoryName} onChange={e=>setNewCategoryName(e.target.value)} className='px-2 py-1 border rounded' placeholder='Category Name' />
-          <input value={newCategorySlug} onChange={e=>setNewCategorySlug(e.target.value)} className='px-2 py-1 border rounded' placeholder='Slug (unique, e.g. maternity)' />
-          <input value={newCategoryDescription} onChange={e=>setNewCategoryDescription(e.target.value)} className='px-2 py-1 border rounded' placeholder='Description (optional)' />
-          <button type='submit' className='bg-primary text-white px-3 py-1 rounded' disabled={addingCategory}>{addingCategory ? 'Adding...' : 'Add Category'}</button>
-        </form>
-      </div>
-
       {/* Main Add Product Form */}
       <form onSubmit={onSubmitHandler} className='flex flex-col w-full items-start gap-3'>
         <div>
           <p className='mb-2'>Upload Image</p>
+          <p className='mb-2 text-yellow-700 text-sm font-medium'>Image size must be around 2 - 4MB max</p>
           <div className='flex gap-2'>
             <label htmlFor="image1">
               <img className='w-20' src={!image1 ? assets.upload_area : URL.createObjectURL(image1)} alt="" />

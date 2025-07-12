@@ -1,9 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
-import axios from "axios";
-import { saveAs } from "file-saver";
-
-const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+import { useState } from "react";
 
 const STATUS_COLORS = {
   Pending: "bg-yellow-100 text-yellow-800",
@@ -22,28 +18,50 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-function downloadInvoice(orderId: string, token?: string) {
-  const url = `${backendUrl}/api/orders/${orderId}/invoice`;
-  fetch(url, {
-    method: "GET",
-    headers: token ? { token } : {},
-  })
-    .then((res) => {
-      if (!res.ok) throw new Error("Failed to download invoice");
-      return res.blob();
-    })
-    .then((blob) => {
-      saveAs(blob, `Invoice_${orderId}.pdf`);
-    })
-    .catch(() => alert("Failed to download invoice"));
+function formatDate(date: string | number) {
+  const d = new Date(date);
+  return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
 }
 
+function formatDateTime(date: string | number) {
+  const d = new Date(date);
+  return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) +
+    ' • ' + d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+}
+
+// Accent bar color by status
+const STATUS_ACCENT = {
+  Pending: "from-yellow-300 to-yellow-400",
+  Packing: "from-blue-300 to-blue-400",
+  Shipped: "from-green-300 to-green-400",
+  Delivered: "from-green-500 to-green-700",
+  Cancelled: "from-red-400 to-red-600",
+};
+
+// Border color by status
+const STATUS_BORDER = {
+  Pending: "border-yellow-400 ring-yellow-100",
+  Packing: "border-blue-400 ring-blue-100",
+  Shipped: "border-green-400 ring-green-100",
+  Delivered: "border-green-700 ring-green-200",
+  Cancelled: "border-red-500 ring-red-100",
+};
+
+// Left border color by status
+const STATUS_BORDER_LEFT = {
+  Pending: "border-l-4 border-yellow-400",
+  Packing: "border-l-4 border-blue-400",
+  Shipped: "border-l-4 border-green-400",
+  Delivered: "border-l-4 border-green-700",
+  Cancelled: "border-l-4 border-red-500",
+};
+
 export default function OrderHistory({ orders }: { orders: any[] }) {
+  const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
   if (!orders) return null;
-  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : undefined;
+
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-bold mb-4">Order History</h2>
       {orders.length === 0 && (
         <div className="text-center py-8 text-gray-500">
           <div className="text-4xl mb-2">🛒</div>
@@ -51,72 +69,144 @@ export default function OrderHistory({ orders }: { orders: any[] }) {
           <div className="text-sm mt-1">Browse our collection and start shopping!</div>
         </div>
       )}
+      <div className="flex flex-col gap-6">
       {orders.map((order) => {
-        // Support both new and legacy order structures
         const items = order.items || order.cartItems || [];
-        const total = order.totalAmount || order.totalPrice || order.total || order.orderSummary?.total || 0;
         const status = order.status || order.orderStatus || order.paymentStatus;
-        const payment = order.paymentStatus || order.paymentMethod;
-        const shipping = order.shippingInfo || order.address;
-        const userInfo = order.userInfo || { name: order.customerName, email: order.email };
-        // Robust address join
-        const address = [
-          shipping?.address,
-          shipping?.address1,
-          shipping?.address2,
-          shipping?.line1,
-          shipping?.line2,
-          shipping?.city,
-          shipping?.state,
-          shipping?.country,
-          shipping?.pincode,
-          shipping?.zipcode,
-          shipping?.zip,
-        ].filter(Boolean).join(', ');
+        const orderDate = order.createdAt || order.date || order.orderDate || order.updatedAt;
+        const accent = STATUS_ACCENT[String(status)] || "from-gray-200 to-gray-300";
+        const borderLeft = STATUS_BORDER_LEFT[status as keyof typeof STATUS_BORDER_LEFT] || "border-l-4 border-gray-200";
+        // Minimal preview: product names, date, status, view details button
         return (
-          <div key={order._id} className="bg-white rounded-lg shadow p-4 flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <div className="font-bold text-lg">Order #{order._id.slice(-6)}</div>
-              <StatusBadge status={status} />
-            </div>
-            <div className="text-sm text-gray-600 mb-2">
-              <span>Placed: {new Date(order.createdAt).toLocaleString()}</span>
-              {order.updatedAt && (
-                <span className="ml-2 text-xs text-gray-400">(Last updated: {new Date(order.updatedAt).toLocaleString()})</span>
+          <div
+            key={order._id}
+            className={`relative flex items-stretch bg-white rounded-2xl shadow-md ${borderLeft} transition-all duration-200 hover:shadow-xl hover:-translate-y-1 group overflow-hidden`}
+          >
+            {/* Accent bar (optional, can remove if only border is needed) */}
+            {/* Cancelled sticker */}
+            {status.toLowerCase() === "cancelled" && (
+              <div className="absolute -top-3 -left-6 z-10 rotate-[-18deg]">
+                <span className="bg-red-600 text-white text-xs font-bold px-4 py-1 rounded shadow-lg drop-shadow-lg border-2 border-white">Cancelled</span>
+              </div>
+            )}
+            <div className="flex flex-1 items-center gap-4 p-4">
+              {/* Product thumbnail */}
+              {items[0]?.image && (
+                <img
+                  src={Array.isArray(items[0].image) ? items[0].image[0] : items[0].image}
+                  alt={items[0].name}
+                  className="w-16 h-16 object-cover rounded-xl border-2 border-purple-100 shadow-sm bg-gray-50"
+                />
               )}
-            </div>
-            <div className="text-xs text-gray-500 mb-1">
-              <span>Customer: {userInfo.name}</span> | <span>Email: {userInfo.email}</span>
-            </div>
-            <div className="text-xs text-gray-500 mb-1">
-              <span>Shipping: {address}</span>
-            </div>
-            <div className="flex flex-col gap-2">
-              {items.map((item: any, idx: number) => (
-                <div key={idx} className="flex items-center gap-3 border-b pb-2 last:border-b-0">
-                  <img src={item.image} alt={item.name} className="w-12 h-12 object-cover rounded" />
-                  <div>
-                    <div className="font-semibold">{item.name}</div>
-                    <div className="text-xs text-gray-500">Qty: {item.quantity} {item.size && `| Size: ${item.size}`}</div>
-                    <div className="text-xs">Price: ₹{item.price}</div>
-                  </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-bold text-lg text-gray-900 truncate">
+                  {items.length === 1 ? items[0].name : `${items[0]?.name} +${items.length - 1} more`}
                 </div>
-              ))}
+                <div className="text-xs text-gray-500 mt-1 font-medium">
+                  Ordered: {formatDateTime(orderDate)}
+                </div>
+                <div className="flex items-center gap-2 mt-3">
+                  <StatusBadge status={status} />
+                  <button
+                    className="btn btn-xs btn-outline rounded-full px-4 py-1 font-semibold text-purple-700 border-purple-200 bg-purple-50 hover:bg-purple-100 hover:scale-105 transition-transform duration-150 shadow-sm"
+                    onClick={() => setSelectedOrder(order)}
+                  >
+                    View Details
+                  </button>
+                </div>
+              </div>
             </div>
-            <div className="font-bold text-right">Total: 	{total}</div>
-            <div className="text-sm text-gray-500">Payment: {payment}</div>
-            <button
-              className="mt-2 px-4 py-2 rounded font-semibold text-white transition w-max self-end"
-              style={{ backgroundColor: '#473C66', border: 'none' }}
-              onMouseOver={e => (e.currentTarget.style.backgroundColor = '#36234d')}
-              onMouseOut={e => (e.currentTarget.style.backgroundColor = '#473C66')}
-              onClick={() => downloadInvoice(order._id, token || undefined)}
-            >
-              Download Invoice
-            </button>
           </div>
         );
       })}
+      </div>
+      {/* Modal for order details */}
+      {selectedOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6 relative animate-fadeIn">
+            <button
+              className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-xl"
+              onClick={() => setSelectedOrder(null)}
+              aria-label="Close"
+            >
+              ×
+            </button>
+            <h3 className="text-lg font-bold mb-2">Order Details</h3>
+            <div className="mb-4 text-xs text-gray-500">Order ID: {selectedOrder._id}</div>
+            <div className="mb-4">
+              <div className="font-semibold mb-2">Products:</div>
+              <div className="space-y-2">
+                {(selectedOrder.items || selectedOrder.cartItems || []).map((item: any, idx: number) => (
+                  <div key={idx} className="flex items-center gap-3">
+                    {item.image && (
+                      <img src={Array.isArray(item.image) ? item.image[0] : item.image} alt={item.name} className="w-12 h-12 object-cover rounded" />
+                    )}
+                    <div>
+                      <div className="font-semibold">{item.name}</div>
+                      <div className="text-xs text-gray-500">Qty: {item.quantity} {item.size && `| Size: ${item.size}`}</div>
+                      <div className="text-xs">Price: ₹{item.price}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {/* Contact/Shipping Info */}
+            {(selectedOrder.address || selectedOrder.shippingInfo) && (
+              <div className="mb-4 text-sm">
+                <span className="font-medium">Shipping Address:</span>
+                <div className="pl-2 mt-1 text-gray-700">
+                  {(() => {
+                    const addr = selectedOrder.address || selectedOrder.shippingInfo;
+                    if (!addr) return null;
+                    return (
+                      <>
+                        {addr.firstName && <div><span className="font-medium">First Name:</span> {addr.firstName}</div>}
+                        {addr.lastName && <div><span className="font-medium">Last Name:</span> {addr.lastName}</div>}
+                        {addr.phone && <div><span className="font-medium">Phone:</span> {addr.phone}</div>}
+                        {addr.email && <div><span className="font-medium">Email:</span> {addr.email}</div>}
+                        {addr.street && <div><span className="font-medium">Street:</span> {addr.street}</div>}
+                        {addr.address && <div><span className="font-medium">Address:</span> {addr.address}</div>}
+                        {addr.address1 && <div><span className="font-medium">Address 1:</span> {addr.address1}</div>}
+                        {addr.address2 && <div><span className="font-medium">Address 2:</span> {addr.address2}</div>}
+                        {addr.line1 && <div><span className="font-medium">Line 1:</span> {addr.line1}</div>}
+                        {addr.line2 && <div><span className="font-medium">Line 2:</span> {addr.line2}</div>}
+                        {addr.city && <div><span className="font-medium">City:</span> {addr.city}</div>}
+                        {addr.state && <div><span className="font-medium">State:</span> {addr.state}</div>}
+                        {addr.country && <div><span className="font-medium">Country:</span> {addr.country}</div>}
+                        {addr.pincode && <div><span className="font-medium">Pincode:</span> {addr.pincode}</div>}
+                        {addr.zipcode && <div><span className="font-medium">Zipcode:</span> {addr.zipcode}</div>}
+                        {addr.zip && <div><span className="font-medium">Zip:</span> {addr.zip}</div>}
+                      </>
+                    );
+                  })()}
+                  {/* Fallback for root-level phone/email if not in address */}
+                  {!((selectedOrder.address && (selectedOrder.address.phone || selectedOrder.address.email)) || selectedOrder.phone || selectedOrder.email) && (
+                    <>
+                      {selectedOrder.phone && <div><span className="font-medium">Phone:</span> {selectedOrder.phone}</div>}
+                      {selectedOrder.email && <div><span className="font-medium">Email:</span> {selectedOrder.email}</div>}
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+            {/* Show total if available or calculable */}
+            <div className="mb-2 text-sm">
+              <span className="font-medium">Total:</span> ₹{
+                typeof selectedOrder.totalAmount === 'number' ? selectedOrder.totalAmount :
+                typeof selectedOrder.totalPrice === 'number' ? selectedOrder.totalPrice :
+                typeof selectedOrder.total === 'number' ? selectedOrder.total :
+                typeof selectedOrder.orderSummary?.total === 'number' ? selectedOrder.orderSummary.total :
+                (selectedOrder.items || selectedOrder.cartItems || []).reduce((sum: number, item: any) => sum + (Number(item.price) * (Number(item.quantity) || 1)), 0)
+              }
+            </div>
+            {/* Shipping and payment info if available */}
+            {/* Add more fields as needed */}
+            <div className="mt-6 text-center">
+              <a href="/contact" className="text-sm text-purple-700 underline hover:text-purple-900 font-medium">Need help? Contact support</a>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 } 

@@ -17,7 +17,7 @@ export default function GoogleLoginButton({ onSuccess, mode = "login" }: { onSuc
       const idToken = await getIdToken(auth.currentUser);
       console.log("Got ID token, calling backend...");
       
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/user/firebase-login`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/user/firebase-login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ idToken }),

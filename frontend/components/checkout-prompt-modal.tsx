@@ -4,6 +4,7 @@ import { CheckCircle, ShoppingBag, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import Image from "next/image"
+import React from "react"
 
 interface CheckoutPromptModalProps {
   isOpen: boolean
@@ -17,6 +18,8 @@ interface CheckoutPromptModalProps {
     size: string
     quantity: number
   } | null
+  images?: string[]
+  selectedImageIndex?: number
 }
 
 export default function CheckoutPromptModal({
@@ -25,7 +28,11 @@ export default function CheckoutPromptModal({
   onViewCart,
   onCheckout,
   product,
+  images = [],
+  selectedImageIndex = 0,
 }: CheckoutPromptModalProps) {
+  const [activeIndex, setActiveIndex] = React.useState(selectedImageIndex)
+  React.useEffect(() => { setActiveIndex(selectedImageIndex) }, [selectedImageIndex])
   if (!isOpen || !product) return null
 
   return (
@@ -48,18 +55,13 @@ export default function CheckoutPromptModal({
               <p className="text-gray-600">Your item has been successfully added to your cart.</p>
             </div>
 
+            {/* Image Gallery */}
+            {/* Removed image gallery */}
+
             {/* Product Summary */}
             <div className="bg-gray-50 rounded-xl p-4">
               <div className="flex items-center space-x-4">
-                <div className="w-16 h-20 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
-                  <Image
-                    src={product.image || "/placeholder.svg"}
-                    alt={product.name}
-                    width={64}
-                    height={80}
-                    className="object-cover w-full h-full"
-                  />
-                </div>
+                {/* Removed product image */}
                 <div className="flex-1 text-left">
                   <h4 className="font-semibold text-gray-900 text-sm line-clamp-2">{product.name}</h4>
                   <p className="text-sm text-gray-600 mt-1">

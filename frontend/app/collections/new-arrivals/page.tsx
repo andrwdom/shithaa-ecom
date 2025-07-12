@@ -20,7 +20,6 @@ export default function NewArrivalsPage() {
   const [filteredProducts, setFilteredProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [priceFilter, setPriceFilter] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
   const [sizeSelectionProduct, setSizeSelectionProduct] = useState<any>(null);
   const [isSizeSelectionOpen, setIsSizeSelectionOpen] = useState(false);
@@ -32,7 +31,7 @@ export default function NewArrivalsPage() {
     const fetchNewArrivals = async () => {
       try {
         setLoading(true);
-        const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000') + '/api/products?sortBy=createdAt&limit=8';
+        const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + '/api/products?sortBy=createdAt&limit=8';
         const res = await fetch(apiUrl);
         const data = await res.json();
         const backendProducts = data.products || [];
@@ -85,19 +84,6 @@ export default function NewArrivalsPage() {
           product.description.toLowerCase().includes(searchQuery.toLowerCase()),
       );
     }
-    if (priceFilter !== "all") {
-      switch (priceFilter) {
-        case "under-1500":
-          filtered = filtered.filter((product) => product.price < 1500);
-          break;
-        case "1500-2500":
-          filtered = filtered.filter((product) => product.price >= 1500 && product.price <= 2500);
-          break;
-        case "above-2500":
-          filtered = filtered.filter((product) => product.price > 2500);
-          break;
-      }
-    }
     switch (sortBy) {
       case "newest":
         filtered.sort((a, b) => new Date(b.dateAdded).getTime() - new Date(a.dateAdded).getTime());
@@ -113,7 +99,7 @@ export default function NewArrivalsPage() {
         break;
     }
     setFilteredProducts(filtered);
-  }, [products, searchQuery, priceFilter, sortBy]);
+  }, [products, searchQuery, sortBy]);
 
   const handleProductClick = (productId: number) => {
     window.location.href = `/product/${productId}`;
@@ -193,8 +179,8 @@ export default function NewArrivalsPage() {
           </div>
           {/* Search and Filter Bar */}
           <div className="flex flex-col gap-2 mb-6 lg:mb-8 w-full max-w-full px-0 sm:px-0">
-            {/* Search Bar Row */}
-            <div className="flex w-full">
+            {/* Search Bar Row with Sort */}
+            <div className="flex w-full gap-2 flex-row">
               <div className="relative flex-1 min-w-0 max-w-full flex items-center">
                 <div className="flex items-center w-full">
                   <span className="inline-flex items-center px-3 h-12 border border-r-0 border-gray-200 bg-white rounded-l-full text-gray-400 text-base">
@@ -204,30 +190,20 @@ export default function NewArrivalsPage() {
                     placeholder="Search products..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="h-12 border border-gray-200 border-l-0 rounded-l-none rounded-r-lg focus:border-[rgb(71,60,102)] bg-white text-base w-full md:w-[350px] lg:w-[450px] transition-all duration-200"
+                    className="h-12 border border-gray-200 border-l-0 rounded-l-none rounded-r-lg focus:border-[rgb(71,60,102)] bg-white text-base w-full max-w-[calc(100vw-4.5rem)] sm:w-[350px] lg:w-[450px] transition-all duration-200 pr-2"
                     style={{ boxShadow: 'none' }}
                   />
                 </div>
               </div>
-            </div>
-            {/* Filters Row */}
-            <div className="flex flex-col sm:flex-row sm:gap-4 w-full max-w-full">
-              {/* Price Filter */}
-              <Select value={priceFilter} onValueChange={setPriceFilter}>
-                <SelectTrigger className="w-full max-w-full min-w-0 h-12 border-2 border-gray-200 focus:border-[rgb(71,60,102)] rounded-lg">
-                  <Filter className="h-4 w-4 mr-2" />
-                  <SelectValue placeholder="Price Range" />
+              {/* Sort Dropdown: Icon only on mobile, full on sm+ */}
+              <div className="flex-shrink-0">
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  {/* Mobile: icon only */}
+                  <SelectTrigger className="h-12 w-12 border-2 border-gray-200 focus:border-[rgb(71,60,102)] rounded-lg flex items-center justify-center sm:hidden">
+                    <SlidersHorizontal className="h-6 w-6" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Prices</SelectItem>
-                  <SelectItem value="under-1500">Under ₹1,500</SelectItem>
-                  <SelectItem value="1500-2500">₹1,500 - ₹2,500</SelectItem>
-                  <SelectItem value="above-2500">Above ₹2,500</SelectItem>
-                </SelectContent>
-              </Select>
-              {/* Sort */}
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-full max-w-full min-w-0 h-12 border-2 border-gray-200 focus:border-[rgb(71,60,102)] rounded-lg">
+                  {/* Desktop: full dropdown */}
+                  <SelectTrigger className="hidden sm:flex w-40 h-12 border-2 border-gray-200 focus:border-[rgb(71,60,102)] rounded-lg items-center">
                   <SlidersHorizontal className="h-4 w-4 mr-2" />
                   <SelectValue placeholder="Sort By" />
                 </SelectTrigger>
@@ -238,6 +214,7 @@ export default function NewArrivalsPage() {
                   <SelectItem value="name">Name: A to Z</SelectItem>
                 </SelectContent>
               </Select>
+              </div>
             </div>
           </div>
           {/* Results Count */}
@@ -323,7 +300,6 @@ export default function NewArrivalsPage() {
               <Button
                 onClick={() => {
                   setSearchQuery("");
-                  setPriceFilter("all");
                   setSortBy("newest");
                 }}
                 variant="outline"

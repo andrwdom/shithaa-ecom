@@ -14,7 +14,6 @@ const STATUS_COLORS = {
   Cancelled: 'bg-red-100 text-red-800',
 };
 
-const PAYMENT_METHODS = ['All', 'COD', 'Online'];
 const ORDER_STATUSES = ['All', 'Pending', 'Packing', 'Shipped', 'Out for delivery', 'Delivered', 'Cancelled'];
 
 function formatDate(date) {
@@ -197,7 +196,6 @@ const Orders = ({ token, setToken }) => {
   const [cancellingOrder, setCancellingOrder] = useState(null);
   const printRef = useRef();
   const navigate = useNavigate();
-  const [paymentFilter, setPaymentFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState('');
@@ -370,19 +368,15 @@ const Orders = ({ token, setToken }) => {
     const matchesSearch =
       name.toLowerCase().includes(search.toLowerCase()) ||
       phone.includes(search);
-    const matchesPayment = paymentFilter === 'All' || order.paymentMethod === paymentFilter;
-    const matchesStatus = statusFilter === 'All' || order.status === statusFilter;
-    return matchesSearch && matchesPayment && matchesStatus;
+    // Fix: use all possible status fields
+    const status = order.status || order.orderStatus || order.paymentStatus;
+    const matchesStatus = statusFilter === 'All' || status === statusFilter;
+    return matchesSearch && matchesStatus;
   });
 
   return (
     <div className="max-w-2xl mx-auto px-2 pb-8">
-      <div className="bg-gray-100 p-2 mb-2 rounded text-xs">
-        <b>Debug Panel</b><br />
-        <div>Token: {token ? token.slice(0, 8) + '...' : 'None'}</div>
-        <div>Endpoint: {backendUrl}/api/orders</div>
-        <div>Last API Response: <pre style={{maxHeight: 100, overflow: 'auto'}}>{JSON.stringify(lastApiResponse, null, 2)}</pre></div>
-      </div>
+      {/* TEMPORARY: Delete All Orders Button removed */}
       <div className="sticky top-0 z-10 bg-gray-50 pt-4 pb-2 mb-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
           <input
@@ -391,15 +385,6 @@ const Orders = ({ token, setToken }) => {
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
-          <select
-            className="px-3 py-2 rounded border focus:outline-none focus:ring-2 focus:ring-theme-400"
-            value={paymentFilter}
-            onChange={e => setPaymentFilter(e.target.value)}
-          >
-            {PAYMENT_METHODS.map(m => (
-              <option key={m} value={m}>{m}</option>
-            ))}
-          </select>
           <select
             className="px-3 py-2 rounded border focus:outline-none focus:ring-2 focus:ring-theme-400"
             value={statusFilter}
@@ -419,7 +404,7 @@ const Orders = ({ token, setToken }) => {
       {!loading && !apiError && orders.length === 0 && <div className="text-center py-8 text-yellow-500">No orders found.</div>}
       {!loading && !apiError && filteredOrders.length === 0 && <div className="text-center py-8 text-gray-400">No orders found.</div>}
       {!loading && !apiError && filteredOrders.length > 0 && (
-        filteredOrders.slice(0, 10).map(order => (
+        filteredOrders.map(order => (
           <OrderCard key={order._id} order={order} onView={setSelectedOrder} userNameCache={userNameCache} fetchUserName={fetchUserName} />
         ))
       )}

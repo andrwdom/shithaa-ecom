@@ -50,11 +50,17 @@ orderRouter.get('/', async (req, res) => {
     const { email } = req.query;
     let orders;
     if (email) {
-      orders = await (await import('../models/orderModel.js')).default.find({ email }).sort({ createdAt: -1 });
+      // Search both legacy and new-structure orders
+      orders = await (await import('../models/orderModel.js')).default.find({
+        $or: [
+          { email: { $regex: new RegExp('^' + email + '$', 'i') } },
+          { 'userInfo.email': { $regex: new RegExp('^' + email + '$', 'i') } }
+        ]
+      }).sort({ createdAt: -1 });
     } else {
       orders = await (await import('../models/orderModel.js')).default.find().sort({ createdAt: -1 });
     }
-  res.json({ success: true, orders });
+    res.json({ success: true, orders });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Failed to fetch orders', error: err.message });
   }

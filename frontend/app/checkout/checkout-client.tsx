@@ -92,7 +92,7 @@ export default function CheckoutClient() {
     if (!user) return null;
     try {
       const idToken = await getIdToken(user, true); // force refresh
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/user/firebase-login`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/user/firebase-login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ idToken }),
@@ -129,7 +129,7 @@ export default function CheckoutClient() {
     setCouponSuccess("");
     setCouponLoading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/coupons/validate`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/coupons/validate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code: coupon }),
@@ -237,13 +237,26 @@ export default function CheckoutClient() {
           name: user.displayName || user.name || (user.email ? user.email.split('@')[0] : 'User'),
           email: user.email,
         },
-        shippingInfo: {
-          name: `${form.firstName} ${form.lastName}`.trim(),
+        address: {
+          firstName: form.firstName,
+          lastName: form.lastName,
           phone: form.phone,
-          address: `${form.street}, ${form.city}, ${form.state}, ${form.country}, ${form.zipcode}`,
+          email: form.email || user.email,
+          street: form.street,
+          address: form.address,
+          address1: form.address1,
+          address2: form.address2,
+          line1: form.line1,
+          line2: form.line2,
+          city: form.city,
+          state: form.state,
+          country: form.country,
+          pincode: form.pincode,
+          zipcode: form.zipcode,
+          zip: form.zip,
         },
         items: itemsWithId.map(item => ({
-          id: item._id,
+          _id: item._id, // Use _id instead of id
           name: item.name,
           quantity: item.quantity,
           price: item.price,
@@ -259,7 +272,7 @@ export default function CheckoutClient() {
       console.log('Order payload:', payload);
       console.log('Form state:', form);
       console.log('User:', user);
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/orders`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/orders`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

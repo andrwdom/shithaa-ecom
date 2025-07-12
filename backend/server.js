@@ -3,7 +3,6 @@ import cors from 'cors'
 import 'dotenv/config'
 import rateLimit from 'express-rate-limit'
 import connectDB from './config/mongodb.js'
-import { cloudinary } from './config/cloudinary.js'
 import userRouter from './routes/userRoute.js'
 import productRouter from './routes/productRoute.js'
 import cartRouter from './routes/cartRoute.js'
@@ -17,7 +16,7 @@ import orderModel from './models/orderModel.js'
 
 // App Config
 const app = express()
-const PORT = process.env.PORT || 5000
+const PORT = process.env.PORT || 4000
 
 // Trust proxy - required for rate limiting behind reverse proxy
 app.set('trust proxy', 1)
@@ -148,6 +147,7 @@ app.options('*', cors(corsOptions));
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 app.use('/uploads', express.static('uploads'))
+app.use('/images', express.static('/var/www/shithaa-ecom/uploads'));
 
 // api endpoints
 app.use('/api/user', userRouter)
@@ -165,8 +165,13 @@ app.use('/api/order', orderRouter)
 
 // Public orders debug route (before any middleware)
 app.get('/api/orders/public-list', async (req, res) => {
-  const orders = await orderModel.find().sort({ createdAt: -1 });
-  res.json({ success: true, orders });
+  try {
+    const orders = await orderModel.find().sort({ createdAt: -1 });
+    res.json({ success: true, orders });
+  } catch (error) {
+    console.error('Error fetching orders:', error);
+    res.status(500).json({ success: false, message: 'Error fetching orders' });
+  }
 });
 
 app.get('/', (req, res) => {
@@ -202,33 +207,13 @@ app.use((err, req, res, next) => {
 
 // General error handling middleware
 app.use((err, req, res, next) => {
-    console.error(err.stack)
+    console.error('Error:', err.stack)
     res.status(500).json({
         success: false,
         message: 'Internal Server Error',
         error: process.env.NODE_ENV === 'development' ? err.message : undefined
     })
 })
-
-// Graceful shutdown
-process.on('SIGTERM', () => {
-    console.log('Received SIGTERM. Performing graceful shutdown...');
-    app.close(() => {
-        console.log('Server closed. Exiting process.');
-        process.exit(0);
-    });
-});
-
-const server = app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
-
-// Handle server errors
-server.on('error', (error) => {
-    if (error.code === 'EADDRINUSE') {
-        console.error(`Port ${PORT} is already in use. Please choose a different port or stop the running process.`);
-    }
-});
 
 // Initialize Firebase Admin SDK
 try {
@@ -251,5 +236,27 @@ try {
   console.error('Firebase Admin SDK initialization failed:', error.message);
   console.log('Firebase Admin SDK will not be available for token verification');
 }
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+    console.log('Received SIGTERM. Performing graceful shutdown...');
+    app.close(() => {
+        console.log('Server closed. Exiting process.');
+        process.exit(0);
+    });
+});
+
+const server = app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+});
+
+// Handle server errors
+server.on('error', (error) => {
+    if (error.code === 'EADDRINUSE') {
+        console.error(`Port ${PORT} is already in use. Please choose a different port or stop the running process.`);
+    } else {
+        console.error('Server error:', error);
+    }
+});
 
 console.log('Backend server started - latest code loaded');

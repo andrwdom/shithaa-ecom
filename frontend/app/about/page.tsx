@@ -1,10 +1,33 @@
-"use client"
-
 import { motion } from "framer-motion"
 import { Heart, Instagram, Sparkles, Quote, Baby, Users, Smile } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import { Metadata } from "next"
+
+// SEO Metadata
+export const metadata: Metadata = {
+  title: "About Shinthaa - Our Story & Mission",
+  description: "Discover the story behind Shinthaa - founded with love and understanding for expecting mothers. Learn about our mission to create elegant maternity wear that honors the mother-child bond.",
+  keywords: [
+    "Shinthaa story",
+    "maternity wear founder",
+    "pregnancy clothing mission",
+    "mother-child bond",
+    "maternity fashion",
+    "feeding wear story",
+    "Shinthaa about us"
+  ],
+  openGraph: {
+    title: "About Shinthaa - Our Story & Mission",
+    description: "Discover the story behind Shinthaa - founded with love and understanding for expecting mothers.",
+    images: ['/shitha-logo.jpg'],
+  },
+  twitter: {
+    title: "About Shinthaa - Our Story & Mission",
+    description: "Discover the story behind Shinthaa - founded with love and understanding for expecting mothers.",
+  },
+}
 
 // Animation variants
 const fadeInUp = {
@@ -92,7 +115,7 @@ export default function AboutPage() {
                 <div className="bg-white rounded-2xl p-3 shadow-lg transform rotate-2">
                   <Image
                     src="/placeholder.svg?height=300&width=250"
-                    alt="Founder of Shithaa with her child, representing the mother-child bond"
+                    alt="Founder of Shinthaa with her child, representing the mother-child bond"
                     width={250}
                     height={300}
                     className="w-full h-72 object-cover rounded-xl"
@@ -120,7 +143,7 @@ export default function AboutPage() {
 
                   <h3 className="text-2xl font-semibold text-[#473C66] mb-4">Founded with Love & Understanding</h3>
                   <p className="text-gray-700 leading-relaxed mb-4">
-                    Shithaa was born from the heart of a passionate creator, mother, and influencer who, through her
+                    Shinthaa was born from the heart of a passionate creator, mother, and influencer who, through her
                     journey with her growing community of 27,000 followers, witnessed the beautiful yet challenging
                     experience of expecting mothers preparing to welcome their little ones.
                   </p>
@@ -238,7 +261,7 @@ export default function AboutPage() {
 
                 <div className="flex justify-center items-center space-x-3">
                   <Heart className="w-6 h-6 text-pink-400" />
-                  <span className="text-lg font-medium text-gray-600">The Shithaa Promise</span>
+                  <span className="text-lg font-medium text-gray-600">The Shinthaa Promise</span>
                   <Baby className="w-6 h-6 text-[#473C66]" />
                 </div>
         </div>
@@ -250,60 +273,117 @@ export default function AboutPage() {
           </motion.div>
         </section>
 
-        {/* Browse Collection CTA */}
-        <section className="py-20 px-4 bg-gradient-to-br from-purple-50 to-pink-50">
+        {/* Values Section */}
+        <section className="py-20 px-4 bg-gradient-to-r from-lavender-50 to-purple-50">
+          <motion.div
+            initial="initial"
+            whileInView="animate"
+            viewport={{ once: true }}
+            variants={staggerContainer}
+            className="max-w-5xl mx-auto"
+          >
+            <motion.div variants={fadeInUp} className="text-center mb-16">
+              <div className="relative inline-block">
+                <WashiTape className="-top-2 -right-4" rotation={-5} />
+                <h2 className="text-3xl md:text-4xl font-light text-[#473C66] relative">
+                  Our <span className="font-semibold">Values</span>
+                </h2>
+                <BabyDoodle className="top-0 -right-8" />
+                <HeartDoodle className="bottom-0 left-0" />
+              </div>
+            </motion.div>
+
+            <motion.div variants={fadeInUp} className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+              {[
+                {
+                  icon: Heart,
+                  title: "Love",
+                  description: "Every design is created with love and understanding for the mother-child journey",
+                  color: "from-pink-400 to-rose-500",
+                },
+                {
+                  icon: Sparkles,
+                  title: "Elegance",
+                  description: "Beautiful designs that make you feel confident and radiant during pregnancy",
+                  color: "from-purple-400 to-indigo-500",
+                },
+                {
+                  icon: Baby,
+                  title: "Comfort",
+                  description: "Premium fabrics and thoughtful design for ultimate comfort and ease",
+                  color: "from-blue-400 to-cyan-500",
+                },
+                {
+                  icon: Users,
+                  title: "Community",
+                  description: "Building a supportive community of mothers sharing their beautiful journeys",
+                  color: "from-green-400 to-emerald-500",
+                },
+              ].map((item, index) => (
+                <motion.div
+                  key={index}
+                  variants={fadeInUp}
+                  className="bg-white rounded-2xl p-6 shadow-lg relative overflow-hidden transform hover:scale-105 transition-transform duration-300"
+                >
+                  <HeartDoodle className="top-2 right-2" />
+                  <BabyDoodle className="bottom-2 left-2" />
+
+                  <div className="text-center">
+                    <div
+                      className={`w-14 h-14 bg-gradient-to-br ${item.color} rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg`}
+                    >
+                      <item.icon className="w-7 h-7 text-white" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-[#473C66] mb-3">{item.title}</h3>
+                    <p className="text-sm text-gray-600 leading-relaxed">{item.description}</p>
+                  </div>
+                </motion.div>
+              ))}
+            </motion.div>
+          </motion.div>
+        </section>
+
+        {/* Call to Action */}
+        <section className="py-20 px-4">
           <motion.div
             initial="initial"
             whileInView="animate"
             viewport={{ once: true }}
             variants={fadeInUp}
-            className="max-w-3xl mx-auto text-center"
+            className="max-w-4xl mx-auto text-center"
           >
-            <div className="relative">
-              <div className="bg-white rounded-3xl p-12 shadow-2xl relative overflow-hidden">
-                {/* Decorative background */}
-                <div className="absolute inset-0 bg-gradient-to-br from-purple-50 to-pink-50 opacity-50"></div>
-                <BabyDoodle className="top-6 left-6" />
-                <HeartDoodle className="top-6 right-6" />
-                <BabyDoodle className="bottom-6 right-6" />
-                <HeartDoodle className="bottom-6 left-6" />
-
-                <div className="relative">
-                  <motion.div
-                    animate={{ y: [0, -8, 0] }}
-                    transition={{ duration: 3, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
-                    className="flex justify-center items-center space-x-4 mb-8"
-                  >
-                    <Heart className="w-12 h-12 text-[#473C66]" />
-                    <Baby className="w-14 h-14 text-pink-400" />
-                    <Heart className="w-12 h-12 text-[#473C66]" />
-                  </motion.div>
-
-                  <h2 className="text-3xl md:text-4xl font-light text-[#473C66] mb-6">
-                    Ready to Embrace Your
-                    <span className="font-semibold"> Beautiful Journey Together?</span>
-                  </h2>
-
-                  <p className="text-xl text-gray-600 mb-10 leading-relaxed">
-                    Discover our thoughtfully curated collection that celebrates both you and your growing little one
-                  </p>
-
-                  <Button
-                    asChild
-                    size="lg"
-                    className="bg-gradient-to-r from-[#473C66] to-purple-500 hover:from-purple-600 hover:to-purple-700 text-white px-10 py-6 text-lg rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
-                  >
-                    <Link href="/collection">
-                      <Sparkles className="w-5 h-5 mr-3" />
-                      Browse Our Collection
-                    </Link>
-                  </Button>
-                </div>
-        </div>
-
+            <div className="bg-gradient-to-br from-[#473C66] to-purple-600 rounded-3xl p-12 md:p-16 text-white relative overflow-hidden">
               {/* Decorative elements */}
-              <WashiTape className="top-4 left-4" rotation={-15} />
-              <PaperPin className="top-6 right-6" />
+              <div className="absolute top-6 left-6 w-8 h-8 bg-white rounded-full opacity-20"></div>
+              <div className="absolute top-6 right-6 w-6 h-6 bg-pink-300 rounded-full opacity-30"></div>
+              <div className="absolute bottom-6 left-8 w-4 h-4 bg-purple-200 rounded-full opacity-40"></div>
+              <div className="absolute bottom-6 right-8 w-10 h-10 bg-rose-200 rounded-full opacity-25"></div>
+              <BabyDoodle className="top-8 left-1/4" />
+              <HeartDoodle className="bottom-8 right-1/4" />
+
+              <h2 className="text-3xl md:text-4xl font-light mb-6">
+                Join the <span className="font-semibold">Shinthaa</span> Family
+              </h2>
+              <p className="text-lg mb-8 opacity-90 leading-relaxed">
+                Discover our collection of elegant maternity wear and feeding essentials designed with love for you and your little one.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Button
+                  size="lg"
+                  className="bg-white text-[#473C66] hover:bg-gray-100 rounded-full px-8 py-3 font-semibold"
+                  onClick={() => window.location.href = '/collections/maternity-feeding-wear'}
+                >
+                  Shop Collection
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="border-white text-white hover:bg-white hover:text-[#473C66] rounded-full px-8 py-3 font-semibold"
+                  onClick={() => window.location.href = '/contact'}
+                >
+                  Get in Touch
+                </Button>
+              </div>
             </div>
           </motion.div>
         </section>

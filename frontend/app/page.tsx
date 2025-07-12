@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { Metadata } from "next"
 import HeroSection from "@/components/hero-section"
 import ProductSlider from "@/components/product-slider"
 import CategoryStrip from "@/components/category-strip"
@@ -10,7 +11,7 @@ import Footer from "@/components/footer"
 import CategorySidebar from "@/components/category-sidebar"
 import CartSidebar from "@/components/cart-sidebar"
 import PageLoading from "@/components/page-loading"
-// import TestimonialsSection from "@/components/testimonials-section"
+import TestimonialsSection from "@/components/testimonials-section"
 
 interface CartItem {
   id: number
@@ -22,8 +23,22 @@ interface CartItem {
   image: string
 }
 
+interface Product {
+  id: number
+  _id: number
+  name: string
+  price: number
+  originalPrice?: number
+  image: string
+  category: string
+  isNewArrival?: boolean
+  isBestSeller?: boolean
+  sizes: { stock?: number }[]
+  stock: number
+}
+
 export default function Home() {
-  const [products, setProducts] = useState([])
+  const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [isCartSidebarOpen, setIsCartSidebarOpen] = useState(false)
   const [isCategorySidebarOpen, setIsCategorySidebarOpen] = useState(false)
@@ -32,11 +47,11 @@ export default function Home() {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000') + '/api/products';
+        const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + '/api/products';
         const res = await fetch(apiUrl);
         const data = await res.json();
         // Map backend fields to frontend
-        const products = (data.data || data.products || []).map((p) => ({
+        const products = (data.data || data.products || []).map((p: any) => ({
           id: p._id,
           _id: p._id,
           name: p.name,
@@ -47,7 +62,7 @@ export default function Home() {
           isNewArrival: p.isNewArrival,
           isBestSeller: p.isBestSeller,
           sizes: p.sizes,
-          stock: p.sizes?.reduce((sum, s) => sum + (s.stock || 0), 0),
+          stock: (p.sizes || []).reduce((sum: number, s: { stock?: number }) => sum + (s.stock || 0), 0),
         }));
         setProducts(products);
         setLoading(false);
@@ -60,7 +75,7 @@ export default function Home() {
     fetchProducts()
   }, [])
 
-  const handleAddToCart = (product: any) => {
+  const handleAddToCart = (product: Product) => {
     const cartItem: CartItem = {
       id: product.id,
       _id: product._id,
@@ -96,24 +111,18 @@ export default function Home() {
     window.location.href = `/collections/${slug}`
   }
 
-  const newArrivals = products.filter((p) => p.isNewArrival)
-  const bestSellers = products.filter((p) => p.isBestSeller)
+  const newArrivals = products.filter((p: Product) => p.isNewArrival)
+  const bestSellers = products.filter((p: Product) => p.isBestSeller)
 
   return (
-    <PageLoading loadingMessage="Welcome to Shitha Clothing" minLoadingTime={2000}>
+    <PageLoading loadingMessage="Welcome to Shinthaa" minLoadingTime={2000}>
       <div className="min-h-screen bg-white">
         <HeroSection />
         <CategoryStrip onCategoryClick={handleCategorySelect} currentCategory={undefined} />
-        {/* <TestimonialsSection />  // Temporarily removed for payment gateway API verification */}
+        <TestimonialsSection />
         <FAQAccordion />
 
-        <CartSidebar
-          isOpen={isCartSidebarOpen}
-          onClose={() => setIsCartSidebarOpen(false)}
-          items={cartItems}
-          onUpdateQuantity={handleUpdateQuantity}
-          onRemoveItem={handleRemoveItem}
-        />
+        <CartSidebar />
       </div>
     </PageLoading>
   )

@@ -1,6 +1,6 @@
 import CarouselBanner from '../models/CarouselBanner.js';
-import { cloudinary } from '../config/cloudinary.js';
 import { Readable } from 'stream';
+import path from 'path';
 
 // Helper function to upload buffer to Cloudinary
 const uploadBuffer = (buffer) => {
@@ -50,11 +50,10 @@ export const createCarouselBanner = async (req, res) => {
     }
 
     try {
-      // Upload buffer to Cloudinary
-      const result = await uploadBuffer(imageFile.buffer);
+      const imageUrl = `https://api.mysite.com/images/carousel/${imageFile.filename}`;
 
       const banner = new CarouselBanner({
-        image: result.secure_url,
+        image: imageUrl,
         title,
         description,
         sectionId,
@@ -92,9 +91,8 @@ export const updateCarouselBanner = async (req, res) => {
     };
 
     if (imageFile) {
-      // Upload new image to Cloudinary
-      const result = await uploadBuffer(imageFile.buffer);
-      updateData.image = result.secure_url;
+      const imageUrl = `https://api.mysite.com/images/carousel/${imageFile.filename}`;
+      updateData.image = imageUrl;
     }
 
     const banner = await CarouselBanner.findByIdAndUpdate(

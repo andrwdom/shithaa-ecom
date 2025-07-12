@@ -93,7 +93,7 @@ export default function CheckoutPage() {
     setPaymentError(null);
     try {
       // 1. Create Razorpay order/session on backend
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000') + '/api/payment/razorpay/create-session';
+      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + '/api/payment/razorpay/create-session';
       const res = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -129,7 +129,7 @@ export default function CheckoutPage() {
         order_id: data.razorpayOrderId,
         handler: async function (response: any) {
           // 4. On payment success, save order to backend
-          const orderRes = await fetch((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000') + '/api/orders', {
+          const orderRes = await fetch((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + '/api/orders', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -177,7 +177,7 @@ export default function CheckoutPage() {
     setPaymentError(null);
     try {
       await new Promise(res => setTimeout(res, 1500));
-      const orderRes = await fetch((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000') + '/api/orders', {
+      const orderRes = await fetch((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + '/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

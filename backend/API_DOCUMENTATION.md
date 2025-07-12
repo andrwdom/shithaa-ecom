@@ -639,9 +639,6 @@ JWT_SECRET=your-jwt-secret
 STRIPE_SECRET_KEY=your-stripe-secret
 RAZORPAY_KEY_ID=your-razorpay-key
 RAZORPAY_KEY_SECRET=your-razorpay-secret
-CLOUDINARY_NAME=your-cloudinary-name
-CLOUDINARY_API_KEY=your-cloudinary-api-key
-CLOUDINARY_SECRET_KEY=your-cloudinary-secret
 ADMIN_EMAIL=admin@example.com
 ADMIN_PASSWORD=admin-password
 NODE_ENV=development
@@ -649,7 +646,7 @@ NODE_ENV=development
 
 ## Notes
 
-1. All image URLs are absolute Cloudinary URLs
+1. All image URLs are now served from https://api.mysite.com/images/
 2. JWT tokens expire after 7 days
 3. Pagination is available on all list endpoints
 4. Search is case-insensitive

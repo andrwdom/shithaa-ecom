@@ -120,22 +120,25 @@ export default function SizeSelectionSidebar({
           {/* Content */}
           <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
             {/* Product Images */}
-            <div className="grid grid-cols-2 gap-3">
-              {product.images && product.images.length > 1 ? (
-                <>
-              <div className="relative aspect-[3/4] bg-gray-100 rounded-lg overflow-hidden">
-                    <Image src={product.images[0] || "/placeholder.svg"} alt={product.name} fill className="object-cover" />
-              </div>
-              <div className="relative aspect-[3/4] bg-gray-100 rounded-lg overflow-hidden">
-                    <Image src={product.images[1] || "/placeholder.svg"} alt={product.name} fill className="object-cover" />
+            {product.images && product.images.length > 0 && (
+              <div className="flex gap-3 overflow-x-auto pb-2 justify-center mb-2">
+                {product.images.map((img, idx) => (
+                  <div
+                    key={img + idx}
+                    className="rounded-lg border-2 border-gray-200 flex-shrink-0"
+                    style={{ width: 120, height: 150 }}
+                  >
+                    <Image
+                      src={img || "/placeholder.svg"}
+                      alt={product.name}
+                      width={120}
+                      height={150}
+                      className="object-cover w-full h-full rounded-lg"
+                    />
                   </div>
-                </>
-              ) : (
-                <div className="relative aspect-[3/4] bg-gray-100 rounded-lg overflow-hidden col-span-2">
-                  <Image src={product.images?.[0] || product.image || "/placeholder.svg"} alt={product.name} fill className="object-cover" />
+                ))}
               </div>
-              )}
-            </div>
+            )}
 
             {/* Product Info */}
             <div className="space-y-3">
@@ -230,7 +233,7 @@ export default function SizeSelectionSidebar({
             <Button
               onClick={handleBuyNow}
               size="lg"
-              className="w-full py-4 text-base font-semibold bg-gradient-to-r from-[#A78BFA] to-[#F9A8D4] hover:from-[#E75480] hover:to-[#A78BFA] text-white transition-all duration-300 rounded-xl shadow-md"
+              className="w-full py-4 text-base font-semibold bg-[#473C66] hover:bg-[#3a3054] text-white transition-all duration-300 rounded-xl shadow-md"
               disabled={sizeOptions.length === 0 || !selectedSize || selectedSizeStock === 0}
             >
               BUY IT NOW

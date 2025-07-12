@@ -39,7 +39,7 @@ export default function LoginModal({ open, onClose, onSuccess }: { open: boolean
       const idToken = await getIdToken(auth.currentUser);
       console.log("Got ID token, calling backend...");
       
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/user/firebase-login`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/user/firebase-login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ idToken }),
@@ -106,7 +106,7 @@ export default function LoginModal({ open, onClose, onSuccess }: { open: boolean
       const idToken2 = await getIdToken(auth.currentUser);
       console.log("Got ID token, calling backend...");
       
-      const res2 = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/user/firebase-login`, {
+      const res2 = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/user/firebase-login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ idToken: idToken2 }),

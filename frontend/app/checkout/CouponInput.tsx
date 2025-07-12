@@ -13,7 +13,7 @@ export default function CouponInput({ value, onApply }: any) {
     setError('')
     setSuccess('')
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000') + '/api/coupons/validate';
+      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + '/api/coupons/validate';
       const res = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

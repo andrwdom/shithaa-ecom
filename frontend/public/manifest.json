@@ -1,0 +1,27 @@
+{
+  "name": "Shinthaa - Elegant Maternity & Feeding Wear",
+  "short_name": "Shinthaa",
+  "description": "Premium maternity wear and feeding essentials for expecting mothers",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#473C66",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/shitha-logo.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/shitha-logo.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["fashion", "shopping"],
+  "lang": "en",
+  "dir": "ltr"
+} 

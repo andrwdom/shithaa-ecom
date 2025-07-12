@@ -14,7 +14,7 @@ export interface CartItem {
 
 interface CartContextType {
   cartItems: CartItem[]
-  addToCart: (item: CartItem) => void
+  addToCart: (item: CartItem, openSidebar?: boolean) => void
   updateCartItem: (id: string, size: string, quantity: number) => void
   removeFromCart: (id: string, size: string) => void
   isCartSidebarOpen: boolean
@@ -40,7 +40,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem("cartItems", JSON.stringify(cartItems))
   }, [cartItems])
 
-  function addToCart(item: CartItem) {
+  function addToCart(item: CartItem, openSidebar: boolean = true) {
     setCartItems((prev) => {
       const existing = prev.find((i) => i._id === item._id && i.size === item.size)
       if (existing) {
@@ -52,7 +52,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
       return [...prev, item]
     })
-    setIsCartSidebarOpen(true)
+    if (openSidebar) setIsCartSidebarOpen(true)
   }
 
   function updateCartItem(_id: string, size: string, quantity: number) {

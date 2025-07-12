@@ -92,7 +92,13 @@ export const getOrderById = async (req, res) => {
     }
 };
 
-// POST /api/orders - RESTful order creation
+// PATCH: Always set both top-level email and userInfo.email for all order creation
+// Helper to get user email
+function getOrderUserEmail(req, fallback) {
+  return (req.user && req.user.email) || fallback || '';
+}
+
+// PATCH createOrder
 export const createOrder = async (req, res) => {
     try {
         const {
@@ -110,9 +116,10 @@ export const createOrder = async (req, res) => {
             return res.status(400).json({ message: 'Missing required fields' });
         }
 
+        const userEmail = getOrderUserEmail(req, email);
         const orderData = {
             customerName,
-            email,
+            email: userEmail,
             phone,
             address: {
                 line1: address.line1,
@@ -131,15 +138,11 @@ export const createOrder = async (req, res) => {
             totalPrice,
             paymentMethod,
             status: 'Pending',
-            isTestOrder: isTestOrder || false
+            isTestOrder: isTestOrder || false,
+            userId: req.body.userId || (req.user && req.user.id),
+            userInfo: { email: userEmail }
         };
-        // Always set userId and email from the most reliable source
-        orderData.email = req.body.email || (req.user && req.user.email);
-        orderData.userId = req.body.userId || (req.user && req.user.id);
         const order = await orderModel.create(orderData);
-
-        console.log('Order created:', order);
-
         res.status(201).json({ success: true, order });
     } catch (err) {
         console.error('Create Order Error:', err);
@@ -147,40 +150,40 @@ export const createOrder = async (req, res) => {
     }
 };
 
-// POST /api/orders - New structured order creation
+// PATCH createStructuredOrder
 const createStructuredOrder = async (req, res) => {
   try {
-    // Accept new structure from frontend
     let { userInfo, shippingInfo, items, couponUsed, totalAmount, paymentStatus, createdAt } = req.body;
     if (!userInfo || !shippingInfo || !items || !Array.isArray(items) || items.length === 0 || !totalAmount) {
       return res.status(400).json({ message: 'Missing required fields' });
     }
-    // Ensure userId is ObjectId if present
-    if (userInfo.userId) {
-      try {
-        userInfo.userId = new mongoose.Types.ObjectId(userInfo.userId);
-      } catch (e) {
-        // fallback: leave as is if not valid ObjectId
-      }
-    }
+    const userEmail = getOrderUserEmail(req, userInfo.email);
     userInfo.name = userInfo.name || '';
-    userInfo.email = userInfo.email || '';
-    // Build new order object
+    userInfo.email = userEmail;
+    const itemsWithIds = items.map(item => ({
+      ...item,
+      _id: item._id || item.id || undefined,
+      id: item._id || item.id || undefined,
+    }));
     const orderDoc = {
       userInfo,
       shippingInfo,
-      items,
+      items: itemsWithIds,
       couponUsed: couponUsed || null,
       totalAmount,
-      paymentStatus: paymentStatus || 'test-paid',
+      status: 'Pending',
+      orderStatus: 'Pending',
+      paymentStatus: paymentStatus === 'paid' ? 'paid' : 'pending',
       createdAt: createdAt ? new Date(createdAt) : new Date(),
+      email: userEmail,
+      userId: userInfo.userId || undefined,
     };
     const order = await orderModel.create(orderDoc);
     res.status(201).json({ success: true, order });
   } catch (err) {
     console.error('Create Structured Order Error:', err);
-        res.status(500).json({ message: 'Server error while creating order' });
-    }
+    res.status(500).json({ message: 'Server error while creating order' });
+  }
 };
 
 async function updateProductStock(items) {
@@ -218,11 +221,9 @@ async function updateProductStock(items) {
     }
 }
 
-// Placing orders using COD Method
+// PATCH placeOrder
 const placeOrder = async (req, res) => {
   try {
-    console.log('req.user in placeOrder:', req.user);
-    console.log('Received order payload at /api/orders/place:', req.body);
     const {
       customerName,
       email,
@@ -233,17 +234,14 @@ const placeOrder = async (req, res) => {
       paymentMethod,
       isTestOrder
     } = req.body;
-
     if (!customerName || !email || !phone || !address || !items || !totalPrice || !paymentMethod) {
       return res.status(400).json({ message: 'Missing required fields' });
     }
-
     await updateProductStock(items);
-
-    // Always set userId and email from the most reliable source
+    const userEmail = getOrderUserEmail(req, email);
     const orderData = {
       customerName,
-      email,
+      email: userEmail,
       phone,
       address: {
         line1: address.line1,
@@ -262,17 +260,11 @@ const placeOrder = async (req, res) => {
       totalPrice,
       paymentMethod,
       status: 'Pending',
-      isTestOrder: isTestOrder || false
+      isTestOrder: isTestOrder || false,
+      userId: req.user && req.user.id,
+      userInfo: { email: userEmail }
     };
-    if (req.user && req.user.id) {
-      orderData.userId = req.user.id;
-    }
-    orderData.email = req.body.email || (req.user && req.user.email);
-
     const order = await orderModel.create(orderData);
-
-    console.log('Order created:', order);
-
     res.status(201).json({ success: true, order });
   } catch (err) {
     console.error('Place Order Error:', err);
@@ -280,15 +272,13 @@ const placeOrder = async (req, res) => {
   }
 };
 
-// Placing orders using Stripe Method
+// PATCH placeOrderStripe
 const placeOrderStripe = async (req,res) => {
     try {
         const { userId, items, amount, address} = req.body
         const { origin } = req.headers;
-
-        // Update product stock
         await updateProductStock(items);
-
+        const userEmail = getOrderUserEmail(req, req.body.email);
         const orderData = {
             userId,
             items,
@@ -296,7 +286,9 @@ const placeOrderStripe = async (req,res) => {
             amount,
             paymentMethod:"Stripe",
             payment:false,
-            date: Date.now()
+            date: Date.now(),
+            email: userEmail,
+            userInfo: { email: userEmail }
         }
 
         const newOrder = new orderModel(orderData)
@@ -373,14 +365,12 @@ const verifyStripe = async (req,res) => {
     }
 }
 
-// Placing orders using Razorpay Method
+// PATCH placeOrderRazorpay
 const placeOrderRazorpay = async (req,res) => {
     try {
         const { userId, items, amount, address} = req.body
-
-        // Update product stock
         await updateProductStock(items);
-
+        const userEmail = getOrderUserEmail(req, req.body.email);
         const orderData = {
             userId,
             items,
@@ -388,7 +378,9 @@ const placeOrderRazorpay = async (req,res) => {
             amount,
             paymentMethod:"Razorpay",
             payment:false,
-            date: Date.now()
+            date: Date.now(),
+            email: userEmail,
+            userInfo: { email: userEmail }
         }
 
         const newOrder = new orderModel(orderData)
@@ -451,18 +443,15 @@ const verifyRazorpay = async (req,res) => {
     }
 }
 
-// Process card payment
+// PATCH processCardPayment
 const processCardPayment = async (req, res) => {
     try {
-        const { userId, items, amount, address, cardDetails } = req.body;
-
+        const { userId, items, amount, address, cardDetails, email } = req.body;
         if (!cardDetails) {
             return res.json({ success: false, message: "Card details are required" });
         }
-
-        // Update product stock
         await updateProductStock(items);
-
+        const userEmail = getOrderUserEmail(req, email);
         const orderData = {
             userId,
             items,
@@ -470,17 +459,14 @@ const processCardPayment = async (req, res) => {
             amount,
             paymentMethod: "Card",
             payment: true, // Assuming card payment is immediate
-            date: Date.now()
+            date: Date.now(),
+            email: userEmail,
+            userInfo: { email: userEmail }
         };
-
         const newOrder = new orderModel(orderData);
         await newOrder.save();
-
-        // Clear user cart
         await userModel.findByIdAndUpdate(userId, { cartData: {} });
-
         res.json({ success: true, message: "Order placed successfully", orderId: newOrder._id });
-
     } catch (error) {
         console.log(error);
         res.json({ success: false, message: error.message });
