@@ -1,3 +1,4 @@
+"use client"
 import { motion } from "framer-motion"
 import { Heart, Instagram, Sparkles, Quote, Baby, Users, Smile } from "lucide-react"
 import Image from "next/image"
