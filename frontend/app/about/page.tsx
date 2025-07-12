@@ -4,9 +4,6 @@ import { Heart, Instagram, Sparkles, Quote, Baby, Users, Smile } from "lucide-re
 import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Metadata } from "next"
-
-// SEO Metadata
 
 // Animation variants
 const fadeInUp = {
