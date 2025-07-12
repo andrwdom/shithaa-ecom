@@ -5,24 +5,24 @@ import ContactPageClient from "./ContactPageClient"
 
 // SEO Metadata
 export const metadata: Metadata = {
-  title: "Contact Shinthaa - Get in Touch",
-  description: "Contact Shinthaa for any questions about our maternity wear and feeding essentials. We're here to help you find the perfect pieces for your journey.",
+  title: "Contact Shithaa - Get in Touch",
+  description: "Contact Shithaa for any questions about our maternity wear and feeding essentials. We're here to help you find the perfect pieces for your journey.",
   keywords: [
-    "contact Shinthaa",
+    "contact Shithaa",
     "maternity wear contact",
     "feeding wear support",
-    "Shinthaa customer service",
+    "Shithaa customer service",
     "pregnancy clothing help",
-    "Shinthaa contact information"
+    "Shithaa contact information"
   ],
   openGraph: {
-    title: "Contact Shinthaa - Get in Touch",
-    description: "Contact Shinthaa for any questions about our maternity wear and feeding essentials.",
+    title: "Contact Shithaa - Get in Touch",
+    description: "Contact Shithaa for any questions about our maternity wear and feeding essentials.",
     images: ['/shitha-logo.jpg'],
   },
   twitter: {
-    title: "Contact Shinthaa - Get in Touch",
-    description: "Contact Shinthaa for any questions about our maternity wear and feeding essentials.",
+    title: "Contact Shithaa - Get in Touch",
+    description: "Contact Shithaa for any questions about our maternity wear and feeding essentials.",
   },
 }
 

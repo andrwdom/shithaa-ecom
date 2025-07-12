@@ -12,38 +12,38 @@ export const generateMetadata = async ({ params }: { params: Promise<{ productId
     
     if (!product) {
       return {
-        title: "Product Not Found - Shinthaa",
+        title: "Product Not Found - Shithaa",
         description: "The requested product could not be found.",
       }
     }
 
     return {
-      title: `${product.name} - Shinthaa`,
-      description: product.description || `Discover ${product.name} at Shinthaa. Premium quality maternity wear designed with love for expecting mothers.`,
+      title: `${product.name} - Shithaa`,
+      description: product.description || `Discover ${product.name} at Shithaa. Premium quality maternity wear designed with love for expecting mothers.`,
       keywords: [
         product.name.toLowerCase(),
         product.category?.toLowerCase(),
         "maternity wear",
         "feeding wear",
         "pregnancy clothes",
-        "Shinthaa",
+        "Shithaa",
         "maternity fashion"
       ],
       openGraph: {
-        title: `${product.name} - Shinthaa`,
-        description: product.description || `Discover ${product.name} at Shinthaa.`,
+        title: `${product.name} - Shithaa`,
+        description: product.description || `Discover ${product.name} at Shithaa.`,
         images: product.images?.[0] ? [product.images[0]] : ['/shitha-logo.jpg'],
       },
       twitter: {
-        title: `${product.name} - Shinthaa`,
-        description: product.description || `Discover ${product.name} at Shinthaa.`,
+        title: `${product.name} - Shithaa`,
+        description: product.description || `Discover ${product.name} at Shithaa.`,
         images: product.images?.[0] ? [product.images[0]] : ['/shitha-logo.jpg'],
       },
     }
   } catch (error) {
     return {
-      title: "Product - Shinthaa",
-      description: "Discover premium maternity wear at Shinthaa.",
+      title: "Product - Shithaa",
+      description: "Discover premium maternity wear at Shithaa.",
     }
   }
 }

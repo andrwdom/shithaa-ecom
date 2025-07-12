@@ -50,7 +50,7 @@ export const createCarouselBanner = async (req, res) => {
     }
 
     try {
-      const imageUrl = `https://api.mysite.com/images/carousel/${imageFile.filename}`;
+      const imageUrl = `https://www.shithaa.in/images/carousel/${imageFile.filename}`;
 
       const banner = new CarouselBanner({
         image: imageUrl,
@@ -91,7 +91,7 @@ export const updateCarouselBanner = async (req, res) => {
     };
 
     if (imageFile) {
-      const imageUrl = `https://api.mysite.com/images/carousel/${imageFile.filename}`;
+      const imageUrl = `https://www.shithaa.in/images/carousel/${imageFile.filename}`;
       updateData.image = imageUrl;
     }
 

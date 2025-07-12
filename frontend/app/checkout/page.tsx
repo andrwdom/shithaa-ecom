@@ -3,8 +3,8 @@ import CheckoutPageClient from './CheckoutPageClient'
 
 // SEO Metadata for checkout page
 export const metadata: Metadata = {
-  title: "Checkout - Shinthaa",
-  description: "Complete your order for elegant maternity wear at Shinthaa. Secure checkout with multiple payment options.",
+  title: "Checkout - Shithaa",
+  description: "Complete your order for elegant maternity wear at Shithaa. Secure checkout with multiple payment options.",
   robots: {
     index: false,
     follow: false,

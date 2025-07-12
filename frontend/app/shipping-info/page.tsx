@@ -3,24 +3,24 @@ import { Metadata } from "next";
 
 // SEO Metadata for shipping info page
 export const metadata: Metadata = {
-  title: "Shipping Information - Shinthaa",
-  description: "Learn about Shinthaa's shipping policies, delivery times, and shipping costs. Fast and reliable delivery across India.",
+  title: "Shipping Information - Shithaa",
+  description: "Learn about Shithaa's shipping policies, delivery times, and shipping costs. Fast and reliable delivery across India.",
   keywords: [
     "shipping information",
     "delivery times",
     "shipping policy",
     "maternity wear shipping",
-    "Shinthaa delivery",
+    "Shithaa delivery",
     "free shipping"
   ],
   openGraph: {
-    title: "Shipping Information - Shinthaa",
-    description: "Learn about Shinthaa's shipping policies, delivery times, and shipping costs.",
+    title: "Shipping Information - Shithaa",
+    description: "Learn about Shithaa's shipping policies, delivery times, and shipping costs.",
     images: ['/shitha-logo.jpg'],
   },
   twitter: {
-    title: "Shipping Information - Shinthaa",
-    description: "Learn about Shinthaa's shipping policies, delivery times, and shipping costs.",
+    title: "Shipping Information - Shithaa",
+    description: "Learn about Shithaa's shipping policies, delivery times, and shipping costs.",
   },
 }
 

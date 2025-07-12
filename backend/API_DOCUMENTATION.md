@@ -646,7 +646,7 @@ NODE_ENV=development
 
 ## Notes
 
-1. All image URLs are now served from https://api.mysite.com/images/
+1. All image URLs are now served from https://www.shithaa.in/images/
 2. JWT tokens expire after 7 days
 3. Pagination is available on all list endpoints
 4. Search is case-insensitive

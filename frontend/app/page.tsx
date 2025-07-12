@@ -115,7 +115,7 @@ export default function Home() {
   const bestSellers = products.filter((p: Product) => p.isBestSeller)
 
   return (
-    <PageLoading loadingMessage="Welcome to Shinthaa" minLoadingTime={2000}>
+    <PageLoading loadingMessage="Welcome to Shithaa" minLoadingTime={2000}>
       <div className="min-h-screen bg-white">
         <HeroSection />
         <CategoryStrip onCategoryClick={handleCategorySelect} currentCategory={undefined} />
