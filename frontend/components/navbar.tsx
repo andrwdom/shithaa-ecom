@@ -76,7 +76,7 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
                 onClick={() => (window.location.href = "/")}
                 className="text-xl lg:text-2xl xl:text-3xl font-bold text-[rgb(71,60,102)] tracking-wider font-serif hover:text-[rgb(71,60,102)]/80 transition-colors duration-300 cursor-pointer"
               >
-                SHITHA
+                SHITHAA
               </button>
             </div>
 
