@@ -67,7 +67,18 @@ const orderSchema = new mongoose.Schema({
     paymentStatus: { type: String, default: 'pending' },
     orderStatus: { type: String, default: 'pending' },
     placedAt: { type: Date, default: Date.now },
-    isTestOrder: { type: Boolean, default: false }
+    isTestOrder: { type: Boolean, default: false },
+    // Payment gateway fields
+    phonepeTransactionId: { type: String },
+    razorpayOrderId: { type: String },
+    razorpayPaymentId: { type: String },
+    stripeSessionId: { type: String },
+    // Legacy payment field
+    payment: { type: Boolean, default: false },
+    // Legacy fields for backward compatibility
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'user' },
+    amount: { type: Number },
+    date: { type: Date, default: Date.now }
 }, { timestamps: true });
 
 const orderModel = mongoose.models.order || mongoose.model('order',orderSchema)

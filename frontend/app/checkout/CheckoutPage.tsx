@@ -171,6 +171,37 @@ export default function CheckoutPage() {
     }
   }
 
+  // PhonePe payment handler
+  async function handlePhonePePayment() {
+    setProcessing(true);
+    setPaymentError(null);
+    try {
+      // 1. Create PhonePe payment session on backend
+      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + '/api/payment/phonepe/create-session';
+      const res = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: orderSummary.total,
+          shipping,
+          billing,
+          cartItems,
+          coupon,
+          userId: user?.mongoId,
+          email: user?.email,
+        })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.redirectUrl) throw new Error(data.message || 'Failed to create payment session');
+
+      // 2. Redirect to PhonePe payment page
+      window.location.href = data.redirectUrl;
+    } catch (err: any) {
+      setPaymentError(err.message || 'Payment failed. Try again.');
+      setProcessing(false);
+    }
+  }
+
   // Dummy payment handler
   async function handleDummyPayment() {
     setProcessing(true);
@@ -240,6 +271,14 @@ export default function CheckoutPage() {
                 disabled={processing}
               >
                 {processing ? <span className="loading loading-spinner loading-md"></span> : 'Confirm Order (Razorpay)'}
+              </button>
+              <button
+                type="button"
+                className="w-full h-14 text-lg font-bold rounded-xl shadow bg-gray-300 text-[#6C6385] transition-all duration-200 hover:bg-gray-400 active:scale-95 focus:outline-none focus:ring-4 focus:ring-[#bcb6d6] disabled:opacity-60 disabled:cursor-not-allowed"
+                onClick={handlePhonePePayment}
+                disabled={processing}
+              >
+                {processing ? <span className="loading loading-spinner loading-md"></span> : 'Confirm Order (PhonePe)'}
               </button>
               <button
                 type="button"
