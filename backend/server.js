@@ -212,10 +212,7 @@ app.use((err, req, res, next) => {
             timestamp: new Date().toISOString()
         });
         
-        // Send CORS headers even for errors
-        res.setHeader('Access-Control-Allow-Origin', req.headers.origin || 'https://admin.shithaa.com');
-        res.setHeader('Access-Control-Allow-Credentials', 'true');
-        
+        // Don't manually set CORS headers - let the main CORS middleware handle it
         res.status(403).json({
             success: false,
             message: 'CORS: Origin not allowed',
