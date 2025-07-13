@@ -230,23 +230,26 @@ app.use((err, req, res, next) => {
 // Initialize Firebase Admin SDK
 try {
   if (!admin.apps.length) {
-    // Try to initialize with service account if available
     if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
       admin.initializeApp({
         credential: admin.credential.applicationDefault(),
       });
       console.log('Firebase Admin SDK initialized with service account');
-    } else {
+    } else if (process.env.NODE_ENV === 'development') {
       // For development, try to initialize with project ID only
       admin.initializeApp({
         projectId: process.env.FIREBASE_PROJECT_ID || 'maternity-test',
       });
-      console.log('Firebase Admin SDK initialized with project ID only');
+      console.log('Firebase Admin SDK initialized with project ID only (development mode)');
+    } else {
+      console.error('FATAL: GOOGLE_APPLICATION_CREDENTIALS is not set. Firebase Admin SDK cannot verify tokens in production.');
+      process.exit(1);
     }
   }
 } catch (error) {
   console.error('Firebase Admin SDK initialization failed:', error.message);
   console.log('Firebase Admin SDK will not be available for token verification');
+  process.exit(1);
 }
 
 // Graceful shutdown
