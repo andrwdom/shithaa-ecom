@@ -87,90 +87,6 @@ export default function CheckoutPage() {
     setOrderSummary({ subtotal, discount, shipping, total });
   }, [cartItems, coupon, shipping]);
 
-  // Razorpay handler
-  async function handleRazorpayPayment() {
-    setProcessing(true);
-    setPaymentError(null);
-    try {
-      // 1. Create Razorpay order/session on backend
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + '/api/payment/razorpay/create-session';
-      const res = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          amount: orderSummary.total,
-          shipping,
-          billing,
-          cartItems,
-          coupon,
-        })
-      });
-      const data = await res.json();
-      if (!res.ok || !data.razorpayOrderId) throw new Error(data.message || 'Failed to create payment session');
-
-      // 2. Load Razorpay SDK if not already loaded
-      if (!window.Razorpay) {
-        await new Promise((resolve, reject) => {
-          const script = document.createElement('script');
-          script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-          script.onload = resolve;
-          script.onerror = reject;
-          document.body.appendChild(script);
-        });
-      }
-
-      // 3. Open Razorpay popup
-      const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_xxx',
-        amount: orderSummary.total * 100,
-        currency: 'INR',
-        name: 'Shitha Clothing',
-        description: 'Order Payment',
-        order_id: data.razorpayOrderId,
-        handler: async function (response: any) {
-          // 4. On payment success, save order to backend
-          const orderRes = await fetch((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + '/api/orders', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              shipping,
-              billing,
-              cartItems,
-              coupon,
-              paymentStatus: 'paid',
-              paymentMethod: 'razorpay',
-              razorpayPaymentId: response.razorpay_payment_id,
-              razorpayOrderId: response.razorpay_order_id,
-              userId: user?.mongoId,
-              email: user?.email,
-            })
-          });
-          const orderData = await orderRes.json();
-          if (orderRes.ok && orderData.order && orderData.order._id) {
-            router.push(`/order-success?orderId=${orderData.order._id}`);
-          } else {
-            setPaymentError(orderData.message || 'Order save failed');
-          }
-          setProcessing(false);
-        },
-        prefill: {
-          name: shipping.fullName,
-          email: shipping.email,
-          contact: shipping.phone,
-        },
-        theme: { color: '#6C6385' },
-        modal: {
-          ondismiss: () => setProcessing(false),
-        },
-      };
-      const rzp = new window.Razorpay(options);
-      rzp.open();
-    } catch (err: any) {
-      setPaymentError(err.message || 'Payment failed. Try again.');
-      setProcessing(false);
-    }
-  }
-
   // PhonePe payment handler
   async function handlePhonePePayment() {
     setProcessing(true);
@@ -267,14 +183,6 @@ export default function CheckoutPage() {
               <button
                 type="button"
                 className="w-full h-14 text-lg font-bold rounded-xl shadow bg-[#6C6385] text-white transition-all duration-200 hover:bg-[#574e6b] active:scale-95 focus:outline-none focus:ring-4 focus:ring-[#bcb6d6] disabled:opacity-60 disabled:cursor-not-allowed"
-                onClick={handleRazorpayPayment}
-                disabled={processing}
-              >
-                {processing ? <span className="loading loading-spinner loading-md"></span> : 'Confirm Order (Razorpay)'}
-              </button>
-              <button
-                type="button"
-                className="w-full h-14 text-lg font-bold rounded-xl shadow bg-gray-300 text-[#6C6385] transition-all duration-200 hover:bg-gray-400 active:scale-95 focus:outline-none focus:ring-4 focus:ring-[#bcb6d6] disabled:opacity-60 disabled:cursor-not-allowed"
                 onClick={handlePhonePePayment}
                 disabled={processing}
               >
