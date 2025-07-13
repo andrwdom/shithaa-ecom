@@ -70,9 +70,6 @@ const orderSchema = new mongoose.Schema({
     isTestOrder: { type: Boolean, default: false },
     // Payment gateway fields
     phonepeTransactionId: { type: String },
-    razorpayOrderId: { type: String },
-    razorpayPaymentId: { type: String },
-    stripeSessionId: { type: String },
     // Legacy payment field
     payment: { type: Boolean, default: false },
     // Legacy fields for backward compatibility

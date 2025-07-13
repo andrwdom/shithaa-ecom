@@ -636,23 +636,7 @@ Get all active carousel banners.
 PORT=4000
 MONGODB_URI=mongodb://localhost:27017/jjtex
 JWT_SECRET=your-jwt-secret
-STRIPE_SECRET_KEY=your-stripe-secret
-RAZORPAY_KEY_ID=your-razorpay-key
-RAZORPAY_KEY_SECRET=your-razorpay-secret
 ADMIN_EMAIL=admin@example.com
 ADMIN_PASSWORD=admin-password
 NODE_ENV=development
 ```
-
-## Notes
-
-1. All image URLs are now served from https://www.shithaa.in/images/
-2. JWT tokens expire after 7 days
-3. Pagination is available on all list endpoints
-4. Search is case-insensitive
-5. Price filters work with min/max values
-6. Stock is automatically updated when orders are placed
-7. Cart is cleared after successful order placement
-8. Categories are separate entities with product counts
-9. Contact form submissions are stored in database
-10. All timestamps are in ISO format 

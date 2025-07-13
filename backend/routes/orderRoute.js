@@ -1,13 +1,9 @@
 import express from 'express'
 import {
     placeOrder, 
-    placeOrderStripe, 
-    placeOrderRazorpay, 
     allOrders, 
     userOrders, 
     updateStatus, 
-    verifyStripe, 
-    verifyRazorpay, 
     processCardPayment, 
     cancelOrder,
     getUserOrders,
@@ -38,10 +34,6 @@ orderRouter.post('/status', adminAuth, updateStatus)
 // User Features - Legacy routes for backward compatibility
 orderRouter.post('/userorders', verifyToken, userOrders)
 orderRouter.post('/place', verifyToken, placeOrder)
-orderRouter.post('/place-stripe', verifyToken, placeOrderStripe)
-orderRouter.post('/place-razorpay', verifyToken, placeOrderRazorpay)
-orderRouter.post('/verify-stripe', verifyToken, verifyStripe)
-orderRouter.post('/verify-razorpay', verifyToken, verifyRazorpay)
 orderRouter.post('/process-card', verifyToken, processCardPayment)
 orderRouter.post('/cancel', verifyToken, cancelOrder)
 
