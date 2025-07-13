@@ -92,7 +92,7 @@ export default function CheckoutClient() {
     if (!user) return null;
     try {
       const idToken = await getIdToken(user, true); // force refresh
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/user/firebase-login`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/user/firebase-login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ idToken }),
@@ -129,7 +129,7 @@ export default function CheckoutClient() {
     setCouponSuccess("");
     setCouponLoading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/coupons/validate`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/coupons/validate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code: coupon }),
@@ -272,7 +272,7 @@ export default function CheckoutClient() {
       console.log('Order payload:', payload);
       console.log('Form state:', form);
       console.log('User:', user);
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/orders`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/orders`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

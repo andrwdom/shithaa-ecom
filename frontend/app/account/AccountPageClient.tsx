@@ -66,7 +66,7 @@ export default function AccountPageClient() {
     // Try to get a new backend token using Firebase ID token
     try {
       const idToken = await getIdToken(user)
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/user/firebase-login`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/user/firebase-login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ idToken }),
@@ -114,7 +114,7 @@ export default function AccountPageClient() {
       const token = await ensureBackendToken()
       if (token) {
         // Fetch order count
-        const countRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/orders/user/count`, {
+        const countRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/orders/user/count`, {
           headers: { token }
         })
         if (countRes.ok) {
@@ -124,7 +124,7 @@ export default function AccountPageClient() {
           }
         }
         // Fetch all orders for this email
-        const res = await fetch((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + `/api/orders/by-email/${encodeURIComponent(user.email)}`);
+        const res = await fetch((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + `/orders/by-email/${encodeURIComponent(user.email)}`);
         const data = await res.json();
         if (res.ok && data.orders) {
           // Robust date sorting: prefer createdAt, then date, then orderDate, then updatedAt
