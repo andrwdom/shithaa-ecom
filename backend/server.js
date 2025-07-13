@@ -134,25 +134,19 @@ const corsOptions = {
         'x-requested-with',
         'Accept',
         'Origin',
-        'X-Requested-With',
-        'Access-Control-Allow-Origin',
-        'Access-Control-Allow-Headers',
-        'Access-Control-Allow-Methods'
+        'X-Requested-With'
     ],
     exposedHeaders: [
         'Content-Range',
-        'X-Content-Range',
-        'Access-Control-Allow-Origin',
-        'Access-Control-Allow-Credentials'
+        'X-Content-Range'
     ],
     preflightContinue: false,
     optionsSuccessStatus: 204,
     maxAge: 86400 // 24 hours
 };
 
-// Apply CORS before all routes
+// Apply CORS middleware only once
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
 
 // middlewares
 app.use(express.json())
@@ -200,7 +194,7 @@ app.get('/api/cors-test', (req, res) => {
     });
 });
 
-// CORS error handler
+// CORS error handler - simplified
 app.use((err, req, res, next) => {
     if (err.message === 'Not allowed by CORS') {
         console.error('CORS Error Details:', {
@@ -212,7 +206,6 @@ app.use((err, req, res, next) => {
             timestamp: new Date().toISOString()
         });
         
-        // Don't manually set CORS headers - let the main CORS middleware handle it
         res.status(403).json({
             success: false,
             message: 'CORS: Origin not allowed',
