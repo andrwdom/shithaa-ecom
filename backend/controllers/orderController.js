@@ -1,8 +1,6 @@
 import orderModel from "../models/orderModel.js";
 import userModel from "../models/userModel.js";
 import productModel from "../models/productModel.js";
-import Stripe from 'stripe'
-import razorpay from 'razorpay'
 import { successResponse, errorResponse, paginatedResponse } from '../utils/response.js'
 import PDFDocument from "pdfkit";
 import { Readable } from "stream";
@@ -12,14 +10,6 @@ import mongoose from 'mongoose';
 // global variables
 const currency = 'inr'
 const deliveryCharge = 10
-
-// gateway initialize
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
-
-const razorpayInstance = new razorpay({
-    key_id : process.env.RAZORPAY_KEY_ID,
-    key_secret : process.env.RAZORPAY_KEY_SECRET,
-})
 
 // GET /api/orders/user - RESTful user orders fetch
 export const getUserOrders = async (req, res) => {
