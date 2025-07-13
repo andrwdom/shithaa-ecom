@@ -93,10 +93,14 @@ export default function CheckoutPage() {
     setPaymentError(null);
     try {
       // 1. Create PhonePe payment session on backend
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
       const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + '/api/payment/phonepe/create-session';
       const res = await fetch(apiUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { token } : {})
+        },
         body: JSON.stringify({
           amount: orderSummary.total,
           shipping,
