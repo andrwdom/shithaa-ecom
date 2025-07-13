@@ -112,7 +112,17 @@ const corsOptions = {
     origin: function (origin, callback) {
         // Allow requests with no origin (like mobile apps or curl requests)
         if (!origin) return callback(null, true);
-        if (allowedOrigins.includes(origin)) return callback(null, true);
+        
+        // Debug logging
+        console.log('CORS Request from origin:', origin);
+        console.log('Allowed origins:', allowedOrigins);
+        
+        if (allowedOrigins.includes(origin)) {
+            console.log('CORS: Origin allowed');
+            return callback(null, true);
+        }
+        
+        console.log('CORS: Origin blocked:', origin);
         return callback(new Error('Not allowed by CORS'));
     },
     credentials: true,
@@ -179,6 +189,16 @@ app.get('/api/orders/public-list', async (req, res) => {
 app.get('/', (req, res) => {
     res.send("API Working")
 })
+
+// CORS test endpoint
+app.get('/api/cors-test', (req, res) => {
+    res.json({ 
+        success: true, 
+        message: 'CORS test successful',
+        origin: req.headers.origin,
+        timestamp: new Date().toISOString()
+    });
+});
 
 // CORS error handler
 app.use((err, req, res, next) => {
