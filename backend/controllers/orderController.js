@@ -6,6 +6,24 @@ import PDFDocument from "pdfkit";
 import { Readable } from "stream";
 import Coupon from '../models/Coupon.js';
 import mongoose from 'mongoose';
+import crypto from 'crypto';
+
+// Conditional Razorpay initialization
+let razorpayInstance = null;
+try {
+    if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
+        const Razorpay = (await import('razorpay')).default;
+        razorpayInstance = new Razorpay({
+            key_id: process.env.RAZORPAY_KEY_ID,
+            key_secret: process.env.RAZORPAY_KEY_SECRET
+        });
+        console.log('Razorpay initialized successfully');
+    } else {
+        console.log('Razorpay environment variables not found, skipping initialization');
+    }
+} catch (error) {
+    console.log('Razorpay initialization failed:', error.message);
+}
 
 // global variables
 const currency = 'inr'
@@ -358,6 +376,13 @@ const verifyStripe = async (req,res) => {
 // PATCH placeOrderRazorpay
 const placeOrderRazorpay = async (req,res) => {
     try {
+        if (!razorpayInstance) {
+            return res.status(400).json({
+                success: false,
+                message: 'Razorpay is not configured. Please contact support.'
+            });
+        }
+
         const { userId, items, amount, address} = req.body
         await updateProductStock(items);
         const userEmail = getOrderUserEmail(req, req.body.email);
