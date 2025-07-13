@@ -1,10 +1,11 @@
 'use client'
 
+import { Suspense } from 'react'
 import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
-export default function PhonePeCallbackPage() {
+function PhonePeCallbackInner() {
   const [status, setStatus] = useState<'loading' | 'success' | 'failed'>('loading')
   const [message, setMessage] = useState('')
   const [orderId, setOrderId] = useState('')
@@ -149,5 +150,13 @@ export default function PhonePeCallbackPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function PhonePeCallbackPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="loading loading-spinner loading-lg text-blue-600"></div></div>}>
+      <PhonePeCallbackInner />
+    </Suspense>
   )
 } 
