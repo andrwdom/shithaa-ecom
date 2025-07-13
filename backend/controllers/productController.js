@@ -1,6 +1,7 @@
 import productModel from "../models/productModel.js"
 import { successResponse, errorResponse, paginatedResponse } from '../utils/response.js'
 import path from "path";
+import fs from "fs";
 
 // GET /api/products/:id - RESTful single product fetch
 export const getProductById = async (req, res) => {
@@ -242,6 +243,24 @@ export const removeProduct = async (req, res) => {
         const product = await productModel.findById(id);
         if (!product) {
             return res.json({ success: false, message: "Product not found" });
+        }
+        // Delete associated image files from local storage
+        if (Array.isArray(product.images)) {
+            for (const imageUrl of product.images) {
+                // Only handle local VPS URLs
+                const match = imageUrl.match(/\/images\/products\/(.+)$/);
+                if (match && match[1]) {
+                    const filename = match[1];
+                    const filePath = `/var/www/shithaa-ecom/uploads/products/${filename}`;
+                    try {
+                        if (fs.existsSync(filePath)) {
+                            fs.unlinkSync(filePath);
+                        }
+                    } catch (err) {
+                        console.error(`Failed to delete image file: ${filePath}`, err);
+                    }
+                }
+            }
         }
         await productModel.findByIdAndDelete(id);
         res.json({ success: true, message: "Product Removed Successfully" })
