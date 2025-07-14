@@ -14,6 +14,7 @@ import categoryRouter from './routes/categoryRoute.js'
 import contactRouter from './routes/contactRoute.js'
 import admin from 'firebase-admin'
 import orderModel from './models/orderModel.js'
+import Category from './models/Category.js'
 
 // App Config
 const app = express()
@@ -23,7 +24,23 @@ const PORT = process.env.PORT || 4000
 app.set('trust proxy', 1)
 
 // Connect to MongoDB
-connectDB()
+connectDB().then(async () => {
+  // Auto-seed default categories if none exist
+  const count = await Category.countDocuments();
+  if (count === 0) {
+    await Category.create([
+      { name: 'Maternity feeding wear', slug: 'maternity-feeding-wear', description: 'Feeding-friendly maternity wear for mothers.' },
+      { name: 'Zipless feeding lounge wear', slug: 'zipless-feeding-lounge-wear', description: 'Lounge wear for feeding without zips.' },
+      { name: 'Non feeding lounge wear', slug: 'non-feeding-lounge-wear', description: 'Lounge wear for non-feeding mothers.' }
+    ]);
+    console.log('Default categories seeded!');
+  }
+  else {
+    console.log('Categories already exist, skipping seeding.');
+  }
+}).catch(err => {
+  console.error('MongoDB connection error:', err);
+});
 
 // Debug logging middleware
 app.use((req, res, next) => {
