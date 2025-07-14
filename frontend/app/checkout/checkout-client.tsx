@@ -272,7 +272,7 @@ export default function CheckoutClient() {
       console.log('Order payload:', payload);
       console.log('Form state:', form);
       console.log('User:', user);
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/orders`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/orders`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -114,7 +114,7 @@ export default function AccountPageClient() {
       const token = await ensureBackendToken()
       if (token) {
         // Fetch order count
-        const countRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/orders/user/count`, {
+        const countRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/orders/user/count`, {
           headers: { token }
         })
         if (countRes.ok) {
@@ -124,7 +124,7 @@ export default function AccountPageClient() {
           }
         }
         // Fetch all orders for this email
-        const res = await fetch((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + `/orders/by-email/${encodeURIComponent(user.email)}`);
+        const res = await fetch((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + `/api/orders/by-email/${encodeURIComponent(user.email)}`);
         const data = await res.json();
         if (res.ok && data.orders) {
           // Robust date sorting: prefer createdAt, then date, then orderDate, then updatedAt
