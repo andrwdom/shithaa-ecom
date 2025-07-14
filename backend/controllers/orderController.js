@@ -69,12 +69,14 @@ export const getOrderById = async (req, res) => {
         if (!order) {
             return errorResponse(res, 'Order not found', 404);
         }
+        // Allow access to test orders for debugging
+        if (order.isTestOrder === true) {
+            return successResponse(res, order, 'Order fetched successfully (test order, debug mode)');
+        }
         // Check if user owns this order or is admin
         const userId = order.userInfo?.userId || order.userId;
-        if (order.isTestOrder !== true) {
-            if (!req.user || (userId && userId.toString() !== req.user.id && (!req.user.role || req.user.role !== 'admin'))) {
+        if (!req.user || (userId && userId.toString() !== req.user.id && (!req.user.role || req.user.role !== 'admin'))) {
             return errorResponse(res, 'Access denied', 403);
-            }
         }
         successResponse(res, order, 'Order fetched successfully');
     } catch (error) {
