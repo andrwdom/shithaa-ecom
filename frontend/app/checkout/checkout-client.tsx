@@ -92,7 +92,7 @@ export default function CheckoutClient() {
     if (!user) return null;
     try {
       const idToken = await getIdToken(user, true); // force refresh
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/user/firebase-login`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/user/firebase-login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ idToken }),
