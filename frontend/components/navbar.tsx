@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Menu, ShoppingBag, X, User, Mail, Info } from "lucide-react"
+import { Menu, ShoppingBag, X, User, Mail, Info, Home } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useCart } from "@/components/cart-context"
 import { useAuth } from "@/components/auth/useAuth"
@@ -131,6 +131,15 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
           {isMenuOpen && (
             <div className="md:hidden border-t border-gray-200 py-4 bg-gray-50">
               <div className="flex flex-col space-y-3">
+                {/* Home icon-only button */}
+                <button
+                  onClick={() => (window.location.href = "/")}
+                  className="flex items-center justify-center text-gray-600 hover:text-[rgb(71,60,102)] font-medium px-2 py-2 rounded-lg hover:bg-white transition-all"
+                  aria-label="Home"
+                >
+                  <Home className="h-5 w-5" />
+                </button>
+                {/* Categories button */}
                 <button
                   onClick={() => {
                     onCategoriesClick?.()

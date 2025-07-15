@@ -66,10 +66,6 @@ export default function HeroSection() {
                   fill
                   className="object-cover group-hover:scale-110 transition-transform duration-700"
                 />
-                {/* Gradient Overlay */}
-                <div
-                  className={`absolute inset-0 ${category.overlayColor} group-hover:bg-opacity-30 transition-all duration-300`}
-                />
               </div>
 
               {/* Glass Effect Content Overlay */}
