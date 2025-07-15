@@ -130,9 +130,9 @@ export const createPhonePeSession = async (req, res) => {
         });
 
         // PhonePe API endpoint
-        const phonepeUrl = PHONEPE_ENV === 'PROD' 
+        const phonepeUrl = PHONEPE_ENV === 'PROD'
             ? 'https://api.phonepe.com/apis/hermes/pg/v1/pay'
-            : 'https://api-preprod.phonepe.com/apis/hermes/pg/v1/pay';
+            : 'https://api-preprod.phonepe.com/apis/pg-sandbox/pg/v1/pay';
 
         // Make request to PhonePe
         let response;
@@ -297,9 +297,9 @@ export const verifyPhonePePayment = async (req, res) => {
         }
 
         // PhonePe status check API
-        const phonepeUrl = PHONEPE_ENV === 'PROD' 
+        const phonepeStatusUrl = PHONEPE_ENV === 'PROD'
             ? 'https://api.phonepe.com/apis/hermes/pg/v1/status'
-            : 'https://api-preprod.phonepe.com/apis/hermes/pg/v1/status';
+            : 'https://api-preprod.phonepe.com/apis/pg-sandbox/pg/v1/status';
 
         const payload = {
             merchantId: PHONEPE_MERCHANT_ID,
@@ -313,7 +313,7 @@ export const verifyPhonePePayment = async (req, res) => {
             .update(base64Payload + '/pg/v1/status' + PHONEPE_SECRET_KEY)
             .digest('hex');
 
-        const response = await axios.get(`${phonepeUrl}/${PHONEPE_MERCHANT_ID}/${merchantTransactionId}`, {
+        const response = await axios.get(`${phonepeStatusUrl}/${PHONEPE_MERCHANT_ID}/${merchantTransactionId}`, {
             headers: {
                 'Content-Type': 'application/json',
                 'X-VERIFY': checksum,
