@@ -174,7 +174,7 @@ const EditProduct = ({ product, token, onClose, onUpdate }) => {
           type="text"
           placeholder='Enter unique product ID'
           required
-          disabled={!!product.customId}
+          disabled={Boolean(product.customId && product.customId.trim())}
         />
       </div>
 
