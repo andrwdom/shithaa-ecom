@@ -4,6 +4,7 @@ import { backendUrl, currency } from '../App'
 import { toast } from 'react-toastify'
 import { assets } from '../assets/assets'
 import { useNavigate } from 'react-router-dom'
+import { FaUser, FaEnvelope, FaTruck, FaPhone, FaMapMarkerAlt, FaMoneyBill, FaCalendarAlt, FaBox, FaTag } from 'react-icons/fa';
 
 const STATUS_COLORS = {
   Pending: 'bg-yellow-100 text-yellow-800',
@@ -58,11 +59,13 @@ function OrderCard({ order, onView, userNameCache, fetchUserName }) {
       {/* Google Authenticated User Info */}
       <div className="rounded px-3 py-2 mb-2 bg-gray-100 border border-gray-200 flex flex-col gap-1">
         <div className="flex items-center gap-2 text-sm text-gray-700">
-          <span className="font-semibold">👤 User:</span>
+          <FaUser className="inline-block text-gray-500" />
+          <span className="font-semibold">User:</span>
           <span>{displayName || userInfo.email || 'Unknown User'}</span>
         </div>
         <div className="flex items-center gap-2 text-sm text-gray-700 flex-row">
-          <span className="font-semibold">📧 Email:</span>
+          <FaEnvelope className="inline-block text-gray-500" />
+          <span className="font-semibold">Email:</span>
           <span
             className="truncate max-w-[160px] block"
             title={userInfo.email}
@@ -74,22 +77,23 @@ function OrderCard({ order, onView, userNameCache, fetchUserName }) {
       </div>
       {/* Shipping Info */}
       <div className="flex items-center justify-between">
-        <div className="font-bold text-lg text-gray-800 truncate">🚚 {name}</div>
+        <div className="font-bold text-lg text-gray-800 truncate flex items-center gap-2"><FaTruck className="inline-block text-gray-500" /> {name}</div>
         <StatusBadge status={status} />
       </div>
       <div className="flex flex-wrap gap-2 text-sm text-gray-600">
-        <span>📞 <b>{phone}</b></span>
-        <span>📬 <b>{shipping?.address || [shipping?.line1, shipping?.city, shipping?.state, shipping?.country, shipping?.pincode].filter(Boolean).join(', ')}</b></span>
+        <span className="flex items-center gap-1"><FaPhone className="inline-block text-red-500" /> <b>{phone}</b></span>
+        <span className="flex items-center gap-1"><FaMapMarkerAlt className="inline-block text-gray-500" /> <b>{shipping?.address || [shipping?.line1, shipping?.city, shipping?.state, shipping?.country, shipping?.pincode].filter(Boolean).join(', ')}</b></span>
       </div>
       <div className="flex flex-wrap gap-2 text-sm text-gray-600">
-        <span>💸 Total: <b>{currency}{total}</b></span>
-        <span>📅 Date: <b>{formatDate(placedAt)}</b></span>
+        <span className="flex items-center gap-1"><FaMoneyBill className="inline-block text-green-600" /> Total: <b>{currency}{total}</b></span>
+        <span className="flex items-center gap-1"><FaCalendarAlt className="inline-block text-gray-500" /> Date: <b>{formatDate(placedAt)}</b></span>
       </div>
       {isTestOrder && (
         <span className="inline-block px-2 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">Test Order</span>
       )}
       <button
-        className="mt-2 w-full py-2 rounded bg-theme-400 text-white font-semibold hover:bg-theme-500 transition"
+        className="mt-2 w-full py-2 rounded font-semibold transition"
+        style={{ background: '#4D1E64', color: '#fff' }}
         onClick={() => onView(order)}
       >
         View Details
@@ -137,11 +141,13 @@ function OrderDetailsModal({ order, onClose, onStatusChange }) {
         {/* Google Authenticated User Info */}
         <div className="rounded px-3 py-2 mb-3 bg-gray-100 border border-gray-200 flex flex-col gap-1">
           <div className="flex items-center gap-2 text-sm text-gray-700">
-            <span className="font-semibold">👤 User:</span>
+            <FaUser className="inline-block text-gray-500" />
+            <span className="font-semibold">User:</span>
             <span>{displayName}</span>
           </div>
           <div className="flex items-center gap-2 text-sm text-gray-700">
-            <span className="font-semibold">📧 Email:</span>
+            <FaEnvelope className="inline-block text-gray-500" />
+            <span className="font-semibold">Email:</span>
             <span>{userInfo.email}</span>
           </div>
         </div>

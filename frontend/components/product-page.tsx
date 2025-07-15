@@ -31,11 +31,7 @@ export default function ProductPage({ product, onBack }: ProductPageProps) {
   const [quantity, setQuantity] = useState(1)
 
   // Stock status logic
-  const stock = typeof product.stock === 'number' ? product.stock : 0;
-  let stockStatus = '';
-  if (stock > 5) stockStatus = 'In Stock';
-  else if (stock > 0) stockStatus = `Only ${stock} left!`;
-  else stockStatus = 'Out of Stock';
+  // (removed all stock status display)
 
   const handleBuyNow = () => {
     // Stub for buy now functionality
@@ -121,7 +117,7 @@ export default function ProductPage({ product, onBack }: ProductPageProps) {
                 {product.originalPrice > product.price && (
                   <span className="text-xl text-gray-500 line-through">₹{product.originalPrice.toLocaleString()}</span>
                 )}
-                <span className={`ml-4 text-base font-semibold ${stock === 0 ? 'text-red-500' : stock <= 5 ? 'text-yellow-600' : 'text-green-600'}`}>{stockStatus}</span>
+                <span className={`ml-4 text-base font-semibold ${stock === 0 ? 'text-red-500' : stock <= 5 ? 'text-yellow-600' : 'text-green-600'}`}></span>
               </div>
 
               <p className="text-gray-600 leading-relaxed">{product.description}</p>

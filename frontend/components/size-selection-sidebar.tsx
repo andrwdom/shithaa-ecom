@@ -178,8 +178,7 @@ export default function SizeSelectionSidebar({
                       disabled={s.stock === 0}
                     >
                       {s.size}
-                      {s.stock === 0 && <span className="text-[10px] text-[#E75480] mt-1 font-bold">Out</span>}
-                      {s.stock > 0 && s.stock <= 5 && <span className="text-[10px] text-[#FDE68A] mt-1 font-semibold flex items-center gap-1">{s.stock} left <svg className="inline h-3 w-3 text-[#FDE68A]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l2 2" /></svg></span>}
+                      {s.stock === 0 && <span className="text-[10px] text-[#E75480] mt-1 font-bold line-through">Out</span>}
                     </button>
                   ))}
                 </div>
@@ -210,9 +209,9 @@ export default function SizeSelectionSidebar({
                   <Plus className="h-4 w-4" />
                 </button>
               </div>
-              {/* Stock status */}
-              {selectedSize && (
-                <div className={`text-xs font-semibold mt-1 ${selectedSizeStock === 0 ? 'text-[#E75480]' : selectedSizeStock <= 5 ? 'text-[#FDE68A]' : 'text-green-600'}`}>{stockStatus}</div>
+              {/* Show out of stock message if trying to exceed stock */}
+              {selectedSize && selectedSizeStock > 0 && quantity >= selectedSizeStock && (
+                <div className="text-xs text-red-500 font-semibold mt-1">No stock left for this quantity</div>
               )}
             </div>
           </div>

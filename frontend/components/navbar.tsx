@@ -131,14 +131,14 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
           {isMenuOpen && (
             <div className="md:hidden border-t border-gray-200 py-4 bg-gray-50">
               <div className="flex flex-col space-y-3">
-                {/* Home icon-only button */}
-                <button
-                  onClick={() => (window.location.href = "/")}
-                  className="flex items-center justify-center text-gray-600 hover:text-[rgb(71,60,102)] font-medium px-2 py-2 rounded-lg hover:bg-white transition-all"
-                  aria-label="Home"
+                {/* Home button with icon and text */}
+                <a
+                  href="/"
+                  className="flex items-center gap-3 text-gray-600 hover:text-[rgb(71,60,102)] font-medium px-2 py-2 rounded-lg hover:bg-white transition-all"
                 >
                   <Home className="h-5 w-5" />
-                </button>
+                  <span>home</span>
+                </a>
                 {/* Categories button */}
                 <button
                   onClick={() => {

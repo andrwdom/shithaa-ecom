@@ -16,6 +16,7 @@ const EditProduct = ({ product, token, onClose, onUpdate }) => {
   const [bestseller, setBestseller] = useState(product.bestseller)
   const [loading, setLoading] = useState(false)
   const [stock, setStock] = useState(product.stock || 0)
+  const [customId, setCustomId] = useState(product._id || "");
 
   const CATEGORY_OPTIONS = [
     "Maternity Feeding Wear",
@@ -64,6 +65,7 @@ const EditProduct = ({ product, token, onClose, onUpdate }) => {
       formData.append("bestseller", bestseller)
       formData.append("sizes", JSON.stringify(sizes.filter(s => s.stock > 0)))
       formData.append("stock", stock)
+      formData.append("customId", customId)
 
       if (image1) formData.append("image1", image1)
       if (image2) formData.append("image2", image2)
@@ -161,6 +163,18 @@ const EditProduct = ({ product, token, onClose, onUpdate }) => {
             />
           </label>
         </div>
+      </div>
+
+      <div className='w-full'>
+        <p className='mb-2'>Product ID (unique, required)</p>
+        <input
+          onChange={(e) => setCustomId(e.target.value)}
+          value={customId}
+          className='w-full max-w-[500px] px-3 py-2 border rounded'
+          type="text"
+          placeholder='Enter unique product ID'
+          required
+        />
       </div>
 
       <div className='w-full'>

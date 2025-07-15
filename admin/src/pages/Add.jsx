@@ -24,6 +24,7 @@ const Add = ({token}) => {
    const [categories, setCategories] = useState([]);
 
    const [selectedCategorySlug, setSelectedCategorySlug] = useState("");
+   const [customId, setCustomId] = useState("");
 
    const CATEGORY_OPTIONS = [
      "Maternity Feeding Wear",
@@ -48,9 +49,14 @@ const Add = ({token}) => {
    const onSubmitHandler = async (e) => {
     e.preventDefault();
     if (loading) return;
+    if (!customId.trim()) {
+      toast.error("Product ID is required");
+      return;
+    }
     setLoading(true);
     try {
       const formData = new FormData()
+      formData.append("customId", customId)
       formData.append("name",name)
       formData.append("description",description)
       formData.append("price",price)
@@ -81,6 +87,7 @@ const Add = ({token}) => {
         setSelectedCategorySlug("");
         setSizes([])
         setBestseller(false)
+        setCustomId("");
       } else {
         toast.error(response.data.message || "Failed to add product.")
       }
@@ -100,7 +107,6 @@ const Add = ({token}) => {
       <form onSubmit={onSubmitHandler} className='flex flex-col w-full items-start gap-3'>
         <div>
           <p className='mb-2'>Upload Image</p>
-          <p className='mb-2 text-yellow-700 text-sm font-medium'>Image size must be around 2 - 4MB max</p>
           <div className='flex gap-2'>
             <label htmlFor="image1">
               <img className='w-20' src={!image1 ? assets.upload_area : URL.createObjectURL(image1)} alt="" />
@@ -119,6 +125,11 @@ const Add = ({token}) => {
               <input onChange={(e)=>setImage4(e.target.files[0])} type="file" id="image4" hidden/>
             </label>
           </div>
+        </div>
+
+        <div className='w-full'>
+          <p className='mb-2'>Product ID (unique, required)</p>
+          <input onChange={(e)=>setCustomId(e.target.value)} value={customId} className='w-full max-w-[500px] px-3 py-2' type="text" placeholder='Enter unique product ID' required/>
         </div>
 
         <div className='w-full'>

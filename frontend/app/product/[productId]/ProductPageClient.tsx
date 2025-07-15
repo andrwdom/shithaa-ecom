@@ -80,6 +80,16 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
     if (productId) {
       fetchProduct()
     }
+    // Refetch product data when coming back from order success
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchProduct();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [productId])
 
   const handleBuyNow = () => {

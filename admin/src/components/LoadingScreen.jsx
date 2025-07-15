@@ -35,7 +35,7 @@ const LoadingScreen = () => {
           transition={{ duration: 0.5, ease: 'easeInOut' }}
           className="fixed inset-0 z-50 flex items-center justify-center"
           style={{
-            background: bgToWhite ? '#fff' : '#8B7FBD',
+            background: '#4D1E64',
             transition: 'background 0.7s cubic-bezier(0.4,0,0.2,1)'
           }}
         >

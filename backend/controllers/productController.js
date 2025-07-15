@@ -207,6 +207,10 @@ export const addProduct = async (req, res) => {
             stock: stock !== undefined ? Number(stock) : 0
         }
 
+        // After parsing sizes, always sync main stock field
+        const totalStock = Array.isArray(parsedSizes) ? parsedSizes.reduce((sum, s) => sum + (s.stock || 0), 0) : 0;
+        productData.stock = totalStock;
+
         console.log('Creating product with data:', productData);
 
         const product = new productModel(productData);
@@ -381,6 +385,11 @@ export const updateProduct = async (req, res) => {
                     error: error.message
                 });
             }
+        }
+
+        // In updateProduct, after parsing newSizes (if provided), always sync main stock field
+        if (updateData.sizes) {
+            updateData.stock = Array.isArray(updateData.sizes) ? updateData.sizes.reduce((sum, s) => sum + (s.stock || 0), 0) : 0;
         }
 
         const updatedProduct = await productModel.findByIdAndUpdate(id, updateData, { new: true });
