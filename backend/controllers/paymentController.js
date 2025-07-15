@@ -102,6 +102,9 @@ export const createPhonePeSession = async (req, res) => {
             }
         };
 
+        // LOGGING: Print payload and headers
+        console.log('PhonePe payload:', JSON.stringify(payload, null, 2));
+
         // Create base64 encoded payload
         const base64Payload = Buffer.from(JSON.stringify(payload)).toString('base64');
 
@@ -111,20 +114,40 @@ export const createPhonePeSession = async (req, res) => {
             .update(base64Payload + '/pg/v1/pay' + PHONEPE_SECRET_KEY)
             .digest('hex');
 
+        // LOGGING: Print headers
+        console.log('PhonePe request headers:', {
+          'Content-Type': 'application/json',
+          'X-VERIFY': checksum
+        });
+
         // PhonePe API endpoint
         const phonepeUrl = PHONEPE_ENV === 'PROD' 
             ? 'https://api.phonepe.com/apis/hermes/pg/v1/pay'
             : 'https://api-preprod.phonepe.com/apis/hermes/pg/v1/pay';
 
         // Make request to PhonePe
-        const response = await axios.post(phonepeUrl, {
-            request: base64Payload
-        }, {
-            headers: {
-                'Content-Type': 'application/json',
-                'X-VERIFY': checksum
-            }
-        });
+        let response;
+        try {
+          response = await axios.post(phonepeUrl, {
+              request: base64Payload
+          }, {
+              headers: {
+                  'Content-Type': 'application/json',
+                  'X-VERIFY': checksum
+              }
+          });
+        } catch (error) {
+          // LOGGING: Print error response
+          console.error('PhonePe error:', error.response ? error.response.data : error.message);
+          return res.status(500).json({
+            success: false,
+            message: 'Payment session creation failed',
+            phonepeError: error.response ? error.response.data : error.message
+          });
+        }
+
+        // LOGGING: Print PhonePe response
+        console.log('PhonePe response:', response.data);
 
         if (response.data.success) {
             // Update order with PhonePe transaction ID
@@ -142,10 +165,10 @@ export const createPhonePeSession = async (req, res) => {
             // If PhonePe request failed, restore stock and delete order
             await updateProductStock(cartItems.map(item => ({ ...item, quantity: -item.quantity })));
             await orderModel.findByIdAndDelete(newOrder._id);
-            
             res.status(400).json({
                 success: false,
-                message: 'Failed to create payment session'
+                message: 'Failed to create payment session',
+                phonepeError: response.data
             });
         }
 
@@ -153,7 +176,8 @@ export const createPhonePeSession = async (req, res) => {
         console.error('PhonePe Session Creation Error:', error);
         res.status(500).json({
             success: false,
-            message: 'Payment session creation failed'
+            message: 'Payment session creation failed',
+            error: error.message
         });
     }
 };
