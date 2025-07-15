@@ -77,11 +77,15 @@ export const addProduct = async (req, res) => {
         console.log('Add Product Request Body:', req.body);
         console.log('Add Product Files:', req.files);
 
-        const { name, description, price, category, subCategory, type, sizes, bestseller, originalPrice, categorySlug, features, isNewArrival, isBestSeller, availableSizes, stock } = req.body
+        const { customId, name, description, price, category, subCategory, type, sizes, bestseller, originalPrice, categorySlug, features, isNewArrival, isBestSeller, availableSizes, stock } = req.body
 
         // Validate required fields
+        if (!customId) {
+            return res.status(400).json({ success: false, message: "Custom product ID is required" });
+        }
         if (!name || !description || !price || !category) {
             console.log('Missing fields:', {
+                customId: !customId,
                 name: !name,
                 description: !description,
                 price: !price,
@@ -91,6 +95,7 @@ export const addProduct = async (req, res) => {
                 success: false, 
                 message: "Missing required fields",
                 missing: {
+                    customId: !customId,
                     name: !name,
                     description: !description,
                     price: !price,
@@ -188,6 +193,7 @@ export const addProduct = async (req, res) => {
         const bestsellerValue = (bestseller === "true" || isBestSeller === "true") ? true : false;
 
         const productData = {
+            customId,
             name,
             description,
             category,

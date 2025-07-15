@@ -225,24 +225,24 @@ const List = ({ token }) => {
                           ))}
                         </div>
                       </div>
-                    </div>
+            </div>
                     {/* Actions */}
                     <div className="flex flex-col gap-2 ml-2 min-w-[80px]">
-                      <button
-                        onClick={() => setEditingProduct(item)}
+                <button
+                  onClick={() => setEditingProduct(item)}
                         className='px-3 py-1 bg-[#4D1E64] text-white rounded font-semibold hover:bg-[#3a164d] transition-colors text-xs'
                         title="Edit product"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => removeProduct(item._id)}
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => removeProduct(item._id)}
                         className='px-3 py-1 bg-red-500 text-white rounded font-semibold hover:bg-red-600 transition-colors text-xs'
                         title="Delete product"
-                      >
+                >
                         Delete
-                      </button>
-                    </div>
+                </button>
+              </div>
                   </div>
                 )
               })}

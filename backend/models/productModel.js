@@ -6,6 +6,7 @@ const sizeSchema = new mongoose.Schema({
 }, { _id: false });
 
 const productSchema = new mongoose.Schema({
+    customId: { type: String, unique: true, required: true },
     name: { type: String, required: true },
     price: { type: Number, required: true },
     originalPrice: { type: Number },

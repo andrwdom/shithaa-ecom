@@ -75,7 +75,7 @@ export const getOrderById = async (req, res) => {
         }
         // Check if user owns this order or is admin
         const userId = order.userInfo?.userId || order.userId;
-        if (!req.user || (userId && userId.toString() !== req.user.id && (!req.user.role || req.user.role !== 'admin'))) {
+            if (!req.user || (userId && userId.toString() !== req.user.id && (!req.user.role || req.user.role !== 'admin'))) {
             return errorResponse(res, 'Access denied', 403);
         }
         successResponse(res, order, 'Order fetched successfully');
