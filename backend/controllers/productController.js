@@ -3,10 +3,17 @@ import { successResponse, errorResponse, paginatedResponse } from '../utils/resp
 import path from "path";
 import fs from "fs";
 
-// GET /api/products/:id - RESTful single product fetch
+// GET /api/products/:id or /api/products/custom/:customId - RESTful single product fetch
 export const getProductById = async (req, res) => {
     try {
-        const product = await productModel.findById(req.params.id).lean();
+        let product;
+        if (req.params.id && req.params.id.length === 24) {
+            product = await productModel.findById(req.params.id).lean();
+        }
+        if (!product && req.params.id) {
+            // Try fetching by customId
+            product = await productModel.findOne({ customId: req.params.id }).lean();
+        }
         if (!product) {
             return res.status(404).json({ error: 'Product not found' });
         }
@@ -61,10 +68,10 @@ export const getAllProducts = async (req, res) => {
             .skip(skip)
             .limit(Number(limit))
             .lean();
-        // Ensure _id is always present
-        const productsWithId = products.map(p => ({ ...p, _id: p._id?.toString?.() || p._id }));
-        console.log('Products returned:', productsWithId.map(p => ({ name: p.name, category: p.category, categorySlug: p.categorySlug, _id: p._id })));
-        res.status(200).json({ products: productsWithId });
+        // Always include customId in the response
+        const productsWithCustomId = products.map(p => ({ ...p, customId: p.customId }));
+        console.log('Products returned:', productsWithCustomId.map(p => ({ name: p.name, category: p.category, categorySlug: p.categorySlug, _id: p._id })));
+        res.status(200).json({ products: productsWithCustomId });
     } catch (error) {
         console.error('Get All Products Error:', error);
         res.status(500).json({ error: error.message });
@@ -306,7 +313,7 @@ export const singleProduct = async (req, res) => {
 export const updateProduct = async (req, res) => {
     try {
         const id = req.params.id;
-        const { name, description, price, category, subCategory, type, sizes, bestseller, originalPrice, categorySlug, features, isNewArrival, isBestSeller, stock } = req.body;
+        const { customId, name, description, price, category, subCategory, type, sizes, bestseller, originalPrice, categorySlug, features, isNewArrival, isBestSeller, stock } = req.body;
 
         if (!id) {
             return res.status(400).json({ success: false, message: "Product ID is required" });
@@ -315,6 +322,15 @@ export const updateProduct = async (req, res) => {
         const product = await productModel.findById(id);
         if (!product) {
             return res.status(404).json({ success: false, message: "Product not found" });
+        }
+
+        // If customId is being updated, check uniqueness
+        if (customId && customId !== product.customId) {
+            const exists = await productModel.findOne({ customId });
+            if (exists) {
+                return res.status(400).json({ success: false, message: "Custom product ID already exists" });
+            }
+            product.customId = customId;
         }
 
         // Parse features if provided

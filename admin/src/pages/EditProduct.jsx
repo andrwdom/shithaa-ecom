@@ -16,7 +16,7 @@ const EditProduct = ({ product, token, onClose, onUpdate }) => {
   const [bestseller, setBestseller] = useState(product.bestseller)
   const [loading, setLoading] = useState(false)
   const [stock, setStock] = useState(product.stock || 0)
-  const [customId, setCustomId] = useState(product._id || "");
+  const [customId, setCustomId] = useState(product.customId || "");
 
   const CATEGORY_OPTIONS = [
     "Maternity Feeding Wear",
@@ -174,6 +174,7 @@ const EditProduct = ({ product, token, onClose, onUpdate }) => {
           type="text"
           placeholder='Enter unique product ID'
           required
+          disabled={!!product.customId}
         />
       </div>
 

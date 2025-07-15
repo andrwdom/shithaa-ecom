@@ -202,8 +202,8 @@ const List = ({ token }) => {
                           className="object-cover w-full h-full"
                         />
                       </div>
-                      <div className="w-full bg-[#4D1E64] text-white text-[10px] text-center rounded-b-lg py-0.5 mt-1 font-semibold truncate" title={item._id || item.customId || 'ID'}>
-                        {item._id || item.customId || 'ID'}
+                      <div className="w-full bg-[#4D1E64] text-white text-[10px] text-center rounded-b-lg py-0.5 mt-1 font-semibold truncate" title={item.customId || item._id || 'ID'}>
+                        {item.customId || item._id || 'ID'}
                       </div>
                     </div>
                     {/* Info Grid */}
