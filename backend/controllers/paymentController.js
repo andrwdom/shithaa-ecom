@@ -30,6 +30,13 @@ const updateProductStock = async (items) => {
     }
 };
 
+// Helper to clean mobile number for PhonePe (10 digits, no country code)
+function cleanMobileNumber(number) {
+  if (!number) return '';
+  const digits = number.replace(/\D/g, '');
+  return digits.slice(-10);
+}
+
 // Create PhonePe payment session
 export const createPhonePeSession = async (req, res) => {
     try {
@@ -88,6 +95,8 @@ export const createPhonePeSession = async (req, res) => {
 
         // Prepare PhonePe payload
         const merchantTransactionId = `ORDER_${newOrder._id}_${Date.now()}`;
+        const merchantUserId = (userId ? String(userId).slice(0, 50) : 'GUEST');
+        const mobileNumber = cleanMobileNumber(shipping.phone);
         const payload = {
             merchantId: PHONEPE_MERCHANT_ID,
             merchantTransactionId: merchantTransactionId,
@@ -95,8 +104,8 @@ export const createPhonePeSession = async (req, res) => {
             redirectUrl: `${PHONEPE_REDIRECT_URL}/payment/phonepe/callback`,
             redirectMode: 'POST',
             callbackUrl: `${PHONEPE_REDIRECT_URL}/api/payment/phonepe/callback`,
-            merchantUserId: userId || 'GUEST',
-            mobileNumber: shipping.phone || '',
+            merchantUserId,
+            mobileNumber,
             paymentInstrument: {
                 type: 'PAY_PAGE'
             }
