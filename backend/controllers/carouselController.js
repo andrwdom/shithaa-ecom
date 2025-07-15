@@ -50,7 +50,8 @@ export const createCarouselBanner = async (req, res) => {
     }
 
     try {
-      const imageUrl = `https://www.shithaa.in/images/carousel/${imageFile.filename}`;
+      const baseUrl = process.env.BASE_URL || 'https://shithaa.in';
+      const imageUrl = `${baseUrl}/images/carousel/${imageFile.filename}`;
 
       const banner = new CarouselBanner({
         image: imageUrl,
@@ -91,7 +92,8 @@ export const updateCarouselBanner = async (req, res) => {
     };
 
     if (imageFile) {
-      const imageUrl = `https://www.shithaa.in/images/carousel/${imageFile.filename}`;
+      const baseUrl = process.env.BASE_URL || 'https://shithaa.in';
+      const imageUrl = `${baseUrl}/images/carousel/${imageFile.filename}`;
       updateData.image = imageUrl;
     }
 

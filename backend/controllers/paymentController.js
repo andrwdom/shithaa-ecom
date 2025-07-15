@@ -9,11 +9,11 @@ import { successResponse, errorResponse } from '../utils/response.js';
 const PHONEPE_MERCHANT_ID = process.env.PHONEPE_MERCHANT_ID || 'TEST-M23G3HW55OYVV_25071';
 const PHONEPE_SECRET_KEY = process.env.PHONEPE_SECRET_KEY || 'NWZiZjZjYjYtYjllMC00ZGFhLWI5ZTEtMmVlMjE1Mjc4Mjkx';
 const PHONEPE_ENV = process.env.PHONEPE_ENV || 'TEST'; // TEST or PROD
-const PHONEPE_REDIRECT_URL = process.env.PHONEPE_REDIRECT_URL || 'https://www.shithaa.in';
+const PHONEPE_REDIRECT_URL = process.env.PHONEPE_REDIRECT_URL || process.env.BASE_URL || 'https://shithaa.in';
 
 // Helper function to get user email for orders
 const getOrderUserEmail = (req, email) => {
-    return req.user?.email || email || 'guest@shithaa.in';
+    return req.user?.email || email || `guest@${process.env.BASE_URL?.replace('https://', '').replace('http://', '') || 'shithaa.in'}`;
 };
 
 // Helper function to update product stock

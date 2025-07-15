@@ -201,6 +201,16 @@ app.get('/', (req, res) => {
     res.send("API Working")
 })
 
+// Test static file serving
+app.get('/test-images', (req, res) => {
+    res.json({
+        message: 'Static file serving test',
+        uploadPath: '/var/www/shithaa-ecom/uploads',
+        imagePath: '/images',
+        testUrl: `${process.env.BASE_URL || 'https://shithaa.in'}/images/products/test.jpg`
+    });
+});
+
 // CORS test endpoint
 app.get('/api/cors-test', (req, res) => {
     res.json({ 

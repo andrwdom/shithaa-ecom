@@ -163,7 +163,8 @@ export const addProduct = async (req, res) => {
         }
 
         // Build image URLs for VPS
-        const imagesUrl = images.map(img => `https://www.shithaa.in/images/products/${img.filename}`);
+        const baseUrl = process.env.BASE_URL || 'https://shithaa.in';
+        const imagesUrl = images.map(img => `${baseUrl}/images/products/${img.filename}`);
 
         // Parse features if provided
         let parsedFeatures = [];
@@ -335,7 +336,8 @@ export const updateProduct = async (req, res) => {
 
             if (newImages.length > 0) {
                 try {
-                    const uploadedImages = newImages.map(img => `https://www.shithaa.in/images/products/${img.filename}`);
+                    const baseUrl = process.env.BASE_URL || 'https://shithaa.in';
+                    const uploadedImages = newImages.map(img => `${baseUrl}/images/products/${img.filename}`);
                     imagesUrl = uploadedImages;
                 } catch (error) {
                     return res.status(500).json({

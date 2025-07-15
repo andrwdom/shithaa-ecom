@@ -579,7 +579,7 @@ const generateInvoice = async (req, res) => {
 
     // --- FOOTER ---
     doc.font('Helvetica-Bold').fontSize(11).fillColor('#473C66').text('Thank you for shopping with Shitha Clothings!', { align: 'center' });
-    doc.font('Helvetica').fontSize(10).fillColor('#888').text('www.shithaa.in | Info.shitha@gmail.com', { align: 'center' });
+    doc.font('Helvetica').fontSize(10).fillColor('#888').text(`${process.env.BASE_URL?.replace('https://', 'www.').replace('http://', 'www.') || 'www.shithaa.in'} | Info.shitha@gmail.com`, { align: 'center' });
     doc.end();
 
   } catch (error) {
