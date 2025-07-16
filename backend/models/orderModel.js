@@ -12,6 +12,15 @@ const orderSchema = new mongoose.Schema({
         state: { type: String },
         pincode: { type: String }
     },
+    // --- Add new shippingAddress field for modern orders ---
+    shippingAddress: {
+        addressLine1: { type: String, required: true },
+        addressLine2: { type: String },
+        city: { type: String, required: true },
+        state: { type: String, required: true },
+        postalCode: { type: String, required: true },
+        country: { type: String, required: true }
+    },
     items: [{
         name: String,
         quantity: Number,

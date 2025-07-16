@@ -227,15 +227,30 @@ const EnhancedSearchAndFilters = ({
 // Modern Responsive Order Card
 const ModernOrderCard = ({ order, onView, onStatusChange }) => {
   const userInfo = order.userInfo || { name: order.customerName, email: order.email };
-  const shipping = order.shippingInfo || order.address;
-  const name = shipping?.name || order.shippingInfo?.fullName || order.customerName;
+  const shipping = order.shippingAddress || order.shippingInfo || order.address;
+  const name = shipping?.name || shipping?.fullName || order.customerName;
   const email = shipping?.email || order.shippingInfo?.email || order.email;
   const phone = shipping?.phone || order.shippingInfo?.phone || order.phone;
   const total = order.totalAmount || order.total || order.totalPrice;
   const payment = order.paymentStatus || order.paymentMethod;
   const status = order.orderStatus || order.status || order.paymentStatus;
   const placedAt = order.createdAt || order.placedAt;
-  const address = shipping?.address || [shipping?.line1, shipping?.city, shipping?.state, shipping?.country, shipping?.pincode].filter(Boolean).join(', ');
+  // --- Address fields ---
+  const addressLines = shipping && shipping.addressLine1 ? [
+    shipping.addressLine1,
+    shipping.addressLine2,
+    shipping.city,
+    shipping.state,
+    shipping.postalCode,
+    shipping.country
+  ].filter(Boolean) : [
+    shipping?.line1,
+    shipping?.line2,
+    shipping?.city,
+    shipping?.state,
+    shipping?.pincode,
+    shipping?.country
+  ].filter(Boolean);
   const isTestOrder = order.isTestOrder || payment === 'test-paid';
 
   // Dropdown for status change
@@ -253,7 +268,7 @@ const ModernOrderCard = ({ order, onView, onStatusChange }) => {
           <p className="font-bold text-sm">#{order._id?.slice(-6) || 'N/A'} - {name}</p>
           <p className="text-xs text-gray-500">📧 {email}</p>
           <p className="text-xs text-gray-500">📞 {phone}</p>
-          <p className="text-xs text-gray-500">📍 {address}</p>
+          <p className="text-xs text-gray-500">📍 {addressLines.map((line, i) => <span key={i}>{line}{i < addressLines.length - 1 ? ', ' : ''}</span>)}</p>
         </div>
         <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${STATUS_COLORS[status] || 'bg-gray-100 text-gray-700'}`}>{status}</span>
       </div>
@@ -297,11 +312,9 @@ const ModernOrderCard = ({ order, onView, onStatusChange }) => {
 
 function OrderDetailsModal({ order, onClose, onStatusChange }) {
   if (!order) return null;
-  // Prefer new structured fields
   const userInfo = order.userInfo || { name: order.customerName, email: order.email };
-  // Fix: Always display a username, fallback to email or 'Unknown User' if missing
   const displayName = userInfo.name && userInfo.name.trim() ? userInfo.name : (userInfo.email || 'Unknown User');
-  const shipping = order.shippingInfo || order.address;
+  const shipping = order.shippingAddress || order.shippingInfo || order.address;
   const items = order.items || order.cartItems || [];
   const total = order.totalAmount || order.total || order.totalPrice;
   const payment = order.paymentStatus || order.paymentMethod;
@@ -310,20 +323,23 @@ function OrderDetailsModal({ order, onClose, onStatusChange }) {
   const coupon = order.couponUsed?.code || order.discount?.appliedCouponCode;
   const discount = order.couponUsed?.discount || order.discount?.value || 0;
   const isTestOrder = order.isTestOrder || payment === 'test-paid';
-  // Address robust join
-  const address = [
-    shipping?.address,
-    shipping?.address1,
-    shipping?.address2,
-    shipping?.line1,
-    shipping?.line2,
-    shipping?.city,
-    shipping?.state,
-    shipping?.country,
-    shipping?.pincode,
-    shipping?.zipcode,
-    shipping?.zip,
-  ].filter(Boolean).join(', ');
+  // --- Address fields ---
+  const hasShippingAddress = !!order.shippingAddress;
+  const addressFields = shipping && shipping.addressLine1 ? [
+    { label: 'Address Line 1', value: shipping.addressLine1 },
+    { label: 'Address Line 2', value: shipping.addressLine2 },
+    { label: 'City', value: shipping.city },
+    { label: 'State', value: shipping.state },
+    { label: 'Pincode', value: shipping.postalCode },
+    { label: 'Country', value: shipping.country }
+  ] : [
+    { label: 'Address Line 1', value: shipping?.line1 },
+    { label: 'Address Line 2', value: shipping?.line2 },
+    { label: 'City', value: shipping?.city },
+    { label: 'State', value: shipping?.state },
+    { label: 'Pincode', value: shipping?.pincode },
+    { label: 'Country', value: shipping?.country }
+  ];
   // Total robust
   const totalAmount = order.totalAmount || order.totalPrice || order.total || order.orderSummary?.total || 0;
   return (
@@ -353,9 +369,42 @@ function OrderDetailsModal({ order, onClose, onStatusChange }) {
           </div>
         {/* Shipping + Payment Details */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm mt-4 mb-4">
-          <div><span className="font-semibold">📛 Shipping Name:</span> {shipping?.name || shipping?.fullName || order.customerName}</div>
+          <div><span className="font-semibold">🪪 Shipping Name:</span> {shipping?.name || shipping?.fullName || order.customerName}</div>
           <div><span className="font-semibold">📞 Phone:</span> {shipping?.phone || order.phone}</div>
-          <div><span className="font-semibold">📍 Address:</span> {address}</div>
+          {/* Shipping Address Block */}
+          <div className="col-span-2">
+            <span className="font-semibold">📦 Shipping Address:</span>
+            <div className="pl-2 mt-1">
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 flex flex-col gap-1 shadow-sm max-w-md">
+                {hasShippingAddress ? (
+                  <>
+                    {order.shippingAddress.addressLine1 && <div className="font-medium text-gray-900">{order.shippingAddress.addressLine1}</div>}
+                    {order.shippingAddress.addressLine2 && <div className="text-gray-700">{order.shippingAddress.addressLine2}</div>}
+                    <div className="flex gap-2 text-gray-700">
+                      <span>{order.shippingAddress.city}</span>
+                      <span>,</span>
+                      <span>{order.shippingAddress.state}</span>
+                    </div>
+                    <div className="text-gray-700">Pincode: <span className="font-semibold">{order.shippingAddress.postalCode}</span></div>
+                    <div className="text-gray-700">Country: <span className="font-semibold">{order.shippingAddress.country}</span></div>
+                  </>
+                ) : (
+                  // Fallback for legacy orders
+                  <>
+                    {shipping?.line1 && <div className="font-medium text-gray-900">{shipping.line1}</div>}
+                    {shipping?.line2 && <div className="text-gray-700">{shipping.line2}</div>}
+                    <div className="flex gap-2 text-gray-700">
+                      <span>{shipping?.city}</span>
+                      <span>,</span>
+                      <span>{shipping?.state}</span>
+                    </div>
+                    <div className="text-gray-700">Pincode: <span className="font-semibold">{shipping?.pincode}</span></div>
+                    <div className="text-gray-700">Country: <span className="font-semibold">{shipping?.country}</span></div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
           <div><span className="font-semibold">💳 Payment Mode:</span> {payment || 'N/A'}</div>
           <div><span className="font-semibold">🧾 Order ID:</span> #{order._id?.slice(-6) || 'N/A'}</div>
           <div><span className="font-semibold">📅 Date:</span> {formatDate(placedAt)}</div>

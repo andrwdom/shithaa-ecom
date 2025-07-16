@@ -424,25 +424,35 @@ export const updateProduct = async (req, res) => {
 // Batch update product order
 export const reorderProducts = async (req, res) => {
   try {
-    let { products } = req.body;
+    let { products, categorySlug } = req.body;
     if (!Array.isArray(products)) {
       return res.status(400).json({ success: false, message: 'Invalid payload: products must be an array' });
     }
+    if (!categorySlug) {
+      return res.status(400).json({ success: false, message: 'categorySlug is required' });
+    }
+    // Only allow products in the given categorySlug
+    const dbProducts = await productModel.find({ categorySlug });
+    const dbIds = dbProducts.map(p => String(p._id));
+    // Filter input to only those in this category
+    products = products.filter(p => dbIds.includes(String(p._id)));
     // Sort and reassign displayOrder with buffer
     products = products
       .filter(p => p._id)
       .sort((a, b) => a.displayOrder - b.displayOrder)
       .map((p, i) => ({ ...p, displayOrder: (i + 1) * 10 }));
-
     // Prepare bulk ops
     const ops = products.map(p => ({
       updateOne: {
-        filter: { _id: p._id },
+        filter: { _id: p._id, categorySlug },
         update: { $set: { displayOrder: p.displayOrder } }
       }
     }));
+    if (ops.length === 0) {
+      return res.status(400).json({ success: false, message: 'No valid products to reorder for this category' });
+    }
     await productModel.bulkWrite(ops);
-    res.status(200).json({ success: true, message: 'Product order updated', products });
+    res.status(200).json({ success: true, message: 'Product order updated for category', products });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

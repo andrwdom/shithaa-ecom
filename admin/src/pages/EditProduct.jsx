@@ -298,7 +298,7 @@ const EditProduct = ({ product, token, onClose, onUpdate }) => {
       <div className="flex gap-4">
         <button
           type="submit"
-          className={`px-6 py-2 bg-purple-400 text-white rounded hover:bg-purple-600 transition-colors flex items-center gap-2 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+          className={`px-6 py-2 bg-[#4D1E64] text-white rounded hover:bg-[#3a164d] transition-colors flex items-center gap-2 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
           disabled={loading}
         >
           {loading && (

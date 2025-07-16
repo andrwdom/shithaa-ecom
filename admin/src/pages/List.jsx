@@ -40,6 +40,8 @@ const List = ({ token }) => {
   });
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [manualSort, setManualSort] = useState(true); // Manual Sort toggle
+  const [isReorderMode, setIsReorderMode] = useState(false); // New reorder mode toggle
+  const [selectedCat, setSelectedCat] = useState(null); // For reorder mode category tab
 
   useEffect(() => {
     // Fetch categories for filter
@@ -155,36 +157,46 @@ const List = ({ token }) => {
   const mostSold = list.reduce((max, item) => (item.piecesSold > (max?.piecesSold || 0) ? item : max), null);
 
   // --- Drag-and-drop handlers ---
-  const handleDragEnd = debounce((result) => {
+  const handleDragEnd = (result) => {
     if (!result.destination) return;
-    // Work with filtered (category) list
-    const filteredList = filtered;
-    const reordered = Array.from(filteredList);
-    const [moved] = reordered.splice(result.source.index, 1);
-    reordered.splice(result.destination.index, 0, moved);
-    // Assign displayOrder = (index+1)*10
-    const updated = reordered.map((item, index) => ({
-      _id: item._id,
+    
+    // Create new sorted list for the current category
+    const reorderedCategoryProducts = Array.from(reorderProducts);
+    const [movedItem] = reorderedCategoryProducts.splice(result.source.index, 1);
+    reorderedCategoryProducts.splice(result.destination.index, 0, movedItem);
+
+    // Create the new full list for optimistic update
+    const otherCategoryProducts = list.filter(p => (p.categorySlug || p.category || 'Uncategorized') !== selectedCat);
+    const updatedReorderedCategoryProducts = reorderedCategoryProducts.map((item, index) => ({
+      ...item,
       displayOrder: (index + 1) * 10,
     }));
-    fetch((import.meta.env.VITE_API_URL || 'http://localhost:5000') + '/api/products/reorder', {
+
+    setList([...otherCategoryProducts, ...updatedReorderedCategoryProducts]);
+
+    // Prepare for API call
+    const updatedForApi = updatedReorderedCategoryProducts.map(({ _id, displayOrder }) => ({
+      _id,
+      displayOrder,
+    }));
+
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/products/reorder`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', token },
-      body: JSON.stringify({ products: updated })
+      body: JSON.stringify({ products: updatedForApi, categorySlug: selectedCat })
     })
     .then(response => response.json())
     .then(data => {
       if (data.success) {
         toast.success('Product order updated ✅');
-        fetchList();
       } else {
         toast.error(data.message || 'Failed to update product order');
       }
     })
-    .catch(error => {
+    .catch(() => {
       toast.error('Failed to update product order');
     });
-  }, 300, { leading: true, trailing: false });
+  };
 
   async function handlePinToTop(productId) {
     if (!manualSort) return;
@@ -221,6 +233,73 @@ const List = ({ token }) => {
     }
   }
 
+  // Get unique category slugs from products (for reorder mode tabs)
+  const categorySlugs = Array.from(new Set(list.map(p => p.categorySlug || p.category || 'Uncategorized')));
+  // If selectedCat is not set, default to first
+  useEffect(() => {
+    if (isReorderMode && categorySlugs.length > 0 && !selectedCat) {
+      setSelectedCat(categorySlugs[0]);
+    }
+    if (!isReorderMode) setSelectedCat(null);
+  }, [isReorderMode, list]);
+
+  // Filtered products for reorder mode (by selectedCat)
+  const reorderProducts = isReorderMode && selectedCat
+    ? filtered.filter(p => (p.categorySlug || p.category || 'Uncategorized') === selectedCat)
+    : filtered;
+
+  // Move up/down handlers for reorder mode
+  function moveUp(product) {
+    if (!isReorderMode || !selectedCat) return;
+    const idx = reorderProducts.findIndex(p => p._id === product._id);
+    if (idx <= 0) return;
+    const newList = [...reorderProducts];
+    [newList[idx - 1], newList[idx]] = [newList[idx], newList[idx - 1]];
+    // Update displayOrder locally
+    const updated = newList.map((item, i) => ({ ...item, displayOrder: (i + 1) * 10 }));
+    // Update main list
+    setList(list.map(p =>
+      (p._id === updated[idx]._id || p._id === updated[idx - 1]._id)
+        ? updated.find(u => u._id === p._id) || p
+        : p
+    ));
+    // Call batch update API
+    fetch((import.meta.env.VITE_API_URL || 'http://localhost:5000') + '/api/products/reorder', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', token },
+      body: JSON.stringify({ products: updated.map(({ _id, displayOrder }) => ({ _id, displayOrder })) })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (!data.success) toast.error(data.message || 'Failed to update order');
+    })
+    .catch(() => toast.error('Failed to update order'));
+  }
+  function moveDown(product) {
+    if (!isReorderMode || !selectedCat) return;
+    const idx = reorderProducts.findIndex(p => p._id === product._id);
+    if (idx === -1 || idx === reorderProducts.length - 1) return;
+    const newList = [...reorderProducts];
+    [newList[idx], newList[idx + 1]] = [newList[idx + 1], newList[idx]];
+    // Update displayOrder locally
+    const updated = newList.map((item, i) => ({ ...item, displayOrder: (i + 1) * 10 }));
+    setList(list.map(p =>
+      (p._id === updated[idx]._id || p._id === updated[idx + 1]._id)
+        ? updated.find(u => u._id === p._id) || p
+        : p
+    ));
+    fetch((import.meta.env.VITE_API_URL || 'http://localhost:5000') + '/api/products/reorder', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', token },
+      body: JSON.stringify({ products: updated.map(({ _id, displayOrder }) => ({ _id, displayOrder })) })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (!data.success) toast.error(data.message || 'Failed to update order');
+    })
+    .catch(() => toast.error('Failed to update order'));
+  }
+
   // Custom Drawer Component
   const FilterDrawer = ({ isOpen, onClose, children }) => {
     if (!isOpen) return null;
@@ -253,7 +332,7 @@ const List = ({ token }) => {
             <div className="p-4 border-t bg-white sticky bottom-0">
               <button
                 onClick={onClose}
-                className="w-full px-4 py-3 bg-[#4D1E64] text-white rounded font-semibold shadow-lg"
+                className="w-full px-4 py-3 bg-brand text-white rounded font-semibold shadow-lg"
               >
                 Apply Filters
               </button>
@@ -275,7 +354,7 @@ const List = ({ token }) => {
         <select
           value={pendingFilters.category}
           onChange={e => handleFilterChange('category', e.target.value)}
-          className="px-2 py-1 border rounded focus:ring-2 focus:ring-[#4D1E64]"
+          className="px-2 py-1 border rounded focus:ring-2 focus:ring-brand"
         >
           <option value="">All</option>
           {categories.map(cat => (
@@ -293,7 +372,7 @@ const List = ({ token }) => {
                 type="checkbox"
                 checked={pendingFilters.sizes.includes(size)}
                 onChange={() => handleSizeToggle(size)}
-                className="accent-[#4D1E64]"
+                className="accent-brand"
               />
               {size}
             </label>
@@ -346,7 +425,7 @@ const List = ({ token }) => {
         <select
           value={pendingFilters.sortBy}
           onChange={e => handleFilterChange('sortBy', e.target.value)}
-          className="px-2 py-1 border rounded focus:ring-2 focus:ring-[#4D1E64]"
+          className="px-2 py-1 border rounded focus:ring-2 focus:ring-brand"
         >
           <option value="createdAt">Newest</option>
           <option value="price">Price</option>
@@ -359,7 +438,7 @@ const List = ({ token }) => {
         <select
           value={pendingFilters.sortOrder}
           onChange={e => handleFilterChange('sortOrder', e.target.value)}
-          className="px-2 py-1 border rounded focus:ring-2 focus:ring-[#4D1E64]"
+          className="px-2 py-1 border rounded focus:ring-2 focus:ring-brand"
         >
           <option value="desc">Desc</option>
           <option value="asc">Asc</option>
@@ -415,7 +494,7 @@ const List = ({ token }) => {
   };
 
   // Product Card Component
-  const ProductCard = ({ item, onEdit, onDelete, position }) => {
+  const ProductCard = ({ item, onEdit, onDelete, position, isReorderMode, moveUp, moveDown, isFirst, isLast, dragHandleProps }) => {
     // Stock grid for sizes
     let sizeStock = [];
     if (Array.isArray(item.sizes)) {
@@ -438,38 +517,52 @@ const List = ({ token }) => {
 
     return (
       <div className="relative border rounded-md p-3 hover:shadow-sm transition bg-white overflow-hidden">
-        {/* Position Tag */}
-        {typeof position === 'number' && (
-          <span className="absolute top-2 left-2 text-xs text-gray-500 font-semibold z-10 bg-white/80 px-2 py-0.5 rounded">
-            #{position + 1}
-          </span>
+        {/* Drag/Position Row for Reorder Mode */}
+        {isReorderMode ? (
+          <div className="flex items-center cursor-grab w-full mb-2" {...dragHandleProps}>
+            <span className="text-gray-400 text-sm mr-2">#{position + 1}</span>
+            <img
+              src={item.images?.[0] || item.image?.[0] || item.image || '/placeholder.svg'}
+              alt={item.name}
+              className="h-12 w-12 object-cover rounded mr-2"
+            />
+            <span className="text-gray-400 ml-auto">⇅</span>
+          </div>
+        ) : (
+          // Position Tag (only in non-reorder mode)
+          typeof position === 'number' && (
+            <span className="absolute top-2 left-2 text-xs text-gray-500 font-semibold z-10 bg-white/80 px-2 py-0.5 rounded">
+              #{position + 1}
+            </span>
+          )
         )}
-        {/* Image */}
-        <div className="relative h-48 bg-gray-100 rounded-md overflow-hidden">
-          <img
-            src={item.images?.[0] || item.image?.[0] || item.image || '/placeholder.svg'}
-            alt={item.name}
-            className="w-full h-full object-cover"
-          />
-          {/* Product ID Badge */}
-          <div className="absolute top-2 left-2 bg-[#4D1E64] text-white text-xs px-2 py-1 rounded font-semibold">
-            {item.customId || item._id?.slice(-6) || 'ID'}
+        {/* Image (hidden in reorder mode, shown in drag row above) */}
+        {!isReorderMode && (
+          <div className="relative h-48 bg-gray-100 rounded-md overflow-hidden">
+            <img
+              src={item.images?.[0] || item.image?.[0] || item.image || '/placeholder.svg'}
+              alt={item.name}
+              className="w-full h-full object-cover"
+            />
+            {/* Product ID Badge */}
+            <div className="absolute top-2 left-2 bg-brand text-white text-xs px-2 py-1 rounded font-semibold">
+              {item.customId || item._id?.slice(-6) || 'ID'}
+            </div>
+            {/* Stock Status Badge */}
+            <div className="absolute top-2 right-2">
+              {isOutOfStock && (
+                <span className="bg-red-500 text-white text-xs px-2 py-1 rounded font-medium">
+                  Out of Stock
+                </span>
+              )}
+              {isLowStock && !isOutOfStock && (
+                <span className="bg-yellow-500 text-white text-xs px-2 py-1 rounded font-medium">
+                  Low Stock
+                </span>
+              )}
+            </div>
           </div>
-          {/* Stock Status Badge */}
-          <div className="absolute top-2 right-2">
-            {isOutOfStock && (
-              <span className="bg-red-500 text-white text-xs px-2 py-1 rounded font-medium">
-                Out of Stock
-              </span>
-            )}
-            {isLowStock && !isOutOfStock && (
-              <span className="bg-yellow-500 text-white text-xs px-2 py-1 rounded font-medium">
-                Low Stock
-              </span>
-            )}
-          </div>
-        </div>
-
+        )}
         {/* Content */}
         <div className="p-2 sm:p-4">
           {/* Title and Category */}
@@ -479,7 +572,6 @@ const List = ({ token }) => {
           <p className="text-xs text-gray-500 mt-1 truncate" title={item.category}>
             {item.category}
           </p>
-
           {/* Price and Sold Count */}
           <div className="flex justify-between items-center mt-2">
             <span className="text-lg font-bold text-gray-900">₹{item.price}</span>
@@ -487,7 +579,6 @@ const List = ({ token }) => {
               Sold: <span className="font-medium">{item.piecesSold || 0}</span>
             </span>
           </div>
-
           {/* Stock Status */}
           <div className="mt-3">
             <p className="text-xs text-gray-600 mb-2">Stock by Size:</p>
@@ -497,24 +588,35 @@ const List = ({ token }) => {
               ))}
             </div>
           </div>
-
           {/* Actions */}
           <div className="flex gap-2 mt-4">
-            {/* Mobile: Icon-only buttons */}
-            <button
-              onClick={() => onEdit(item)}
-              className="flex-1 sm:flex-none px-2 py-2 sm:px-3 sm:py-2 bg-[#4D1E64] text-white text-xs font-semibold rounded hover:bg-[#3a164d] transition-colors flex items-center justify-center gap-1"
-            >
-              <Edit className="w-4 h-4 sm:hidden" />
-              <span className="hidden sm:inline">Edit</span>
-            </button>
-            <button
-              onClick={() => onDelete(item._id)}
-              className="flex-1 sm:flex-none px-2 py-2 sm:px-3 sm:py-2 bg-red-500 text-white text-xs font-semibold rounded hover:bg-red-600 transition-colors flex items-center justify-center gap-1"
-            >
-              <Trash2 className="w-4 h-4 sm:hidden" />
-              <span className="hidden sm:inline">Delete</span>
-            </button>
+            {isReorderMode ? (
+              <>
+                <button onClick={() => moveUp(item)} className="text-xl px-2 py-1 rounded disabled:opacity-40" disabled={isFirst}>↑</button>
+                <button onClick={() => moveDown(item)} className="text-xl px-2 py-1 rounded disabled:opacity-40" disabled={isLast}>↓</button>
+              </>
+            ) : (
+              <>
+                {onEdit && (
+                  <button
+                    onClick={() => onEdit(item)}
+                    className="flex-1 sm:flex-none px-2 py-2 sm:px-3 sm:py-2 bg-brand text-white text-xs font-semibold rounded hover:bg-brand-dark transition-colors flex items-center justify-center gap-1"
+                  >
+                    <Edit className="w-4 h-4 sm:hidden" />
+                    <span className="hidden sm:inline">Edit</span>
+                  </button>
+                )}
+                {onDelete && (
+                  <button
+                    onClick={() => onDelete(item._id)}
+                    className="flex-1 sm:flex-none px-2 py-2 sm:px-3 sm:py-2 bg-red-500 text-white text-xs font-semibold rounded hover:bg-red-600 transition-colors flex items-center justify-center gap-1"
+                  >
+                    <Trash2 className="w-4 h-4 sm:hidden" />
+                    <span className="hidden sm:inline">Delete</span>
+                  </button>
+                )}
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -522,7 +624,7 @@ const List = ({ token }) => {
   };
 
   // Table View Component
-  const ProductTable = ({ products, onEdit, onDelete }) => {
+  const ProductTable = ({ products, onEdit, onDelete, isReorderMode }) => {
     return (
       <div className="hidden md:block bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
@@ -644,18 +746,22 @@ const List = ({ token }) => {
                     {/* Actions */}
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex gap-2">
-                        <button
-                          onClick={() => onEdit(item)}
-                          className="px-3 py-1 bg-[#4D1E64] text-white text-xs font-semibold rounded hover:bg-[#3a164d] transition-colors"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => onDelete(item._id)}
-                          className="px-3 py-1 bg-red-500 text-white text-xs font-semibold rounded hover:bg-red-600 transition-colors"
-                        >
-                          Delete
-                        </button>
+                        {onEdit && (
+                          <button
+                            onClick={() => onEdit(item)}
+                            className="px-3 py-1 bg-brand text-white text-xs font-semibold rounded hover:bg-brand-dark transition-colors"
+                          >
+                            Edit
+                          </button>
+                        )}
+                        {onDelete && (
+                          <button
+                            onClick={() => onDelete(item._id)}
+                            className="px-3 py-1 bg-red-500 text-white text-xs font-semibold rounded hover:bg-red-600 transition-colors"
+                          >
+                            Delete
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -679,17 +785,38 @@ const List = ({ token }) => {
 
   return (
     <>
-      {/* Manual Sort Toggle */}
+      {/* Reorder Products Toggle Button */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold">Products</h2>
-        <label className="flex items-center gap-2 cursor-pointer select-none">
-          <span className="text-sm text-gray-600">Manual Sort</span>
-          {/* Simple Switch */}
-          <span className={`relative inline-block w-10 h-6 transition duration-200 align-middle select-none ${manualSort ? 'bg-[#4D1E64]' : 'bg-gray-300'} rounded-full`} onClick={() => setManualSort(v => !v)}>
-            <span className={`absolute left-1 top-1 w-4 h-4 transition-transform duration-200 transform ${manualSort ? 'translate-x-4' : ''} bg-white rounded-full shadow`}></span>
-          </span>
-        </label>
+        <div className="flex gap-2 items-center">
+          <button
+            className="bg-[#4D1E64] text-white px-4 py-2 rounded hover:bg-[#3a164d] focus:ring-2 focus:ring-[#4D1E64]"
+            onClick={() => setIsReorderMode(v => !v)}
+          >
+            {isReorderMode ? 'Exit Reorder Mode' : 'Reorder Products'}
+          </button>
+        </div>
       </div>
+      {/* Category Tabs in Reorder Mode */}
+      {isReorderMode && categorySlugs.length > 0 && (
+        <div className="flex gap-3 mt-4 mb-2 overflow-x-auto pb-2">
+          {categorySlugs.map(cat => (
+            <button
+              key={cat}
+              onClick={() => setSelectedCat(cat)}
+              className={`px-3 py-1 rounded border whitespace-nowrap transition-all duration-150
+                ${selectedCat === cat
+                  ? 'bg-[#4D1E64] text-white font-bold ring-2 ring-[#4D1E64] scale-105 shadow'
+                  : 'bg-white text-[#4D1E64] hover:bg-[#4D1E64]/10 border-[#4D1E64]'}
+              `}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+      )}
+      {/* Optionally keep Manual Sort toggle if needed for sorting, but not for UI */}
+      {/* {manualSort toggle can be removed or kept for backend sort logic only} */}
       {editingProduct ? (
         <EditProduct 
           product={editingProduct} 
@@ -786,28 +913,31 @@ const List = ({ token }) => {
             {/* Product Grid/Table */}
             <div className="p-2 sm:p-0">
               {viewMode === 'card' ? (
-                <DragDropContext onDragEnd={handleDragEnd}>
-                  <Droppable droppableId="products">
-                    {(provided) => (
-                      <div {...provided.droppableProps} ref={provided.innerRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
-                        {filtered.map((item, index) => (
-                          <Draggable key={item._id} draggableId={item._id} index={index}>
-                            {(provided) => (
-                              <div
-                                ref={provided.innerRef}
-                                {...provided.draggableProps}
-                                className="relative"
-                              >
-                                <div {...provided.dragHandleProps} className="absolute left-2 top-2 z-10 cursor-grab text-gray-400 hover:text-gray-700">
-                                  <GripVertical size={18} />
-                      </div>
-                                <ProductCard
-                                  item={item}
-                                  onEdit={setEditingProduct}
-                                  onDelete={removeProduct}
-                                  position={index}
-                                />
-                                {manualSort && (
+                isReorderMode ? (
+                  <DragDropContext onDragEnd={handleDragEnd}>
+                    <Droppable droppableId="products">
+                      {(provided) => (
+                        <div {...provided.droppableProps} ref={provided.innerRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
+                          {reorderProducts.map((item, index) => (
+                            <Draggable key={item._id} draggableId={item._id} index={index}>
+                              {(provided) => (
+                                <div
+                                  ref={provided.innerRef}
+                                  {...provided.draggableProps}
+                                  className="relative"
+                                >
+                                  <ProductCard
+                                    item={item}
+                                    onEdit={null} // Hide edit
+                                    onDelete={null} // Hide delete
+                                    position={index}
+                                    isReorderMode={true}
+                                    moveUp={moveUp}
+                                    moveDown={moveDown}
+                                    isFirst={index === 0}
+                                    isLast={index === reorderProducts.length - 1}
+                                    dragHandleProps={provided.dragHandleProps}
+                                  />
                                   <div className="flex gap-2 ml-auto mt-2">
                                     <button
                                       className="px-2 py-1 text-xs rounded bg-gray-100 hover:bg-gray-200 border border-gray-300"
@@ -819,22 +949,36 @@ const List = ({ token }) => {
                                       title="Send to Bottom"
                                       onClick={() => handleSendToBottom(item._id)}
                                     >⬇️</button>
-                    </div>
-                                )}
-                      </div>
-                            )}
-                          </Draggable>
-                        ))}
-                        {provided.placeholder}
-                      </div>
-                    )}
-                  </Droppable>
-                </DragDropContext>
+                                  </div>
+                                </div>
+                              )}
+                            </Draggable>
+                          ))}
+                          {provided.placeholder}
+                        </div>
+                      )}
+                    </Droppable>
+                  </DragDropContext>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
+                    {filtered.map((item, index) => (
+                      <ProductCard
+                        key={item._id}
+                        item={item}
+                        onEdit={setEditingProduct}
+                        onDelete={removeProduct}
+                        position={index}
+                        isReorderMode={false}
+                      />
+                    ))}
+                  </div>
+                )
               ) : (
                 <ProductTable
-                  products={filtered}
-                  onEdit={setEditingProduct}
-                  onDelete={removeProduct}
+                  products={isReorderMode ? reorderProducts : filtered}
+                  onEdit={isReorderMode ? null : setEditingProduct}
+                  onDelete={isReorderMode ? null : removeProduct}
+                  isReorderMode={isReorderMode}
                 />
               )}
             </div>

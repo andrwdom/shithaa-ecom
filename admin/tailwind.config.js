@@ -26,6 +26,8 @@ export default {
         primary: '#E11D48', // Shitha pink
         accent: '#F472B6',  // Shitha accent
         background: '#FDF2F8', // Shitha bg
+        brand: '#473C66',
+        'brand-dark': '#3B3158',
         theme: {
           light: '#B3AAD1', // Lighter shade
           DEFAULT: '#8B7FBD', // Main theme color

@@ -60,53 +60,27 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
   const router = useRouter()
 
   useEffect(() => {
-    const fetchCategoryProducts = async () => {
+    async function getProducts() {
+      setLoading(true);
       try {
-        setLoading(true)
-        setCategoryName(
-          categorySlug
-            .split("-")
-            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-            .join(" ")
-        )
-        const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + '/api/products?category=' + encodeURIComponent(categorySlug) + '&sortBy=createdAt&limit=16';
-        const res = await fetch(apiUrl)
-        const data = await res.json()
-        const backendProducts = data.products || []
-        // Map backend product to frontend shape
-        const mappedProducts = backendProducts.map((p) => ({
-          id: p._id,
-          _id: p._id,
-          name: p.name,
-          price: p.price,
-          originalPrice: p.originalPrice,
-          image: p.images?.[0] || '',
-          images: p.images || [],
-          category: p.category,
-          description: p.description,
-          // Standardize sizes: always { size, stock }
-          sizes: Array.isArray(p.sizes)
-            ? (typeof p.sizes[0] === 'object'
-                ? p.sizes.map(s => ({ size: s.size, stock: s.stock }))
-                : p.sizes.map(s => ({ size: s, stock: 99 }))
-              )
-            : [],
-          bestseller: p.bestseller,
-          isBestSeller: p.isBestSeller,
-          dateAdded: p.createdAt, // Assuming createdAt is the dateAdded field
-        }))
-        setProducts(mappedProducts)
-        setFilteredProducts(mappedProducts)
-        setLoading(false)
-      } catch (error) {
-        console.error("Error fetching products:", error)
-        setLoading(false)
+        const url = new URL(`${process.env.NEXT_PUBLIC_API_URL}/api/products`);
+        if (categorySlug) {
+          url.searchParams.append('categorySlug', categorySlug);
+          url.searchParams.append('sortBy', 'displayOrder');
+          url.searchParams.append('sortOrder', 'asc');
+        }
+        const res = await fetch(url.toString());
+        if (!res.ok) throw new Error('Failed to fetch products');
+        const data = await res.json();
+        setProducts(data.products || []);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
       }
     }
-    if (categorySlug) {
-      fetchCategoryProducts()
-    }
-  }, [categorySlug])
+    getProducts();
+  }, [categorySlug]);
 
   // Filter and sort products
   useEffect(() => {
@@ -387,8 +361,8 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
                         onClick={() => handleCategorySelect(category.slug)}
                         className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-full border-2 transition-all duration-300 font-medium text-sm ${
                           isActive
-                            ? `${category.activeBgColor} ${category.activeBorderColor} ${category.textColor} shadow-md`
-                            : `${category.bgColor} ${category.borderColor} ${category.textColor} hover:${category.activeBgColor} hover:${category.activeBorderColor}`
+                            ? 'bg-brand border-brand text-white shadow-md'
+                            : 'bg-white border-brand text-brand hover:bg-brand/10 hover:border-brand'
                         }`}
                       >
                         <category.icon className="h-5 w-5" />
@@ -498,7 +472,7 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
                         {/* Simple Add to Cart Button */}
                         <Button
                           variant="outline"
-                          className="w-full border border-gray-900 text-gray-900 hover:bg-gray-900 hover:text-white bg-white rounded-none font-normal text-sm py-2 h-auto transition-colors duration-200"
+                          className="w-full border border-brand text-brand hover:bg-brand hover:text-white bg-white rounded-none font-normal text-sm py-2 h-auto transition-colors duration-200 focus:ring-2 focus:ring-brand"
                           onClick={(e) => {
                             e.stopPropagation()
                             handleAddToCart(product)
@@ -521,7 +495,7 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
                       setSortBy("featured")
                     }}
                     variant="outline"
-                    className="border border-gray-900 text-gray-900 hover:bg-gray-900 hover:text-white bg-white rounded-none px-6"
+                    className="border border-brand text-brand hover:bg-brand hover:text-white bg-white rounded-none px-6 focus:ring-2 focus:ring-brand"
                   >
                     Clear All Filters
                   </Button>

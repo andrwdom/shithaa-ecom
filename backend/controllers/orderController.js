@@ -71,14 +71,16 @@ export const getOrderById = async (req, res) => {
         }
         // Allow access to test orders for debugging
         if (order.isTestOrder === true) {
-            return successResponse(res, order, 'Order fetched successfully (test order, debug mode)');
+            // Always include shippingAddress in response
+            return successResponse(res, { ...order.toObject(), shippingAddress: order.shippingAddress || null }, 'Order fetched successfully (test order, debug mode)');
         }
         // Check if user owns this order or is admin
         const userId = order.userInfo?.userId || order.userId;
             if (!req.user || (userId && userId.toString() !== req.user.id && (!req.user.role || req.user.role !== 'admin'))) {
             return errorResponse(res, 'Access denied', 403);
         }
-        successResponse(res, order, 'Order fetched successfully');
+        // Always include shippingAddress in response
+        successResponse(res, { ...order.toObject(), shippingAddress: order.shippingAddress || null }, 'Order fetched successfully');
     } catch (error) {
         console.error('Get Order By ID Error:', error);
         errorResponse(res, error.message);
@@ -94,6 +96,7 @@ function getOrderUserEmail(req, fallback) {
 // PATCH createOrder
 export const createOrder = async (req, res) => {
     try {
+        console.log('Order Body:', req.body); // TEMP LOG FOR TESTING
         const {
             customerName,
             email,
@@ -110,6 +113,15 @@ export const createOrder = async (req, res) => {
         }
 
         const userEmail = getOrderUserEmail(req, email);
+        // --- Save shippingAddress in new format if present ---
+        const shippingAddress = address && (address.line1 || address.address1) ? {
+            addressLine1: address.line1 || address.address1 || '',
+            addressLine2: address.line2 || address.address2 || '',
+            city: address.city,
+            state: address.state,
+            postalCode: address.pincode || address.postalCode || address.zipcode || '',
+            country: address.country || ''
+        } : undefined;
         const orderData = {
             customerName,
             email: userEmail,
@@ -121,6 +133,8 @@ export const createOrder = async (req, res) => {
                 state: address.state,
                 pincode: address.pincode
             },
+            // --- Add shippingAddress if available ---
+            ...(shippingAddress ? { shippingAddress } : {}),
             items: items.map(item => ({
                 name: item.name,
                 quantity: item.quantity,
@@ -158,9 +172,20 @@ const createStructuredOrder = async (req, res) => {
       _id: item._id || item.id || undefined,
       id: item._id || item.id || undefined,
     }));
+    // --- Save shippingAddress in new format if present ---
+    const shippingAddress = shippingInfo && shippingInfo.addressLine1 ? {
+      addressLine1: shippingInfo.addressLine1,
+      addressLine2: shippingInfo.addressLine2 || '',
+      city: shippingInfo.city,
+      state: shippingInfo.state,
+      postalCode: shippingInfo.zip || shippingInfo.postalCode || '',
+      country: shippingInfo.country || ''
+    } : undefined;
     const orderDoc = {
       userInfo,
       shippingInfo,
+      // --- Add shippingAddress if available ---
+      ...(shippingAddress ? { shippingAddress } : {}),
       items: itemsWithIds,
       couponUsed: couponUsed || null,
       totalAmount,
@@ -427,8 +452,10 @@ const cancelOrder = async (req, res) => {
 const getAllOrders = async (req, res) => {
     try {
         const orders = await orderModel.find().sort({ createdAt: -1 });
-        console.log('Orders fetched:', orders.length);
-        res.status(200).json({ success: true, orders });
+        // Always include shippingAddress in each order
+        const ordersWithShipping = orders.map(order => ({ ...order.toObject(), shippingAddress: order.shippingAddress || null }));
+        console.log('Orders fetched:', ordersWithShipping.length);
+        res.status(200).json({ success: true, orders: ordersWithShipping });
     } catch (err) {
         console.error('Get Orders Error:', err);
         res.status(500).json({ message: 'Server error while fetching orders' });
