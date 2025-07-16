@@ -28,7 +28,8 @@ const productSchema = new mongoose.Schema({
     date: { type: Number, default: Date.now },
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
-    stock: { type: Number, default: 0 }
+    stock: { type: Number, default: 0 },
+    displayOrder: { type: Number, required: false, default: 0 },
 }, {
     timestamps: true
 });

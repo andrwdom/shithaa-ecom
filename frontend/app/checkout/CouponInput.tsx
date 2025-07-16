@@ -39,12 +39,12 @@ export default function CouponInput({ value, onApply }: any) {
   }
 
   return (
-    <div className="bg-white rounded-xl shadow p-6 flex flex-col gap-2">
-      <label className="font-medium mb-1">Coupon Code</label>
+    <div className="bg-gray-50 border rounded-lg p-4 mt-4 flex flex-col gap-2">
+      <label className="block text-sm font-medium text-gray-700 mb-1">Coupon Code</label>
       <div className="flex gap-2">
-        <input type="text" className="input input-bordered w-full" placeholder="Enter coupon code" value={input} onChange={e => setInput(e.target.value.toUpperCase())} disabled={!!value || loading} />
+        <input type="text" className="flex-1 border rounded px-3 py-2" placeholder="Enter coupon code" value={input} onChange={e => setInput(e.target.value.toUpperCase())} disabled={!!value || loading} />
         {!value ? (
-          <button type="button" className="btn btn-primary" onClick={handleApply} disabled={loading || !input}>
+          <button type="button" className="bg-purple-600 text-white px-4 py-2 rounded" onClick={handleApply} disabled={loading || !input}>
             {loading ? <span className="loading loading-spinner loading-xs"></span> : 'Apply'}
           </button>
         ) : (

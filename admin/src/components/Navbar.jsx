@@ -8,7 +8,7 @@ const Navbar = ({setToken}) => {
         <div className='flex col gap-10'>
           <button 
             onClick={()=>setToken('')} 
-            className='bg-theme-400 text-white px-5 py-2 sm:px-7 sm:py-2.5 rounded-md text-xs sm:text-sm hover:bg-theme-500 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-theme-400 focus:ring-offset-2'
+            className='bg-[#4B2065] text-white px-7 py-2.5 rounded-md text-sm font-medium hover:bg-[#3a174e] transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#4B2065] focus:ring-offset-2'
           >
             Logout
           </button>

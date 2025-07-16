@@ -262,12 +262,12 @@ const ModernOrderCard = ({ order, onView, onStatusChange }) => {
         <p>📅 {formatDate(placedAt)}</p>
       </div>
       <div className="flex flex-wrap justify-between gap-2 mt-3">
-        <button
+      <button
           className="px-3 py-1.5 rounded border border-gray-300 text-xs font-semibold hover:bg-gray-50 transition"
-          onClick={() => onView(order)}
-        >
-          View Details
-        </button>
+        onClick={() => onView(order)}
+      >
+        View Details
+      </button>
         <div className="relative">
           <button
             className="px-3 py-1.5 rounded bg-[#4D1E64] text-white text-xs font-semibold hover:bg-[#3a164d] transition"
@@ -341,7 +341,7 @@ function OrderDetailsModal({ order, onClose, onStatusChange }) {
             <span className="sr-only">Close</span>
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
-        </div>
+          </div>
         {/* User Info Box */}
         <div className="bg-gray-100 p-3 rounded-md flex flex-col gap-1 text-sm mb-4">
           <p className="flex items-center gap-2">
@@ -350,7 +350,7 @@ function OrderDetailsModal({ order, onClose, onStatusChange }) {
           <p className="flex items-center gap-2">
             <FaEnvelope className="w-4 h-4" /> {userInfo.email}
           </p>
-        </div>
+          </div>
         {/* Shipping + Payment Details */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm mt-4 mb-4">
           <div><span className="font-semibold">📛 Shipping Name:</span> {shipping?.name || shipping?.fullName || order.customerName}</div>
@@ -663,7 +663,7 @@ const Orders = ({ token, setToken }) => {
           <div className="text-gray-400 text-6xl mb-4">🔍</div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">No Orders Match Your Filters</h3>
           <p className="text-gray-500">Try adjusting your search or filter criteria.</p>
-        </div>
+      </div>
       )}
 
       {/* Orders List */}

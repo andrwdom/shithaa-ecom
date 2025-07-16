@@ -10,9 +10,9 @@ export default function BillingForm({ value, onChange, sameAsShipping, onToggleS
   }
   return (
     <div className="bg-white rounded-xl shadow p-6">
-      <div className="flex items-center mb-4">
-        <input type="checkbox" checked={sameAsShipping} onChange={e => onToggleSame(e.target.checked)} className="checkbox mr-2" id="billing-same" />
-        <label htmlFor="billing-same" className="font-medium">Billing address same as shipping?</label>
+      <div className="flex items-center gap-2 mb-4">
+        <input type="checkbox" checked={sameAsShipping} onChange={e => onToggleSame(e.target.checked)} className="accent-purple-600 w-5 h-5" id="billing-same" />
+        <label htmlFor="billing-same" className="text-sm">Billing address is same as shipping</label>
       </div>
       <div className={`transition-all duration-300 overflow-hidden ${open ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0 pointer-events-none'}`}>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

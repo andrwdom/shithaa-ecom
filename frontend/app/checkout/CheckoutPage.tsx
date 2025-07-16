@@ -18,23 +18,16 @@ function ProductPreviewSection({ items, onEdit }: any) {
     return <div className="bg-white rounded-xl shadow p-4 mb-4 text-red-600">No products found. Please go back to shop.</div>
   }
   return (
-    <div className="bg-white rounded-xl shadow p-4 mb-6">
-      <div className="flex justify-between items-center mb-2">
-        <h2 className="text-lg font-bold text-[rgb(71,60,102)]">Product Preview</h2>
-        {/* Removed Edit Cart button */}
-      </div>
-      <ul className="divide-y">
+    <div className="bg-white p-4 rounded-xl shadow-sm border mb-6">
+      <h3 className="text-lg font-semibold mb-3">Product Preview</h3>
+      <ul className="space-y-3">
         {items.map((item: any) => (
-          <li key={item._id + item.size} className="flex items-center gap-4 py-3">
-            <img src={item.image} alt={item.name} className="w-16 h-16 object-cover rounded" />
-            <div className="flex-1">
-              <div className="font-semibold">{item.name}</div>
-              <div className="text-xs text-gray-500">Size: {item.size}</div>
-              <div className="text-xs text-gray-500">Qty: {item.quantity}</div>
-            </div>
-            <div className="text-right">
-              <div className="font-bold text-[rgb(71,60,102)]">₹{item.price}</div>
-              <div className="text-xs text-gray-500">Subtotal: ₹{item.price * item.quantity}</div>
+          <li key={item._id + item.size} className="flex items-center gap-4">
+            <img src={item.image} alt={item.name} className="h-16 w-16 rounded object-cover border" />
+            <div className="flex-1 min-w-0">
+              <p className="font-medium truncate">{item.name}</p>
+              <p className="text-sm text-gray-500">Size: {item.size} | Qty: {item.quantity}</p>
+              <p className="text-sm font-semibold mt-1">Subtotal: ₹{item.price * item.quantity}</p>
             </div>
           </li>
         ))}
@@ -163,46 +156,66 @@ export default function CheckoutPage() {
   return (
     <PageLoading loadingMessage="Loading Checkout..." minLoadingTime={1500}>
       <div className="min-h-screen bg-gray-50 py-6 px-2 sm:px-4">
-        <div className="max-w-5xl mx-auto lg:grid lg:grid-cols-5 gap-8 flex flex-col">
-          {/* Left: Forms */}
-          <form className="lg:col-span-3 flex flex-col gap-6">
+        {/* Stepper/Progress Indicator */}
+        <div className="max-w-5xl mx-auto mb-8 px-4">
+          <ol className="flex items-center w-full text-sm font-medium text-gray-500">
+            <li className="flex-1 flex items-center gap-2">
+              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-purple-700 text-white font-bold">1</span>
+              <span className="hidden sm:inline">Cart</span>
+              <span className="flex-1 h-1 bg-purple-700 mx-2 rounded sm:block hidden"></span>
+            </li>
+            <li className="flex-1 flex items-center gap-2">
+              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-purple-700 text-white font-bold ring-2 ring-purple-400">2</span>
+              <span className="text-purple-700 font-semibold hidden sm:inline">Checkout</span>
+              <span className="flex-1 h-1 bg-gray-200 mx-2 rounded sm:block hidden"></span>
+            </li>
+            <li className="flex-1 flex items-center gap-2">
+              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-200 text-gray-400 font-bold">3</span>
+              <span className="hidden sm:inline">Payment</span>
+              <span className="flex-1 h-1 bg-gray-200 mx-2 rounded sm:block hidden"></span>
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-200 text-gray-400 font-bold">4</span>
+              <span className="hidden sm:inline">Complete</span>
+            </li>
+          </ol>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto mt-10 px-4">
+          {/* Left Section: Product Preview + Shipping/Billing Forms */}
+          <div className="space-y-6">
             <ProductPreviewSection items={cartItems} />
             <ShippingForm value={shipping} onChange={setShipping} errors={errors.shipping} />
             <BillingForm value={billing} onChange={setBilling} sameAsShipping={billingSame} onToggleSame={setBillingSame} errors={errors.billing} shipping={shipping} />
             {/* CouponInput: show only on mobile/tablet */}
-            <div className="block lg:hidden">
+            <div className="block md:hidden">
               <CouponInput value={coupon} onApply={setCoupon} />
             </div>
             {paymentError && <div className="text-red-600 text-center font-semibold mb-2">{paymentError}</div>}
-          </form>
-          {/* Right: Order Summary and CouponInput for desktop */}
-          <div className="lg:col-span-2 mt-8 lg:mt-0 flex flex-col gap-6">
+          </div>
+          {/* Right Section: Order Summary + Confirm Button */}
+          <div className="space-y-4">
             {/* CouponInput: show only on desktop */}
-            <div className="hidden lg:block">
+            <div className="hidden md:block">
               <CouponInput value={coupon} onApply={setCoupon} />
             </div>
-            <div className="lg:sticky top-8 flex flex-col gap-4">
-              <OrderSummary cartItems={cartItems} coupon={coupon} summary={orderSummary} />
-              {/* Payment Buttons */}
-              <button
-                type="button"
-                className="w-full h-14 text-lg font-bold rounded-xl shadow bg-[#6C6385] text-white transition-all duration-200 hover:bg-[#574e6b] active:scale-95 focus:outline-none focus:ring-4 focus:ring-[#bcb6d6] disabled:opacity-60 disabled:cursor-not-allowed"
-                onClick={handlePhonePePayment}
-                disabled={processing}
-              >
-                {processing ? <span className="loading loading-spinner loading-md"></span> : 'Confirm Order (PhonePe)'}
-              </button>
-              <button
-                type="button"
-                className="w-full h-14 text-lg font-bold rounded-xl shadow bg-gray-300 text-[#6C6385] transition-all duration-200 hover:bg-gray-400 active:scale-95 focus:outline-none focus:ring-4 focus:ring-[#bcb6d6] disabled:opacity-60 disabled:cursor-not-allowed"
-                onClick={handleDummyPayment}
-                disabled={processing}
-              >
-                {processing ? <span className="loading loading-spinner loading-md"></span> : 'Dummy Payment (Test)'}
-              </button>
-              {paymentError && <div className="text-red-600 text-center font-semibold mt-2">{paymentError}</div>}
-              {/* PlaceOrderButton removed, replaced by above */}
-            </div>
+            <OrderSummary cartItems={cartItems} coupon={coupon} summary={orderSummary} />
+            {/* Payment Buttons */}
+            <button
+              type="button"
+              className="w-full bg-purple-700 hover:bg-purple-800 text-white text-lg font-semibold rounded-xl py-3 mt-4 transition disabled:opacity-60 disabled:cursor-not-allowed"
+              onClick={handlePhonePePayment}
+              disabled={processing}
+            >
+              {processing ? <span className="loading loading-spinner loading-md"></span> : 'Confirm Order (PhonePe)'}
+            </button>
+            <button
+              type="button"
+              className="w-full mt-2 text-sm bg-gray-100 text-gray-600 rounded-lg py-2 disabled:opacity-60 disabled:cursor-not-allowed"
+              onClick={handleDummyPayment}
+              disabled={processing}
+            >
+              {processing ? <span className="loading loading-spinner loading-md"></span> : 'Dummy Payment (Test)'}
+            </button>
           </div>
         </div>
       </div>

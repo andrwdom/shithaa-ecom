@@ -4,6 +4,13 @@ import { backendUrl, currency } from '../App'
 import { toast } from 'react-toastify'
 import EditProduct from './EditProduct'
 import { X, ChevronDown, Filter, Edit, Trash2 } from 'lucide-react';
+import { GripVertical } from 'lucide-react';
+import {
+  DragDropContext,
+  Droppable,
+  Draggable
+} from '@hello-pangea/dnd';
+import debounce from 'lodash.debounce';
 
 const ALL_SIZES = ["S", "M", "L", "XL", "XXL"];
 
@@ -32,6 +39,7 @@ const List = ({ token }) => {
     sortOrder: 'desc',
   });
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [manualSort, setManualSort] = useState(true); // Manual Sort toggle
 
   useEffect(() => {
     // Fetch categories for filter
@@ -44,7 +52,9 @@ const List = ({ token }) => {
 
   const fetchList = async () => {
     try {
-      const apiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000') + '/api/products';
+      const sortBy = manualSort ? 'displayOrder' : 'createdAt';
+      const sortOrder = manualSort ? 'asc' : 'desc';
+      const apiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000') + `/api/products?sortBy=${sortBy}&sortOrder=${sortOrder}`;
       const response = await axios.get(apiUrl, { headers: { token } })
       const products = response.data.products || response.data.data || [];
       setList(products);
@@ -74,7 +84,7 @@ const List = ({ token }) => {
 
   useEffect(() => {
     fetchList()
-  }, [])
+  }, [manualSort])
 
   // --- Filtering and Sorting ---
   let filtered = list.filter(item => {
@@ -143,6 +153,73 @@ const List = ({ token }) => {
   const lowStockCount = list.filter(item => typeof item.stock === 'number' && item.stock > 0 && item.stock < 3).length;
   const outOfStockCount = list.filter(item => Number(item.stock) === 0).length;
   const mostSold = list.reduce((max, item) => (item.piecesSold > (max?.piecesSold || 0) ? item : max), null);
+
+  // --- Drag-and-drop handlers ---
+  const handleDragEnd = debounce((result) => {
+    if (!result.destination) return;
+    // Work with filtered (category) list
+    const filteredList = filtered;
+    const reordered = Array.from(filteredList);
+    const [moved] = reordered.splice(result.source.index, 1);
+    reordered.splice(result.destination.index, 0, moved);
+    // Assign displayOrder = (index+1)*10
+    const updated = reordered.map((item, index) => ({
+      _id: item._id,
+      displayOrder: (index + 1) * 10,
+    }));
+    fetch((import.meta.env.VITE_API_URL || 'http://localhost:5000') + '/api/products/reorder', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', token },
+      body: JSON.stringify({ products: updated })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        toast.success('Product order updated ✅');
+        fetchList();
+      } else {
+        toast.error(data.message || 'Failed to update product order');
+      }
+    })
+    .catch(error => {
+      toast.error('Failed to update product order');
+    });
+  }, 300, { leading: true, trailing: false });
+
+  async function handlePinToTop(productId) {
+    if (!manualSort) return;
+    const filteredList = filtered;
+    const minOrder = Math.min(...filteredList.map(p => typeof p.displayOrder === 'number' ? p.displayOrder : 0));
+    const newOrder = minOrder - 10;
+    const res = await fetch((import.meta.env.VITE_API_URL || 'http://localhost:5000') + '/api/products/reorder', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', token },
+      body: JSON.stringify({ products: [{ _id: productId, displayOrder: newOrder }] })
+    });
+    if (res.ok) {
+      toast.success('Product order updated ✅');
+      fetchList();
+    } else {
+      toast.error('Failed to update product order');
+    }
+  }
+  async function handleSendToBottom(productId) {
+    if (!manualSort) return;
+    const filteredList = filtered;
+    const maxOrder = Math.max(...filteredList.map(p => typeof p.displayOrder === 'number' ? p.displayOrder : 0));
+    const newOrder = maxOrder + 10;
+    const res = await fetch((import.meta.env.VITE_API_URL || 'http://localhost:5000') + '/api/products/reorder', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', token },
+      body: JSON.stringify({ products: [{ _id: productId, displayOrder: newOrder }] })
+    });
+    if (res.ok) {
+      toast.success('Product order updated ✅');
+      fetchList();
+    } else {
+      toast.error('Failed to update product order');
+    }
+  }
 
   // Custom Drawer Component
   const FilterDrawer = ({ isOpen, onClose, children }) => {
@@ -338,7 +415,7 @@ const List = ({ token }) => {
   };
 
   // Product Card Component
-  const ProductCard = ({ item, onEdit, onDelete }) => {
+  const ProductCard = ({ item, onEdit, onDelete, position }) => {
     // Stock grid for sizes
     let sizeStock = [];
     if (Array.isArray(item.sizes)) {
@@ -360,9 +437,15 @@ const List = ({ token }) => {
     const isOutOfStock = totalStock === 0;
 
     return (
-      <div className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
+      <div className="relative border rounded-md p-3 hover:shadow-sm transition bg-white overflow-hidden">
+        {/* Position Tag */}
+        {typeof position === 'number' && (
+          <span className="absolute top-2 left-2 text-xs text-gray-500 font-semibold z-10 bg-white/80 px-2 py-0.5 rounded">
+            #{position + 1}
+          </span>
+        )}
         {/* Image */}
-        <div className="relative h-48 bg-gray-100">
+        <div className="relative h-48 bg-gray-100 rounded-md overflow-hidden">
           <img
             src={item.images?.[0] || item.image?.[0] || item.image || '/placeholder.svg'}
             alt={item.name}
@@ -390,7 +473,7 @@ const List = ({ token }) => {
         {/* Content */}
         <div className="p-2 sm:p-4">
           {/* Title and Category */}
-          <h3 className="text-sm font-semibold text-gray-900 truncate" title={item.name}>
+          <h3 className="text-sm font-semibold text-gray-900 truncate mb-1" title={item.name}>
             {item.name}
           </h3>
           <p className="text-xs text-gray-500 mt-1 truncate" title={item.category}>
@@ -596,6 +679,17 @@ const List = ({ token }) => {
 
   return (
     <>
+      {/* Manual Sort Toggle */}
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-semibold">Products</h2>
+        <label className="flex items-center gap-2 cursor-pointer select-none">
+          <span className="text-sm text-gray-600">Manual Sort</span>
+          {/* Simple Switch */}
+          <span className={`relative inline-block w-10 h-6 transition duration-200 align-middle select-none ${manualSort ? 'bg-[#4D1E64]' : 'bg-gray-300'} rounded-full`} onClick={() => setManualSort(v => !v)}>
+            <span className={`absolute left-1 top-1 w-4 h-4 transition-transform duration-200 transform ${manualSort ? 'translate-x-4' : ''} bg-white rounded-full shadow`}></span>
+          </span>
+        </label>
+      </div>
       {editingProduct ? (
         <EditProduct 
           product={editingProduct} 
@@ -656,7 +750,7 @@ const List = ({ token }) => {
                 </Toggle>
               </ToggleGroup>
             </div>
-          </div>
+            </div>
 
           {/* Desktop Filter Panel */}
           <div className="hidden md:block">
@@ -687,21 +781,55 @@ const List = ({ token }) => {
               <p className="text-sm text-gray-600">
                 Showing {filtered.length} of {totalProducts} products
               </p>
-            </div>
+                      </div>
 
             {/* Product Grid/Table */}
             <div className="p-2 sm:p-0">
               {viewMode === 'card' ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
-                  {filtered.map((item, index) => (
-                    <ProductCard
-                      key={item._id || index}
-                      item={item}
-                      onEdit={setEditingProduct}
-                      onDelete={removeProduct}
-                    />
-                  ))}
-                </div>
+                <DragDropContext onDragEnd={handleDragEnd}>
+                  <Droppable droppableId="products">
+                    {(provided) => (
+                      <div {...provided.droppableProps} ref={provided.innerRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
+                        {filtered.map((item, index) => (
+                          <Draggable key={item._id} draggableId={item._id} index={index}>
+                            {(provided) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                className="relative"
+                              >
+                                <div {...provided.dragHandleProps} className="absolute left-2 top-2 z-10 cursor-grab text-gray-400 hover:text-gray-700">
+                                  <GripVertical size={18} />
+                      </div>
+                                <ProductCard
+                                  item={item}
+                                  onEdit={setEditingProduct}
+                                  onDelete={removeProduct}
+                                  position={index}
+                                />
+                                {manualSort && (
+                                  <div className="flex gap-2 ml-auto mt-2">
+                                    <button
+                                      className="px-2 py-1 text-xs rounded bg-gray-100 hover:bg-gray-200 border border-gray-300"
+                                      title="Pin to Top"
+                                      onClick={() => handlePinToTop(item._id)}
+                                    >📌</button>
+                                    <button
+                                      className="px-2 py-1 text-xs rounded bg-gray-100 hover:bg-gray-200 border border-gray-300"
+                                      title="Send to Bottom"
+                                      onClick={() => handleSendToBottom(item._id)}
+                                    >⬇️</button>
+                    </div>
+                                )}
+                      </div>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                      </div>
+                    )}
+                  </Droppable>
+                </DragDropContext>
               ) : (
                 <ProductTable
                   products={filtered}

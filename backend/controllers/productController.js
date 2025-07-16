@@ -56,12 +56,10 @@ export const getAllProducts = async (req, res) => {
                 { description: { $regex: search, $options: 'i' } }
             ];
         }
-        const sort = {};
-        if (sortBy === 'createdAt') sort.createdAt = -1;
-        if (sortBy === 'rating') sort.rating = -1;
-        if (sortBy === 'price') sort.price = 1;
-        if (sortBy === 'name') sort.name = 1;
-        if (sortBy === 'date') sort.date = -1;
+        // --- Sorting logic update for displayOrder ---
+        const sortField = req.query.sortBy || 'createdAt';
+        const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
+        const sort = { [sortField]: sortOrder };
         const skip = (page - 1) * limit;
         const products = await productModel.find(filter)
             .sort(sort)
@@ -422,3 +420,30 @@ export const updateProduct = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 }
+
+// Batch update product order
+export const reorderProducts = async (req, res) => {
+  try {
+    let { products } = req.body;
+    if (!Array.isArray(products)) {
+      return res.status(400).json({ success: false, message: 'Invalid payload: products must be an array' });
+    }
+    // Sort and reassign displayOrder with buffer
+    products = products
+      .filter(p => p._id)
+      .sort((a, b) => a.displayOrder - b.displayOrder)
+      .map((p, i) => ({ ...p, displayOrder: (i + 1) * 10 }));
+
+    // Prepare bulk ops
+    const ops = products.map(p => ({
+      updateOne: {
+        filter: { _id: p._id },
+        update: { $set: { displayOrder: p.displayOrder } }
+      }
+    }));
+    await productModel.bulkWrite(ops);
+    res.status(200).json({ success: true, message: 'Product order updated', products });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
