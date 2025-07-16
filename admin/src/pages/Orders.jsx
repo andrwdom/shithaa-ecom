@@ -4,7 +4,7 @@ import { backendUrl, currency } from '../App'
 import { toast } from 'react-toastify'
 import { assets } from '../assets/assets'
 import { useNavigate } from 'react-router-dom'
-import { FaUser, FaEnvelope, FaTruck, FaPhone, FaMapMarkerAlt, FaMoneyBill, FaCalendarAlt, FaBox, FaTag } from 'react-icons/fa';
+import { FaUser, FaEnvelope, FaTruck, FaPhone, FaMapMarkerAlt, FaMoneyBill, FaCalendarAlt, FaBox, FaTag, FaSearch, FaFilter, FaClock, FaCheckCircle, FaTimesCircle, FaShippingFast, FaDollarSign } from 'react-icons/fa';
 
 const STATUS_COLORS = {
   Pending: 'bg-yellow-100 text-yellow-800',
@@ -27,8 +27,205 @@ function StatusBadge({ status }) {
   );
 }
 
-function OrderCard({ order, onView, userNameCache, fetchUserName }) {
-  // Prefer new structured fields
+// Dashboard Summary Cards
+const DashboardSummary = ({ orders }) => {
+  const today = new Date().toDateString();
+  
+  const pendingOrders = orders.filter(order => {
+    const status = order.orderStatus || order.status || order.paymentStatus;
+    return status === 'Pending' || status === 'Packing';
+  }).length;
+  
+  const shippedOrders = orders.filter(order => {
+    const status = order.orderStatus || order.status || order.paymentStatus;
+    return status === 'Shipped' || status === 'Out for delivery';
+  }).length;
+  
+  const deliveredOrders = orders.filter(order => {
+    const status = order.orderStatus || order.status || order.paymentStatus;
+    return status === 'Delivered';
+  }).length;
+  
+  const revenueToday = orders
+    .filter(order => {
+      const orderDate = new Date(order.createdAt || order.placedAt).toDateString();
+      const status = order.orderStatus || order.status || order.paymentStatus;
+      return orderDate === today && status !== 'Cancelled';
+    })
+    .reduce((sum, order) => {
+      const total = order.totalAmount || order.total || order.totalPrice || 0;
+      return sum + total;
+    }, 0);
+
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div className="bg-white shadow-sm rounded-lg p-4 border border-gray-200">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs font-medium text-gray-500">Pending Orders</p>
+            <h2 className="text-lg font-bold text-gray-900">{pendingOrders}</h2>
+          </div>
+          <FaClock className="w-5 h-5 text-yellow-500" />
+        </div>
+      </div>
+      
+      <div className="bg-white shadow-sm rounded-lg p-4 border border-gray-200">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs font-medium text-gray-500">Shipped Orders</p>
+            <h2 className="text-lg font-bold text-gray-900">{shippedOrders}</h2>
+          </div>
+          <FaShippingFast className="w-5 h-5 text-blue-500" />
+        </div>
+      </div>
+      
+      <div className="bg-white shadow-sm rounded-lg p-4 border border-gray-200">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs font-medium text-gray-500">Delivered Orders</p>
+            <h2 className="text-lg font-bold text-gray-900">{deliveredOrders}</h2>
+          </div>
+          <FaCheckCircle className="w-5 h-5 text-green-500" />
+        </div>
+      </div>
+      
+      <div className="bg-white shadow-sm rounded-lg p-4 border border-gray-200">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs font-medium text-gray-500">Revenue Today</p>
+            <h2 className="text-lg font-bold text-gray-900">{currency}{revenueToday.toFixed(2)}</h2>
+          </div>
+          <FaDollarSign className="w-5 h-5 text-green-500" />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Segmented Toggle Group for Status
+const StatusToggleGroup = ({ value, onChange }) => {
+  const options = [
+    { label: 'All', value: 'All' },
+    { label: 'Pending', value: 'Pending' },
+    { label: 'Shipped', value: 'Shipped' },
+    { label: 'Delivered', value: 'Delivered' },
+  ];
+  return (
+    <div className="mb-4 flex gap-2">
+      {options.map(opt => (
+        <button
+          key={opt.value}
+          type="button"
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors border focus:outline-none focus:ring-2 focus:ring-[#4D1E64] ${
+            value === opt.value
+              ? 'bg-[#4D1E64] text-white border-[#4D1E64] shadow-sm'
+              : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+          }`}
+          onClick={() => onChange(opt.value)}
+          aria-pressed={value === opt.value}
+        >
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  );
+};
+
+const PAYMENT_METHODS = ['All', 'COD', 'Prepaid', 'Razorpay', 'Stripe'];
+const SORT_ORDERS = [
+  { value: 'newest', label: 'Newest' },
+  { value: 'oldest', label: 'Oldest' },
+];
+
+// Enhanced Search and Filters Bar
+const EnhancedSearchAndFilters = ({
+  search,
+  onSearchChange,
+  statusFilter,
+  onStatusChange,
+  dateRange,
+  onDateRangeChange,
+  paymentMethod,
+  onPaymentMethodChange,
+  sortOrder,
+  onSortOrderChange,
+}) => {
+  return (
+    <div className="sticky top-0 z-20 bg-white border-b border-gray-100 mb-6">
+      <div className="flex flex-col md:flex-row items-start md:items-center gap-4 px-2 py-3">
+        {/* Search Input */}
+        <div className="w-full md:w-[260px]">
+          <div className="relative">
+            <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <input
+              type="text"
+              placeholder="Search by name or phone"
+              value={search}
+              onChange={onSearchChange}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4D1E64] focus:border-transparent"
+            />
+          </div>
+        </div>
+        {/* Status Dropdown */}
+        <div className="w-full md:w-[180px]">
+          <select
+            value={statusFilter}
+            onChange={e => onStatusChange(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4D1E64] focus:border-transparent"
+          >
+            <option value="All">All Statuses</option>
+            <option value="Pending">Pending</option>
+            <option value="Shipped">Shipped</option>
+            <option value="Delivered">Delivered</option>
+          </select>
+        </div>
+        {/* Date Range */}
+        <div className="flex gap-2 w-full md:w-auto">
+          <input
+            type="date"
+            value={dateRange.start}
+            onChange={e => onDateRangeChange({ ...dateRange, start: e.target.value })}
+            className="px-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4D1E64] focus:border-transparent text-xs"
+          />
+          <span className="text-gray-400 text-xs mt-2 md:mt-0">to</span>
+          <input
+            type="date"
+            value={dateRange.end}
+            onChange={e => onDateRangeChange({ ...dateRange, end: e.target.value })}
+            className="px-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4D1E64] focus:border-transparent text-xs"
+          />
+        </div>
+        {/* Payment Method */}
+        <div className="w-full md:w-[140px]">
+          <select
+            value={paymentMethod}
+            onChange={e => onPaymentMethodChange(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4D1E64] focus:border-transparent"
+          >
+            {PAYMENT_METHODS.map(method => (
+              <option key={method} value={method}>{method}</option>
+            ))}
+          </select>
+        </div>
+        {/* Sort Order */}
+        <div className="w-full md:w-[120px]">
+          <select
+            value={sortOrder}
+            onChange={e => onSortOrderChange(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4D1E64] focus:border-transparent"
+          >
+            {SORT_ORDERS.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Modern Responsive Order Card
+const ModernOrderCard = ({ order, onView, onStatusChange }) => {
   const userInfo = order.userInfo || { name: order.customerName, email: order.email };
   const shipping = order.shippingInfo || order.address;
   const name = shipping?.name || order.shippingInfo?.fullName || order.customerName;
@@ -38,69 +235,65 @@ function OrderCard({ order, onView, userNameCache, fetchUserName }) {
   const payment = order.paymentStatus || order.paymentMethod;
   const status = order.orderStatus || order.status || order.paymentStatus;
   const placedAt = order.createdAt || order.placedAt;
+  const address = shipping?.address || [shipping?.line1, shipping?.city, shipping?.state, shipping?.country, shipping?.pincode].filter(Boolean).join(', ');
   const isTestOrder = order.isTestOrder || payment === 'test-paid';
 
-  // Fallback: fetch display name if missing or matches email
-  const [displayName, setDisplayName] = useState(userInfo.name && userInfo.name.trim() && userInfo.name !== userInfo.email ? userInfo.name : '');
-  useEffect(() => {
-    if (!displayName && userInfo.email) {
-      if (userNameCache[userInfo.email]) {
-        setDisplayName(userNameCache[userInfo.email]);
-      } else {
-        fetchUserName(userInfo.email).then(name => {
-          if (name) setDisplayName(name);
-        });
-      }
-    }
-  }, [userInfo.email, userInfo.name, displayName, userNameCache, fetchUserName]);
+  // Dropdown for status change
+  const [showDropdown, setShowDropdown] = useState(false);
+  const statusOptions = [
+    { label: '✅ Delivered', value: 'Delivered' },
+    { label: '🚚 Shipped', value: 'Shipped' },
+    { label: '❌ Cancelled', value: 'Cancelled' },
+  ];
 
   return (
-    <div className="bg-white rounded-xl shadow p-4 mb-4 flex flex-col gap-2">
-      {/* Google Authenticated User Info */}
-      <div className="rounded px-3 py-2 mb-2 bg-gray-100 border border-gray-200 flex flex-col gap-1">
-        <div className="flex items-center gap-2 text-sm text-gray-700">
-          <FaUser className="inline-block text-gray-500" />
-          <span className="font-semibold">User:</span>
-          <span>{displayName || userInfo.email || 'Unknown User'}</span>
+    <div className="p-4 shadow-md rounded-xl flex flex-col gap-2 bg-white border border-gray-100">
+      <div className="flex justify-between items-start gap-2">
+        <div>
+          <p className="font-bold text-sm">#{order._id?.slice(-6) || 'N/A'} - {name}</p>
+          <p className="text-xs text-gray-500">📧 {email}</p>
+          <p className="text-xs text-gray-500">📞 {phone}</p>
+          <p className="text-xs text-gray-500">📍 {address}</p>
         </div>
-        <div className="flex items-center gap-2 text-sm text-gray-700 flex-row">
-          <FaEnvelope className="inline-block text-gray-500" />
-          <span className="font-semibold">Email:</span>
-          <span
-            className="truncate max-w-[160px] block"
-            title={userInfo.email}
-            style={{ lineHeight: '1.2' }}
+        <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${STATUS_COLORS[status] || 'bg-gray-100 text-gray-700'}`}>{status}</span>
+      </div>
+      <div className="text-xs text-gray-600 mt-2">
+        <p>💳 {payment || 'N/A'} | ₹{total}</p>
+        <p>📅 {formatDate(placedAt)}</p>
+      </div>
+      <div className="flex flex-wrap justify-between gap-2 mt-3">
+        <button
+          className="px-3 py-1.5 rounded border border-gray-300 text-xs font-semibold hover:bg-gray-50 transition"
+          onClick={() => onView(order)}
+        >
+          View Details
+        </button>
+        <div className="relative">
+          <button
+            className="px-3 py-1.5 rounded bg-[#4D1E64] text-white text-xs font-semibold hover:bg-[#3a164d] transition"
+            onClick={() => setShowDropdown(v => !v)}
+            type="button"
           >
-            {userInfo.email}
-          </span>
+            Change Status
+          </button>
+          {showDropdown && (
+            <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded shadow-lg z-20">
+              {statusOptions.map(opt => (
+                <button
+                  key={opt.value}
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
+                  onClick={() => { setShowDropdown(false); onStatusChange(order._id, opt.value); }}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
-      {/* Shipping Info */}
-      <div className="flex items-center justify-between">
-        <div className="font-bold text-lg text-gray-800 truncate flex items-center gap-2"><FaTruck className="inline-block text-gray-500" /> {name}</div>
-        <StatusBadge status={status} />
-      </div>
-      <div className="flex flex-wrap gap-2 text-sm text-gray-600">
-        <span className="flex items-center gap-1"><FaPhone className="inline-block text-red-500" /> <b>{phone}</b></span>
-        <span className="flex items-center gap-1"><FaMapMarkerAlt className="inline-block text-gray-500" /> <b>{shipping?.address || [shipping?.line1, shipping?.city, shipping?.state, shipping?.country, shipping?.pincode].filter(Boolean).join(', ')}</b></span>
-      </div>
-      <div className="flex flex-wrap gap-2 text-sm text-gray-600">
-        <span className="flex items-center gap-1"><FaMoneyBill className="inline-block text-green-600" /> Total: <b>{currency}{total}</b></span>
-        <span className="flex items-center gap-1"><FaCalendarAlt className="inline-block text-gray-500" /> Date: <b>{formatDate(placedAt)}</b></span>
-      </div>
-      {isTestOrder && (
-        <span className="inline-block px-2 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">Test Order</span>
-      )}
-      <button
-        className="mt-2 w-full py-2 rounded font-semibold transition"
-        style={{ background: '#4D1E64', color: '#fff' }}
-        onClick={() => onView(order)}
-      >
-        View Details
-      </button>
     </div>
   );
-}
+};
 
 function OrderDetailsModal({ order, onClose, onStatusChange }) {
   if (!order) return null;
@@ -134,32 +327,39 @@ function OrderDetailsModal({ order, onClose, onStatusChange }) {
   // Total robust
   const totalAmount = order.totalAmount || order.totalPrice || order.total || order.orderSummary?.total || 0;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-      <div className="bg-white rounded-xl shadow-lg w-full max-w-md mx-2 p-6 relative animate-fadeIn">
-        <button className="absolute top-3 right-3 text-2xl text-gray-400 hover:text-gray-700" onClick={onClose}>&times;</button>
-        <h2 className="text-xl font-bold mb-2">Order Details</h2>
-        {/* Google Authenticated User Info */}
-        <div className="rounded px-3 py-2 mb-3 bg-gray-100 border border-gray-200 flex flex-col gap-1">
-          <div className="flex items-center gap-2 text-sm text-gray-700">
-            <FaUser className="inline-block text-gray-500" />
-            <span className="font-semibold">User:</span>
-            <span>{displayName}</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-gray-700">
-            <FaEnvelope className="inline-block text-gray-500" />
-            <span className="font-semibold">Email:</span>
-            <span>{userInfo.email}</span>
-          </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 px-2 py-4 overflow-y-auto">
+      <div className="bg-white rounded-xl shadow-lg w-full max-w-md mx-auto p-4 sm:p-6 relative animate-fadeIn">
+        {/* Modal Header */}
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg font-semibold font-heading">Order Details</h2>
+          <button
+            className="rounded-full p-2 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#4D1E64]"
+            onClick={onClose}
+            aria-label="Close order details"
+            type="button"
+          >
+            <span className="sr-only">Close</span>
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
         </div>
-        {/* Shipping Info */}
-        <div className="mb-2 text-sm"><b>🚚 Shipping Name:</b> {shipping?.name || shipping?.fullName || order.customerName}</div>
-        <div className="mb-2 text-sm"><b>📞 Phone:</b> {shipping?.phone || order.phone}</div>
-        <div className="mb-2 text-sm"><b>📬 Address:</b> {address}</div>
-        <div className="mb-2 text-sm"><b>💸 Total Amount:</b> {currency}{totalAmount}</div>
-        <div className="mb-2 text-sm"><b>📅 Order Date:</b> {formatDate(placedAt)}</div>
-        {coupon && (
-          <div className="mb-2 text-sm text-green-700 font-semibold"><b>🔖 Coupon:</b> {coupon} <span className="ml-2">(Discount: {discount})</span></div>
-        )}
+        {/* User Info Box */}
+        <div className="bg-gray-100 p-3 rounded-md flex flex-col gap-1 text-sm mb-4">
+          <p className="flex items-center gap-2">
+            <FaUser className="w-4 h-4" /> <span className="font-medium">{displayName}</span>
+          </p>
+          <p className="flex items-center gap-2">
+            <FaEnvelope className="w-4 h-4" /> {userInfo.email}
+          </p>
+        </div>
+        {/* Shipping + Payment Details */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm mt-4 mb-4">
+          <div><span className="font-semibold">📛 Shipping Name:</span> {shipping?.name || shipping?.fullName || order.customerName}</div>
+          <div><span className="font-semibold">📞 Phone:</span> {shipping?.phone || order.phone}</div>
+          <div><span className="font-semibold">📍 Address:</span> {address}</div>
+          <div><span className="font-semibold">💳 Payment Mode:</span> {payment || 'N/A'}</div>
+          <div><span className="font-semibold">🧾 Order ID:</span> #{order._id?.slice(-6) || 'N/A'}</div>
+          <div><span className="font-semibold">📅 Date:</span> {formatDate(placedAt)}</div>
+        </div>
         <div className="mb-2 text-sm"><b>🛍️ Products:</b></div>
         <ul className="mb-2 divide-y">
           {items.map((item, idx) => (
@@ -198,16 +398,19 @@ const Orders = ({ token, setToken }) => {
   const [orders, setOrders] = useState([])
   const [selectedOrder, setSelectedOrder] = useState(null)
   const [search, setSearch] = useState('')
-  const [printOrder, setPrintOrder] = useState(null);
-  const [cancellingOrder, setCancellingOrder] = useState(null);
-  const printRef = useRef();
-  const navigate = useNavigate();
-  const [statusFilter, setStatusFilter] = useState('All');
-  const [loading, setLoading] = useState(false);
-  const [apiError, setApiError] = useState('');
-  const [lastApiResponse, setLastApiResponse] = useState(null);
-  // Cache for user display names
-  const [userNameCache, setUserNameCache] = useState({});
+  const [statusFilter, setStatusFilter] = useState('All')
+  const [loading, setLoading] = useState(true)
+  const [apiError, setApiError] = useState('')
+  const [lastApiResponse, setLastApiResponse] = useState(null)
+  const [cancellingOrder, setCancellingOrder] = useState(null)
+  const [userNameCache, setUserNameCache] = useState({})
+  const [printOrder, setPrintOrder] = useState(null)
+  const printRef = useRef()
+  const navigate = useNavigate()
+  const [dateRange, setDateRange] = useState({ start: '', end: '' });
+  const [paymentMethod, setPaymentMethod] = useState('All');
+  const [sortOrder, setSortOrder] = useState('newest');
+
   // Helper to fetch display name from backend
   const fetchUserName = async (email) => {
     if (!email) return '';
@@ -371,49 +574,113 @@ const Orders = ({ token, setToken }) => {
   const filteredOrders = orders.filter(order => {
     const name = order.customerName || '';
     const phone = order.phone || '';
+    const orderId = order._id || '';
     const matchesSearch =
       name.toLowerCase().includes(search.toLowerCase()) ||
-      phone.includes(search);
-    // Fix: use all possible status fields
+      phone.includes(search) ||
+      orderId.toLowerCase().includes(search.toLowerCase());
+    
     const status = order.status || order.orderStatus || order.paymentStatus;
     const matchesStatus = statusFilter === 'All' || status === statusFilter;
-    return matchesSearch && matchesStatus;
+    // Date range filter
+    const orderDate = new Date(order.createdAt || order.placedAt);
+    const inDateRange = (!dateRange.start || orderDate >= new Date(dateRange.start)) &&
+      (!dateRange.end || orderDate <= new Date(dateRange.end + 'T23:59:59'));
+    // Payment method filter
+    const matchesPayment = paymentMethod === 'All' || (order.paymentMethod || '').toLowerCase().includes(paymentMethod.toLowerCase());
+    return matchesSearch && matchesStatus && inDateRange && matchesPayment;
+  })
+  .sort((a, b) => {
+    const dateA = new Date(a.createdAt || a.placedAt);
+    const dateB = new Date(b.createdAt || b.placedAt);
+    return sortOrder === 'oldest' ? dateA - dateB : dateB - dateA;
   });
 
   return (
-    <div className="max-w-2xl mx-auto px-2 pb-8">
-      {/* TEMPORARY: Delete All Orders Button removed */}
-      <div className="sticky top-0 z-10 bg-gray-50 pt-4 pb-2 mb-4">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
-          <input
-            className="flex-1 px-3 py-2 rounded border focus:outline-none focus:ring-2 focus:ring-theme-400"
-            placeholder="Search by name or phone"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
-          <select
-            className="px-3 py-2 rounded border focus:outline-none focus:ring-2 focus:ring-theme-400"
-            value={statusFilter}
-            onChange={e => setStatusFilter(e.target.value)}
-          >
-            {ORDER_STATUSES.map(s => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
-        </div>
-        <div className="mt-2 text-xs text-gray-500">
-          Showing {filteredOrders.length} of {orders.length} orders
-        </div>
+    <div className="max-w-7xl mx-auto px-4 py-6">
+      {/* Page Header */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">Orders Management</h1>
+        <p className="text-gray-600">Manage and track all customer orders</p>
       </div>
-      {loading && <div className="text-center py-8 text-gray-400">Loading orders...</div>}
-      {apiError && <div className="text-center py-8 text-red-500">Error: {apiError}</div>}
-      {!loading && !apiError && orders.length === 0 && <div className="text-center py-8 text-yellow-500">No orders found.</div>}
-      {!loading && !apiError && filteredOrders.length === 0 && <div className="text-center py-8 text-gray-400">No orders found.</div>}
-      {!loading && !apiError && filteredOrders.length > 0 && (
-        filteredOrders.map(order => (
-          <OrderCard key={order._id} order={order} onView={setSelectedOrder} userNameCache={userNameCache} fetchUserName={fetchUserName} />
-        ))
+
+      {/* Dashboard Summary Cards */}
+      <DashboardSummary orders={orders} />
+
+      {/* Search and Filters */}
+      <EnhancedSearchAndFilters
+        search={search}
+        onSearchChange={e => setSearch(e.target.value)}
+        statusFilter={statusFilter}
+        onStatusChange={setStatusFilter}
+        dateRange={dateRange}
+        onDateRangeChange={setDateRange}
+        paymentMethod={paymentMethod}
+        onPaymentMethodChange={setPaymentMethod}
+        sortOrder={sortOrder}
+        onSortOrderChange={setSortOrder}
+      />
+
+      {/* Status Filter Toggles */}
+      <StatusToggleGroup value={statusFilter} onChange={setStatusFilter} />
+
+      {/* Results Count */}
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-sm text-gray-600">
+          Showing {filteredOrders.length} of {orders.length} orders
+        </p>
+        {loading && <p className="text-sm text-gray-500">Loading...</p>}
+      </div>
+
+      {/* Loading State */}
+      {loading && (
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#4D1E64] mx-auto mb-4"></div>
+          <p className="text-gray-500">Loading orders...</p>
+        </div>
       )}
+
+      {/* Error State */}
+      {apiError && (
+        <div className="text-center py-12">
+          <div className="text-red-500 text-6xl mb-4">⚠️</div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Error Loading Orders</h3>
+          <p className="text-gray-500">{apiError}</p>
+        </div>
+      )}
+
+      {/* Empty States */}
+      {!loading && !apiError && orders.length === 0 && (
+        <div className="text-center py-12">
+          <div className="text-gray-400 text-6xl mb-4">📦</div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No Orders Found</h3>
+          <p className="text-gray-500">Orders will appear here once customers start placing them.</p>
+        </div>
+      )}
+
+      {!loading && !apiError && filteredOrders.length === 0 && orders.length > 0 && (
+        <div className="text-center py-12">
+          <div className="text-gray-400 text-6xl mb-4">🔍</div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No Orders Match Your Filters</h3>
+          <p className="text-gray-500">Try adjusting your search or filter criteria.</p>
+        </div>
+      )}
+
+      {/* Orders List */}
+      {!loading && !apiError && filteredOrders.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {filteredOrders.map(order => (
+            <ModernOrderCard
+              key={order._id}
+              order={order}
+              onView={setSelectedOrder}
+              onStatusChange={updateStatus}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Order Details Modal */}
       {selectedOrder && (
         <OrderDetailsModal
           order={selectedOrder}
@@ -421,6 +688,8 @@ const Orders = ({ token, setToken }) => {
           onStatusChange={updateStatus}
         />
       )}
+
+      {/* Print Invoice */}
       {printOrder && (
         <div className='fixed inset-0 bg-white z-[9999] flex items-center justify-center print:block'>
           <Invoice ref={printRef} order={printOrder} />

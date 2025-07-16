@@ -6,6 +6,22 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: [
+          'Inter',
+          'ui-sans-serif',
+          'system-ui',
+          'sans-serif',
+        ],
+        heading: [
+          'Space Grotesk',
+          'Sora',
+          'Inter',
+          'ui-sans-serif',
+          'system-ui',
+          'sans-serif',
+        ],
+      },
       colors: {
         primary: '#E11D48', // Shitha pink
         accent: '#F472B6',  // Shitha accent
