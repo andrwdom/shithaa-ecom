@@ -80,10 +80,7 @@ export default function ProductSlider({
   }
 
   const handleCheckout = () => {
-    // Navigate to checkout page or open WhatsApp
-    const message = `Hi! I'd like to proceed with checkout for my cart items. Please assist me with the payment process.`
-    const whatsappUrl = `https://wa.me/919876543210?text=${encodeURIComponent(message)}`
-    window.open(whatsappUrl, "_blank")
+    window.location.href = "/checkout";
   }
 
   if (loading) {

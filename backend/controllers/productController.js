@@ -425,35 +425,59 @@ export const updateProduct = async (req, res) => {
 export const reorderProducts = async (req, res) => {
   try {
     let { products, categorySlug } = req.body;
+    console.log('Reorder request:', { products: products?.length, categorySlug });
+    
     if (!Array.isArray(products)) {
       return res.status(400).json({ success: false, message: 'Invalid payload: products must be an array' });
     }
     if (!categorySlug) {
       return res.status(400).json({ success: false, message: 'categorySlug is required' });
     }
-    // Only allow products in the given categorySlug
-    const dbProducts = await productModel.find({ categorySlug });
+    
+    // Get all products in the category (both by categorySlug and category name)
+    const dbProducts = await productModel.find({
+      $or: [
+        { categorySlug: categorySlug },
+        { category: categorySlug }
+      ]
+    });
+    
+    console.log('Found products in category:', dbProducts.length);
     const dbIds = dbProducts.map(p => String(p._id));
+    
     // Filter input to only those in this category
     products = products.filter(p => dbIds.includes(String(p._id)));
+    console.log('Filtered products to update:', products.length);
+    
     // Sort and reassign displayOrder with buffer
     products = products
       .filter(p => p._id)
       .sort((a, b) => a.displayOrder - b.displayOrder)
       .map((p, i) => ({ ...p, displayOrder: (i + 1) * 10 }));
-    // Prepare bulk ops
+    // Prepare bulk ops - remove categorySlug filter to be more flexible
     const ops = products.map(p => ({
       updateOne: {
-        filter: { _id: p._id, categorySlug },
+        filter: { _id: p._id },
         update: { $set: { displayOrder: p.displayOrder } }
       }
     }));
+    
     if (ops.length === 0) {
       return res.status(400).json({ success: false, message: 'No valid products to reorder for this category' });
     }
+    
+    console.log('Updating products with ops:', ops.length);
     await productModel.bulkWrite(ops);
-    res.status(200).json({ success: true, message: 'Product order updated for category', products });
+    
+    // Fetch updated products to return
+    const updatedProducts = await productModel.find({
+      _id: { $in: products.map(p => p._id) }
+    }).sort({ displayOrder: 1 });
+    
+    console.log('Successfully updated, updatedProducts.length:', updatedProducts.length, 'products');
+    res.status(200).json({ success: true, message: 'Product order updated for category', products: updatedProducts });
   } catch (error) {
+    console.error('Reorder error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };

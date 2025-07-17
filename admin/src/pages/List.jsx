@@ -42,23 +42,42 @@ const List = ({ token }) => {
   const [manualSort, setManualSort] = useState(true); // Manual Sort toggle
   const [isReorderMode, setIsReorderMode] = useState(false); // New reorder mode toggle
   const [selectedCat, setSelectedCat] = useState(null); // For reorder mode category tab
+  // 1. Add allCategories state
+  const [allCategories, setAllCategories] = useState([]);
 
+  // 2. Fetch all categories on mount (if not already)
   useEffect(() => {
-    // Fetch categories for filter
     axios.get(`${backendUrl}/api/categories`).then(res => {
       if (res.data.success && Array.isArray(res.data.data)) {
-        setCategories(res.data.data)
+        setCategories(res.data.data);
+        setAllCategories(res.data.data.map(cat => cat.slug || cat.name));
       }
-    })
-  }, [])
+    });
+  }, []);
 
-  const fetchList = async () => {
+  const fetchList = async (categorySlug = null) => {
     try {
       const sortBy = manualSort ? 'displayOrder' : 'createdAt';
       const sortOrder = manualSort ? 'asc' : 'desc';
-      const apiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000') + `/api/products?sortBy=${sortBy}&sortOrder=${sortOrder}`;
+      let apiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000') + `/api/products?sortBy=${sortBy}&sortOrder=${sortOrder}`;
+      
+      // If we're in reorder mode and have a selected category, filter by that category
+      if (isReorderMode && selectedCat && categorySlug === null) {
+        categorySlug = selectedCat;
+      }
+      
+      // Add category filter if provided
+      if (categorySlug) {
+        apiUrl += `&categorySlug=${encodeURIComponent(categorySlug)}`;
+        console.log('Fetching products for categorySlug:', categorySlug);
+      }
+      
+      console.log('Fetching from URL:', apiUrl);
       const response = await axios.get(apiUrl, { headers: { token } })
       const products = response.data.products || response.data.data || [];
+      console.log('Received products:', products.length, 'for category:', categorySlug);
+      
+      // Always set the full list - let the filtering happen in the UI
       setList(products);
     } catch (error) {
       console.log(error)
@@ -157,45 +176,49 @@ const List = ({ token }) => {
   const mostSold = list.reduce((max, item) => (item.piecesSold > (max?.piecesSold || 0) ? item : max), null);
 
   // --- Drag-and-drop handlers ---
-  const handleDragEnd = (result) => {
+  const handleDragEnd = async (result) => {
     if (!result.destination) return;
-    
-    // Create new sorted list for the current category
-    const reorderedCategoryProducts = Array.from(reorderProducts);
-    const [movedItem] = reorderedCategoryProducts.splice(result.source.index, 1);
-    reorderedCategoryProducts.splice(result.destination.index, 0, movedItem);
 
-    // Create the new full list for optimistic update
-    const otherCategoryProducts = list.filter(p => (p.categorySlug || p.category || 'Uncategorized') !== selectedCat);
-    const updatedReorderedCategoryProducts = reorderedCategoryProducts.map((item, index) => ({
+    // Always work on a sorted copy by displayOrder
+    const sortedList = [...reorderProducts].sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+    const [moved] = sortedList.splice(result.source.index, 1);
+    sortedList.splice(result.destination.index, 0, moved);
+
+    // Update displayOrder for all products in the new order
+    const updatedProducts = sortedList.map((item, idx) => ({
       ...item,
-      displayOrder: (index + 1) * 10,
+      displayOrder: (idx + 1) * 10,
     }));
 
-    setList([...otherCategoryProducts, ...updatedReorderedCategoryProducts]);
+    // Optimistically update UI
+    setList(list => {
+      // Replace only the products in this category
+      const other = list.filter(p => (p.categorySlug || p.category || 'Uncategorized') !== selectedCat);
+      return [...other, ...updatedProducts];
+    });
 
-    // Prepare for API call
-    const updatedForApi = updatedReorderedCategoryProducts.map(({ _id, displayOrder }) => ({
-      _id,
-      displayOrder,
-    }));
+    // Prepare payload for backend
+    const payload = updatedProducts.map(({ _id, displayOrder }) => ({ _id, displayOrder }));
+    const categorySlug = getCategorySlug(selectedCat);
 
-    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/products/reorder`, {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/products/reorder`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', token },
-      body: JSON.stringify({ products: updatedForApi, categorySlug: selectedCat })
-    })
-    .then(response => response.json())
-    .then(data => {
+        body: JSON.stringify({ products: payload, categorySlug })
+      });
+      const data = await response.json();
       if (data.success) {
         toast.success('Product order updated ✅');
+        await fetchList();
       } else {
         toast.error(data.message || 'Failed to update product order');
+        await fetchList();
       }
-    })
-    .catch(() => {
+    } catch {
       toast.error('Failed to update product order');
-    });
+      await fetchList();
+    }
   };
 
   async function handlePinToTop(productId) {
@@ -203,10 +226,11 @@ const List = ({ token }) => {
     const filteredList = filtered;
     const minOrder = Math.min(...filteredList.map(p => typeof p.displayOrder === 'number' ? p.displayOrder : 0));
     const newOrder = minOrder - 10;
+    const categorySlug = getCategorySlug(selectedCat);
     const res = await fetch((import.meta.env.VITE_API_URL || 'http://localhost:5000') + '/api/products/reorder', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', token },
-      body: JSON.stringify({ products: [{ _id: productId, displayOrder: newOrder }] })
+      body: JSON.stringify({ products: [{ _id: productId, displayOrder: newOrder }], categorySlug })
     });
     if (res.ok) {
       toast.success('Product order updated ✅');
@@ -220,10 +244,11 @@ const List = ({ token }) => {
     const filteredList = filtered;
     const maxOrder = Math.max(...filteredList.map(p => typeof p.displayOrder === 'number' ? p.displayOrder : 0));
     const newOrder = maxOrder + 10;
+    const categorySlug = getCategorySlug(selectedCat);
     const res = await fetch((import.meta.env.VITE_API_URL || 'http://localhost:5000') + '/api/products/reorder', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', token },
-      body: JSON.stringify({ products: [{ _id: productId, displayOrder: newOrder }] })
+      body: JSON.stringify({ products: [{ _id: productId, displayOrder: newOrder }], categorySlug })
     });
     if (res.ok) {
       toast.success('Product order updated ✅');
@@ -235,6 +260,13 @@ const List = ({ token }) => {
 
   // Get unique category slugs from products (for reorder mode tabs)
   const categorySlugs = Array.from(new Set(list.map(p => p.categorySlug || p.category || 'Uncategorized')));
+  
+  // Helper function to get the correct categorySlug for a given category
+  const getCategorySlug = (categoryName) => {
+    const product = list.find(p => p.category === categoryName || p.categorySlug === categoryName);
+    return product?.categorySlug || categoryName;
+  };
+  
   // If selectedCat is not set, default to first
   useEffect(() => {
     if (isReorderMode && categorySlugs.length > 0 && !selectedCat) {
@@ -247,6 +279,11 @@ const List = ({ token }) => {
   const reorderProducts = isReorderMode && selectedCat
     ? filtered.filter(p => (p.categorySlug || p.category || 'Uncategorized') === selectedCat)
     : filtered;
+
+  // Always sort reorderProducts by displayOrder before rendering
+  const reorderProductsForRendering = isReorderMode && selectedCat
+    ? filtered.filter(p => (p.categorySlug || p.category || 'Uncategorized') === selectedCat).sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0))
+    : filtered.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
 
   // Move up/down handlers for reorder mode
   function moveUp(product) {
@@ -263,17 +300,28 @@ const List = ({ token }) => {
         ? updated.find(u => u._id === p._id) || p
         : p
     ));
+    // Get the correct categorySlug for the backend
+    const categorySlug = getCategorySlug(selectedCat);
     // Call batch update API
     fetch((import.meta.env.VITE_API_URL || 'http://localhost:5000') + '/api/products/reorder', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', token },
-      body: JSON.stringify({ products: updated.map(({ _id, displayOrder }) => ({ _id, displayOrder })) })
+      body: JSON.stringify({ products: updated.map(({ _id, displayOrder }) => ({ _id, displayOrder })), categorySlug })
     })
     .then(res => res.json())
     .then(data => {
-      if (!data.success) toast.error(data.message || 'Failed to update order');
+      if (data.success) {
+        toast.success('Product order updated ✅');
+        fetchList();
+      } else {
+        toast.error(data.message || 'Failed to update order');
+        fetchList();
+      }
     })
-    .catch(() => toast.error('Failed to update order'));
+    .catch(() => {
+      toast.error('Failed to update order');
+      fetchList();
+    });
   }
   function moveDown(product) {
     if (!isReorderMode || !selectedCat) return;
@@ -288,16 +336,27 @@ const List = ({ token }) => {
         ? updated.find(u => u._id === p._id) || p
         : p
     ));
+    // Get the correct categorySlug for the backend
+    const categorySlug = getCategorySlug(selectedCat);
     fetch((import.meta.env.VITE_API_URL || 'http://localhost:5000') + '/api/products/reorder', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', token },
-      body: JSON.stringify({ products: updated.map(({ _id, displayOrder }) => ({ _id, displayOrder })) })
+      body: JSON.stringify({ products: updated.map(({ _id, displayOrder }) => ({ _id, displayOrder })), categorySlug })
     })
     .then(res => res.json())
     .then(data => {
-      if (!data.success) toast.error(data.message || 'Failed to update order');
+      if (data.success) {
+        toast.success('Product order updated ✅');
+        fetchList();
+      } else {
+        toast.error(data.message || 'Failed to update order');
+        fetchList();
+      }
     })
-    .catch(() => toast.error('Failed to update order'));
+    .catch(() => {
+      toast.error('Failed to update order');
+      fetchList();
+    });
   }
 
   // Custom Drawer Component
@@ -470,7 +529,7 @@ const List = ({ token }) => {
       disabled={disabled}
       className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
         isActive 
-          ? 'bg-[#4D1E64] text-white shadow-sm' 
+          ? 'bg-[var(--brand-purple)] text-white shadow-sm' 
           : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
       } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
     >
@@ -494,7 +553,7 @@ const List = ({ token }) => {
   };
 
   // Product Card Component
-  const ProductCard = ({ item, onEdit, onDelete, position, isReorderMode, moveUp, moveDown, isFirst, isLast, dragHandleProps }) => {
+  const ProductCard = ({ item, onEdit, onDelete, position, isReorderMode, moveUp, moveDown, isFirst, isLast, dragHandleProps, showDragHandle = false }) => {
     // Stock grid for sizes
     let sizeStock = [];
     if (Array.isArray(item.sizes)) {
@@ -526,42 +585,55 @@ const List = ({ token }) => {
               alt={item.name}
               className="h-12 w-12 object-cover rounded mr-2"
             />
-            <span className="text-gray-400 ml-auto">⇅</span>
+            <div className="flex-1">
+              <h4 className="text-sm font-medium text-gray-900 truncate">{item.name}</h4>
+              <p className="text-xs text-gray-500">₹{item.price}</p>
+            </div>
+            {/* Drag Handle - Only this area should be draggable */}
+            {showDragHandle && (
+              <div 
+                {...dragHandleProps}
+                className="cursor-grab p-2 hover:bg-gray-100 rounded transition-colors"
+                title="Drag to reorder"
+              >
+                <span className="text-gray-400 text-lg">⇅</span>
+              </div>
+            )}
           </div>
         ) : (
           // Position Tag (only in non-reorder mode)
           typeof position === 'number' && (
-            <span className="absolute top-2 left-2 text-xs text-gray-500 font-semibold z-10 bg-white/80 px-2 py-0.5 rounded">
-              #{position + 1}
-            </span>
+          <span className="absolute top-2 left-2 text-xs text-gray-500 font-semibold z-10 bg-white/80 px-2 py-0.5 rounded">
+            #{position + 1}
+          </span>
           )
         )}
         {/* Image (hidden in reorder mode, shown in drag row above) */}
         {!isReorderMode && (
-          <div className="relative h-48 bg-gray-100 rounded-md overflow-hidden">
-            <img
-              src={item.images?.[0] || item.image?.[0] || item.image || '/placeholder.svg'}
-              alt={item.name}
-              className="w-full h-full object-cover"
-            />
-            {/* Product ID Badge */}
+        <div className="relative h-48 bg-gray-100 rounded-md overflow-hidden">
+          <img
+            src={item.images?.[0] || item.image?.[0] || item.image || '/placeholder.svg'}
+            alt={item.name}
+            className="w-full h-full object-cover"
+          />
+          {/* Product ID Badge */}
             <div className="absolute top-2 left-2 bg-brand text-white text-xs px-2 py-1 rounded font-semibold">
-              {item.customId || item._id?.slice(-6) || 'ID'}
-            </div>
-            {/* Stock Status Badge */}
-            <div className="absolute top-2 right-2">
-              {isOutOfStock && (
-                <span className="bg-red-500 text-white text-xs px-2 py-1 rounded font-medium">
-                  Out of Stock
-                </span>
-              )}
-              {isLowStock && !isOutOfStock && (
-                <span className="bg-yellow-500 text-white text-xs px-2 py-1 rounded font-medium">
-                  Low Stock
-                </span>
-              )}
-            </div>
+            {item.customId || item._id?.slice(-6) || 'ID'}
           </div>
+          {/* Stock Status Badge */}
+          <div className="absolute top-2 right-2">
+            {isOutOfStock && (
+              <span className="bg-red-500 text-white text-xs px-2 py-1 rounded font-medium">
+                Out of Stock
+              </span>
+            )}
+            {isLowStock && !isOutOfStock && (
+              <span className="bg-yellow-500 text-white text-xs px-2 py-1 rounded font-medium">
+                Low Stock
+              </span>
+            )}
+          </div>
+        </div>
         )}
         {/* Content */}
         <div className="p-2 sm:p-4">
@@ -598,22 +670,22 @@ const List = ({ token }) => {
             ) : (
               <>
                 {onEdit && (
-                  <button
-                    onClick={() => onEdit(item)}
+            <button
+              onClick={() => onEdit(item)}
                     className="flex-1 sm:flex-none px-2 py-2 sm:px-3 sm:py-2 bg-brand text-white text-xs font-semibold rounded hover:bg-brand-dark transition-colors flex items-center justify-center gap-1"
-                  >
-                    <Edit className="w-4 h-4 sm:hidden" />
-                    <span className="hidden sm:inline">Edit</span>
-                  </button>
+            >
+              <Edit className="w-4 h-4 sm:hidden" />
+              <span className="hidden sm:inline">Edit</span>
+            </button>
                 )}
                 {onDelete && (
-                  <button
-                    onClick={() => onDelete(item._id)}
-                    className="flex-1 sm:flex-none px-2 py-2 sm:px-3 sm:py-2 bg-red-500 text-white text-xs font-semibold rounded hover:bg-red-600 transition-colors flex items-center justify-center gap-1"
-                  >
-                    <Trash2 className="w-4 h-4 sm:hidden" />
-                    <span className="hidden sm:inline">Delete</span>
-                  </button>
+            <button
+              onClick={() => onDelete(item._id)}
+              className="flex-1 sm:flex-none px-2 py-2 sm:px-3 sm:py-2 bg-red-500 text-white text-xs font-semibold rounded hover:bg-red-600 transition-colors flex items-center justify-center gap-1"
+            >
+              <Trash2 className="w-4 h-4 sm:hidden" />
+              <span className="hidden sm:inline">Delete</span>
+            </button>
                 )}
               </>
             )}
@@ -747,20 +819,20 @@ const List = ({ token }) => {
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex gap-2">
                         {onEdit && (
-                          <button
-                            onClick={() => onEdit(item)}
+                        <button
+                          onClick={() => onEdit(item)}
                             className="px-3 py-1 bg-brand text-white text-xs font-semibold rounded hover:bg-brand-dark transition-colors"
-                          >
-                            Edit
-                          </button>
+                        >
+                          Edit
+                        </button>
                         )}
                         {onDelete && (
-                          <button
-                            onClick={() => onDelete(item._id)}
-                            className="px-3 py-1 bg-red-500 text-white text-xs font-semibold rounded hover:bg-red-600 transition-colors"
-                          >
-                            Delete
-                          </button>
+                        <button
+                          onClick={() => onDelete(item._id)}
+                          className="px-3 py-1 bg-red-500 text-white text-xs font-semibold rounded hover:bg-red-600 transition-colors"
+                        >
+                          Delete
+                        </button>
                         )}
                       </div>
                     </td>
@@ -795,24 +867,27 @@ const List = ({ token }) => {
           >
             {isReorderMode ? 'Exit Reorder Mode' : 'Reorder Products'}
           </button>
-        </div>
       </div>
-      {/* Category Tabs in Reorder Mode */}
-      {isReorderMode && categorySlugs.length > 0 && (
-        <div className="flex gap-3 mt-4 mb-2 overflow-x-auto pb-2">
-          {categorySlugs.map(cat => (
-            <button
-              key={cat}
-              onClick={() => setSelectedCat(cat)}
-              className={`px-3 py-1 rounded border whitespace-nowrap transition-all duration-150
-                ${selectedCat === cat
-                  ? 'bg-[#4D1E64] text-white font-bold ring-2 ring-[#4D1E64] scale-105 shadow'
-                  : 'bg-white text-[#4D1E64] hover:bg-[#4D1E64]/10 border-[#4D1E64]'}
-              `}
-            >
-              {cat}
-            </button>
-          ))}
+      </div>
+      {/* --- Category Tab Bar (Reorder Mode Only) --- */}
+      {isReorderMode && allCategories.length > 0 && (
+        <div className="w-full overflow-x-auto whitespace-nowrap mb-6 pb-1">
+          <div className="flex space-x-2 px-1 min-w-max">
+            {allCategories.map(cat => (
+              <button
+                key={cat}
+                onClick={() => setSelectedCat(cat)}
+                className={`px-4 py-1.5 rounded-full transition-colors duration-150 outline-none focus:ring-2 focus:ring-[#4D1E64] whitespace-nowrap
+                  ${selectedCat === cat
+                    ? 'bg-[#4D1E64] text-white font-bold shadow-sm'
+                    : 'bg-[#F3F4F6] text-[#4D1E64] font-normal hover:bg-[#4D1E64]/10'}
+                `}
+                style={{ minWidth: 100 }}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
         </div>
       )}
       {/* Optionally keep Manual Sort toggle if needed for sorting, but not for UI */}
@@ -822,7 +897,7 @@ const List = ({ token }) => {
           product={editingProduct} 
           token={token} 
           onClose={() => setEditingProduct(null)}
-          onUpdate={fetchList}
+          onUpdate={() => fetchList()}
         />
       ) : (
         <>
@@ -914,29 +989,31 @@ const List = ({ token }) => {
             <div className="p-2 sm:p-0">
               {viewMode === 'card' ? (
                 isReorderMode ? (
-                  <DragDropContext onDragEnd={handleDragEnd}>
-                    <Droppable droppableId="products">
-                      {(provided) => (
-                        <div {...provided.droppableProps} ref={provided.innerRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
-                          {reorderProducts.map((item, index) => (
-                            <Draggable key={item._id} draggableId={item._id} index={index}>
-                              {(provided) => (
-                                <div
-                                  ref={provided.innerRef}
-                                  {...provided.draggableProps}
-                                  className="relative"
-                                >
-                                  <ProductCard
-                                    item={item}
+                <DragDropContext onDragEnd={handleDragEnd}>
+                  <Droppable droppableId="products">
+                    {(provided) => (
+                      <div {...provided.droppableProps} ref={provided.innerRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
+                          {reorderProductsForRendering.map((item, index) => (
+                          <Draggable key={item._id} draggableId={item._id} index={index}>
+                              {(provided, snapshot) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                  style={provided.draggableProps.style}
+                                className="relative"
+                              >
+                                <ProductCard
+                                  item={item}
                                     onEdit={null} // Hide edit
                                     onDelete={null} // Hide delete
-                                    position={index}
+                                  position={index}
                                     isReorderMode={true}
                                     moveUp={moveUp}
                                     moveDown={moveDown}
                                     isFirst={index === 0}
-                                    isLast={index === reorderProducts.length - 1}
+                                    isLast={index === reorderProductsForRendering.length - 1}
                                     dragHandleProps={provided.dragHandleProps}
+                                    showDragHandle={true}
                                   />
                                   <div className="flex gap-2 ml-auto mt-2">
                                     <button
@@ -949,24 +1026,24 @@ const List = ({ token }) => {
                                       title="Send to Bottom"
                                       onClick={() => handleSendToBottom(item._id)}
                                     >⬇️</button>
-                                  </div>
-                                </div>
-                              )}
-                            </Draggable>
-                          ))}
-                          {provided.placeholder}
-                        </div>
-                      )}
-                    </Droppable>
-                  </DragDropContext>
-                ) : (
+                    </div>
+                      </div>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                      </div>
+                    )}
+                  </Droppable>
+                </DragDropContext>
+              ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
                     {filtered.map((item, index) => (
                       <ProductCard
                         key={item._id}
                         item={item}
-                        onEdit={setEditingProduct}
-                        onDelete={removeProduct}
+                  onEdit={setEditingProduct}
+                  onDelete={removeProduct}
                         position={index}
                         isReorderMode={false}
                       />
@@ -975,7 +1052,7 @@ const List = ({ token }) => {
                 )
               ) : (
                 <ProductTable
-                  products={isReorderMode ? reorderProducts : filtered}
+                  products={isReorderMode ? reorderProductsForRendering : filtered}
                   onEdit={isReorderMode ? null : setEditingProduct}
                   onDelete={isReorderMode ? null : removeProduct}
                   isReorderMode={isReorderMode}

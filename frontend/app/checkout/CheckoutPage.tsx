@@ -51,7 +51,7 @@ export default function CheckoutPage() {
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const { user } = useAuth();
 
-  const { cartItems: contextCartItems } = useCart()
+  const { cartItems: contextCartItems, cartTotal, offerDetails } = useCart()
   const { buyNowItem } = useBuyNow()
 
   useEffect(() => {
@@ -64,8 +64,8 @@ export default function CheckoutPage() {
   }, [buyNowItem, contextCartItems])
 
   useEffect(() => {
-    // Calculate subtotal
-    const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    // Use cartTotal from context if available, otherwise calculate manually
+    const subtotal = cartTotal || cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
     // Calculate discount
     const discount = coupon ? Math.round((subtotal * coupon.discountPercentage) / 100) : 0;
     // Shipping: free if shipping.state is 'tamil nadu', else 49 if subtotal > 0
@@ -78,7 +78,7 @@ export default function CheckoutPage() {
     // Calculate total
     const total = subtotal - discount + shipping;
     setOrderSummary({ subtotal, discount, shipping, total });
-  }, [cartItems, coupon, shipping]);
+  }, [cartItems, coupon, shipping, cartTotal]);
 
   // PhonePe payment handler
   async function handlePhonePePayment() {
@@ -151,8 +151,6 @@ export default function CheckoutPage() {
     }
   }
 
-  // TODO: Load cartItems from context or props
-
   return (
     <PageLoading loadingMessage="Loading Checkout..." minLoadingTime={1500}>
       <div className="min-h-screen bg-gray-50 py-6 px-2 sm:px-4">
@@ -198,7 +196,7 @@ export default function CheckoutPage() {
             <div className="hidden md:block">
               <CouponInput value={coupon} onApply={setCoupon} />
             </div>
-            <OrderSummary cartItems={cartItems} coupon={coupon} summary={orderSummary} />
+            <OrderSummary cartItems={cartItems} coupon={coupon} summary={orderSummary} offerDetails={offerDetails} />
             {/* Payment Buttons */}
             <button
               type="button"

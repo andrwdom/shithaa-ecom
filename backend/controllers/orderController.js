@@ -181,6 +181,27 @@ const createStructuredOrder = async (req, res) => {
       postalCode: shippingInfo.zip || shippingInfo.postalCode || '',
       country: shippingInfo.country || ''
     } : undefined;
+    // Extra validation and logging for items
+    for (const item of itemsWithIds) {
+      if (!item._id) {
+        console.error('Order item missing _id:', item);
+        return res.status(400).json({ message: `Order item missing _id: ${JSON.stringify(item)}` });
+      }
+      const product = await productModel.findById(item._id);
+      if (!product) {
+        console.error(`Product not found for _id: ${item._id}`);
+        return res.status(400).json({ message: `Product not found for _id: ${item._id}` });
+      }
+      const sizeObj = product.sizes.find(s => s.size === item.size);
+      if (!sizeObj) {
+        console.error(`Size ${item.size} not found for product ${product.name}`);
+        return res.status(400).json({ message: `Size ${item.size} not found for product ${product.name}` });
+      }
+      if (sizeObj.stock < item.quantity) {
+        console.error(`Insufficient stock for ${product.name} in size ${item.size}. Only ${sizeObj.stock} available.`);
+        return res.status(400).json({ message: `Insufficient stock for ${product.name} in size ${item.size}. Only ${sizeObj.stock} available.` });
+      }
+    }
     const orderDoc = {
       userInfo,
       shippingInfo,
@@ -199,8 +220,8 @@ const createStructuredOrder = async (req, res) => {
     const order = await orderModel.create(orderDoc);
     res.status(201).json({ success: true, order });
   } catch (err) {
-    console.error('Create Structured Order Error:', err);
-    res.status(500).json({ message: 'Server error while creating order' });
+    console.error('Create Structured Order Error (detailed):', err);
+    res.status(500).json({ message: 'Server error while creating order', error: err.message, stack: err.stack });
   }
 };
 

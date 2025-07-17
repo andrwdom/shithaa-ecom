@@ -13,9 +13,10 @@ import { useAuth } from "@/components/auth/useAuth";
 import LoginModal from "@/components/auth/LoginModal";
 import { useBuyNow } from "@/components/buy-now-context";
 import { getIdToken } from "firebase/auth";
+import { Gift } from "lucide-react";
 
 export default function CheckoutClient() {
-  const { cartItems, clearCart } = useCart();
+  const { cartItems, clearCart, cartTotal, offerDetails } = useCart();
   const { buyNowItem, clearBuyNowItem } = useBuyNow();
   const searchParams = useSearchParams();
   const isBuyNow = searchParams.get("mode") === "buynow" && !!buyNowItem;
@@ -77,8 +78,8 @@ export default function CheckoutClient() {
     }
   }, [user]);
 
-  // Calculate discounted total
-  const subtotal = checkoutItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  // Calculate discounted total using cartTotal from context
+  const subtotal = cartTotal || checkoutItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const discount = appliedCoupon ? Math.round((subtotal * appliedCoupon.discountPercentage) / 100) : 0;
   const total = subtotal - discount;
 
@@ -255,6 +256,14 @@ export default function CheckoutClient() {
           zipcode: form.zipcode,
           zip: form.zip,
         },
+        shippingAddress: {
+          addressLine1: form.address1 || form.street || "",
+          addressLine2: form.address2 || "",
+          city: form.city || "",
+          state: form.state || "",
+          postalCode: form.pincode || form.zipcode || "",
+          country: form.country || "",
+        },
         items: itemsWithId.map(item => ({
           _id: item._id, // Use _id instead of id
           name: item.name,
@@ -367,6 +376,24 @@ export default function CheckoutClient() {
                     </AlertDescription>
                   </Alert>
                 )}
+                
+                {/* Loungewear Offer Display */}
+                {offerDetails?.offerApplied && (
+                  <div className="mb-4 bg-green-50 border border-green-200 rounded-lg p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Gift className="h-4 w-4 text-green-600" />
+                      <span className="text-sm font-semibold text-green-800">Loungewear Offer Applied!</span>
+                    </div>
+                    <div className="text-xs text-green-700 space-y-1">
+                      <p>• {offerDetails.offerDetails?.completeSets} set(s) of 3 for ₹1299 each</p>
+                      {offerDetails.offerDetails?.remainingItems > 0 && (
+                        <p>• {offerDetails.offerDetails.remainingItems} item(s) at ₹450 each</p>
+                      )}
+                      <p className="font-semibold">You saved ₹{offerDetails.offerDiscount}!</p>
+                    </div>
+                  </div>
+                )}
+                
                 {/* Coupon UI */}
                 <div className="flex flex-col sm:flex-row items-center gap-2 mb-4">
                   <Input
@@ -408,9 +435,22 @@ export default function CheckoutClient() {
                     </li>
                   ))}
                 </ul>
-                {appliedCoupon && (
-                  <div className="text-right text-green-700 font-semibold mt-2">Discount: -₹{discount}</div>
+                
+                {/* Offer Discount */}
+                {offerDetails?.offerApplied && (
+                  <div className="text-right text-green-700 font-semibold mt-2">
+                    <div className="flex items-center justify-end gap-1">
+                      <Gift className="h-3 w-3" />
+                      <span>Loungewear Offer: -₹{offerDetails.offerDiscount}</span>
+                    </div>
+                  </div>
                 )}
+                
+                {/* Coupon Discount */}
+                {appliedCoupon && (
+                  <div className="text-right text-green-700 font-semibold mt-2">Coupon Discount: -₹{discount}</div>
+                )}
+                
                 <div className="text-right font-bold mt-4 text-xl text-[rgb(71,60,102)]">Total: ₹{total}</div>
               </div>
               <Separator />

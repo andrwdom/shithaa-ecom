@@ -47,17 +47,17 @@ export default function Home() {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + '/api/products';
+        const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + '/api/products?sortBy=displayOrder&sortOrder=asc';
         const res = await fetch(apiUrl);
         const data = await res.json();
         // Map backend fields to frontend
         const products = (data.data || data.products || []).map((p: any) => ({
-          id: p._id,
-          _id: p._id,
+          id: String(p._id),
+          _id: String(p._id),
           name: p.name,
           price: p.price,
           originalPrice: p.originalPrice,
-          image: p.images?.[0] || '/placeholder.svg',
+          image: (Array.isArray(p.images) && p.images.length > 0) ? p.images[0] : '/placeholder.svg',
           category: p.category,
           isNewArrival: p.isNewArrival,
           isBestSeller: p.isBestSeller,

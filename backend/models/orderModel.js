@@ -14,12 +14,12 @@ const orderSchema = new mongoose.Schema({
     },
     // --- Add new shippingAddress field for modern orders ---
     shippingAddress: {
-        addressLine1: { type: String, required: true },
+        addressLine1: { type: String },
         addressLine2: { type: String },
-        city: { type: String, required: true },
-        state: { type: String, required: true },
-        postalCode: { type: String, required: true },
-        country: { type: String, required: true }
+        city: { type: String },
+        state: { type: String },
+        postalCode: { type: String },
+        country: { type: String }
     },
     items: [{
         name: String,

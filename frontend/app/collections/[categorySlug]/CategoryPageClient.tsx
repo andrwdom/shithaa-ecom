@@ -72,7 +72,22 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
         const res = await fetch(url.toString());
         if (!res.ok) throw new Error('Failed to fetch products');
         const data = await res.json();
-        setProducts(data.products || []);
+        // Map backend fields to frontend
+        const mappedProducts = (data.products || []).map((p: any) => ({
+          id: String(p._id),
+          _id: String(p._id),
+          name: p.name,
+          price: p.price,
+          originalPrice: p.originalPrice,
+          image: (Array.isArray(p.images) && p.images.length > 0) ? p.images[0] : '/placeholder.svg',
+          category: p.category,
+          description: p.description,
+          sizes: p.sizes,
+          bestseller: p.bestseller,
+          isBestSeller: p.isBestSeller,
+          dateAdded: p.createdAt,
+        }));
+        setProducts(mappedProducts);
       } catch (err) {
         setError(err.message);
       } finally {
@@ -171,10 +186,7 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
   };
 
   const handleCheckout = () => {
-    // Navigate to checkout page or open WhatsApp
-    const message = `Hi! I'd like to proceed with checkout for my cart items. Please assist me with the payment process.`
-    const whatsappUrl = `https://wa.me/919876543210?text=${encodeURIComponent(message)}`
-    window.open(whatsappUrl, "_blank")
+    window.location.href = "/checkout";
   }
 
   const handleUpdateQuantity = (productId: number, size: string, quantity: number) => {
@@ -445,7 +457,7 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
                     <div
                       key={product.id}
                       className="group cursor-pointer"
-                      onClick={() => handleProductClick(product.id)}
+                      onClick={() => handleProductClick(Number(product.id))}
                     >
                       {/* Clean Product Image */}
                       <div className="relative aspect-[2/3] bg-gray-100 rounded-lg overflow-hidden mb-4">

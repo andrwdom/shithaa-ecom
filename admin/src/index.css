@@ -3,6 +3,11 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --brand-purple: #473C66;
+  --brand-grey: #F0F0F0;
+}
+
 *{
     font-family: Outfit;
 }

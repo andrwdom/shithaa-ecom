@@ -22,7 +22,7 @@ interface SizeSelectionSidebarProps {
   isOpen: boolean
   onClose: () => void
   product: Product | null
-  onAddToCart: (product: Product, size: string, quantity: number) => void
+  onAddToCart: (product: Product, size: string, quantity: number, stock: number) => void
   onBuyNow: (product: Product, size: string, quantity: number) => void
 }
 
@@ -66,7 +66,7 @@ export default function SizeSelectionSidebar({
       alert("Selected size is out of stock!");
       return;
     }
-    onAddToCart(product, selectedSize, quantity)
+    onAddToCart(product, selectedSize, quantity, selectedSizeStock)
     onClose()
   }
 

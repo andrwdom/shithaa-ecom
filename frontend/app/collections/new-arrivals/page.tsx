@@ -153,10 +153,8 @@ export default function NewArrivalsPage() {
   };
 
   const handleCheckout = () => {
-    const message = `Hi! I'd like to proceed with checkout for my cart items. Please assist me with the payment process.`;
-    const whatsappUrl = `https://wa.me/919876543210?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, "_blank");
-  };
+    window.location.href = "/checkout";
+  }
 
   function formatDateYYYYMMDD(date) {
     if (!date) return '';
