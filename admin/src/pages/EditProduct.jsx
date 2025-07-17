@@ -49,6 +49,13 @@ const EditProduct = ({ product, token, onClose, onUpdate }) => {
 
   const onSubmitHandler = async (e) => {
     e.preventDefault()
+    
+    // Check if token exists
+    if (!token || token.trim() === '') {
+      toast.error('Authentication token is missing. Please log in again.');
+      return;
+    }
+    
     const errorMsg = validateForm()
     if (errorMsg) {
       toast.error(errorMsg)
@@ -72,8 +79,17 @@ const EditProduct = ({ product, token, onClose, onUpdate }) => {
       if (image3) formData.append("image3", image3)
       if (image4) formData.append("image4", image4)
 
+      // Debug logging
+      console.log('Token being sent:', token);
+      console.log('Token length:', token ? token.length : 0);
+      console.log('API URL:', 'https://shithaa.in/api/products/' + product._id);
+      console.log('FormData contents:');
+      for (let [key, value] of formData.entries()) {
+        console.log(key, ':', value);
+      }
+
       const response = await axios.put(
-        (import.meta.env.VITE_API_URL || 'http://localhost:5000') + `/api/products/${product._id}`,
+        'https://shithaa.in/api/products/' + product._id,
         formData,
         { headers: { token } }
       )
@@ -88,8 +104,13 @@ const EditProduct = ({ product, token, onClose, onUpdate }) => {
         toast.error(response.data.message || 'Failed to update product');
       }
     } catch (error) {
-      console.log(error)
-      toast.error(error.message)
+      console.log('Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data,
+        headers: error.response?.headers
+      });
+      toast.error(error.response?.data?.message || error.message)
     }
     setLoading(false)
   }
@@ -268,19 +289,6 @@ const EditProduct = ({ product, token, onClose, onUpdate }) => {
             );
           })}
         </div>
-      </div>
-
-      <div className='w-full'>
-        <p className='mb-2'>Product Stock</p>
-        <input
-          onChange={(e) => setStock(Number(e.target.value))}
-          value={stock}
-          className='w-full max-w-[200px] px-3 py-2 border rounded'
-          type="number"
-          min={0}
-          placeholder='Stock count'
-          required
-        />
       </div>
 
       <div className='flex gap-2 mt-2'>
