@@ -364,23 +364,22 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
                       activeBgColor: "bg-green-100",
                       activeBorderColor: "border-green-400",
                     },
-                  ].map((category) => {
-                    const isActive = categorySlug === category.slug
-
+                  ].map(category => {
+                    const isActive = categorySlug === category.slug;
                     return (
                       <button
                         key={category.slug}
                         onClick={() => handleCategorySelect(category.slug)}
-                        className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-full border-2 transition-all duration-300 font-medium text-sm ${
-                          isActive
-                            ? 'bg-brand border-brand text-white shadow-md'
-                            : 'bg-white border-brand text-brand hover:bg-brand/10 hover:border-brand'
-                        }`}
+                        className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-full border-2 transition-all duration-300 font-medium text-sm
+                          ${isActive
+                            ? `${category.activeBgColor} ${category.activeBorderColor} ${category.textColor}`
+                            : `${category.bgColor} ${category.borderColor} ${category.textColor}`
+                          }`}
                       >
                         <category.icon className="h-5 w-5" />
                         {category.title}
                       </button>
-                    )
+                    );
                   })}
                 </div>
               </div>
