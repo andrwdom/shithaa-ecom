@@ -90,14 +90,14 @@ const EditProduct = ({ product, token, onClose, onUpdate }) => {
       console.log('Token being sent:', token);
       console.log('Token length:', token ? token.length : 0);
       console.log('Token starts with:', token ? token.substring(0, 20) + '...' : 'No token');
-      console.log('API URL:', 'https://shithaa.in:4000/api/products/' + product._id);
+      console.log('API URL:', 'https://shithaa.in/api/products/' + product._id);
       console.log('FormData contents:');
       for (let [key, value] of formData.entries()) {
         console.log(key, ':', value);
       }
 
       const response = await axios.put(
-        'https://shithaa.in:4000/api/products/' + product._id,
+        'https://shithaa.in/api/products/' + product._id,
         formData,
         { 
           headers: { 

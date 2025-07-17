@@ -288,8 +288,8 @@ process.on('SIGTERM', () => {
     });
 });
 
-const server = app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+const server = app.listen(PORT, '127.0.0.1', () => {
+    console.log(`Server running on port ${PORT} (localhost only)`);
 });
 
 // Handle server errors
