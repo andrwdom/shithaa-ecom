@@ -129,7 +129,7 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
     setFilteredProducts(filtered)
   }, [products, searchQuery, sortBy])
 
-  const handleProductClick = (productId: number) => {
+  const handleProductClick = (productId: string) => {
     window.location.href = `/product/${productId}`
   }
 
@@ -456,7 +456,7 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
                     <div
                       key={product.id}
                       className="group cursor-pointer"
-                      onClick={() => handleProductClick(Number(product.id))}
+                      onClick={() => handleProductClick(product.id)}
                     >
                       {/* Clean Product Image */}
                       <div className="relative aspect-[2/3] bg-gray-100 rounded-lg overflow-hidden mb-4">
