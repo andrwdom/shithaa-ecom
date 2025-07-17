@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { assets } from '../assets/assets'
 import axios from 'axios'
 import { backendUrl } from '../App'
@@ -17,6 +17,13 @@ const EditProduct = ({ product, token, onClose, onUpdate }) => {
   const [loading, setLoading] = useState(false)
   const [stock, setStock] = useState(product.stock || 0)
   const [customId, setCustomId] = useState(product.customId || "");
+
+  // Debug token on component mount
+  useEffect(() => {
+    console.log('EditProduct mounted with token:', token);
+    console.log('Token from localStorage:', localStorage.getItem('token'));
+    console.log('Token comparison:', token === localStorage.getItem('token'));
+  }, [token]);
 
   const CATEGORY_OPTIONS = [
     "Maternity Feeding Wear",
@@ -82,16 +89,22 @@ const EditProduct = ({ product, token, onClose, onUpdate }) => {
       // Debug logging
       console.log('Token being sent:', token);
       console.log('Token length:', token ? token.length : 0);
-      console.log('API URL:', 'https://shithaa.in/api/products/' + product._id);
+      console.log('Token starts with:', token ? token.substring(0, 20) + '...' : 'No token');
+      console.log('API URL:', 'https://shithaa.in:4000/api/products/' + product._id);
       console.log('FormData contents:');
       for (let [key, value] of formData.entries()) {
         console.log(key, ':', value);
       }
 
       const response = await axios.put(
-        'https://shithaa.in/api/products/' + product._id,
+        'https://shithaa.in:4000/api/products/' + product._id,
         formData,
-        { headers: { token } }
+        { 
+          headers: { 
+            token,
+            'Content-Type': 'multipart/form-data'
+          } 
+        }
       )
 
       if (response.data.success) {
@@ -110,7 +123,15 @@ const EditProduct = ({ product, token, onClose, onUpdate }) => {
         data: error.response?.data,
         headers: error.response?.headers
       });
-      toast.error(error.response?.data?.message || error.message)
+      
+      if (error.response?.status === 401) {
+        toast.error('Authentication failed. Please log in again.');
+        // Clear token and redirect to login
+        localStorage.removeItem('token');
+        window.location.href = '/';
+      } else {
+        toast.error(error.response?.data?.message || error.message)
+      }
     }
     setLoading(false)
   }
