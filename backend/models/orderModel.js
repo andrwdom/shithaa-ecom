@@ -83,6 +83,7 @@ const orderSchema = new mongoose.Schema({
     orderStatus: { type: String, default: 'pending' },
     placedAt: { type: Date, default: Date.now },
     isTestOrder: { type: Boolean, default: false },
+    orderId: { type: String, unique: true, required: true },
     // Payment gateway fields
     phonepeTransactionId: { type: String },
     // Legacy payment field

@@ -74,7 +74,7 @@ function OrderSuccessContent() {
       <div className="bg-white rounded-xl shadow p-6 mb-6 w-full max-w-lg mx-auto flex flex-col gap-2">
         <div className="flex flex-wrap justify-between text-left text-gray-800">
           <div className="font-semibold">Order ID:</div>
-          <div className="font-mono">{order._id}</div>
+          <div className="font-mono">{order.orderId}</div>
         </div>
         <div className="flex flex-wrap justify-between text-left text-gray-800">
           <div className="font-semibold">Amount Paid:</div>

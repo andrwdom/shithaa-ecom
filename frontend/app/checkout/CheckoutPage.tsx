@@ -135,8 +135,8 @@ export default function CheckoutPage() {
         })
       });
       const orderData = await orderRes.json();
-      if (orderRes.ok && orderData.order && orderData.order._id) {
-        router.push(`/order-success?orderId=${orderData.order._id}`);
+      if (orderRes.ok && orderData.order && orderData.order.orderId) {
+        router.push(`/order-success?orderId=${orderData.order.orderId}`);
       } else {
         setPaymentError(orderData.message || 'Order save failed');
       }

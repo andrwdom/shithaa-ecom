@@ -132,7 +132,7 @@ export default function OrderHistory({ orders }: { orders: any[] }) {
               ×
             </button>
             <h3 className="text-lg font-bold mb-2">Order Details</h3>
-            <div className="mb-4 text-xs text-gray-500">Order ID: {selectedOrder._id}</div>
+            <div className="mb-4 text-xs text-gray-500">Order ID: {selectedOrder.orderId}</div>
             <div className="mb-4">
               <div className="font-semibold mb-2">Products:</div>
               <div className="space-y-2">

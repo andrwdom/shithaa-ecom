@@ -7,6 +7,7 @@ import { Readable } from "stream";
 import Coupon from '../models/Coupon.js';
 import mongoose from 'mongoose';
 import crypto from 'crypto';
+import counterModel from '../models/counterModel.js';
 
 // global variables
 const currency = 'inr'
@@ -87,10 +88,19 @@ export const getOrderById = async (req, res) => {
     }
 };
 
-// PATCH: Always set both top-level email and userInfo.email for all order creation
 // Helper to get user email
 function getOrderUserEmail(req, fallback) {
   return (req.user && req.user.email) || fallback || '';
+}
+
+// Helper to get next order sequence
+async function getNextOrderId() {
+  const counter = await counterModel.findByIdAndUpdate(
+    { _id: 'order' },
+    { $inc: { seq: 1 } },
+    { new: true, upsert: true }
+  );
+  return `ORD${counter.seq}`;
 }
 
 // PATCH createOrder
@@ -127,6 +137,7 @@ export const createOrder = async (req, res) => {
             email: address.email || email || '',
             phone: address.phone || phone || ''
         } : undefined;
+        const orderId = await getNextOrderId();
         const orderData = {
             customerName,
             email: userEmail,
@@ -152,7 +163,8 @@ export const createOrder = async (req, res) => {
             status: 'Pending',
             isTestOrder: isTestOrder || false,
             userId: req.body.userId || (req.user && req.user.id),
-            userInfo: { email: userEmail }
+            userInfo: { email: userEmail },
+            orderId
         };
         const order = await orderModel.create(orderData);
         res.status(201).json({ success: true, order });
@@ -220,6 +232,7 @@ const createStructuredOrder = async (req, res) => {
         return res.status(400).json({ message: `Insufficient stock for ${product.name} in size ${item.size}. Only ${sizeObj.stock} available.` });
       }
     }
+    const orderId = await getNextOrderId();
     const orderDoc = {
       userInfo,
       shippingInfo: validatedShippingInfo,
@@ -232,6 +245,7 @@ const createStructuredOrder = async (req, res) => {
       createdAt: createdAt ? new Date(createdAt) : new Date(),
       email: userEmail,
       userId: userInfo.userId || undefined,
+      orderId
     };
     const order = await orderModel.create(orderDoc);
     res.status(201).json({ success: true, order });
@@ -294,6 +308,7 @@ const placeOrder = async (req, res) => {
     }
     await updateProductStock(items);
     const userEmail = getOrderUserEmail(req, email);
+    const orderId = await getNextOrderId();
     const orderData = {
       customerName,
       email: userEmail,
@@ -317,7 +332,8 @@ const placeOrder = async (req, res) => {
       status: 'Pending',
       isTestOrder: isTestOrder || false,
       userId: req.user && req.user.id,
-      userInfo: { email: userEmail }
+      userInfo: { email: userEmail },
+      orderId
     };
     const order = await orderModel.create(orderData);
     res.status(201).json({ success: true, order });
@@ -336,6 +352,7 @@ const processCardPayment = async (req, res) => {
         }
         await updateProductStock(items);
         const userEmail = getOrderUserEmail(req, email);
+        const orderId = await getNextOrderId();
         const orderData = {
             userId,
             items,
@@ -345,12 +362,13 @@ const processCardPayment = async (req, res) => {
             payment: true, // Assuming card payment is immediate
             date: Date.now(),
             email: userEmail,
-            userInfo: { email: userEmail }
+            userInfo: { email: userEmail },
+            orderId
         };
         const newOrder = new orderModel(orderData);
         await newOrder.save();
         await userModel.findByIdAndUpdate(userId, { cartData: {} });
-        res.json({ success: true, message: "Order placed successfully", orderId: newOrder._id });
+        res.json({ success: true, message: "Order placed successfully", orderId: newOrder.orderId });
     } catch (error) {
         console.log(error);
         res.json({ success: false, message: error.message });

@@ -289,7 +289,7 @@ const ModernOrderCard = ({ order, onView, onStatusChange }) => {
     <div className="p-4 shadow-md rounded-xl flex flex-col gap-2 bg-white border border-gray-100">
       <div className="flex justify-between items-start gap-2">
         <div>
-          <p className="font-bold text-sm">#{order._id?.slice(-6) || 'N/A'} - {name}</p>
+          <p className="font-bold text-sm">#{order.orderId || 'N/A'} - {name}</p>
           <p className="text-xs text-gray-500">📧 {email}</p>
           <p className="text-xs text-gray-500">📞 {phone}</p>
           <p className="text-xs text-gray-500">📍 {addressLines.map((line, i) => <span key={i}>{line}{i < addressLines.length - 1 ? ', ' : ''}</span>)}</p>
@@ -447,7 +447,7 @@ function OrderDetailsModal({ order, onClose, onStatusChange }) {
             </div>
           </div>
           <div><span className="font-semibold">💳 Payment Mode:</span> {payment || 'N/A'}</div>
-          <div><span className="font-semibold">🧾 Order ID:</span> #{order._id?.slice(-6) || 'N/A'}</div>
+          <div><span className="font-semibold">🧾 Order ID:</span> #{order.orderId || 'N/A'}</div>
           <div><span className="font-semibold">📅 Date:</span> {formatDate(placedAt)}</div>
         </div>
         <div className="mb-2 text-sm"><b>🛍️ Products:</b></div>
@@ -671,8 +671,8 @@ const Orders = ({ token, setToken }) => {
         // Search by order ID (partial, case-insensitive)
         const idQuery = s.slice(1).toLowerCase();
         matchesSearch =
-          (order._id && order._id.toLowerCase().includes(idQuery)) ||
-          (order.customId && order.customId.toLowerCase().includes(idQuery));
+          (order.orderId && order.orderId.toLowerCase().includes(idQuery)) ||
+          (order._id && order._id.toLowerCase().includes(idQuery));
       } else {
         // Search by name or phone
         const name = (order.userInfo?.name || order.customerName || '').toLowerCase();
