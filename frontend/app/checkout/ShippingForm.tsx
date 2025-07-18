@@ -20,7 +20,7 @@ export default function ShippingForm({ value, onChange, errors }: any) {
             <Input name="fullName" autoComplete="name" value={value.fullName || ''} onChange={handleChange} className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-600 ${errors?.fullName ? 'border-red-500' : ''}`} />
             {errors?.fullName && <div className="text-red-500 text-xs mt-1">{errors.fullName}</div>}
           </div>
-          <div>
+          <div className="col-span-2 sm:col-span-1">
             <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
             <Input name="email" type="email" autoComplete="email" value={value.email || ''} onChange={handleChange} className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-600 ${errors?.email ? 'border-red-500' : ''}`} />
             {errors?.email && <div className="text-red-500 text-xs mt-1">{errors.email}</div>}
@@ -45,7 +45,7 @@ export default function ShippingForm({ value, onChange, errors }: any) {
             <label className="block text-sm font-medium text-gray-700 mb-1">Address Line 2</label>
             <Input name="address2" autoComplete="address-line2" value={value.address2 || ''} onChange={handleChange} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-600" />
           </div>
-          <div>
+          <div className="col-span-2 sm:col-span-1">
             <label className="block text-sm font-medium text-gray-700 mb-1">City *</label>
             <Input name="city" autoComplete="address-level2" value={value.city || ''} onChange={handleChange} className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-600 ${errors?.city ? 'border-red-500' : ''}`} />
             {errors?.city && <div className="text-red-500 text-xs mt-1">{errors.city}</div>}
@@ -62,11 +62,7 @@ export default function ShippingForm({ value, onChange, errors }: any) {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Country *</label>
-            <select name="country" autoComplete="country" value={value.country || ''} onChange={handleChange} className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-600 ${errors?.country ? 'border-red-500' : ''}`} >
-              <option value="">Select country</option>
-              {countries.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-            {errors?.country && <div className="text-red-500 text-xs mt-1">{errors.country}</div>}
+            <Input name="country" value="India" disabled className="w-full border rounded-lg px-3 py-2 text-sm bg-gray-100 cursor-not-allowed" />
           </div>
         </div>
       </div>

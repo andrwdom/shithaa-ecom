@@ -18,8 +18,7 @@ const Sidebar = () => {
       name: 'Orders',
       path: '/orders',
       icon: (
-        <svg width="20" height="20" viewBox="0 0 73 73" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect x="0.5" y="0.5" width="72" height="72" fill="#F9FAFB" stroke="#D2D2D2"/>
+        <svg className="w-5 h-5" width="24" height="24" viewBox="0 0 73 73" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M41.1484 37.4871L38.6348 38.9418V65.0908L61.2694 52.0221V25.873L41.1484 37.4871Z" fill="#565656"/>
           <path d="M45.247 14.039L36.5423 9L13.2793 22.4295L21.9956 27.4684L45.247 14.039Z" fill="#565656"/>
           <path d="M59.7945 22.4307L49.7631 16.7168L26.5117 30.1463L27.8384 30.8329L36.5431 35.8602L45.2013 30.8678L59.7945 22.4307Z" fill="#565656"/>
