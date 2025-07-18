@@ -55,6 +55,7 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
   const [isSizeSelectionOpen, setIsSizeSelectionOpen] = useState(false)
   const [isCheckoutPromptOpen, setIsCheckoutPromptOpen] = useState(false)
   const [addedProduct, setAddedProduct] = useState<any>(null)
+  const [error, setError] = useState<string | null>(null); // <-- Add this line
   const { setBuyNowItem } = useBuyNow()
   const { addToCart } = useCart()
   const router = useRouter()
@@ -317,6 +318,13 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
                 <span className="text-gray-900 font-medium">{categoryName}</span>
               </div>
             </div>
+
+            {/* Error Message */}
+            {error && (
+              <div className="text-red-600 text-center font-semibold mb-4">
+                {error}
+              </div>
+            )}
 
             {/* Page Header with Search and Filters */}
             <div className="px-4 sm:px-6 lg:px-8 pb-6 lg:pb-8 w-full">
