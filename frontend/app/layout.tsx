@@ -5,6 +5,7 @@ import "./globals.css"
 import Providers from "./providers"
 import CartSidebar from "@/components/cart-sidebar"
 import LayoutClient from "@/components/layout-client"
+import Script from "next/script";
 
 const playfairDisplay = Playfair_Display({
   subsets: ["latin"],
@@ -138,6 +139,10 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body min-h-screen flex flex-col">
+        <Script
+          src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`}
+          strategy="beforeInteractive"
+        />
         <Providers>
           <LayoutClient>{children}</LayoutClient>
           <CartSidebar />

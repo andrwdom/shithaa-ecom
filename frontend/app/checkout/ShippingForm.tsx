@@ -1,8 +1,6 @@
 "use client";
 import React from 'react'
 import { Input } from '@/components/ui/input'
-import dynamic from "next/dynamic";
-const PlacesAutocomplete = dynamic(() => import("react-places-autocomplete"), { ssr: false });
 
 const countries = ["India", "United States", "United Kingdom", "Canada", "Australia"]
 
@@ -70,47 +68,21 @@ export default function ShippingForm({ value, onChange, errors }: any) {
             />
             {errors?.phone && <div className="text-red-500 text-xs mt-1">{errors.phone}</div>}
           </div>
-          {/* Address Line 1 with Google Places Autocomplete */}
+          {/* Address Line 1 */}
           <div>
             <label htmlFor="addressLine1" className="block text-sm font-medium text-gray-700 mb-1">
               Address Line 1 *
             </label>
-            <PlacesAutocomplete
+            <Input
+              id="addressLine1"
+              name="addressLine1"
+              autoComplete="address-line1"
+              required
+              placeholder="e.g. 123/4A, Nakeerer Street"
               value={value.addressLine1 || ""}
-              onChange={address => onChange({ ...value, addressLine1: address })}
-              onSelect={address => onChange({ ...value, addressLine1: address })}
-              searchOptions={{ componentRestrictions: { country: "in" } }}
-            >
-              {({ getInputProps, suggestions, getSuggestionItemProps, loading }) => (
-                <div className="relative">
-                  <Input
-                    {...getInputProps({
-                      id: "addressLine1",
-                      name: "addressLine1",
-                      autoComplete: "address-line1",
-                      required: true,
-                      placeholder: "e.g. 123/4A, Nakeerer Street",
-                      className: `w-full border rounded-lg px-3 py-2 text-sm ${errors?.addressLine1 ? "border-red-500" : ""}`,
-                    })}
-                  />
-                  {suggestions.length > 0 && (
-                    <div className="absolute left-0 right-0 bg-white border rounded shadow z-50 mt-1 max-h-56 overflow-y-auto">
-                      {loading && <div className="px-3 py-2 text-gray-500">Loading...</div>}
-                      {suggestions.map(suggestion => (
-                        <div
-                          {...getSuggestionItemProps(suggestion, {
-                            className: "px-3 py-2 cursor-pointer hover:bg-gray-100"
-                          })}
-                          key={suggestion.placeId}
-                        >
-                          {suggestion.description}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </PlacesAutocomplete>
+              onChange={handleChange}
+              className={`w-full border rounded-lg px-3 py-2 text-sm ${errors?.addressLine1 ? "border-red-500" : ""}`}
+            />
             {errors?.addressLine1 && <div className="text-red-500 text-xs mt-1">{errors.addressLine1}</div>}
           </div>
           {/* Address Line 2 (optional) */}
