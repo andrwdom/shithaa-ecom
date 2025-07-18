@@ -268,7 +268,7 @@ const ModernOrderCard = ({ order, onView, onStatusChange }) => {
         order.address.state,
         order.address.pincode,
         order.address.country
-      ].filter(Boolean);
+  ].filter(Boolean);
       return lines;
     }
     return [];
@@ -441,7 +441,7 @@ function OrderDetailsModal({ order, onClose, onStatusChange }) {
                 {shippingDisplay.addressFields.map((field, index) => (
                   <div key={index}>
                     <b>{field.label}:</b> {field.value}
-                  </div>
+                    </div>
                 ))}
               </div>
             </div>
@@ -686,19 +686,19 @@ const Orders = ({ token, setToken }) => {
     // Search logic
     let matchesSearch = true;
     if (search) {
-      const s = search.trim();
-      if (s.startsWith('#')) {
-        // Search by order ID (partial, case-insensitive)
-        const idQuery = s.slice(1).toLowerCase();
+    const s = search.trim();
+    if (s.startsWith('#')) {
+      // Search by order ID (partial, case-insensitive)
+      const idQuery = s.slice(1).toLowerCase();
         matchesSearch =
           (order.orderId && order.orderId.toLowerCase().includes(idQuery)) ||
           (order._id && order._id.toLowerCase().includes(idQuery));
-      } else {
-        // Search by name or phone
-        const name = (order.userInfo?.name || order.customerName || '').toLowerCase();
-        const phone = (order.userInfo?.phone || order.phone || '').toLowerCase();
+    } else {
+      // Search by name or phone
+      const name = (order.userInfo?.name || order.customerName || '').toLowerCase();
+      const phone = (order.userInfo?.phone || order.phone || '').toLowerCase();
         matchesSearch =
-          name.includes(s.toLowerCase()) ||
+        name.includes(s.toLowerCase()) ||
           phone.includes(s.toLowerCase());
       }
     }
@@ -747,7 +747,7 @@ const Orders = ({ token, setToken }) => {
       {/* Status Filter Toggles */}
       <div className="overflow-x-auto w-full">
         <div className="flex gap-2 min-w-max pb-2" style={{ WebkitOverflowScrolling: 'touch' }}>
-          <StatusToggleGroup value={statusFilter} onChange={setStatusFilter} />
+      <StatusToggleGroup value={statusFilter} onChange={setStatusFilter} />
         </div>
       </div>
 
