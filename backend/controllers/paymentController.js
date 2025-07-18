@@ -4,6 +4,7 @@ import orderModel from "../models/orderModel.js";
 import userModel from "../models/userModel.js";
 import productModel from "../models/productModel.js";
 import { successResponse, errorResponse } from '../utils/response.js';
+import { getUniqueOrderId } from './orderController.js';
 
 // PhonePe configuration
 const PHONEPE_MERCHANT_ID = process.env.PHONEPE_MERCHANT_ID || 'TEST-M23G3HW55OYVV_25071';
@@ -61,6 +62,7 @@ export const createPhonePeSession = async (req, res) => {
         await updateProductStock(cartItems);
 
         const userEmail = getOrderUserEmail(req, email);
+        const orderId = await getUniqueOrderId();
 
         // Create order in database
         const orderData = {
@@ -101,7 +103,8 @@ export const createPhonePeSession = async (req, res) => {
             userInfo: { email: userEmail },
             status: 'Pending',
             orderStatus: 'Pending',
-            paymentStatus: 'pending'
+            paymentStatus: 'pending',
+            orderId
         };
 
         const newOrder = await orderModel.create(orderData);
