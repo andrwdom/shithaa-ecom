@@ -58,8 +58,8 @@ const DashboardSummary = ({ orders }) => {
     }, 0);
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-      <div className="bg-white shadow-sm rounded-lg p-4 border border-gray-200">
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8"> {/* Increased gap and margin */}
+      <div className="bg-white shadow-sm rounded-lg p-4 border border-gray-200 flex flex-col justify-between">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs font-medium text-gray-500">Pending Orders</p>
@@ -68,8 +68,7 @@ const DashboardSummary = ({ orders }) => {
           <FaClock className="w-5 h-5 text-yellow-500" />
         </div>
       </div>
-      
-      <div className="bg-white shadow-sm rounded-lg p-4 border border-gray-200">
+      <div className="bg-white shadow-sm rounded-lg p-4 border border-gray-200 flex flex-col justify-between">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs font-medium text-gray-500">Shipped Orders</p>
@@ -78,8 +77,7 @@ const DashboardSummary = ({ orders }) => {
           <FaShippingFast className="w-5 h-5 text-blue-500" />
         </div>
       </div>
-      
-      <div className="bg-white shadow-sm rounded-lg p-4 border border-gray-200">
+      <div className="bg-white shadow-sm rounded-lg p-4 border border-gray-200 flex flex-col justify-between">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs font-medium text-gray-500">Delivered Orders</p>
@@ -88,14 +86,13 @@ const DashboardSummary = ({ orders }) => {
           <FaCheckCircle className="w-5 h-5 text-green-500" />
         </div>
       </div>
-      
-      <div className="bg-white shadow-sm rounded-lg p-4 border border-gray-200">
-        <div className="flex items-center justify-between">
+      <div className="bg-white shadow-sm rounded-lg p-4 border border-gray-200 flex flex-col justify-between">
+        <div className="flex items-center justify-between h-full"> {/* Ensure vertical alignment */}
           <div>
             <p className="text-xs font-medium text-gray-500">Revenue Today</p>
             <h2 className="text-lg font-bold text-gray-900">{currency}{revenueToday.toFixed(2)}</h2>
           </div>
-          <FaDollarSign className="w-5 h-5 text-green-500" />
+          <FaDollarSign className="w-5 h-5 text-green-500 self-end" />
         </div>
       </div>
     </div>
@@ -151,15 +148,15 @@ const EnhancedSearchAndFilters = ({
   onSortOrderChange,
 }) => {
   return (
-    <div className="sticky top-0 z-20 bg-white border-b border-gray-100 mb-6">
-      <div className="flex flex-col md:flex-row items-start md:items-center gap-4 px-2 py-3">
+    <div className="sticky top-0 z-20 bg-white border-b border-gray-100 mb-8"> {/* Increased margin */}
+      <div className="flex flex-col md:flex-row items-start md:items-center gap-6 px-2 py-4"> {/* Increased gap and padding */}
         {/* Search Input */}
         <div className="w-full md:w-[260px]">
           <div className="relative">
             <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <input
               type="text"
-              placeholder="Search by name or phone"
+              placeholder="Search by #order ID, name, or phone"
               value={search}
               onChange={onSearchChange}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4D1E64] focus:border-transparent"
@@ -380,26 +377,20 @@ function OrderDetailsModal({ order, onClose, onStatusChange }) {
                   <>
                     {order.shippingAddress.addressLine1 && <div className="font-medium text-gray-900">{order.shippingAddress.addressLine1}</div>}
                     {order.shippingAddress.addressLine2 && <div className="text-gray-700">{order.shippingAddress.addressLine2}</div>}
-                    <div className="flex gap-2 text-gray-700">
-                      <span>{order.shippingAddress.city}</span>
-                      <span>,</span>
-                      <span>{order.shippingAddress.state}</span>
-                    </div>
-                    <div className="text-gray-700">Pincode: <span className="font-semibold">{order.shippingAddress.postalCode}</span></div>
-                    <div className="text-gray-700">Country: <span className="font-semibold">{order.shippingAddress.country}</span></div>
+                    {order.shippingAddress.city && <div className="text-gray-700">City: <span className="font-semibold">{order.shippingAddress.city}</span></div>}
+                    {order.shippingAddress.state && <div className="text-gray-700">State: <span className="font-semibold">{order.shippingAddress.state}</span></div>}
+                    {order.shippingAddress.postalCode && <div className="text-gray-700">Pincode: <span className="font-semibold">{order.shippingAddress.postalCode}</span></div>}
+                    {order.shippingAddress.country && <div className="text-gray-700">Country: <span className="font-semibold">{order.shippingAddress.country}</span></div>}
                   </>
                 ) : (
                   // Fallback for legacy orders
                   <>
                     {shipping?.line1 && <div className="font-medium text-gray-900">{shipping.line1}</div>}
                     {shipping?.line2 && <div className="text-gray-700">{shipping.line2}</div>}
-                    <div className="flex gap-2 text-gray-700">
-                      <span>{shipping?.city}</span>
-                      <span>,</span>
-                      <span>{shipping?.state}</span>
-                    </div>
-                    <div className="text-gray-700">Pincode: <span className="font-semibold">{shipping?.pincode}</span></div>
-                    <div className="text-gray-700">Country: <span className="font-semibold">{shipping?.country}</span></div>
+                    {shipping?.city && <div className="text-gray-700">City: <span className="font-semibold">{shipping.city}</span></div>}
+                    {shipping?.state && <div className="text-gray-700">State: <span className="font-semibold">{shipping.state}</span></div>}
+                    {shipping?.pincode && <div className="text-gray-700">Pincode: <span className="font-semibold">{shipping.pincode}</span></div>}
+                    {shipping?.country && <div className="text-gray-700">Country: <span className="font-semibold">{shipping.country}</span></div>}
                   </>
                 )}
               </div>
@@ -620,15 +611,29 @@ const Orders = ({ token, setToken }) => {
     }
   };
 
-  const filteredOrders = orders.filter(order => {
-    const name = order.customerName || '';
-    const phone = order.phone || '';
-    const orderId = order._id || '';
-    const matchesSearch =
-      name.toLowerCase().includes(search.toLowerCase()) ||
-      phone.includes(search) ||
-      orderId.toLowerCase().includes(search.toLowerCase());
-    
+  // Enhanced search filter
+  let filteredOrders = orders.filter(order => {
+    if (!search) return true;
+    const s = search.trim();
+    if (s.startsWith('#')) {
+      // Search by order ID (partial, case-insensitive)
+      const idQuery = s.slice(1).toLowerCase();
+      return (
+        (order._id && order._id.toLowerCase().includes(idQuery)) ||
+        (order.customId && order.customId.toLowerCase().includes(idQuery))
+      );
+    } else {
+      // Search by name or phone
+      const name = (order.userInfo?.name || order.customerName || '').toLowerCase();
+      const phone = (order.userInfo?.phone || order.phone || '').toLowerCase();
+      return (
+        name.includes(s.toLowerCase()) ||
+        phone.includes(s.toLowerCase())
+      );
+    }
+  });
+
+  filteredOrders = filteredOrders.filter(order => {
     const status = order.status || order.orderStatus || order.paymentStatus;
     const matchesStatus = statusFilter === 'All' || status === statusFilter;
     // Date range filter

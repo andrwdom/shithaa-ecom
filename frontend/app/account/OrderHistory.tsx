@@ -160,22 +160,21 @@ export default function OrderHistory({ orders }: { orders: any[] }) {
                     if (!addr) return null;
                     return (
                       <>
-                        {addr.firstName && <div><span className="font-medium">First Name:</span> {addr.firstName}</div>}
-                        {addr.lastName && <div><span className="font-medium">Last Name:</span> {addr.lastName}</div>}
-                        {addr.phone && <div><span className="font-medium">Phone:</span> {addr.phone}</div>}
-                        {addr.email && <div><span className="font-medium">Email:</span> {addr.email}</div>}
+                        {addr.addressLine1 && <div><span className="font-medium">Address Line 1:</span> {addr.addressLine1}</div>}
+                        {addr.addressLine2 && <div><span className="font-medium">Address Line 2:</span> {addr.addressLine2}</div>}
+                        {addr.line1 && <div><span className="font-medium">Line 1:</span> {addr.line1}</div>}
+                        {addr.line2 && <div><span className="font-medium">Line 2:</span> {addr.line2}</div>}
                         {addr.street && <div><span className="font-medium">Street:</span> {addr.street}</div>}
                         {addr.address && <div><span className="font-medium">Address:</span> {addr.address}</div>}
                         {addr.address1 && <div><span className="font-medium">Address 1:</span> {addr.address1}</div>}
                         {addr.address2 && <div><span className="font-medium">Address 2:</span> {addr.address2}</div>}
-                        {addr.line1 && <div><span className="font-medium">Line 1:</span> {addr.line1}</div>}
-                        {addr.line2 && <div><span className="font-medium">Line 2:</span> {addr.line2}</div>}
                         {addr.city && <div><span className="font-medium">City:</span> {addr.city}</div>}
                         {addr.state && <div><span className="font-medium">State:</span> {addr.state}</div>}
-                        {addr.country && <div><span className="font-medium">Country:</span> {addr.country}</div>}
                         {addr.pincode && <div><span className="font-medium">Pincode:</span> {addr.pincode}</div>}
+                        {addr.postalCode && <div><span className="font-medium">Pincode:</span> {addr.postalCode}</div>}
                         {addr.zipcode && <div><span className="font-medium">Zipcode:</span> {addr.zipcode}</div>}
                         {addr.zip && <div><span className="font-medium">Zip:</span> {addr.zip}</div>}
+                        {addr.country && <div><span className="font-medium">Country:</span> {addr.country}</div>}
                       </>
                     );
                   })()}

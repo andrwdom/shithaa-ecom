@@ -1,5 +1,6 @@
 import axios from 'axios'
 import React, { useEffect, useState } from 'react'
+import { useRef } from 'react';
 import { backendUrl, currency } from '../App'
 import { toast } from 'react-toastify'
 import EditProduct from './EditProduct'
@@ -44,6 +45,9 @@ const List = ({ token }) => {
   const [selectedCat, setSelectedCat] = useState(null); // For reorder mode category tab
   // 1. Add allCategories state
   const [allCategories, setAllCategories] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const searchTimeout = useRef();
 
   // 2. Fetch all categories on mount (if not already)
   useEffect(() => {
@@ -144,6 +148,25 @@ const List = ({ token }) => {
     if (valA < valB) return pendingFilters.sortOrder === 'asc' ? -1 : 1;
     if (valA > valB) return pendingFilters.sortOrder === 'asc' ? 1 : -1;
     return 0;
+  });
+
+  // Debounce search input
+  useEffect(() => {
+    if (searchTimeout.current) clearTimeout(searchTimeout.current);
+    searchTimeout.current = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+    }, 250);
+    return () => clearTimeout(searchTimeout.current);
+  }, [searchTerm]);
+
+  // Apply search filter (by name or _id)
+  let searched = filtered.filter(item => {
+    if (!debouncedSearch) return true;
+    const s = debouncedSearch.trim().toLowerCase();
+    return (
+      (item.name && item.name.toLowerCase().includes(s)) ||
+      (item._id && item._id.toLowerCase().includes(s))
+    );
   });
 
   function handleFilterChange(field, value) {
@@ -977,13 +1000,23 @@ const List = ({ token }) => {
             </div>
           )}
           <p className='mb-2'>All Products List</p>
+          {/* Search Bar */}
+          <div className="mb-4 flex items-center gap-2 max-w-md">
+            <input
+              type="text"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent"
+              placeholder="Search by product name or ID..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+            />
+          </div>
           <div className='flex flex-col gap-2'>
             {/* Results Count */}
             <div className="flex items-center justify-between">
               <p className="text-sm text-gray-600">
-                Showing {filtered.length} of {totalProducts} products
+                Showing {searched.length} of {totalProducts} products
               </p>
-                      </div>
+            </div>
 
             {/* Product Grid/Table */}
             <div className="p-2 sm:p-0">
@@ -1038,7 +1071,7 @@ const List = ({ token }) => {
                 </DragDropContext>
               ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
-                    {filtered.map((item, index) => (
+                    {searched.map((item, index) => (
                       <ProductCard
                         key={item._id}
                         item={item}
@@ -1052,7 +1085,7 @@ const List = ({ token }) => {
                 )
               ) : (
                 <ProductTable
-                  products={isReorderMode ? reorderProductsForRendering : filtered}
+                  products={isReorderMode ? reorderProductsForRendering : searched}
                   onEdit={isReorderMode ? null : setEditingProduct}
                   onDelete={isReorderMode ? null : removeProduct}
                   isReorderMode={isReorderMode}
@@ -1061,7 +1094,7 @@ const List = ({ token }) => {
             </div>
 
             {/* Empty State for Card View */}
-            {viewMode === 'card' && filtered.length === 0 && (
+            {viewMode === 'card' && searched.length === 0 && (
               <div className="text-center py-12">
                 <div className="text-gray-400 text-6xl mb-4">📦</div>
                 <h3 className="text-lg font-medium text-gray-900 mb-2">No products found</h3>
