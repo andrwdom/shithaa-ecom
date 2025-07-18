@@ -1,7 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
 import ShippingForm from './ShippingForm'
-import BillingForm from './BillingForm'
 import CouponInput from './CouponInput'
 import OrderSummary from './OrderSummary'
 import PlaceOrderButton from './PlaceOrderButton'
@@ -39,8 +38,6 @@ function ProductPreviewSection({ items, onEdit }: any) {
 export default function CheckoutPage() {
   // Centralized state for all forms and summary
   const [shipping, setShipping] = useState<any>({})
-  const [billing, setBilling] = useState<any>({})
-  const [billingSame, setBillingSame] = useState(true)
   const [coupon, setCoupon] = useState<any>(null)
   const [cartItems, setCartItems] = useState<any[]>([])
   const [errors, setErrors] = useState<any>({})
@@ -69,15 +66,15 @@ export default function CheckoutPage() {
     // Calculate discount
     const discount = coupon ? Math.round((subtotal * coupon.discountPercentage) / 100) : 0;
     // Shipping: free if shipping.state is 'tamil nadu', else 49 if subtotal > 0
-    let shipping = 0;
+    let shippingCost = 0;
     if (subtotal > 0) {
       if (!shipping?.state || typeof shipping.state !== 'string' || shipping.state.trim().toLowerCase() !== 'tamil nadu') {
-        shipping = 49;
+        shippingCost = 49;
       }
     }
     // Calculate total
-    const total = subtotal - discount + shipping;
-    setOrderSummary({ subtotal, discount, shipping, total });
+    const total = subtotal - discount + shippingCost;
+    setOrderSummary({ subtotal, discount, shipping: shippingCost, total });
   }, [cartItems, coupon, shipping, cartTotal]);
 
   // PhonePe payment handler
@@ -97,7 +94,6 @@ export default function CheckoutPage() {
         body: JSON.stringify({
           amount: orderSummary.total,
           shipping,
-          billing,
           cartItems,
           coupon,
           userId: user?.mongoId,
@@ -179,11 +175,10 @@ export default function CheckoutPage() {
           </ol>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto mt-10 px-4">
-          {/* Left Section: Product Preview + Shipping/Billing Forms */}
+          {/* Left Section: Product Preview + Shipping Form Only */}
           <div className="space-y-6">
             <ProductPreviewSection items={cartItems} />
             <ShippingForm value={shipping} onChange={setShipping} errors={errors.shipping} />
-            <BillingForm value={billing} onChange={setBilling} sameAsShipping={billingSame} onToggleSame={setBillingSame} errors={errors.billing} shipping={shipping} />
             {/* CouponInput: show only on mobile/tablet */}
             <div className="block md:hidden">
               <CouponInput value={coupon} onApply={setCoupon} />

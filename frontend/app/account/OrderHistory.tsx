@@ -74,7 +74,7 @@ export default function OrderHistory({ orders }: { orders: any[] }) {
         const items = order.items || order.cartItems || [];
         const status = order.status || order.orderStatus || order.paymentStatus;
         const orderDate = order.createdAt || order.date || order.orderDate || order.updatedAt;
-        const accent = STATUS_ACCENT[String(status)] || "from-gray-200 to-gray-300";
+        const accent = STATUS_ACCENT[status as keyof typeof STATUS_ACCENT] || "from-gray-200 to-gray-300";
         const borderLeft = STATUS_BORDER_LEFT[status as keyof typeof STATUS_BORDER_LEFT] || "border-l-4 border-gray-200";
         // Minimal preview: product names, date, status, view details button
         return (
@@ -156,43 +156,64 @@ export default function OrderHistory({ orders }: { orders: any[] }) {
                 <span className="font-medium">Shipping Address:</span>
                 <div className="pl-2 mt-1 text-gray-700">
                   {(() => {
-                    const addr = selectedOrder.address || selectedOrder.shippingInfo;
-                    if (!addr) return null;
+                    // Get shipping information for display
+                    const getShippingDisplayInfo = () => {
+                      if (selectedOrder.shippingInfo) {
+                        // Use new shippingInfo structure
+                        return [
+                          { label: 'Full Name', value: selectedOrder.shippingInfo.fullName },
+                          { label: 'Email', value: selectedOrder.shippingInfo.email },
+                          { label: 'Phone', value: selectedOrder.shippingInfo.phone },
+                          { label: 'Address Line 1', value: selectedOrder.shippingInfo.addressLine1 },
+                          { label: 'Address Line 2', value: selectedOrder.shippingInfo.addressLine2 },
+                          { label: 'City', value: selectedOrder.shippingInfo.city },
+                          { label: 'State', value: selectedOrder.shippingInfo.state },
+                          { label: 'Postal Code', value: selectedOrder.shippingInfo.postalCode },
+                          { label: 'Country', value: selectedOrder.shippingInfo.country }
+                        ].filter(field => field.value);
+                      } else if (selectedOrder.shippingAddress) {
+                        // Use shippingAddress structure
+                        return [
+                          { label: 'Full Name', value: selectedOrder.shippingAddress.fullName },
+                          { label: 'Email', value: selectedOrder.shippingAddress.email },
+                          { label: 'Phone', value: selectedOrder.shippingAddress.phone },
+                          { label: 'Flat/House No.', value: selectedOrder.shippingAddress.flatHouseNo },
+                          { label: 'Area/Locality', value: selectedOrder.shippingAddress.areaLocality },
+                          { label: 'Street Address', value: selectedOrder.shippingAddress.streetAddress },
+                          { label: 'Landmark', value: selectedOrder.shippingAddress.landmark },
+                          { label: 'City', value: selectedOrder.shippingAddress.city },
+                          { label: 'State', value: selectedOrder.shippingAddress.state },
+                          { label: 'Pincode', value: selectedOrder.shippingAddress.pincode },
+                          { label: 'Country', value: selectedOrder.shippingAddress.country }
+                        ].filter(field => field.value);
+                      } else if (selectedOrder.address) {
+                        // Use legacy address structure
+                        return [
+                          { label: 'Address Line 1', value: selectedOrder.address.line1 },
+                          { label: 'Address Line 2', value: selectedOrder.address.line2 },
+                          { label: 'City', value: selectedOrder.address.city },
+                          { label: 'State', value: selectedOrder.address.state },
+                          { label: 'Pincode', value: selectedOrder.address.pincode },
+                          { label: 'Country', value: selectedOrder.address.country }
+                        ].filter(field => field.value);
+                      }
+                      return [];
+                    };
+                    
+                    const shippingFields = getShippingDisplayInfo();
+                    
+                    if (shippingFields.length === 0) return null;
+                    
                     return (
-                      <>
-                        {addr.flatHouseNo && <div><span className="font-medium">Flat/House No.:</span> {addr.flatHouseNo}</div>}
-                        {addr.areaLocality && <div><span className="font-medium">Area/Locality:</span> {addr.areaLocality}</div>}
-                        {addr.streetAddress && <div><span className="font-medium">Street Address:</span> {addr.streetAddress}</div>}
-                        {addr.landmark && <div><span className="font-medium">Landmark:</span> {addr.landmark}</div>}
-                        {addr.city && <div><span className="font-medium">City:</span> {addr.city}</div>}
-                        {addr.state && <div><span className="font-medium">State:</span> {addr.state}</div>}
-                        {addr.pincode && <div><span className="font-medium">Pincode:</span> {addr.pincode}</div>}
-                        {addr.country && <div><span className="font-medium">Country:</span> {addr.country}</div>}
-                        {addr.fullName && <div><span className="font-medium">Name:</span> {addr.fullName}</div>}
-                        {addr.email && <div><span className="font-medium">Email:</span> {addr.email}</div>}
-                        {addr.phone && <div><span className="font-medium">Phone:</span> {addr.phone}</div>}
-                        {/* Fallbacks for legacy fields */}
-                        {addr.addressLine1 && <div><span className="font-medium">Address Line 1:</span> {addr.addressLine1}</div>}
-                        {addr.addressLine2 && <div><span className="font-medium">Address Line 2:</span> {addr.addressLine2}</div>}
-                        {addr.line1 && <div><span className="font-medium">Line 1:</span> {addr.line1}</div>}
-                        {addr.line2 && <div><span className="font-medium">Line 2:</span> {addr.line2}</div>}
-                        {addr.street && <div><span className="font-medium">Street:</span> {addr.street}</div>}
-                        {addr.address && <div><span className="font-medium">Address:</span> {addr.address}</div>}
-                        {addr.address1 && <div><span className="font-medium">Address 1:</span> {addr.address1}</div>}
-                        {addr.address2 && <div><span className="font-medium">Address 2:</span> {addr.address2}</div>}
-                        {addr.postalCode && <div><span className="font-medium">Pincode:</span> {addr.postalCode}</div>}
-                        {addr.zipcode && <div><span className="font-medium">Zipcode:</span> {addr.zipcode}</div>}
-                        {addr.zip && <div><span className="font-medium">Zip:</span> {addr.zip}</div>}
-                      </>
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 flex flex-col gap-1 shadow-sm">
+                        {shippingFields.map((field, index) => (
+                          <div key={index}>
+                            <span className="font-medium">{field.label}:</span> {field.value}
+                          </div>
+                        ))}
+                      </div>
                     );
                   })()}
-                  {/* Fallback for root-level phone/email if not in address */}
-                  {!((selectedOrder.address && (selectedOrder.address.phone || selectedOrder.address.email)) || selectedOrder.phone || selectedOrder.email) && (
-                    <>
-                      {selectedOrder.phone && <div><span className="font-medium">Phone:</span> {selectedOrder.phone}</div>}
-                      {selectedOrder.email && <div><span className="font-medium">Email:</span> {selectedOrder.email}</div>}
-                    </>
-                  )}
                 </div>
               </div>
             )}

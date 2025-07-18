@@ -42,16 +42,17 @@ const orderSchema = new mongoose.Schema({
         name: String,
         email: String
     },
+    // Updated shippingInfo with all required fields
     shippingInfo: {
-        fullName: String,
-        email: String,
-        phone: String,
-        addressLine1: String,
-        addressLine2: String,
-        city: String,
-        state: String,
-        zip: String,
-        country: String
+        fullName: { type: String, required: true },
+        email: { type: String, required: true },
+        phone: { type: String, required: true },
+        addressLine1: { type: String, required: true },
+        addressLine2: { type: String },
+        city: { type: String, required: true },
+        state: { type: String, required: true },
+        postalCode: { type: String, required: true },
+        country: { type: String, required: true, default: 'India' }
     },
     billingInfo: {
         fullName: String,

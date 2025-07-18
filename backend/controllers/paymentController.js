@@ -73,12 +73,25 @@ export const createPhonePeSession = async (req, res) => {
                 image: item.image,
                 size: item.size
             })),
+            // Store shipping information in the new shippingInfo structure
+            shippingInfo: {
+                fullName: shipping.fullName,
+                email: shipping.email,
+                phone: shipping.phone,
+                addressLine1: shipping.addressLine1,
+                addressLine2: shipping.addressLine2 || '',
+                city: shipping.city,
+                state: shipping.state,
+                postalCode: shipping.postalCode,
+                country: shipping.country || 'India'
+            },
+            // Legacy address field for backward compatibility
             address: {
                 line1: shipping.addressLine1 || shipping.street || '',
                 line2: shipping.addressLine2 || '',
                 city: shipping.city,
                 state: shipping.state,
-                pincode: shipping.pincode || shipping.zipcode
+                pincode: shipping.postalCode || shipping.pincode || shipping.zipcode
             },
             amount: amount,
             paymentMethod: 'PhonePe',

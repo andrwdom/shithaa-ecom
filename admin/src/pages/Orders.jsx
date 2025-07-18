@@ -224,32 +224,57 @@ const EnhancedSearchAndFilters = ({
 // Modern Responsive Order Card
 const ModernOrderCard = ({ order, onView, onStatusChange }) => {
   const userInfo = order.userInfo || { name: order.customerName, email: order.email };
-  const shipping = order.shippingAddress || order.shippingInfo || order.address;
-  const name = shipping?.name || shipping?.fullName || order.customerName;
+  const shipping = order.shippingInfo || order.shippingAddress || order.address;
+  const name = shipping?.fullName || shipping?.name || order.customerName;
   const email = shipping?.email || order.shippingInfo?.email || order.email;
   const phone = shipping?.phone || order.shippingInfo?.phone || order.phone;
   const total = order.totalAmount || order.total || order.totalPrice;
   const payment = order.paymentStatus || order.paymentMethod;
   const status = order.orderStatus || order.status || order.paymentStatus;
   const placedAt = order.createdAt || order.placedAt;
-  // --- Address fields ---
-  const addressLines = shipping && (shipping.flatHouseNo || shipping.streetAddress) ? [
-    shipping.flatHouseNo,
-    shipping.areaLocality,
-    shipping.streetAddress,
-    shipping.landmark,
-    shipping.city,
-    shipping.state,
-    shipping.pincode,
-    shipping.country
-  ].filter(Boolean) : [
-    shipping?.line1,
-    shipping?.line2,
-    shipping?.city,
-    shipping?.state,
-    shipping?.pincode,
-    shipping?.country
-  ].filter(Boolean);
+  
+  // Get shipping address lines for display
+  const getShippingAddressLines = () => {
+    if (order.shippingInfo) {
+      // Use new shippingInfo structure
+      const lines = [
+        order.shippingInfo.addressLine1,
+        order.shippingInfo.addressLine2,
+        order.shippingInfo.city,
+        order.shippingInfo.state,
+        order.shippingInfo.postalCode,
+        order.shippingInfo.country
+      ].filter(Boolean);
+      return lines;
+    } else if (order.shippingAddress) {
+      // Use shippingAddress structure
+      const lines = [
+        order.shippingAddress.flatHouseNo,
+        order.shippingAddress.areaLocality,
+        order.shippingAddress.streetAddress,
+        order.shippingAddress.landmark,
+        order.shippingAddress.city,
+        order.shippingAddress.state,
+        order.shippingAddress.pincode,
+        order.shippingAddress.country
+      ].filter(Boolean);
+      return lines;
+    } else if (order.address) {
+      // Use legacy address structure
+      const lines = [
+        order.address.line1,
+        order.address.line2,
+        order.address.city,
+        order.address.state,
+        order.address.pincode,
+        order.address.country
+      ].filter(Boolean);
+      return lines;
+    }
+    return [];
+  };
+  
+  const addressLines = getShippingAddressLines();
   const isTestOrder = order.isTestOrder || payment === 'test-paid';
 
   // Dropdown for status change
@@ -313,7 +338,7 @@ function OrderDetailsModal({ order, onClose, onStatusChange }) {
   if (!order) return null;
   const userInfo = order.userInfo || { name: order.customerName, email: order.email };
   const displayName = userInfo.name && userInfo.name.trim() ? userInfo.name : (userInfo.email || 'Unknown User');
-  const shipping = order.shippingAddress || order.shippingInfo || order.address;
+  const shipping = order.shippingInfo || order.shippingAddress || order.address;
   const items = order.items || order.cartItems || [];
   const total = order.totalAmount || order.total || order.totalPrice;
   const payment = order.paymentStatus || order.paymentMethod;
@@ -322,23 +347,61 @@ function OrderDetailsModal({ order, onClose, onStatusChange }) {
   const coupon = order.couponUsed?.code || order.discount?.appliedCouponCode;
   const discount = order.couponUsed?.discount || order.discount?.value || 0;
   const isTestOrder = order.isTestOrder || payment === 'test-paid';
-  // --- Address fields ---
-  const hasShippingAddress = !!order.shippingAddress;
-  const addressFields = shipping && shipping.addressLine1 ? [
-    { label: 'Address Line 1', value: shipping.addressLine1 },
-    { label: 'Address Line 2', value: shipping.addressLine2 },
-    { label: 'City', value: shipping.city },
-    { label: 'State', value: shipping.state },
-    { label: 'Pincode', value: shipping.postalCode },
-    { label: 'Country', value: shipping.country }
-  ] : [
-    { label: 'Address Line 1', value: shipping?.line1 },
-    { label: 'Address Line 2', value: shipping?.line2 },
-    { label: 'City', value: shipping?.city },
-    { label: 'State', value: shipping?.state },
-    { label: 'Pincode', value: shipping?.pincode },
-    { label: 'Country', value: shipping?.country }
-  ];
+  
+  // Get shipping information for display
+  const getShippingDisplayInfo = () => {
+    if (order.shippingInfo) {
+      // Use new shippingInfo structure
+      return {
+        name: order.shippingInfo.fullName,
+        email: order.shippingInfo.email,
+        phone: order.shippingInfo.phone,
+        addressFields: [
+          { label: 'Address Line 1', value: order.shippingInfo.addressLine1 },
+          { label: 'Address Line 2', value: order.shippingInfo.addressLine2 },
+          { label: 'City', value: order.shippingInfo.city },
+          { label: 'State', value: order.shippingInfo.state },
+          { label: 'Postal Code', value: order.shippingInfo.postalCode },
+          { label: 'Country', value: order.shippingInfo.country }
+        ].filter(field => field.value)
+      };
+    } else if (order.shippingAddress) {
+      // Use shippingAddress structure
+      return {
+        name: order.shippingAddress.fullName,
+        email: order.shippingAddress.email,
+        phone: order.shippingAddress.phone,
+        addressFields: [
+          { label: 'Flat/House No.', value: order.shippingAddress.flatHouseNo },
+          { label: 'Area/Locality', value: order.shippingAddress.areaLocality },
+          { label: 'Street Address', value: order.shippingAddress.streetAddress },
+          { label: 'Landmark', value: order.shippingAddress.landmark },
+          { label: 'City', value: order.shippingAddress.city },
+          { label: 'State', value: order.shippingAddress.state },
+          { label: 'Pincode', value: order.shippingAddress.pincode },
+          { label: 'Country', value: order.shippingAddress.country }
+        ].filter(field => field.value)
+      };
+    } else if (order.address) {
+      // Use legacy address structure
+      return {
+        name: order.customerName,
+        email: order.email,
+        phone: order.phone,
+        addressFields: [
+          { label: 'Address Line 1', value: order.address.line1 },
+          { label: 'Address Line 2', value: order.address.line2 },
+          { label: 'City', value: order.address.city },
+          { label: 'State', value: order.address.state },
+          { label: 'Pincode', value: order.address.pincode },
+          { label: 'Country', value: order.address.country }
+        ].filter(field => field.value)
+      };
+    }
+    return { name: '', email: '', phone: '', addressFields: [] };
+  };
+  
+  const shippingDisplay = getShippingDisplayInfo();
   // Total robust
   const totalAmount = order.totalAmount || order.totalPrice || order.total || order.orderSummary?.total || 0;
   return (
@@ -368,38 +431,18 @@ function OrderDetailsModal({ order, onClose, onStatusChange }) {
           </div>
         {/* Shipping + Payment Details */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm mt-4 mb-4">
-          <div><span className="font-semibold">🪪 Shipping Name:</span> {shipping?.name || shipping?.fullName || order.customerName}</div>
-          <div><span className="font-semibold">📞 Phone:</span> {shipping?.phone || order.phone}</div>
+          <div><span className="font-semibold">🪪 Shipping Name:</span> {shippingDisplay.name}</div>
+          <div><span className="font-semibold">📞 Phone:</span> {shippingDisplay.phone}</div>
           {/* Shipping Address Block */}
           <div className="col-span-2">
             <span className="font-semibold">📦 Shipping Address:</span>
             <div className="pl-2 mt-1">
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 flex flex-col gap-1 shadow-sm max-w-md">
-                {hasShippingAddress ? (
-                  <>
-                    {order.shippingAddress.flatHouseNo && <div><b>Flat/House No.:</b> {order.shippingAddress.flatHouseNo}</div>}
-                    {order.shippingAddress.areaLocality && <div><b>Area/Locality:</b> {order.shippingAddress.areaLocality}</div>}
-                    {order.shippingAddress.streetAddress && <div><b>Street Address:</b> {order.shippingAddress.streetAddress}</div>}
-                    {order.shippingAddress.landmark && <div><b>Landmark:</b> {order.shippingAddress.landmark}</div>}
-                    {order.shippingAddress.city && <div><b>City:</b> {order.shippingAddress.city}</div>}
-                    {order.shippingAddress.state && <div><b>State:</b> {order.shippingAddress.state}</div>}
-                    {order.shippingAddress.pincode && <div><b>Pincode:</b> {order.shippingAddress.pincode}</div>}
-                    {order.shippingAddress.country && <div><b>Country:</b> {order.shippingAddress.country}</div>}
-                    {order.shippingAddress.fullName && <div><b>Name:</b> {order.shippingAddress.fullName}</div>}
-                    {order.shippingAddress.email && <div><b>Email:</b> {order.shippingAddress.email}</div>}
-                    {order.shippingAddress.phone && <div><b>Phone:</b> {order.shippingAddress.phone}</div>}
-                  </>
-                ) : (
-                  // Fallback for legacy orders
-                  <>
-                    {shipping?.line1 && <div className="font-medium text-gray-900">{shipping.line1}</div>}
-                    {shipping?.line2 && <div className="text-gray-700">{shipping.line2}</div>}
-                    {shipping?.city && <div className="text-gray-700">City: <span className="font-semibold">{shipping.city}</span></div>}
-                    {shipping?.state && <div className="text-gray-700">State: <span className="font-semibold">{shipping.state}</span></div>}
-                    {shipping?.pincode && <div className="text-gray-700">Pincode: <span className="font-semibold">{shipping.pincode}</span></div>}
-                    {shipping?.country && <div className="text-gray-700">Country: <span className="font-semibold">{shipping.country}</span></div>}
-                  </>
-                )}
+                {shippingDisplay.addressFields.map((field, index) => (
+                  <div key={index}>
+                    <b>{field.label}:</b> {field.value}
+                  </div>
+                ))}
               </div>
             </div>
           </div>

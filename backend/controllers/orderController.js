@@ -177,15 +177,28 @@ const createStructuredOrder = async (req, res) => {
       _id: item._id || item.id || undefined,
       id: item._id || item.id || undefined,
     }));
-    // --- Save shippingAddress in new format if present ---
-    const shippingAddress = shippingInfo && shippingInfo.addressLine1 ? {
+    
+    // Validate required shipping fields
+    const requiredShippingFields = ['fullName', 'email', 'phone', 'addressLine1', 'city', 'state', 'postalCode'];
+    for (const field of requiredShippingFields) {
+      if (!shippingInfo[field]) {
+        return res.status(400).json({ message: `Missing required shipping field: ${field}` });
+      }
+    }
+    
+    // Ensure shippingInfo has all required fields with proper structure
+    const validatedShippingInfo = {
+      fullName: shippingInfo.fullName,
+      email: shippingInfo.email,
+      phone: shippingInfo.phone,
       addressLine1: shippingInfo.addressLine1,
       addressLine2: shippingInfo.addressLine2 || '',
       city: shippingInfo.city,
       state: shippingInfo.state,
-      postalCode: shippingInfo.zip || shippingInfo.postalCode || '',
-      country: shippingInfo.country || ''
-    } : undefined;
+      postalCode: shippingInfo.postalCode,
+      country: shippingInfo.country || 'India'
+    };
+    
     // Extra validation and logging for items
     for (const item of itemsWithIds) {
       if (!item._id) {
@@ -209,9 +222,7 @@ const createStructuredOrder = async (req, res) => {
     }
     const orderDoc = {
       userInfo,
-      shippingInfo,
-      // --- Add shippingAddress if available ---
-      ...(shippingAddress ? { shippingAddress } : {}),
+      shippingInfo: validatedShippingInfo,
       items: itemsWithIds,
       couponUsed: couponUsed || null,
       totalAmount,
