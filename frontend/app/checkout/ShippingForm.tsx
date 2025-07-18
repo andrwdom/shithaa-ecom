@@ -37,13 +37,23 @@ export default function ShippingForm({ value, onChange, errors }: any) {
         <h3 className="text-md font-semibold mb-2 text-gray-700">Address</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Address Line 1 *</label>
-            <Input name="address1" autoComplete="address-line1" value={value.address1 || ''} onChange={handleChange} className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-600 ${errors?.address1 ? 'border-red-500' : ''}`} />
-            {errors?.address1 && <div className="text-red-500 text-xs mt-1">{errors.address1}</div>}
+            <label className="block text-sm font-medium text-gray-700 mb-1">Flat/House No. *</label>
+            <Input name="flatHouseNo" autoComplete="address-line1" value={value.flatHouseNo || ''} onChange={handleChange} className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-600 ${errors?.flatHouseNo ? 'border-red-500' : ''}`} />
+            {errors?.flatHouseNo && <div className="text-red-500 text-xs mt-1">{errors.flatHouseNo}</div>}
           </div>
           <div className="col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Address Line 2</label>
-            <Input name="address2" autoComplete="address-line2" value={value.address2 || ''} onChange={handleChange} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-600" />
+            <label className="block text-sm font-medium text-gray-700 mb-1">Area/Locality *</label>
+            <Input name="areaLocality" autoComplete="address-line2" value={value.areaLocality || ''} onChange={handleChange} className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-600 ${errors?.areaLocality ? 'border-red-500' : ''}`} />
+            {errors?.areaLocality && <div className="text-red-500 text-xs mt-1">{errors.areaLocality}</div>}
+          </div>
+          <div className="col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Street Address *</label>
+            <Input name="streetAddress" autoComplete="street-address" value={value.streetAddress || ''} onChange={handleChange} className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-600 ${errors?.streetAddress ? 'border-red-500' : ''}`} />
+            {errors?.streetAddress && <div className="text-red-500 text-xs mt-1">{errors.streetAddress}</div>}
+          </div>
+          <div className="col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Landmark</label>
+            <Input name="landmark" autoComplete="landmark" value={value.landmark || ''} onChange={handleChange} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-600" />
           </div>
           <div className="col-span-2 sm:col-span-1">
             <label className="block text-sm font-medium text-gray-700 mb-1">City *</label>
