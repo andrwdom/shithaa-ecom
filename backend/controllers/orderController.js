@@ -734,7 +734,8 @@ export {
     updateStatus, 
     cancelOrder, 
     getAllOrders, 
-  updateOrderStatus,
+    updateOrderStatus,
     generateInvoice,
-    createStructuredOrder
+    createStructuredOrder,
+    getUniqueOrderId
 };
