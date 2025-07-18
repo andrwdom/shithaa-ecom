@@ -479,6 +479,26 @@ function OrderDetailsModal({ order, onClose, onStatusChange }) {
             ))}
           </select>
         </div>
+        {/* Payment Log Section */}
+        <div className="mt-4">
+          <h3 className="text-md font-semibold mb-2">Payment Log</h3>
+          {order.phonepeTransactionId && (
+            <div className="mb-1 text-xs text-gray-700">Transaction ID: <span className="font-mono">{order.phonepeTransactionId}</span></div>
+          )}
+          {order.amountPaid && (
+            <div className="mb-1 text-xs text-gray-700">Amount Paid: <span className="font-mono">₹{order.amountPaid}</span></div>
+          )}
+          {order.paymentStatus && (
+            <div className="mb-1 text-xs text-gray-700">Status: <span className="font-mono">{order.paymentStatus}</span></div>
+          )}
+          {order.paymentLog ? (
+            <pre className="bg-gray-100 rounded p-2 text-xs max-h-48 overflow-auto border mt-2">
+              {JSON.stringify(order.paymentLog, null, 2)}
+            </pre>
+          ) : (
+            <div className="text-xs text-gray-500">No payment log available.</div>
+          )}
+        </div>
       </div>
     </div>
   );

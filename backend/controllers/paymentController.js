@@ -241,34 +241,35 @@ export const phonePeCallback = async (req, res) => {
             });
         }
 
+        // Always save the full callback payload as paymentLog
+        const paymentLog = req.body;
+        let update = {
+            paymentLog,
+            phonepeTransactionId: transactionId,
+            amountPaid: amount / 100, // Convert paise to INR
+        };
+
         if (paymentState === 'COMPLETED' && responseCode === 'PAYMENT_SUCCESS') {
             // Payment successful
-            await orderModel.findByIdAndUpdate(order._id, {
+            update = {
+                ...update,
                 payment: true,
                 paymentStatus: 'paid',
                 orderStatus: 'Confirmed',
                 status: 'Order Placed',
-                phonepeTransactionId: transactionId
-            });
-
+            };
             // Clear user cart
             if (order.userId) {
                 await userModel.findByIdAndUpdate(order.userId, { cartData: {} });
             }
-
-            res.json({
-                success: true,
-                message: 'Payment successful',
-                orderId: order._id
-            });
         } else {
             // Payment failed
-            await orderModel.findByIdAndUpdate(order._id, {
+            update = {
+                ...update,
                 paymentStatus: 'failed',
                 orderStatus: 'Failed',
-                status: 'Payment Failed'
-            });
-
+                status: 'Payment Failed',
+            };
             // Restore product stock
             for (const item of order.items) {
                 const product = await productModel.findById(item._id);
@@ -280,13 +281,15 @@ export const phonePeCallback = async (req, res) => {
                     }
                 }
             }
-
-            res.json({
-                success: false,
-                message: 'Payment failed',
-                orderId: order._id
-            });
         }
+
+        await orderModel.findByIdAndUpdate(order._id, update);
+
+        res.json({
+            success: paymentState === 'COMPLETED' && responseCode === 'PAYMENT_SUCCESS',
+            message: paymentState === 'COMPLETED' && responseCode === 'PAYMENT_SUCCESS' ? 'Payment successful' : 'Payment failed',
+            orderId: order._id
+        });
 
     } catch (error) {
         console.error('PhonePe Callback Error:', error);

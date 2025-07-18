@@ -183,7 +183,19 @@ export default function CheckoutPage() {
             <div className="block md:hidden">
               <CouponInput value={coupon} onApply={setCoupon} />
             </div>
-            {paymentError && <div className="text-red-600 text-center font-semibold mb-2">{paymentError}</div>}
+            {paymentError && (
+              <div className="text-red-600 text-center font-semibold mb-2 flex flex-col items-center gap-2">
+                <span>{paymentError}</span>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline border-red-400 text-red-700 hover:bg-red-50 mt-2"
+                  onClick={handlePhonePePayment}
+                  disabled={processing}
+                >
+                  Retry PhonePe Payment
+                </button>
+              </div>
+            )}
           </div>
           {/* Right Section: Order Summary + Confirm Button */}
           <div className="space-y-4">

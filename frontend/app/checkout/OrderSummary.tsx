@@ -37,8 +37,16 @@ export default function OrderSummary({ cartItems, coupon, summary, offerDetails 
           </div>
         )}
         
-        <div className="flex justify-between">
-          <span>Shipping</span><span>₹{summary.shipping}</span>
+        <div className="flex justify-between items-center">
+          <span>Shipping</span>
+          {summary.shipping === 0 ? (
+            <span className="flex flex-col items-end">
+              <span className="line-through text-gray-400 text-xs">₹49</span>
+              <span className="text-green-700 font-semibold text-sm">Free shipping within Tamil Nadu!</span>
+            </span>
+          ) : (
+            <span>₹{summary.shipping}</span>
+          )}
         </div>
         <div className="border-t pt-2 font-semibold text-base flex justify-between">
           <span>Total</span><span>₹{summary.total}</span>

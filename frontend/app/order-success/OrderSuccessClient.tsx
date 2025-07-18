@@ -63,22 +63,35 @@ function OrderSuccessContent() {
     );
   }
 
+  const isPaid = order.paymentStatus === 'paid' || order.status === 'Paid';
+  const isFailed = order.paymentStatus === 'failed' || order.status === 'Payment Failed';
+
   return (
     <div className="max-w-2xl mx-auto p-6 sm:p-10 text-center flex flex-col items-center justify-center min-h-[70vh]">
-      {/* Success Animation */}
+      {/* Success/Failure Animation */}
       <div className="mb-6 animate-bounce-in">
-        <CheckCircle className="h-20 w-20 text-green-500 drop-shadow-lg" />
+        {isPaid ? (
+          <CheckCircle className="h-20 w-20 text-green-500 drop-shadow-lg" />
+        ) : (
+          <div className="text-6xl text-red-500">❌</div>
+        )}
       </div>
-      <h1 className="text-3xl sm:text-4xl font-bold text-green-700 mb-2">Order Placed Successfully!</h1>
-      <p className="text-lg text-gray-700 mb-4">Thank you for shopping with Shitha. Your order is confirmed.</p>
+      <h1 className={`text-3xl sm:text-4xl font-bold mb-2 ${isPaid ? 'text-green-700' : 'text-red-700'}`}>{isPaid ? 'Order Placed Successfully!' : 'Payment Failed'}</h1>
+      <p className="text-lg text-gray-700 mb-4">{isPaid ? 'Thank you for shopping with Shitha. Your order is confirmed.' : 'Your payment was not successful. Please try again.'}</p>
       <div className="bg-white rounded-xl shadow p-6 mb-6 w-full max-w-lg mx-auto flex flex-col gap-2">
         <div className="flex flex-wrap justify-between text-left text-gray-800">
           <div className="font-semibold">Order ID:</div>
           <div className="font-mono">{order.orderId}</div>
         </div>
+        {order.phonepeTransactionId && (
+          <div className="flex flex-wrap justify-between text-left text-gray-800">
+            <div className="font-semibold">Transaction ID:</div>
+            <div className="font-mono">{order.phonepeTransactionId}</div>
+          </div>
+        )}
         <div className="flex flex-wrap justify-between text-left text-gray-800">
           <div className="font-semibold">Amount Paid:</div>
-          <div>₹{order.total || order.totalPrice}</div>
+          <div>₹{order.amountPaid || order.total || order.totalPrice}</div>
         </div>
         <div className="flex flex-wrap justify-between text-left text-gray-800">
           <div className="font-semibold">Payment Method:</div>
@@ -86,25 +99,39 @@ function OrderSuccessContent() {
         </div>
         <div className="flex flex-wrap justify-between text-left text-gray-800">
           <div className="font-semibold">Status:</div>
-          <div className="capitalize">{order.paymentStatus || 'N/A'}</div>
+          <div className={`capitalize font-bold ${isPaid ? 'text-green-700' : 'text-red-700'}`}>{order.paymentStatus || order.status || 'N/A'}</div>
         </div>
       </div>
-      <div className="text-green-700 font-medium mb-2">Your invoice has been emailed to you.</div>
-      <div className="text-gray-600 mb-6">You can also view your order in your account.</div>
-      <div className="flex flex-col sm:flex-row gap-3 justify-center">
-        <button
-          className="px-6 py-3 rounded-xl bg-green-100 text-green-800 font-semibold shadow hover:bg-green-200 transition"
-          onClick={() => router.push('/account')}
-        >
-          Track Order
-        </button>
-        <a
-          href="/"
-          className="px-6 py-3 rounded-xl bg-gray-200 text-gray-800 font-semibold shadow hover:bg-gray-300 transition"
-        >
-          Back to Homepage
-        </a>
-      </div>
+      {isPaid ? (
+        <>
+          <div className="text-green-700 font-medium mb-2">Your invoice has been emailed to you.</div>
+          <div className="text-gray-600 mb-6">You can also view your order in your account.</div>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <button
+              className="px-6 py-3 rounded-xl bg-green-100 text-green-800 font-semibold shadow hover:bg-green-200 transition"
+              onClick={() => router.push('/account')}
+            >
+              Track Order
+            </button>
+            <a
+              href="/"
+              className="px-6 py-3 rounded-xl bg-gray-200 text-gray-800 font-semibold shadow hover:bg-gray-300 transition"
+            >
+              Back to Homepage
+            </a>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="text-red-600 font-medium mb-4">If money was deducted, it will be auto-refunded by your bank. You can retry payment below.</div>
+          <button
+            className="px-6 py-3 rounded-xl bg-red-100 text-red-800 font-semibold shadow hover:bg-red-200 transition"
+            onClick={() => router.push('/checkout')}
+          >
+            Retry Payment
+          </button>
+        </>
+      )}
       {/* Confetti animation (optional) */}
       <style>{`
         @keyframes bounce-in { 0% { transform: scale(0.7); opacity: 0; } 80% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(1); } }

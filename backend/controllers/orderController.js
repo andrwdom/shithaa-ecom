@@ -66,7 +66,16 @@ export const getUserOrders = async (req, res) => {
 // GET /api/orders/:id - RESTful single order fetch
 export const getOrderById = async (req, res) => {
     try {
-        const order = await orderModel.findById(req.params.id);
+        let order;
+        const { id } = req.params;
+        // Check if id is a valid MongoDB ObjectId
+        if (id && /^[a-fA-F0-9]{24}$/.test(id)) {
+            order = await orderModel.findById(id);
+        }
+        // If not found or not a valid ObjectId, try by orderId
+        if (!order) {
+            order = await orderModel.findOne({ orderId: id });
+        }
         if (!order) {
             return errorResponse(res, 'Order not found', 404);
         }
@@ -77,7 +86,7 @@ export const getOrderById = async (req, res) => {
         }
         // Check if user owns this order or is admin
         const userId = order.userInfo?.userId || order.userId;
-            if (!req.user || (userId && userId.toString() !== req.user.id && (!req.user.role || req.user.role !== 'admin'))) {
+        if (!req.user || (userId && userId.toString() !== req.user.id && (!req.user.role || req.user.role !== 'admin'))) {
             return errorResponse(res, 'Access denied', 403);
         }
         // Always include shippingAddress in response
@@ -93,14 +102,25 @@ function getOrderUserEmail(req, fallback) {
   return (req.user && req.user.email) || fallback || '';
 }
 
-// Helper to get next order sequence
-async function getNextOrderId() {
-  const counter = await counterModel.findByIdAndUpdate(
-    { _id: 'order' },
-    { $inc: { seq: 1 } },
-    { new: true, upsert: true }
-  );
-  return `ORD${counter.seq}`;
+// Helper to generate a random 4-character alphanumeric string
+function generateRandomOrderId() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let id = '';
+  for (let i = 0; i < 4; i++) {
+    id += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return id;
+}
+
+// Helper to get a unique random orderId
+async function getUniqueOrderId() {
+  let orderId;
+  let exists = true;
+  while (exists) {
+    orderId = generateRandomOrderId();
+    exists = await orderModel.exists({ orderId });
+  }
+  return orderId;
 }
 
 // PATCH createOrder
@@ -137,7 +157,7 @@ export const createOrder = async (req, res) => {
             email: address.email || email || '',
             phone: address.phone || phone || ''
         } : undefined;
-        const orderId = await getNextOrderId();
+        const orderId = await getUniqueOrderId();
         const orderData = {
             customerName,
             email: userEmail,
@@ -232,7 +252,7 @@ const createStructuredOrder = async (req, res) => {
         return res.status(400).json({ message: `Insufficient stock for ${product.name} in size ${item.size}. Only ${sizeObj.stock} available.` });
       }
     }
-    const orderId = await getNextOrderId();
+    const orderId = await getUniqueOrderId();
     const orderDoc = {
       userInfo,
       shippingInfo: validatedShippingInfo,
@@ -308,7 +328,7 @@ const placeOrder = async (req, res) => {
     }
     await updateProductStock(items);
     const userEmail = getOrderUserEmail(req, email);
-    const orderId = await getNextOrderId();
+    const orderId = await getUniqueOrderId();
     const orderData = {
       customerName,
       email: userEmail,
@@ -352,7 +372,7 @@ const processCardPayment = async (req, res) => {
         }
         await updateProductStock(items);
         const userEmail = getOrderUserEmail(req, email);
-        const orderId = await getNextOrderId();
+        const orderId = await getUniqueOrderId();
         const orderData = {
             userId,
             items,
