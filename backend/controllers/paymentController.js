@@ -195,6 +195,7 @@ export const createPhonePeSession = async (req, res) => {
         }
 
     } catch (error) {
+        console.error('Request body:', req.body);
         console.error('PhonePe Session Creation Error:', error);
         res.status(500).json({
             success: false,
