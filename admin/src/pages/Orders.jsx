@@ -675,7 +675,11 @@ const Orders = ({ token, setToken }) => {
       />
 
       {/* Status Filter Toggles */}
-      <StatusToggleGroup value={statusFilter} onChange={setStatusFilter} />
+      <div className="overflow-x-auto w-full">
+        <div className="flex gap-2 min-w-max pb-2" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <StatusToggleGroup value={statusFilter} onChange={setStatusFilter} />
+        </div>
+      </div>
 
       {/* Results Count */}
       <div className="flex items-center justify-between mb-4">
