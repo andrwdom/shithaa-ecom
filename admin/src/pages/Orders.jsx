@@ -613,27 +613,25 @@ const Orders = ({ token, setToken }) => {
 
   // Enhanced search filter
   let filteredOrders = orders.filter(order => {
-    if (!search) return true;
-    const s = search.trim();
-    if (s.startsWith('#')) {
-      // Search by order ID (partial, case-insensitive)
-      const idQuery = s.slice(1).toLowerCase();
-      return (
-        (order._id && order._id.toLowerCase().includes(idQuery)) ||
-        (order.customId && order.customId.toLowerCase().includes(idQuery))
-      );
-    } else {
-      // Search by name or phone
-      const name = (order.userInfo?.name || order.customerName || '').toLowerCase();
-      const phone = (order.userInfo?.phone || order.phone || '').toLowerCase();
-      return (
-        name.includes(s.toLowerCase()) ||
-        phone.includes(s.toLowerCase())
-      );
+    // Search logic
+    let matchesSearch = true;
+    if (search) {
+      const s = search.trim();
+      if (s.startsWith('#')) {
+        // Search by order ID (partial, case-insensitive)
+        const idQuery = s.slice(1).toLowerCase();
+        matchesSearch =
+          (order._id && order._id.toLowerCase().includes(idQuery)) ||
+          (order.customId && order.customId.toLowerCase().includes(idQuery));
+      } else {
+        // Search by name or phone
+        const name = (order.userInfo?.name || order.customerName || '').toLowerCase();
+        const phone = (order.userInfo?.phone || order.phone || '').toLowerCase();
+        matchesSearch =
+          name.includes(s.toLowerCase()) ||
+          phone.includes(s.toLowerCase());
+      }
     }
-  });
-
-  filteredOrders = filteredOrders.filter(order => {
     const status = order.status || order.orderStatus || order.paymentStatus;
     const matchesStatus = statusFilter === 'All' || status === statusFilter;
     // Date range filter
@@ -643,8 +641,9 @@ const Orders = ({ token, setToken }) => {
     // Payment method filter
     const matchesPayment = paymentMethod === 'All' || (order.paymentMethod || '').toLowerCase().includes(paymentMethod.toLowerCase());
     return matchesSearch && matchesStatus && inDateRange && matchesPayment;
-  })
-  .sort((a, b) => {
+  });
+
+  filteredOrders = filteredOrders.sort((a, b) => {
     const dateA = new Date(a.createdAt || a.placedAt);
     const dateB = new Date(b.createdAt || b.placedAt);
     return sortOrder === 'oldest' ? dateA - dateB : dateB - dateA;
