@@ -233,12 +233,14 @@ const ModernOrderCard = ({ order, onView, onStatusChange }) => {
   const status = order.orderStatus || order.status || order.paymentStatus;
   const placedAt = order.createdAt || order.placedAt;
   // --- Address fields ---
-  const addressLines = shipping && shipping.addressLine1 ? [
-    shipping.addressLine1,
-    shipping.addressLine2,
+  const addressLines = shipping && (shipping.flatHouseNo || shipping.streetAddress) ? [
+    shipping.flatHouseNo,
+    shipping.areaLocality,
+    shipping.streetAddress,
+    shipping.landmark,
     shipping.city,
     shipping.state,
-    shipping.postalCode,
+    shipping.pincode,
     shipping.country
   ].filter(Boolean) : [
     shipping?.line1,
@@ -375,12 +377,17 @@ function OrderDetailsModal({ order, onClose, onStatusChange }) {
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 flex flex-col gap-1 shadow-sm max-w-md">
                 {hasShippingAddress ? (
                   <>
-                    {order.shippingAddress.addressLine1 && <div className="font-medium text-gray-900">{order.shippingAddress.addressLine1}</div>}
-                    {order.shippingAddress.addressLine2 && <div className="text-gray-700">{order.shippingAddress.addressLine2}</div>}
-                    {order.shippingAddress.city && <div className="text-gray-700">City: <span className="font-semibold">{order.shippingAddress.city}</span></div>}
-                    {order.shippingAddress.state && <div className="text-gray-700">State: <span className="font-semibold">{order.shippingAddress.state}</span></div>}
-                    {order.shippingAddress.postalCode && <div className="text-gray-700">Pincode: <span className="font-semibold">{order.shippingAddress.postalCode}</span></div>}
-                    {order.shippingAddress.country && <div className="text-gray-700">Country: <span className="font-semibold">{order.shippingAddress.country}</span></div>}
+                    {order.shippingAddress.flatHouseNo && <div><b>Flat/House No.:</b> {order.shippingAddress.flatHouseNo}</div>}
+                    {order.shippingAddress.areaLocality && <div><b>Area/Locality:</b> {order.shippingAddress.areaLocality}</div>}
+                    {order.shippingAddress.streetAddress && <div><b>Street Address:</b> {order.shippingAddress.streetAddress}</div>}
+                    {order.shippingAddress.landmark && <div><b>Landmark:</b> {order.shippingAddress.landmark}</div>}
+                    {order.shippingAddress.city && <div><b>City:</b> {order.shippingAddress.city}</div>}
+                    {order.shippingAddress.state && <div><b>State:</b> {order.shippingAddress.state}</div>}
+                    {order.shippingAddress.pincode && <div><b>Pincode:</b> {order.shippingAddress.pincode}</div>}
+                    {order.shippingAddress.country && <div><b>Country:</b> {order.shippingAddress.country}</div>}
+                    {order.shippingAddress.fullName && <div><b>Name:</b> {order.shippingAddress.fullName}</div>}
+                    {order.shippingAddress.email && <div><b>Email:</b> {order.shippingAddress.email}</div>}
+                    {order.shippingAddress.phone && <div><b>Phone:</b> {order.shippingAddress.phone}</div>}
                   </>
                 ) : (
                   // Fallback for legacy orders

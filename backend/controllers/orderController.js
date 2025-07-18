@@ -114,13 +114,18 @@ export const createOrder = async (req, res) => {
 
         const userEmail = getOrderUserEmail(req, email);
         // --- Save shippingAddress in new format if present ---
-        const shippingAddress = address && (address.line1 || address.address1) ? {
-            addressLine1: address.line1 || address.address1 || '',
-            addressLine2: address.line2 || address.address2 || '',
-            city: address.city,
-            state: address.state,
-            postalCode: address.pincode || address.postalCode || address.zipcode || '',
-            country: address.country || ''
+        const shippingAddress = address && (address.flatHouseNo || address.streetAddress) ? {
+            flatHouseNo: address.flatHouseNo || '',
+            areaLocality: address.areaLocality || '',
+            streetAddress: address.streetAddress || '',
+            landmark: address.landmark || '',
+            city: address.city || '',
+            state: address.state || '',
+            pincode: address.pincode || '',
+            country: address.country || '',
+            fullName: address.fullName || customerName || '',
+            email: address.email || email || '',
+            phone: address.phone || phone || ''
         } : undefined;
         const orderData = {
             customerName,
