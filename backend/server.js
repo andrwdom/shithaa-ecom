@@ -302,3 +302,4 @@ server.on('error', (error) => {
 });
 
 console.log('Backend server started - latest code loaded');
+console.log('DEBUG: Loaded PHONEPE_MERCHANT_ID:', process.env.PHONEPE_MERCHANT_ID);
