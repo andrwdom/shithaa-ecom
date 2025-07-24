@@ -5,16 +5,18 @@ import { successResponse, errorResponse } from '../utils/response.js';
 import { getUniqueOrderId } from './orderController.js';
 import { StandardCheckoutClient, Env, StandardCheckoutPayRequest } from 'pg-sdk-node';
 import { randomUUID } from 'crypto';
+import { generateInvoiceBuffer, sendInvoiceEmail } from '../utils/invoiceGenerator.js';
 
 // PhonePe SDK configuration
-const PHONEPE_CLIENT_ID = process.env.PHONEPE_CLIENT_ID;
-const PHONEPE_CLIENT_SECRET = process.env.PHONEPE_CLIENT_SECRET;
+const PHONEPE_MERCHANT_ID = process.env.PHONEPE_MERCHANT_ID;
+const PHONEPE_API_KEY = process.env.PHONEPE_API_KEY;
+const PHONEPE_SALT_INDEX = parseInt(process.env.PHONEPE_SALT_INDEX || '1', 10);
 const PHONEPE_ENV = process.env.PHONEPE_ENV === 'PRODUCTION' ? Env.PRODUCTION : Env.SANDBOX;
 
 const phonepeClient = StandardCheckoutClient.getInstance(
-  PHONEPE_CLIENT_ID,
-  PHONEPE_CLIENT_SECRET,
-  1, // version
+  PHONEPE_MERCHANT_ID,
+  PHONEPE_API_KEY,
+  PHONEPE_SALT_INDEX,
   PHONEPE_ENV
 );
 
@@ -202,6 +204,14 @@ export const phonePeCallback = async (req, res) => {
       if (order.userId) {
         await userModel.findByIdAndUpdate(order.userId, { cartData: {} });
       }
+      // Generate and send invoice PDF via email (non-blocking)
+      try {
+        const freshOrder = await orderModel.findById(order._id); // get latest
+        const pdfBuffer = await generateInvoiceBuffer(freshOrder);
+        await sendInvoiceEmail(freshOrder, pdfBuffer);
+      } catch (err) {
+        console.error('Invoice email error:', err);
+      }
     } else {
       update = {
         ...update,
@@ -258,5 +268,32 @@ export const verifyPhonePePayment = async (req, res) => {
       message: 'Payment verification failed',
       error: error.message
     });
+  }
+};
+
+// Dummy payment endpoint for testing invoice email
+export const dummyPaymentSuccess = async (req, res) => {
+  try {
+    const { orderId } = req.body;
+    if (!orderId) return res.status(400).json({ success: false, message: 'Order ID required' });
+    const order = await orderModel.findById(orderId);
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+    // Mark as paid
+    order.payment = true;
+    order.paymentStatus = 'paid';
+    order.orderStatus = 'Confirmed';
+    order.status = 'Order Placed';
+    await order.save();
+    // Generate and send invoice
+    try {
+      const pdfBuffer = await generateInvoiceBuffer(order);
+      await sendInvoiceEmail(order, pdfBuffer);
+    } catch (err) {
+      console.error('Invoice email error (dummy):', err);
+    }
+    res.json({ success: true, message: 'Dummy payment processed and invoice sent.' });
+  } catch (err) {
+    console.error('Dummy payment error:', err);
+    res.status(500).json({ success: false, message: 'Dummy payment failed', error: err.message });
   }
 }; 

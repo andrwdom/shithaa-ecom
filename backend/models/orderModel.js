@@ -86,6 +86,15 @@ const orderSchema = new mongoose.Schema({
     orderId: { type: String, unique: true, required: true },
     // Payment gateway fields
     phonepeTransactionId: { type: String },
+    // Refund tracking for PhonePe
+    refunds: [{
+        merchantRefundId: { type: String, required: true },
+        amount: { type: Number, required: true }, // in paise
+        state: { type: String, enum: ['PENDING', 'CONFIRMED', 'COMPLETED', 'FAILED'], default: 'PENDING' },
+        log: { type: Object }, // raw response/log
+        createdAt: { type: Date, default: Date.now },
+        updatedAt: { type: Date, default: Date.now }
+    }],
     // Legacy payment field
     payment: { type: Boolean, default: false },
     // Legacy fields for backward compatibility
