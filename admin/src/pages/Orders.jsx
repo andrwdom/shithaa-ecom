@@ -404,9 +404,19 @@ function OrderDetailsModal({ order, onClose, onStatusChange }) {
   const shippingDisplay = getShippingDisplayInfo();
   // Total robust
   const totalAmount = order.totalAmount || order.totalPrice || order.total || order.orderSummary?.total || 0;
+
+  // Esc key to close
+  React.useEffect(() => {
+    function handleEsc(e) {
+      if (e.key === 'Escape') onClose();
+    }
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [onClose]);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 px-2 py-4 overflow-y-auto">
-      <div className="bg-white rounded-xl shadow-lg w-full max-w-md mx-auto p-4 sm:p-6 relative animate-fadeIn">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 px-2 py-4 overflow-y-auto" onClick={onClose}>
+      <div className="bg-white rounded-xl shadow-lg w-full max-w-md mx-auto p-4 sm:p-6 relative animate-fadeIn" onClick={e => e.stopPropagation()}>
         {/* Modal Header */}
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-semibold font-heading">Order Details</h2>
@@ -419,7 +429,7 @@ function OrderDetailsModal({ order, onClose, onStatusChange }) {
             <span className="sr-only">Close</span>
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
-          </div>
+        </div>
         {/* User Info Box */}
         <div className="bg-gray-100 p-3 rounded-md flex flex-col gap-1 text-sm mb-4">
           <p className="flex items-center gap-2">
