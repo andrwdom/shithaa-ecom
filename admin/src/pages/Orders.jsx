@@ -552,12 +552,8 @@ const Orders = ({ token, setToken }) => {
     return '';
   };
 
-  useEffect(() => {
-    console.log('Orders.jsx loaded');
-  }, []);
-
-  useEffect(() => {
-    console.log('Orders component mounted');
+  // --- FIX: Define fetchOrders ---
+  const fetchOrders = () => {
     setLoading(true);
     setApiError('');
     axios.get(`${backendUrl}/api/orders`)
@@ -578,6 +574,16 @@ const Orders = ({ token, setToken }) => {
         toast.error(error.response?.data?.message || 'Failed to fetch orders');
       })
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    console.log('Orders.jsx loaded');
+  }, []);
+
+  useEffect(() => {
+    console.log('Orders component mounted');
+    fetchOrders();
+    // eslint-disable-next-line
   }, [token]);
 
   const handleAuthError = () => {
@@ -607,7 +613,7 @@ const Orders = ({ token, setToken }) => {
       );
       
       if (response.data.success) {
-        await fetchOrders();
+        fetchOrders();
         toast.success('Order cancelled successfully');
       } else {
         toast.error(response.data.message);
