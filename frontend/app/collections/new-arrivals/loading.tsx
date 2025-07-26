@@ -5,7 +5,7 @@ export default function Loading() {
     <div className="fixed inset-0 flex flex-col items-center justify-center bg-white z-50">
       <div className="mb-8">
         <Image
-          src="/shitha-logo.jpg"
+          src="/shithaa-logo.jpg"
           alt="Shitha Clothing"
           width={120}
           height={120}

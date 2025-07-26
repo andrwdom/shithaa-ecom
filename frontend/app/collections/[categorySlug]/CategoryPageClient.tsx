@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ChevronRight, Home, Search, Filter, SlidersHorizontal, Baby, Heart, Shirt } from "lucide-react"
 import Image from "next/image"
+import Script from "next/script"
 import PageLoading from "@/components/page-loading"
 import SizeSelectionSidebar from "@/components/size-selection-sidebar"
 import CheckoutPromptModal from "@/components/checkout-prompt-modal"
@@ -90,7 +91,7 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
         }));
         setProducts(mappedProducts);
       } catch (err) {
-        setError(err.message);
+        setError(err instanceof Error ? err.message : 'An error occurred while fetching products');
       } finally {
         setLoading(false);
       }
@@ -207,7 +208,7 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
   }
 
   return (
-    <PageLoading loadingMessage="Loading Shinthaa Collection..." minLoadingTime={1500}>
+    <PageLoading loadingMessage="Loading Shithaa Collection..." minLoadingTime={1500}>
       <div className="min-h-screen bg-gray-50 w-full overflow-x-hidden">
         <div className="flex w-full overflow-x-hidden">
           {/* Category Sidebar - Refined Design with Proper Bounds */}
@@ -309,10 +310,46 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
           <div className="flex-1 lg:ml-0 w-full">
             {/* Breadcrumb */}
             <div className="px-4 sm:px-6 lg:px-8 py-6 w-full">
+              {/* Add BreadcrumbList structured data */}
+              <Script
+                id="breadcrumb-schema"
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{
+                  __html: JSON.stringify({
+                    "@context": "https://schema.org",
+                    "@type": "BreadcrumbList",
+                    "itemListElement": [
+                      {
+                        "@type": "ListItem",
+                        "position": 1,
+                        "name": "Home",
+                        "item": "https://shithaa.in"
+                      },
+                      {
+                        "@type": "ListItem",
+                        "position": 2,
+                        "name": "Collections",
+                        "item": "https://shithaa.in/collections"
+                      },
+                      {
+                        "@type": "ListItem",
+                        "position": 3,
+                        "name": categoryName,
+                        "item": `https://shithaa.in/collections/${categorySlug}`
+                      }
+                    ]
+                  })
+                }}
+              />
+              
               <div className="flex items-center space-x-2 text-sm text-gray-600">
                 <Button variant="ghost" size="sm" onClick={() => (window.location.href = "/")}>
                   <Home className="h-4 w-4 mr-1" />
                   Home
+                </Button>
+                <ChevronRight className="h-4 w-4" />
+                <Button variant="ghost" size="sm" onClick={() => (window.location.href = "/collections")}>
+                  Collections
                 </Button>
                 <ChevronRight className="h-4 w-4" />
                 <span className="text-gray-900 font-medium">{categoryName}</span>
@@ -553,4 +590,4 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
       </div>
     </PageLoading>
   )
-} 
+}

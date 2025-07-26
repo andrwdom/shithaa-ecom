@@ -1,6 +1,7 @@
 "use client"
 
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import Script from "next/script"
 
 export default function FAQAccordion() {
   const faqs = [
@@ -24,17 +25,48 @@ export default function FAQAccordion() {
       answer:
         "Standard delivery takes 3-5 business days across major cities. For remote locations, it may take 5-7 business days. We also offer express delivery options for urgent orders.",
     },
+    {
+      question: "Are your maternity clothes suitable for all stages of pregnancy?",
+      answer:
+        "Yes, our maternity wear is designed to adapt to your changing body throughout all trimesters. The stretchy, comfortable fabrics and thoughtful designs ensure a perfect fit from early pregnancy through postpartum.",
+    },
+    {
+      question: "Do you offer maternity wear for special occasions?",
+      answer:
+        "Absolutely! We have an elegant collection of maternity dresses perfect for special occasions, from formal events to casual gatherings. Our designs combine style with comfort for the modern expecting mother.",
+    },
   ]
+
+  // Prepare FAQ structured data
+  const faqStructuredData = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": faqs.map(faq => ({
+      "@type": "Question",
+      "name": faq.question,
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": faq.answer
+      }
+    }))
+  };
 
   return (
     <section className="px-4 sm:px-6 lg:px-8 py-12 lg:py-16 bg-white">
+      {/* Add FAQ structured data */}
+      <Script
+        id="faq-schema"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqStructuredData) }}
+      />
+      
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8 lg:mb-12">
           <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-3 lg:mb-4 font-serif">
-            Frequently Asked Questions
+            Frequently Asked Questions About Maternity Wear
           </h2>
           <p className="text-base lg:text-lg text-gray-600 max-w-2xl mx-auto">
-            Everything you need to know about our products and services
+            Everything you need to know about our premium maternity clothing and services
           </p>
         </div>
 

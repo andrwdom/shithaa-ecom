@@ -4,8 +4,9 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowLeft, Heart, Share2, Truck, Shield, RotateCcw, Plus, Minus, Star } from "lucide-react"
+import { ArrowLeft, Heart, Share2, Truck, Shield, RotateCcw, Plus, Minus, Star, ChevronRight } from "lucide-react"
 import Image from "next/image"
+import Script from "next/script"
 import PageLoading from "@/components/page-loading"
 import { useCart } from "@/components/cart-context"
 import CheckoutPromptModal from "@/components/checkout-prompt-modal"
@@ -146,48 +147,154 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
       {/* Header */}
       <div className="sticky top-20 z-40 bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center h-16">
-            <Button variant="ghost" onClick={() => window.history.back()} className="mr-4">
-              <ArrowLeft className="h-5 w-5 mr-2" />
-              Back
-            </Button>
-            <h1 className="text-lg font-semibold text-gray-900 truncate flex-1">{product.name}</h1>
-            <div className="flex items-center space-x-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={async () => {
-                  const shareData = {
-                    title: product.name,
-                    text: `Check out this product on Shinthaa.in: ${product.name}`,
-                    url: typeof window !== 'undefined' ? window.location.href : ''
-                  };
-                  if (navigator.share) {
-                    try {
-                      await navigator.share(shareData);
-                    } catch (err) {
-                      // User cancelled or error
-                    }
-                  } else if (navigator.clipboard) {
-                    try {
-                      await navigator.clipboard.writeText(shareData.url);
-                      alert('Link copied!');
-                    } catch (err) {
-                      alert('Could not copy link');
-                    }
-                  } else {
-                    alert('Share not supported');
-                  }
-                }}
-              >
-                <Share2 className="h-5 w-5" />
+          <div className="flex flex-col h-auto py-3">
+            {/* Breadcrumb */}
+            <div className="flex items-center space-x-2 text-sm text-gray-600 mb-2">
+              <Button variant="link" size="sm" className="p-0 h-auto" onClick={() => (window.location.href = "/")}>
+                Home
               </Button>
+              <ChevronRight className="h-4 w-4" />
+              <Button variant="link" size="sm" className="p-0 h-auto" onClick={() => (window.location.href = "/collections")}>
+                Collections
+              </Button>
+              <ChevronRight className="h-4 w-4" />
+              <Button 
+                variant="link" 
+                size="sm" 
+                className="p-0 h-auto" 
+                onClick={() => (window.location.href = `/collections/${product.category.toLowerCase().replace(/ /g, '-')}`)}
+              >
+                {product.category}
+              </Button>
+              <ChevronRight className="h-4 w-4" />
+              <span className="text-gray-900 font-medium truncate">{product.name}</span>
+            </div>
+            
+            {/* Product Title and Share */}
+            <div className="flex items-center">
+              <Button variant="ghost" onClick={() => window.history.back()} className="mr-4">
+                <ArrowLeft className="h-5 w-5 mr-2" />
+                Back
+              </Button>
+              <h1 className="text-lg font-semibold text-gray-900 truncate flex-1">{product.name}</h1>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={async () => {
+                    const shareData = {
+                      title: product.name,
+                      text: `Check out this product on Shithaa.in: ${product.name}`,
+                      url: typeof window !== 'undefined' ? window.location.href : ''
+                    };
+                    if (navigator.share) {
+                      try {
+                        await navigator.share(shareData);
+                      } catch (err) {
+                        // User cancelled or error
+                      }
+                    } else if (navigator.clipboard) {
+                      try {
+                        await navigator.clipboard.writeText(shareData.url);
+                        alert('Link copied!');
+                      } catch (err) {
+                        alert('Could not copy link');
+                      }
+                    } else {
+                      alert('Share not supported');
+                    }
+                  }}
+                >
+                  <Share2 className="h-5 w-5" />
+                </Button>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Add Product structured data */}
+        {product && (
+          <Script
+            id="product-schema"
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify({
+                "@context": "https://schema.org",
+                "@type": "Product",
+                "name": product.name,
+                "image": product.images.length > 0 ? product.images : "/placeholder.svg",
+                "description": product.description,
+                "sku": `SHITHAA-${productId}`,
+                "mpn": `SHITHAA-${productId}`,
+                "brand": {
+                  "@type": "Brand",
+                  "name": "Shithaa"
+                },
+                "offers": {
+                  "@type": "Offer",
+                  "url": `https://shithaa.in/product/${productId}`,
+                  "priceCurrency": "INR",
+                  "price": product.price,
+                  "priceValidUntil": new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
+                  "itemCondition": "https://schema.org/NewCondition",
+                  "availability": product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+                  "seller": {
+                    "@type": "Organization",
+                    "name": "Shithaa"
+                  }
+                },
+                "aggregateRating": {
+                  "@type": "AggregateRating",
+                  "ratingValue": product.rating,
+                  "reviewCount": product.reviews
+                }
+              })
+            }}
+          />
+        )}
+        
+        {/* Add BreadcrumbList structured data */}
+        {product && (
+          <Script
+            id="breadcrumb-schema"
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify({
+                "@context": "https://schema.org",
+                "@type": "BreadcrumbList",
+                "itemListElement": [
+                  {
+                    "@type": "ListItem",
+                    "position": 1,
+                    "name": "Home",
+                    "item": "https://shithaa.in"
+                  },
+                  {
+                    "@type": "ListItem",
+                    "position": 2,
+                    "name": "Collections",
+                    "item": "https://shithaa.in/collections"
+                  },
+                  {
+                    "@type": "ListItem",
+                    "position": 3,
+                    "name": product.category,
+                    "item": `https://shithaa.in/collections/${product.category.toLowerCase().replace(/ /g, '-')}`
+                  },
+                  {
+                    "@type": "ListItem",
+                    "position": 4,
+                    "name": product.name,
+                    "item": `https://shithaa.in/product/${productId}`
+                  }
+                ]
+              })
+            }}
+          />
+        )}
+        
         <div className="grid lg:grid-cols-2 gap-12">
           {/* Product Images */}
           <div className="space-y-4">
@@ -388,4 +495,4 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
       />
     </div>
   )
-} 
+}

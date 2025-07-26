@@ -15,10 +15,10 @@ export const metadata: Metadata = {
   openGraph: {
     title: "About Shithaa - Our Story & Mission",
     description: "Discover the story behind Shithaa - founded with love and understanding for expecting mothers.",
-    images: ['/shitha-logo.jpg'],
+    images: ['/shithaa-logo.jpg'],
   },
   twitter: {
     title: "About Shithaa - Our Story & Mission",
     description: "Discover the story behind Shithaa - founded with love and understanding for expecting mothers.",
   },
-} 
+}

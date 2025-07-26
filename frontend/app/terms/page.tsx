@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Terms and Conditions - Shithaa",
     description: "Read the Terms and Conditions for using Shithaa's website and services.",
-    images: ['/shitha-logo.jpg'],
+    images: ['/shithaa-logo.jpg'],
   },
   twitter: {
     title: "Terms and Conditions - Shithaa",

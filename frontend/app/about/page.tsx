@@ -91,7 +91,7 @@ export default function AboutPage() {
                 <div className="bg-white rounded-2xl p-3 shadow-lg transform rotate-2">
                   <Image
                     src="/placeholder.svg?height=300&width=250"
-                    alt="Founder of Shinthaa with her child, representing the mother-child bond"
+                    alt="Founder of Shithaa with her child, representing the mother-child bond"
                     width={250}
                     height={300}
                     className="w-full h-72 object-cover rounded-xl"
@@ -119,7 +119,7 @@ export default function AboutPage() {
 
                   <h3 className="text-2xl font-semibold text-[#473C66] mb-4">Founded with Love & Understanding</h3>
                   <p className="text-gray-700 leading-relaxed mb-4">
-                    Shinthaa was born from the heart of a passionate creator, mother, and influencer who, through her
+                    Shithaa was born from the heart of a passionate creator, mother, and influencer who, through her
                     journey with her growing community of 27,000 followers, witnessed the beautiful yet challenging
                     experience of expecting mothers preparing to welcome their little ones.
                   </p>
@@ -237,7 +237,7 @@ export default function AboutPage() {
 
                 <div className="flex justify-center items-center space-x-3">
                   <Heart className="w-6 h-6 text-pink-400" />
-                  <span className="text-lg font-medium text-gray-600">The Shinthaa Promise</span>
+                  <span className="text-lg font-medium text-gray-600">The Shithaa Promise</span>
                   <Baby className="w-6 h-6 text-[#473C66]" />
                 </div>
         </div>
@@ -338,7 +338,7 @@ export default function AboutPage() {
               <HeartDoodle className="bottom-8 right-1/4" />
 
               <h2 className="text-3xl md:text-4xl font-light mb-6">
-                Join the <span className="font-semibold">Shinthaa</span> Family
+                Join the <span className="font-semibold">Shithaa</span> Family
               </h2>
               <p className="text-lg mb-8 opacity-90 leading-relaxed">
                 Discover our collection of elegant maternity wear and feeding essentials designed with love for you and your little one.
@@ -366,4 +366,4 @@ export default function AboutPage() {
       </div>
     </div>
   )
-} 
+}

@@ -4,24 +4,25 @@ import { Metadata } from 'next'
 
 // SEO Metadata for return policy page
 export const metadata: Metadata = {
-  title: "Return Policy - Shinthaa",
-  description: "Learn about Shinthaa's return and refund policy. Easy returns for damaged or defective products within 7 days of delivery.",
+  title: "Return Policy - Shithaa | Premium Maternity Wear Returns",
+  description: "Learn about Shithaa's return and refund policy. Easy returns for damaged or defective maternity wear products within 7 days of delivery.",
   keywords: [
     "return policy",
     "refund policy",
+    "product returns",
+    "Shithaa returns",
     "maternity wear returns",
-    "Shinthaa returns",
-    "damaged products",
-    "defective products"
+    "maternity clothing returns",
+    "premium clothing returns"
   ],
   openGraph: {
-    title: "Return Policy - Shinthaa",
-    description: "Learn about Shinthaa's return and refund policy. Easy returns for damaged or defective products.",
-    images: ['/shitha-logo.jpg'],
+    title: "Return Policy - Shithaa | Premium Maternity Wear Returns",
+    description: "Learn about Shithaa's return and refund policy. Easy returns for damaged or defective maternity wear products.",
+    images: ['/shithaa-logo.jpg'],
   },
   twitter: {
-    title: "Return Policy - Shinthaa",
-    description: "Learn about Shinthaa's return and refund policy. Easy returns for damaged or defective products.",
+    title: "Return Policy - Shithaa | Premium Maternity Wear Returns",
+    description: "Learn about Shithaa's return and refund policy. Easy returns for damaged or defective maternity wear products.",
   },
 }
 
@@ -83,4 +84,4 @@ export default function ReturnPolicyPage() {
       </div>
     </main>
   )
-} 
+}

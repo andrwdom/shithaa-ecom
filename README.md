@@ -1,4 +1,4 @@
-# Shinthaa - Elegant Maternity & Feeding Wear
+# Shithaa - Elegant Maternity & Feeding Wear
 
 A modern, production-ready e-commerce platform for premium maternity wear and feeding essentials.
 
@@ -11,13 +11,15 @@ A modern, production-ready e-commerce platform for premium maternity wear and fe
 - **Filtering Logic**: Admin panel uses all possible status fields (`status`, `orderStatus`, `paymentStatus`)
 
 ### ✅ SEO & Branding Complete
-- **Site Title**: Updated to "Shinthaa" throughout
+- **Site Title**: Updated to "Shithaa" throughout
 - **Favicon**: Set to `/shitha-logo.jpg`
-- **Comprehensive Metadata**: All pages have proper SEO metadata
+- **Comprehensive Metadata**: All pages have proper SEO metadata with targeted keywords
 - **Open Graph & Twitter Cards**: Social media sharing optimized
-- **Structured Data**: Organization schema for better search results
+- **Structured Data**: Organization and WebSite schema for better search results
 - **Robots.txt & Sitemap**: Dynamic generation for search engines
 - **PWA Support**: Manifest.json for mobile app-like experience
+- **Keyword Optimization**: Focus on maternity wear, feeding wear, and premium clothing
+- **Mobile Optimization**: Responsive design with mobile-first approach
 
 ### ✅ Page SEO Coverage
 - ✅ Home page (`/`)
@@ -250,8 +252,8 @@ For technical support or questions:
 
 ## 📄 License
 
-This project is proprietary software for Shinthaa. All rights reserved.
+This project is proprietary software for Shithaa. All rights reserved.
 
 ---
 
-**Built with ❤️ for expecting mothers everywhere** 
+**Built with ❤️ for expecting mothers everywhere**

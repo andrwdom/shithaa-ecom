@@ -23,10 +23,10 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: "Shinthaa - Elegant Maternity & Feeding Wear | Premium Mother & Baby Clothing",
-    template: "%s | Shinthaa"
+    default: "Shithaa - Elegant Maternity & Feeding Wear | Premium Mother & Baby Clothing",
+    template: "%s | Shithaa"
   },
-  description: "Discover elegant maternity wear and feeding essentials at Shinthaa. Premium quality, comfortable designs for expecting mothers. Shop the latest collection of maternity feeding wear, zipless lounge wear, and more. Free shipping on orders above ₹999.",
+  description: "Discover elegant maternity wear and feeding essentials at Shithaa. Premium quality, comfortable designs for expecting mothers. Shop the latest collection of maternity feeding wear, zipless lounge wear, and more. Free shipping on orders above ₹999.",
   keywords: [
     "maternity wear",
     "feeding wear",
@@ -40,12 +40,17 @@ export const metadata: Metadata = {
     "nursing clothes",
     "maternity dresses",
     "feeding essentials",
-    "Shinthaa",
-    "Shitha clothing"
+    "Shithaa",
+    "Shithaa clothing",
+    "best maternity wear",
+    "premium maternity clothing",
+    "comfortable maternity dresses",
+    "stylish maternity fashion",
+    "maternity wear online"
   ],
-  authors: [{ name: "Shinthaa" }],
-  creator: "Shinthaa",
-  publisher: "Shinthaa",
+  authors: [{ name: "Shithaa" }],
+  creator: "Shithaa",
+  publisher: "Shithaa",
   formatDetection: {
     email: false,
     address: false,
@@ -59,22 +64,22 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'en_IN',
     url: '/',
-    siteName: 'Shinthaa',
-    title: 'Shinthaa - Elegant Maternity & Feeding Wear',
-    description: 'Discover elegant maternity wear and feeding essentials at Shinthaa. Premium quality, comfortable designs for expecting mothers.',
+    siteName: 'Shithaa',
+    title: 'Shithaa - Elegant Maternity & Feeding Wear | Premium Maternity Clothing',
+    description: 'Discover elegant maternity wear and feeding essentials at Shithaa. Premium quality, comfortable designs for expecting mothers. Best maternity clothing online.',
     images: [
       {
-        url: '/shitha-logo.jpg',
+        url: '/shithaa-logo.jpg',
         width: 1200,
         height: 630,
-        alt: 'Shinthaa - Elegant Maternity & Feeding Wear',
+        alt: 'Shithaa - Elegant Maternity & Feeding Wear',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Shinthaa - Elegant Maternity & Feeding Wear',
-    description: 'Discover elegant maternity wear and feeding essentials at Shinthaa. Premium quality, comfortable designs for expecting mothers.',
+    title: 'Shithaa - Elegant Maternity & Feeding Wear | Premium Maternity Clothing',
+    description: 'Discover elegant maternity wear and feeding essentials at Shithaa. Premium quality, comfortable designs for expecting mothers. Best maternity clothing online.',
     images: ['/shitha-logo.jpg'],
   },
   robots: {
@@ -103,8 +108,8 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${playfairDisplay.variable} ${inter.variable}`}>
       <head>
-        <link rel="icon" href="/shitha-logo.jpg" type="image/jpeg" />
-        <link rel="apple-touch-icon" href="/shitha-logo.jpg" />
+        <link rel="icon" href="/shithaa-logo.jpg" type="image/jpeg" />
+        <link rel="apple-touch-icon" href="/shithaa-logo.jpg" />
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#473C66" />
         <meta name="msapplication-TileColor" content="#473C66" />
@@ -118,10 +123,10 @@ export default function RootLayout({
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "Organization",
-              "name": "Shinthaa",
+              "name": "Shithaa",
               "url": "https://shithaa.in",
-              "logo": "https://shithaa.in/shitha-logo.jpg",
-              "description": "Elegant maternity wear and feeding essentials for expecting mothers",
+              "logo": "https://shithaa.in/shithaa-logo.jpg",
+              "description": "Elegant Maternity & Feeding Wear - Premium Maternity Clothing",
               "address": {
                 "@type": "PostalAddress",
                 "addressCountry": "IN"
@@ -134,6 +139,23 @@ export default function RootLayout({
               "sameAs": [
                 "https://instagram.com/shithaa.in"
               ]
+            })
+          }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "WebSite",
+              "name": "Shithaa - Elegant Maternity & Feeding Wear",
+              "url": "https://shithaa.in",
+              "potentialAction": {
+                "@type": "SearchAction",
+                "target": "https://shithaa.in/search?q={search_term_string}",
+                "query-input": "required name=search_term_string"
+              },
+              "description": "Premium maternity wear and feeding essentials designed for comfort and style. Shop our collection of maternity dresses, feeding wear, and zipless lounge wear."
             })
           }}
         />

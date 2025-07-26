@@ -12,7 +12,7 @@ export default function LoadingScreen({ message = "Loading..." }: LoadingScreenP
       {/* Logo with fade animation */}
       <div className="mb-8">
         <Image
-          src="/shitha-logo.jpg"
+          src="/shithaa-logo.jpg"
           alt="Shitha Clothing"
           width={200}
           height={200}

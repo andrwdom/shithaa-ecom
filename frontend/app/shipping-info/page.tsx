@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Shipping Information - Shithaa",
     description: "Learn about Shithaa's shipping policies, delivery times, and shipping costs.",
-    images: ['/shitha-logo.jpg'],
+    images: ['/shithaa-logo.jpg'],
   },
   twitter: {
     title: "Shipping Information - Shithaa",
@@ -70,4 +70,4 @@ export default function ShippingInfoPage() {
       </div>
     </main>
   );
-} 
+}

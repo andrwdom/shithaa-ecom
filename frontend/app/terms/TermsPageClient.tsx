@@ -13,12 +13,12 @@ export default function TermsPageClient() {
         <h1 className="text-3xl font-bold mb-6 font-serif">Terms and Conditions</h1>
         <div className="space-y-6 text-base leading-relaxed">
           <p>
-            Welcome to Shinthaa.in. These Terms and Conditions ("Terms") govern your use of our website located at www.shithaa.in and the services we offer. By accessing or using the Site, you agree to be bound by these Terms.
+            Welcome to Shithaa.in. These Terms and Conditions ("Terms") govern your use of our website located at www.shithaa.in and the services we offer. By accessing or using the Site, you agree to be bound by these Terms.
           </p>
           <ol className="list-decimal pl-6 space-y-2">
             <li>
               <b>General Information</b><br />
-              This website is operated by S KARTHIKA. Throughout the site, the terms "we", "us" and "our" refer to Shinthaa.
+              This website is operated by S KARTHIKA. Throughout the site, the terms "we", "us" and "our" refer to Shithaa.
             </li>
             <li>
               <b>Use of Our Website</b><br />
@@ -50,7 +50,7 @@ export default function TermsPageClient() {
             </li>
             <li>
               <b>Intellectual Property</b><br />
-              All content on this website (images, text, design, logo, etc.) is the property of Shinthaa and may not be copied or used without written permission.
+              All content on this website (images, text, design, logo, etc.) is the property of Shithaa and may not be copied or used without written permission.
             </li>
             <li>
               <b>Limitation of Liability</b><br />
@@ -72,4 +72,4 @@ export default function TermsPageClient() {
       </main>
     </div>
   );
-} 
+}

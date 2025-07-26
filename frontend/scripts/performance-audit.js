@@ -1,9 +1,9 @@
 const fs = require('fs');
 const path = require('path');
 
-// Performance audit script for Shinthaa frontend
+// Performance audit script for Shithaa frontend
 function auditPerformance() {
-  console.log('🔍 Shinthaa Performance Audit\n');
+  console.log('🔍 Shithaa Performance Audit\n');
   
   const issues = [];
   const recommendations = [];
@@ -163,4 +163,4 @@ if (require.main === module) {
   auditPerformance();
 }
 
-module.exports = { auditPerformance }; 
+module.exports = { auditPerformance };

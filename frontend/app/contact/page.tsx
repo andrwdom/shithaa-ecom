@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Contact Shithaa - Get in Touch",
     description: "Contact Shithaa for any questions about our maternity wear and feeding essentials.",
-    images: ['/shitha-logo.jpg'],
+    images: ['/shithaa-logo.jpg'],
   },
   twitter: {
     title: "Contact Shithaa - Get in Touch",

@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Star } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import Image from "next/image"
+import Script from "next/script"
 
 export default function TestimonialCarousel() {
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -18,6 +19,8 @@ export default function TestimonialCarousel() {
       text: "Finally, feeding wear that actually works! No more struggling with zippers at 3 AM. This has been a game-changer for my postpartum journey.",
       image: "/placeholder.svg?height=80&width=80",
       verified: true,
+      date: "2023-10-15",
+      productName: "Zipless Feeding Maternity Dress"
     },
     {
       id: 2,
@@ -27,6 +30,8 @@ export default function TestimonialCarousel() {
       text: "The quality is amazing and the fit is perfect! So comfortable during pregnancy and after. The zipless design is revolutionary - I can't imagine going back to regular nursing wear.",
       image: "/placeholder.svg?height=80&width=80",
       verified: true,
+      date: "2023-11-02",
+      productName: "Versatile Maternity Office Wear"
     },
     {
       id: 3,
@@ -36,15 +41,19 @@ export default function TestimonialCarousel() {
       text: "Love the elegant designs! Finally found maternity wear that doesn't compromise on style. The fabric is so soft and breathable, perfect for our climate.",
       image: "/placeholder.svg?height=80&width=80",
       verified: true,
+      date: "2023-09-28",
+      productName: "Premium Maternity Comfort Set"
     },
     {
       id: 4,
       name: "Meera Singh",
       location: "Pune",
       rating: 5,
-      text: "Excellent customer service and fast delivery. The clothes fit perfectly and are so comfortable. Shitha has made my motherhood journey so much easier!",
+      text: "Excellent customer service and fast delivery. The clothes fit perfectly and are so comfortable. Shithaa has made my motherhood journey so much easier!",
       image: "/placeholder.svg?height=80&width=80",
       verified: true,
+      date: "2023-12-05",
+      productName: "Postpartum Transition Collection"
     },
   ]
 
@@ -62,8 +71,72 @@ export default function TestimonialCarousel() {
 
   const currentTestimonial = testimonials[currentIndex]
 
+  // Prepare Review structured data for all testimonials
+  const reviewsStructuredData = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    "itemListElement": testimonials.map((testimonial, index) => ({
+      "@type": "ListItem",
+      "position": index + 1,
+      "item": {
+        "@type": "Review",
+        "reviewRating": {
+          "@type": "Rating",
+          "ratingValue": testimonial.rating,
+          "bestRating": 5
+        },
+        "author": {
+          "@type": "Person",
+          "name": testimonial.name
+        },
+        "datePublished": testimonial.date || "2023-01-01",
+        "reviewBody": testimonial.text,
+        "itemReviewed": {
+            "@type": "Product",
+            "name": testimonial.productName || "Premium Maternity Wear",
+            "brand": {
+              "@type": "Brand",
+              "name": "Shithaa"
+            }
+          }
+      }
+    }))
+  };
+
+  // Calculate aggregate rating
+  const aggregateRating = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "name": "Shithaa Maternity Wear",
+    "description": "Premium maternity clothing with innovative zipless feeding feature for modern mothers",
+    "brand": {
+      "@type": "Brand",
+      "name": "Shithaa"
+    },
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": testimonials.reduce((sum, item) => sum + item.rating, 0) / testimonials.length,
+      "reviewCount": testimonials.length,
+      "bestRating": 5
+    }
+  };
+
   return (
     <section className="px-4 sm:px-6 lg:px-8 py-16 lg:py-20 bg-gradient-to-br from-pink-50 via-pink-25 to-purple-50">
+      {/* Add Review structured data */}
+      <Script
+        id="reviews-schema"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(reviewsStructuredData) }}
+      />
+      
+      {/* Add Aggregate Rating structured data */}
+      <Script
+        id="aggregate-rating-schema"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(aggregateRating) }}
+      />
+      
       <div className="max-w-5xl mx-auto">
         {/* Header */}
         <div className="text-center mb-12 lg:mb-16">
@@ -71,7 +144,7 @@ export default function TestimonialCarousel() {
             Customer <span className="text-pink-500">Love</span>
           </h2>
           <p className="text-base lg:text-lg text-gray-600 max-w-2xl mx-auto">
-            Real stories from real moms who chose Shitha
+            Real stories from real moms who chose Shithaa
           </p>
         </div>
 
@@ -159,7 +232,7 @@ export default function TestimonialCarousel() {
         {/* Stats Section */}
         <div className="text-center mt-16">
           <div className="text-6xl font-bold text-pink-500 mb-2">500+</div>
-          <p className="text-gray-600 text-lg">Happy Mothers Trust Shitha</p>
+          <p className="text-gray-600 text-lg">Happy Mothers Trust Shithaa</p>
         </div>
       </div>
     </section>

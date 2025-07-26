@@ -13,7 +13,7 @@ export default function PrivacyPolicyPageClient() {
         <h1 className="text-3xl font-bold mb-6 font-serif">Privacy Policy</h1>
         <div className="space-y-6 text-base leading-relaxed">
           <ol className="list-decimal pl-6 space-y-2">
-            <li><b>Introduction</b><br/>At Shinthaa we respect your privacy and are committed to protecting the personal information you share with us. This Privacy Policy explains how we collect, use, and safeguard your data when you visit or make a purchase from our website.</li>
+            <li><b>Introduction</b><br/>At Shithaa we respect your privacy and are committed to protecting the personal information you share with us. This Privacy Policy explains how we collect, use, and safeguard your data when you visit or make a purchase from our premium maternity wear website.</li>
             <li><b>Information We Collect</b><br/>
               - Personal Information: Name, email address, shipping address, phone number, and payment details.<br/>
               - Non-Personal Information: IP address, browser type, device information, and browsing behavior.
@@ -51,4 +51,4 @@ export default function PrivacyPolicyPageClient() {
       </main>
     </div>
   )
-} 
+}
