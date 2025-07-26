@@ -297,7 +297,7 @@ const ModernOrderCard = ({ order, onView, onStatusChange }) => {
         <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${STATUS_COLORS[status] || 'bg-gray-100 text-gray-700'}`}>{status}</span>
       </div>
       <div className="text-xs text-gray-600 mt-2">
-        <p>💳 {payment || 'N/A'} | ₹{total}</p>
+        <p>💳 {payment || 'N/A'} | ₹{typeof total === 'number' && !isNaN(total) ? total.toFixed(2) : '0.00'}</p>
         <p>📅 {formatDate(placedAt)}</p>
       </div>
       <div className="flex flex-wrap justify-between gap-2 mt-3">
@@ -337,7 +337,9 @@ const ModernOrderCard = ({ order, onView, onStatusChange }) => {
 function OrderDetailsModal({ order, onClose, onStatusChange }) {
   if (!order) return null;
   const userInfo = order.userInfo || { name: order.customerName, email: order.email };
-  const displayName = userInfo.name && userInfo.name.trim() ? userInfo.name : (userInfo.email || 'Unknown User');
+  // Always show name (or fallback), then email
+  const displayName = userInfo.name && userInfo.name.trim() ? userInfo.name : (order.customerName && order.customerName.trim() ? order.customerName : 'Unknown User');
+  const displayEmail = userInfo.email || order.email || '';
   const shipping = order.shippingInfo || order.shippingAddress || order.address;
   const items = order.items || order.cartItems || [];
   const total = order.totalAmount || order.total || order.totalPrice;
@@ -429,14 +431,14 @@ function OrderDetailsModal({ order, onClose, onStatusChange }) {
             <span className="sr-only">Close</span>
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
-        </div>
+          </div>
         {/* User Info Box */}
         <div className="bg-gray-100 p-3 rounded-md flex flex-col gap-1 text-sm mb-4">
           <p className="flex items-center gap-2">
             <FaUser className="w-4 h-4" /> <span className="font-medium">{displayName}</span>
           </p>
           <p className="flex items-center gap-2">
-            <FaEnvelope className="w-4 h-4" /> {userInfo.email}
+            <FaEnvelope className="w-4 h-4" /> {displayEmail}
           </p>
           </div>
         {/* Shipping + Payment Details */}

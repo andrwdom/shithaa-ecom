@@ -31,7 +31,7 @@ export const getAllProducts = async (req, res) => {
         console.log('GET /api/products category query:', category);
         const {
             page = 1,
-            limit = 20,
+            limit,
             search,
             isNewArrival,
             isBestSeller,
@@ -60,11 +60,11 @@ export const getAllProducts = async (req, res) => {
         const sortField = req.query.sortBy || 'createdAt';
         const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
         const sort = { [sortField]: sortOrder };
-        const skip = (page - 1) * limit;
+        const skip = (page - 1) * (limit ? Number(limit) : 0);
         const products = await productModel.find(filter)
             .sort(sort)
             .skip(skip)
-            .limit(Number(limit))
+            .limit(limit ? Number(limit) : 0)
             .lean();
         // Always include customId in the response
         const productsWithCustomId = products.map(p => ({ ...p, customId: p.customId }));
