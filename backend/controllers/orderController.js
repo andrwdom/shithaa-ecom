@@ -527,8 +527,28 @@ const cancelOrder = async (req, res) => {
 const getAllOrders = async (req, res) => {
     try {
         const orders = await orderModel.find().sort({ createdAt: -1 });
-        // Always include shippingAddress in each order
-        const ordersWithShipping = orders.map(order => ({ ...order.toObject(), shippingAddress: order.shippingAddress || null }));
+        // Always include shippingAddress in each order and ensure price fields are present
+        const ordersWithShipping = orders.map(order => {
+            const orderObj = order.toObject();
+            // Ensure price fields are present
+            if (!orderObj.totalAmount && !orderObj.total && !orderObj.totalPrice) {
+                // Calculate total from items if available
+                if (orderObj.items && Array.isArray(orderObj.items) && orderObj.items.length > 0) {
+                    const calculatedTotal = orderObj.items.reduce((sum, item) => {
+                        return sum + (item.price || 0) * (item.quantity || 1);
+                    }, 0);
+                    orderObj.total = calculatedTotal;
+                    console.log(`Calculated total ${calculatedTotal} for order ${orderObj._id}`);
+                }
+            }
+            // Log price fields for debugging
+            console.log(`Order ${orderObj._id} price fields:`, {
+                totalAmount: orderObj.totalAmount,
+                totalPrice: orderObj.totalPrice,
+                total: orderObj.total
+            });
+            return { ...orderObj, shippingAddress: orderObj.shippingAddress || null };
+        });
         console.log('Orders fetched:', ordersWithShipping.length);
         res.status(200).json({ success: true, orders: ordersWithShipping });
     } catch (err) {

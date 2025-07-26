@@ -228,10 +228,19 @@ const ModernOrderCard = ({ order, onView, onStatusChange }) => {
   const name = shipping?.fullName || shipping?.name || order.customerName;
   const email = shipping?.email || order.shippingInfo?.email || order.email;
   const phone = shipping?.phone || order.shippingInfo?.phone || order.phone;
-  const total = order.totalAmount || order.total || order.totalPrice;
+  const total = order.totalAmount || order.total || order.totalPrice || 0;
   const payment = order.paymentStatus || order.paymentMethod;
   const status = order.orderStatus || order.status || order.paymentStatus;
   const placedAt = order.createdAt || order.placedAt;
+  
+  // Debug price fields
+  console.log('Order card - price fields:', {
+    orderId: order.orderId,
+    totalAmount: order.totalAmount,
+    totalPrice: order.totalPrice,
+    total: order.total,
+    finalTotal: total
+  });
   
   // Get shipping address lines for display
   const getShippingAddressLines = () => {
@@ -404,8 +413,15 @@ function OrderDetailsModal({ order, onClose, onStatusChange }) {
   };
   
   const shippingDisplay = getShippingDisplayInfo();
-  // Total robust
+  // Total robust - ensure we display the correct total amount
   const totalAmount = order.totalAmount || order.totalPrice || order.total || order.orderSummary?.total || 0;
+  console.log('Order details - price fields:', {
+    totalAmount: order.totalAmount,
+    totalPrice: order.totalPrice,
+    total: order.total,
+    orderSummaryTotal: order.orderSummary?.total,
+    finalTotal: totalAmount
+  });
 
   // Esc key to close
   React.useEffect(() => {
