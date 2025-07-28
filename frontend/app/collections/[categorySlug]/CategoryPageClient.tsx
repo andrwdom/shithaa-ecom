@@ -65,7 +65,10 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
   const router = useRouter()
 
   const shouldShowSleeveFilter = () => {
-    return categorySlug === "zipless-feeding-lounge-wear" || categorySlug === "non-feeding-lounge-wear";
+    // Show sleeve filter for all lounge wear and feeding wear categories
+    return categorySlug === "zipless-feeding-lounge-wear" ||
+           categorySlug === "non-feeding-lounge-wear" ||
+           categorySlug === "maternity-feeding-wear";
   };
 
   // Fetch available sleeve types for the current category
@@ -485,6 +488,25 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
                       />
                     </div>
                   </div>
+                  {/* Sleeve Type Filter - Show next to sort on desktop */}
+                  {shouldShowSleeveFilter() && availableSleeveTypes.length > 0 && (
+                    <div className="flex-shrink-0 hidden sm:block">
+                      <Select value={sleeveTypeFilter} onValueChange={setSleeveTypeFilter}>
+                        <SelectTrigger className="w-48 h-12 border-2 border-gray-200 focus:border-[rgb(71,60,102)] rounded-lg">
+                          <SelectValue placeholder="Filter by Sleeve Type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">All Sleeve Types</SelectItem>
+                          {availableSleeveTypes.map((sleeveType) => (
+                            <SelectItem key={sleeveType} value={sleeveType}>
+                              {sleeveType}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
                   {/* Sort Dropdown: Icon only on mobile, full on sm+ */}
                   <div className="flex-shrink-0">
                     <Select value={sortBy} onValueChange={setSortBy}>
@@ -507,9 +529,9 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
                   </div>
                 </div>
 
-                {/* Sleeve Type Filter - Only show for lounge wear categories */}
+                {/* Sleeve Type Filter - Mobile version (full width) */}
                 {shouldShowSleeveFilter() && availableSleeveTypes.length > 0 && (
-                  <div className="flex w-full gap-2 mt-2">
+                  <div className="flex w-full gap-2 mt-2 sm:hidden">
                     <div className="flex-1">
                       <Select value={sleeveTypeFilter} onValueChange={setSleeveTypeFilter}>
                         <SelectTrigger className="h-12 border-2 border-gray-200 focus:border-[rgb(71,60,102)] rounded-lg">
