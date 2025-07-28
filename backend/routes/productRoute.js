@@ -1,13 +1,14 @@
 import express from 'express'
-import { 
-    listProducts, 
-    addProduct, 
-    removeProduct, 
-    singleProduct, 
+import {
+    listProducts,
+    addProduct,
+    removeProduct,
+    singleProduct,
     updateProduct,
     getProductById,
     getAllProducts,
-    reorderProducts
+    reorderProducts,
+    getSleeveTypes
 } from '../controllers/productController.js'
 import upload from '../middleware/multer.js';
 import { isAdmin } from '../middleware/auth.js';
@@ -16,6 +17,7 @@ const productRouter = express.Router();
 
 // Public RESTful routes
 productRouter.get('/', getAllProducts); // GET /api/products
+productRouter.get('/sleeve-types', getSleeveTypes); // GET /api/products/sleeve-types
 productRouter.get('/category/:category', getAllProducts); // GET /api/products/category/:category (filtered in controller)
 
 // Batch reorder route must come before any dynamic :id routes

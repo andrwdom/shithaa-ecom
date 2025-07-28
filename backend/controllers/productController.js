@@ -24,6 +24,44 @@ export const getProductById = async (req, res) => {
     }
 };
 
+// GET /api/products/sleeve-types - Get unique sleeve types for filtering
+export const getSleeveTypes = async (req, res) => {
+    try {
+        const { categorySlug } = req.query;
+
+        // Build filter for lounge wear categories
+        const filter = {};
+        if (categorySlug) {
+            filter.categorySlug = categorySlug;
+        } else {
+            // Default to lounge wear categories if no specific category provided
+            filter.categorySlug = { $in: ['zipless-feeding-lounge-wear', 'non-feeding-lounge-wear'] };
+        }
+
+        // Get unique sleeve types from products that have them
+        const sleeveTypes = await productModel.distinct('sleeveType', {
+            ...filter,
+            sleeveType: { $ne: null, $ne: '' }
+        });
+
+        // Filter out null/empty values and sort
+        const validSleeveTypes = sleeveTypes
+            .filter(type => type && type.trim() !== '')
+            .sort();
+
+        res.status(200).json({
+            success: true,
+            sleeveTypes: validSleeveTypes
+        });
+    } catch (error) {
+        console.error('Get Sleeve Types Error:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+};
+
 // GET /api/products/category/:category or /api/products?category=...
 export const getAllProducts = async (req, res) => {
     try {

@@ -33,7 +33,7 @@ const Add = ({token}) => {
      "Non-Feeding Lounge Wear"
    ];
 
-   const SLEEVE_TYPE_OPTIONS = ["Normal Sleeve", "Puff Sleeve"];
+   const SLEEVE_TYPE_OPTIONS = ["Sleeveless", "Short Sleeve", "Long Sleeve", "3/4 Sleeve", "Normal Sleeve", "Puff Sleeve"];
 
    const [loading, setLoading] = useState(false)
 
@@ -80,7 +80,7 @@ const Add = ({token}) => {
       
       // Add sleeve type if applicable
       if (shouldShowSleeveType() && sleeveType) {
-        formData.append("sleeveType", sleeveType)
+        formData.append("sleeveType", sleeveType);
       }
       
       const response = await axios.post(
@@ -160,29 +160,23 @@ const Add = ({token}) => {
         <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full'>
           <div>
             <p className='mb-2'>Category</p>
-            <select
-              value={selectedCategorySlug}
-              onChange={e => {
-                setSelectedCategorySlug(e.target.value);
-                const cat = categories.find(c => c.slug === e.target.value);
-                setCategory(cat ? cat.name : "");
-              }}
-              className='w-full px-3 py-2 border rounded bg-white text-gray-900'
-              required
-            >
-              <option value="" disabled>Select a Category</option>
-              {categories.map(option => (
-                <option key={option.slug} value={option.slug}>{option.name}</option>
+            <select onChange={(e) => setCategory(e.target.value)} className='w-full px-3 py-2'>
+              <option value="">Select a Category</option>
+              {CATEGORY_OPTIONS.map(option => (
+                <option key={option} value={option}>{option}</option>
               ))}
             </select>
           </div>
+
+          {/* Add Sleeve Type Field Here */}
           {shouldShowSleeveType() && (
-            <div className='flex flex-col w-full gap-2'>
-              <p>Sleeve Type</p>
+            <div className='w-full'>
+              <p className='mb-2'>Sleeve Type</p>
               <select 
                 onChange={(e) => setSleeveType(e.target.value)} 
                 value={sleeveType}
-                className='w-full px-3 py-2 border border-gray-300 rounded'
+                className='w-full px-3 py-2'
+                required
               >
                 <option value="">Select Sleeve Type</option>
                 {SLEEVE_TYPE_OPTIONS.map(option => (
@@ -191,6 +185,7 @@ const Add = ({token}) => {
               </select>
             </div>
           )}
+
           <div>
             <p className='mb-2'>Product Price</p>
             <input onChange={(e) => setPrice(e.target.value)} value={price} className='w-full px-3 py-2' type="number" placeholder='25' />

@@ -59,6 +59,7 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
   const [addedProduct, setAddedProduct] = useState<any>(null)
   const [error, setError] = useState<string | null>(null); // <-- Add this line
   const [sleeveTypeFilter, setSleeveTypeFilter] = useState("")
+  const [availableSleeveTypes, setAvailableSleeveTypes] = useState<string[]>([])
   const { setBuyNowItem } = useBuyNow()
   const { addToCart } = useCart()
   const router = useRouter()
@@ -66,6 +67,29 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
   const shouldShowSleeveFilter = () => {
     return categorySlug === "zipless-feeding-lounge-wear" || categorySlug === "non-feeding-lounge-wear";
   };
+
+  // Fetch available sleeve types for the current category
+  useEffect(() => {
+    async function getSleeveTypes() {
+      if (!shouldShowSleeveFilter()) return;
+
+      try {
+        const url = new URL(`${process.env.NEXT_PUBLIC_API_URL}/api/products/sleeve-types`);
+        url.searchParams.append('categorySlug', categorySlug);
+
+        const response = await fetch(url.toString());
+        const data = await response.json();
+
+        if (data.success && Array.isArray(data.sleeveTypes)) {
+          setAvailableSleeveTypes(data.sleeveTypes);
+        }
+      } catch (error) {
+        console.error('Error fetching sleeve types:', error);
+      }
+    }
+
+    getSleeveTypes();
+  }, [categorySlug]);
 
   useEffect(() => {
     async function getProducts() {
@@ -76,6 +100,10 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
           url.searchParams.append('categorySlug', categorySlug);
           url.searchParams.append('sortBy', 'displayOrder');
           url.searchParams.append('sortOrder', 'asc');
+        }
+        // Add sleeve type filter to API call if selected
+        if (sleeveTypeFilter) {
+          url.searchParams.append('sleeveType', sleeveTypeFilter);
         }
         const res = await fetch(url.toString());
         if (!res.ok) throw new Error('Failed to fetch products');
@@ -103,7 +131,7 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
       }
     }
     getProducts();
-  }, [categorySlug]);
+  }, [categorySlug, sleeveTypeFilter]);
 
   // Filter and sort products
   useEffect(() => {
@@ -478,6 +506,27 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
                   </Select>
                   </div>
                 </div>
+
+                {/* Sleeve Type Filter - Only show for lounge wear categories */}
+                {shouldShowSleeveFilter() && availableSleeveTypes.length > 0 && (
+                  <div className="flex w-full gap-2 mt-2">
+                    <div className="flex-1">
+                      <Select value={sleeveTypeFilter} onValueChange={setSleeveTypeFilter}>
+                        <SelectTrigger className="h-12 border-2 border-gray-200 focus:border-[rgb(71,60,102)] rounded-lg">
+                          <SelectValue placeholder="Filter by Sleeve Type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">All Sleeve Types</SelectItem>
+                          {availableSleeveTypes.map((sleeveType) => (
+                            <SelectItem key={sleeveType} value={sleeveType}>
+                              {sleeveType}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Results Count */}
@@ -485,6 +534,7 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
                 <p className="text-gray-600">
                   Showing {filteredProducts.length} of {products.length} products
                   {searchQuery && ` for "${searchQuery}"`}
+                  {sleeveTypeFilter && ` with ${sleeveTypeFilter}`}
                 </p>
               </div>
             </div>
