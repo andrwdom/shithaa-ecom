@@ -38,13 +38,16 @@ export const getAllProducts = async (req, res) => {
             sortBy = 'createdAt',
             minPrice,
             maxPrice,
-            categorySlug
+            categorySlug,
+            sleeveType
         } = req.query;
+        
         const filter = {};
         if (category) filter.categorySlug = category.toLowerCase();
         if (categorySlug) filter.categorySlug = categorySlug;
         if (isNewArrival) filter.isNewArrival = isNewArrival === 'true';
         if (isBestSeller) filter.isBestSeller = isBestSeller === 'true';
+        if (sleeveType) filter.sleeveType = sleeveType;
         if (minPrice || maxPrice) {
             filter.price = {};
             if (minPrice) filter.price.$gte = Number(minPrice);
@@ -82,7 +85,7 @@ export const addProduct = async (req, res) => {
         console.log('Add Product Request Body:', req.body);
         console.log('Add Product Files:', req.files);
 
-        const { customId, name, description, price, category, subCategory, type, sizes, bestseller, originalPrice, categorySlug, features, isNewArrival, isBestSeller, availableSizes, stock } = req.body
+        const { customId, name, description, price, category, subCategory, type, sizes, bestseller, originalPrice, categorySlug, features, isNewArrival, isBestSeller, availableSizes, stock, sleeveType } = req.body
 
         // Validate required fields
         if (!customId) {
@@ -207,6 +210,7 @@ export const addProduct = async (req, res) => {
             subCategory: subCategory || "",
             type: type || "",
             categorySlug: categorySlug || "",
+            sleeveType: sleeveType || null,
             bestseller: bestsellerValue,
             isBestSeller: bestsellerValue,
             isNewArrival: isNewArrival === "true" ? true : false,

@@ -19,6 +19,7 @@ const Add = ({token}) => {
    const [itemType, setItemType] = useState("");
    const [bestseller, setBestseller] = useState(false);
    const [sizes, setSizes] = useState([]);
+   const [sleeveType, setSleeveType] = useState("");
 
    // New: categories from backend
    const [categories, setCategories] = useState([]);
@@ -31,6 +32,8 @@ const Add = ({token}) => {
      "Zipless Feeding Lounge Wear",
      "Non-Feeding Lounge Wear"
    ];
+
+   const SLEEVE_TYPE_OPTIONS = ["Normal Sleeve", "Puff Sleeve"];
 
    const [loading, setLoading] = useState(false)
 
@@ -45,6 +48,11 @@ const Add = ({token}) => {
        }
      });
    }, []);
+
+   // Check if current category should show sleeve type field
+   const shouldShowSleeveType = () => {
+     return category === "Zipless Feeding Lounge Wear" || category === "Non-Feeding Lounge Wear";
+   };
 
    const onSubmitHandler = async (e) => {
     e.preventDefault();
@@ -69,6 +77,12 @@ const Add = ({token}) => {
       image2 && formData.append("image2",image2)
       image3 && formData.append("image3",image3)
       image4 && formData.append("image4",image4)
+      
+      // Add sleeve type if applicable
+      if (shouldShowSleeveType() && sleeveType) {
+        formData.append("sleeveType", sleeveType)
+      }
+      
       const response = await axios.post(
         import.meta.env.VITE_API_URL + "/api/products",
         formData,
@@ -88,6 +102,7 @@ const Add = ({token}) => {
         setSizes([])
         setBestseller(false)
         setCustomId("");
+        setSleeveType(""); // Reset sleeve type
       } else {
         toast.error(response.data.message || "Failed to add product.")
       }
@@ -161,6 +176,21 @@ const Add = ({token}) => {
               ))}
             </select>
           </div>
+          {shouldShowSleeveType() && (
+            <div className='flex flex-col w-full gap-2'>
+              <p>Sleeve Type</p>
+              <select 
+                onChange={(e) => setSleeveType(e.target.value)} 
+                value={sleeveType}
+                className='w-full px-3 py-2 border border-gray-300 rounded'
+              >
+                <option value="">Select Sleeve Type</option>
+                {SLEEVE_TYPE_OPTIONS.map(option => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <div>
             <p className='mb-2'>Product Price</p>
             <input onChange={(e) => setPrice(e.target.value)} value={price} className='w-full px-3 py-2' type="number" placeholder='25' />

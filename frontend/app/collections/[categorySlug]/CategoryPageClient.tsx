@@ -27,7 +27,8 @@ interface Product {
   sizes: string[]
   bestseller: boolean
   isBestSeller: boolean
-  dateAdded?: string; // Added for date display
+  sleeveType?: string
+  dateAdded?: string
 }
 
 interface CartItem {
@@ -57,9 +58,14 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
   const [isCheckoutPromptOpen, setIsCheckoutPromptOpen] = useState(false)
   const [addedProduct, setAddedProduct] = useState<any>(null)
   const [error, setError] = useState<string | null>(null); // <-- Add this line
+  const [sleeveTypeFilter, setSleeveTypeFilter] = useState("")
   const { setBuyNowItem } = useBuyNow()
   const { addToCart } = useCart()
   const router = useRouter()
+
+  const shouldShowSleeveFilter = () => {
+    return categorySlug === "zipless-feeding-lounge-wear" || categorySlug === "non-feeding-lounge-wear";
+  };
 
   useEffect(() => {
     async function getProducts() {
@@ -112,6 +118,11 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
       )
     }
 
+    // Sleeve type filter
+    if (sleeveTypeFilter) {
+      filtered = filtered.filter(product => product.sleeveType === sleeveTypeFilter)
+    }
+
     // Sort products
     switch (sortBy) {
       case "price-low":
@@ -124,12 +135,11 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
         filtered.sort((a, b) => a.name.localeCompare(b.name))
         break
       default:
-        // Keep original order for "featured"
         break
     }
 
     setFilteredProducts(filtered)
-  }, [products, searchQuery, sortBy])
+  }, [products, searchQuery, sortBy, sleeveTypeFilter])
 
   const handleProductClick = (productId: string) => {
     window.location.href = `/product/${productId}`
@@ -524,6 +534,11 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
                         <div className="text-sm lg:text-base text-gray-900">
                           ₹ {product.price.toLocaleString()}.00 INR
                         </div>
+
+                        {/* Sleeve Type */}
+                        {product.sleeveType && (
+                          <p className="text-xs text-gray-500 mt-1">{product.sleeveType}</p>
+                        )}
 
                         {/* Simple Add to Cart Button */}
                         <Button
