@@ -5,6 +5,7 @@ import "./globals.css"
 import Providers from "./providers"
 import CartSidebar from "@/components/cart-sidebar"
 import LayoutClient from "@/components/layout-client"
+import ErrorBoundary from "@/components/error-boundary"
 import Script from "next/script";
 
 const playfairDisplay = Playfair_Display({
@@ -56,7 +57,7 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://shithaa.in'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://shithaa.in'),
   alternates: {
     canonical: '/',
   },
@@ -105,6 +106,11 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  // Add development mode error logging
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Layout rendering with API URL:', process.env.NEXT_PUBLIC_API_URL);
+  }
+
   return (
     <html lang="en" className={`${playfairDisplay.variable} ${inter.variable}`}>
       <head>
@@ -161,10 +167,12 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body min-h-screen flex flex-col">
-        <Providers>
-          <LayoutClient>{children}</LayoutClient>
-          <CartSidebar />
-        </Providers>
+        <ErrorBoundary>
+          <Providers>
+            <LayoutClient>{children}</LayoutClient>
+            <CartSidebar />
+          </Providers>
+        </ErrorBoundary>
       </body>
     </html>
   )

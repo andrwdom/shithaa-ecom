@@ -11,6 +11,8 @@ import Image from "next/image"
 import PageLoading from "@/components/page-loading"
 import SizeSelectionSidebar from "@/components/size-selection-sidebar"
 import CheckoutPromptModal from "@/components/checkout-prompt-modal"
+import ErrorBoundary from "@/components/error-boundary"
+import { safeFetch } from "@/lib/api-health"
 import { useBuyNow } from "@/components/buy-now-context"
 import { useCart } from "@/components/cart-context"
 
@@ -75,17 +77,22 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
       }
 
       try {
-        const url = new URL(`${process.env.NEXT_PUBLIC_API_URL}/api/products/sleeve-types`);
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+        const url = new URL(`${baseUrl}/api/products/sleeve-types`);
         url.searchParams.append('categorySlug', categorySlug);
 
-        const response = await fetch(url.toString());
-        const data = await response.json();
+        const response = await safeFetch(url.toString());
 
-        if (data.success && Array.isArray(data.sleeveTypes)) {
-          setAvailableSleeveTypes(data.sleeveTypes);
+        if (response && response.ok) {
+          const data = await response.json();
+          if (data.success && Array.isArray(data.sleeveTypes)) {
+            setAvailableSleeveTypes(data.sleeveTypes);
+          } else {
+            // Fallback to default sleeve types if none found
+            setAvailableSleeveTypes(['Puff Sleeve', 'Normal Sleeve']);
+          }
         } else {
-          // Fallback to default sleeve types if none found
-          setAvailableSleeveTypes(['Puff Sleeve', 'Normal Sleeve']);
+          throw new Error(`HTTP error! status: ${response?.status || 'Network error'}`);
         }
       } catch (error) {
         console.error('Error fetching sleeve types:', error);
@@ -101,7 +108,8 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
     async function getProducts() {
       setLoading(true);
       try {
-        const url = new URL(`${process.env.NEXT_PUBLIC_API_URL}/api/products`);
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+        const url = new URL(`${baseUrl}/api/products`);
         if (categorySlug) {
           url.searchParams.append('categorySlug', categorySlug);
           url.searchParams.append('sortBy', 'displayOrder');
@@ -111,8 +119,13 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
         if (sleeveTypeFilter && sleeveTypeFilter !== 'all') {
           url.searchParams.append('sleeveType', sleeveTypeFilter);
         }
-        const res = await fetch(url.toString());
-        if (!res.ok) throw new Error('Failed to fetch products');
+
+        const res = await safeFetch(url.toString());
+
+        if (!res || !res.ok) {
+          throw new Error(`Failed to fetch products: ${res?.status || 'Network error'} ${res?.statusText || ''}`);
+        }
+
         const data = await res.json();
         // Map backend fields to frontend
         const mappedProducts = (data.products || []).map((p: any) => ({
@@ -240,8 +253,9 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
 
 
   return (
-    <PageLoading loadingMessage="Loading Shithaa Collection..." minLoadingTime={1500}>
-      <div className="min-h-screen bg-gray-50 w-full overflow-x-hidden">
+    <ErrorBoundary>
+      <PageLoading loadingMessage="Loading Shithaa Collection..." minLoadingTime={1500}>
+        <div className="min-h-screen bg-gray-50 w-full overflow-x-hidden">
         <div className="flex w-full overflow-x-hidden">
           {/* Category Sidebar - Refined Design with Proper Bounds */}
           <div className="w-80 flex-shrink-0 hidden lg:block">
@@ -637,7 +651,8 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
           onCheckout={handleCheckout}
           product={addedProduct}
         />
-      </div>
-    </PageLoading>
+        </div>
+      </PageLoading>
+    </ErrorBoundary>
   )
 }

@@ -6,11 +6,25 @@ import Script from "next/script"
 export const generateMetadata = async ({ params }: { params: Promise<{ productId: string }> }): Promise<Metadata> => {
   try {
     const { productId } = await params
-    const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + '/api/products/' + productId;
-    const res = await fetch(apiUrl, { next: { revalidate: 3600 } }); // Cache for 1 hour
+
+    // Use internal API URL for server-side requests
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    const apiUrl = baseUrl + '/api/products/' + productId;
+
+    const res = await fetch(apiUrl, {
+      next: { revalidate: 3600 },
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+
+    if (!res.ok) {
+      throw new Error(`Failed to fetch product: ${res.status}`);
+    }
+
     const data = await res.json();
     const product = data.data || data.product;
-    
+
     if (!product) {
       return {
         title: "Product Not Found - Shithaa",
@@ -55,6 +69,7 @@ export const generateMetadata = async ({ params }: { params: Promise<{ productId
       },
     }
   } catch (error) {
+    console.error("Error generating metadata for product:", error);
     return {
       title: "Premium Maternity Wear - Shithaa",
       description: "Discover elegant maternity wear and feeding essentials at Shithaa. Premium quality, comfortable designs for expecting mothers.",
@@ -68,10 +83,20 @@ export default async function ProductPage({ params }: { params: Promise<{ produc
   // Fetch product data for structured data
   let productData = null;
   try {
-    const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + '/api/products/' + productId;
-    const res = await fetch(apiUrl, { next: { revalidate: 3600 } });
-    const data = await res.json();
-    productData = data.data || data.product;
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    const apiUrl = baseUrl + '/api/products/' + productId;
+
+    const res = await fetch(apiUrl, {
+      next: { revalidate: 3600 },
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      productData = data.data || data.product;
+    }
   } catch (error) {
     console.error("Error fetching product data for structured data:", error);
   }
