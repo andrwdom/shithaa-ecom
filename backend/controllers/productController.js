@@ -353,7 +353,7 @@ export const singleProduct = async (req, res) => {
 export const updateProduct = async (req, res) => {
     try {
         const id = req.params.id;
-        const { customId, name, description, price, category, subCategory, type, sizes, bestseller, originalPrice, categorySlug, features, isNewArrival, isBestSeller, stock } = req.body;
+        const { customId, name, description, price, category, subCategory, type, sizes, bestseller, originalPrice, categorySlug, features, isNewArrival, isBestSeller, stock, sleeveType } = req.body;
 
         if (!id) {
             return res.status(400).json({ success: false, message: "Product ID is required" });
@@ -431,7 +431,8 @@ export const updateProduct = async (req, res) => {
             features: parsedFeatures,
             images: imagesUrl,
             updatedAt: new Date(),
-            ...(stock !== undefined ? { stock: Number(stock) } : {})
+            ...(stock !== undefined ? { stock: Number(stock) } : {}),
+            ...(sleeveType !== undefined ? { sleeveType } : {})
         };
 
         // Only update sizes if explicitly provided

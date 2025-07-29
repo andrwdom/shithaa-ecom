@@ -17,6 +17,7 @@ const EditProduct = ({ product, token, onClose, onUpdate }) => {
   const [loading, setLoading] = useState(false)
   const [stock, setStock] = useState(product.stock || 0)
   const [customId, setCustomId] = useState(product.customId || "");
+  const [sleeveType, setSleeveType] = useState(product.sleeveType || "");
 
   // Debug token on component mount
   useEffect(() => {
@@ -30,6 +31,8 @@ const EditProduct = ({ product, token, onClose, onUpdate }) => {
     "Zipless Feeding Lounge Wear",
     "Non-Feeding Lounge Wear"
   ];
+
+  const SLEEVE_TYPE_OPTIONS = ["Sleeveless", "Short Sleeve", "Long Sleeve", "3/4 Sleeve", "Normal Sleeve", "Puff Sleeve"];
 
   // Helper: all possible sizes
   const ALL_SIZES = ["S", "M", "L", "XL", "XXL"];
@@ -80,6 +83,7 @@ const EditProduct = ({ product, token, onClose, onUpdate }) => {
       formData.append("sizes", JSON.stringify(sizes.filter(s => s.stock > 0)))
       formData.append("stock", stock)
       formData.append("customId", customId)
+      formData.append("sleeveType", sleeveType)
 
       if (image1) formData.append("image1", image1)
       if (image2) formData.append("image2", image2)
@@ -254,6 +258,20 @@ const EditProduct = ({ product, token, onClose, onUpdate }) => {
           >
             <option value="" disabled>Select a Category</option>
             {CATEGORY_OPTIONS.map(option => (
+              <option key={option} value={option}>{option}</option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <p className='mb-2'>Sleeve Type</p>
+          <select
+            value={sleeveType}
+            onChange={e => setSleeveType(e.target.value)}
+            className='w-full px-3 py-2 border rounded bg-white text-gray-900'
+          >
+            <option value="">Select Sleeve Type (Optional)</option>
+            {SLEEVE_TYPE_OPTIONS.map(option => (
               <option key={option} value={option}>{option}</option>
             ))}
           </select>
