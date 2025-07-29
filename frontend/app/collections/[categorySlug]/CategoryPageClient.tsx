@@ -95,7 +95,9 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
           throw new Error(`HTTP error! status: ${response?.status || 'Network error'}`);
         }
       } catch (error) {
-        console.error('Error fetching sleeve types:', error);
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Error fetching sleeve types:', error);
+        }
         // Fallback to default sleeve types on error
         setAvailableSleeveTypes(['Puff Sleeve', 'Normal Sleeve']);
       }
@@ -144,6 +146,9 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
         }));
         setProducts(mappedProducts);
       } catch (err) {
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Error fetching products:', err);
+        }
         setError(err instanceof Error ? err.message : 'An error occurred while fetching products');
       } finally {
         setLoading(false);

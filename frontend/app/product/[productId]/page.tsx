@@ -1,25 +1,20 @@
 import { Metadata } from "next"
 import ProductPageClient from "./ProductPageClient"
 import Script from "next/script"
+import { getApiUrl, serverFetch, fallbackMetadata, logError } from "@/lib/server-utils"
 
 // SEO Metadata - This will be dynamic based on product
 export const generateMetadata = async ({ params }: { params: Promise<{ productId: string }> }): Promise<Metadata> => {
   try {
     const { productId } = await params
 
-    // Use internal API URL for server-side requests
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-    const apiUrl = baseUrl + '/api/products/' + productId;
-
-    const res = await fetch(apiUrl, {
-      next: { revalidate: 3600 },
-      headers: {
-        'Content-Type': 'application/json',
-      }
+    const apiUrl = `${getApiUrl()}/api/products/${productId}`;
+    const res = await serverFetch(apiUrl, {
+      next: { revalidate: 3600 } as any
     });
 
-    if (!res.ok) {
-      throw new Error(`Failed to fetch product: ${res.status}`);
+    if (!res || !res.ok) {
+      throw new Error(`Failed to fetch product: ${res?.status || 'Network error'}`);
     }
 
     const data = await res.json();
@@ -69,11 +64,8 @@ export const generateMetadata = async ({ params }: { params: Promise<{ productId
       },
     }
   } catch (error) {
-    console.error("Error generating metadata for product:", error);
-    return {
-      title: "Premium Maternity Wear - Shithaa",
-      description: "Discover elegant maternity wear and feeding essentials at Shithaa. Premium quality, comfortable designs for expecting mothers.",
-    }
+    logError("Error generating metadata for product:", error);
+    return fallbackMetadata;
   }
 }
 
@@ -83,22 +75,17 @@ export default async function ProductPage({ params }: { params: Promise<{ produc
   // Fetch product data for structured data
   let productData = null;
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-    const apiUrl = baseUrl + '/api/products/' + productId;
-
-    const res = await fetch(apiUrl, {
-      next: { revalidate: 3600 },
-      headers: {
-        'Content-Type': 'application/json',
-      }
+    const apiUrl = `${getApiUrl()}/api/products/${productId}`;
+    const res = await serverFetch(apiUrl, {
+      next: { revalidate: 3600 } as any
     });
 
-    if (res.ok) {
+    if (res && res.ok) {
       const data = await res.json();
       productData = data.data || data.product;
     }
   } catch (error) {
-    console.error("Error fetching product data for structured data:", error);
+    logError("Error fetching product data for structured data:", error);
   }
   
   return (

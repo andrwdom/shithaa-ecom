@@ -6,6 +6,7 @@ import Providers from "./providers"
 import CartSidebar from "@/components/cart-sidebar"
 import LayoutClient from "@/components/layout-client"
 import ErrorBoundary from "@/components/error-boundary"
+import ServerErrorBoundary from "@/components/server-error-boundary"
 import Script from "next/script";
 
 const playfairDisplay = Playfair_Display({
@@ -167,12 +168,14 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body min-h-screen flex flex-col">
-        <ErrorBoundary>
-          <Providers>
-            <LayoutClient>{children}</LayoutClient>
-            <CartSidebar />
-          </Providers>
-        </ErrorBoundary>
+        <ServerErrorBoundary>
+          <ErrorBoundary>
+            <Providers>
+              <LayoutClient>{children}</LayoutClient>
+              <CartSidebar />
+            </Providers>
+          </ErrorBoundary>
+        </ServerErrorBoundary>
       </body>
     </html>
   )

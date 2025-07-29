@@ -13,7 +13,9 @@ export async function checkApiHealth(): Promise<boolean> {
     
     return response.ok;
   } catch (error) {
-    console.error('API health check failed:', error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error('API health check failed:', error);
+    }
     return false;
   }
 }
@@ -33,7 +35,9 @@ export async function safeFetch(url: string, options?: RequestInit): Promise<Res
     
     return response;
   } catch (error) {
-    console.error('Fetch error:', error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Fetch error:', error);
+    }
     return null;
   }
 }
