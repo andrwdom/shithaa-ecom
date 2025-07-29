@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
 import Footer from "@/components/footer"
 import CartSidebar from "@/components/cart-sidebar"
 import { Button } from "@/components/ui/button"
@@ -17,11 +16,13 @@ import { useBuyNow } from "@/components/buy-now-context"
 import { useCart } from "@/components/cart-context"
 
 interface Product {
-  id: number
+  id: string
+  _id: string
   name: string
   price: number
   originalPrice: number
   image: string
+  images?: string[]
   category: string
   description: string
   sizes: string[]
@@ -31,14 +32,7 @@ interface Product {
   dateAdded?: string
 }
 
-interface CartItem {
-  id: number
-  name: string
-  price: number
-  quantity: number
-  size: string
-  image: string
-}
+
 
 interface CategoryPageClientProps {
   categorySlug: string
@@ -48,46 +42,63 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
   const [products, setProducts] = useState<Product[]>([])
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
-  const [categoryName, setCategoryName] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
   const [sortBy, setSortBy] = useState("featured")
-  const [isCartSidebarOpen, setIsCartSidebarOpen] = useState(false)
-  const [cartItems, setCartItems] = useState<CartItem[]>([])
   const [sizeSelectionProduct, setSizeSelectionProduct] = useState<Product | null>(null)
   const [isSizeSelectionOpen, setIsSizeSelectionOpen] = useState(false)
   const [isCheckoutPromptOpen, setIsCheckoutPromptOpen] = useState(false)
   const [addedProduct, setAddedProduct] = useState<any>(null)
-  const [error, setError] = useState<string | null>(null); // <-- Add this line
+  const [error, setError] = useState<string | null>(null)
   const [sleeveTypeFilter, setSleeveTypeFilter] = useState("")
   const [availableSleeveTypes, setAvailableSleeveTypes] = useState<string[]>([])
   const { setBuyNowItem } = useBuyNow()
   const { addToCart } = useCart()
-  const router = useRouter()
+
+  // Compute category name from slug
+  const categoryName = categorySlug
+    .split("-")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ")
 
   const shouldShowSleeveFilter = () => {
     // Show sleeve filter for all lounge wear and feeding wear categories
-    return categorySlug === "zipless-feeding-lounge-wear" ||
+    const shouldShow = categorySlug === "zipless-feeding-lounge-wear" ||
            categorySlug === "non-feeding-lounge-wear" ||
            categorySlug === "maternity-feeding-wear";
+    console.log('DEBUG: shouldShowSleeveFilter', { categorySlug, shouldShow });
+    return shouldShow;
   };
 
   // Fetch available sleeve types for the current category
   useEffect(() => {
     async function getSleeveTypes() {
-      if (!shouldShowSleeveFilter()) return;
+      if (!shouldShowSleeveFilter()) {
+        console.log('DEBUG: Not showing sleeve filter for category:', categorySlug);
+        return;
+      }
 
+      console.log('DEBUG: Fetching sleeve types for category:', categorySlug);
       try {
         const url = new URL(`${process.env.NEXT_PUBLIC_API_URL}/api/products/sleeve-types`);
         url.searchParams.append('categorySlug', categorySlug);
 
+        console.log('DEBUG: Fetching from URL:', url.toString());
         const response = await fetch(url.toString());
         const data = await response.json();
 
+        console.log('DEBUG: Sleeve types response:', data);
         if (data.success && Array.isArray(data.sleeveTypes)) {
           setAvailableSleeveTypes(data.sleeveTypes);
+          console.log('DEBUG: Set available sleeve types:', data.sleeveTypes);
+        } else {
+          console.log('DEBUG: No sleeve types found or invalid response');
+          // For debugging, let's add some default sleeve types
+          setAvailableSleeveTypes(['Sleeveless', 'Short Sleeve', 'Long Sleeve']);
         }
       } catch (error) {
         console.error('Error fetching sleeve types:', error);
+        // For debugging, let's add some default sleeve types
+        setAvailableSleeveTypes(['Sleeveless', 'Short Sleeve', 'Long Sleeve']);
       }
     }
 
@@ -195,10 +206,10 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
     setIsSizeSelectionOpen(true);
   }
 
-  const handleSizeSelectionAddToCart = (product: Product, size: string, quantity: number) => {
+  const handleSizeSelectionAddToCart = (product: any, size: string, quantity: number, _stock: number) => {
     addToCart({
-      id: product._id,
-      _id: product._id,
+      id: product._id || product.id,
+      _id: product._id || product.id,
       name: product.name,
       price: product.price,
       quantity,
@@ -215,10 +226,10 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
     setIsCheckoutPromptOpen(true);
   };
 
-  const handleSizeSelectionBuyNow = (product: Product, size: string, quantity: number) => {
+  const handleSizeSelectionBuyNow = (product: any, size: string, quantity: number) => {
     setBuyNowItem({
-      id: product._id,
-      _id: product._id,
+      id: product._id || product.id,
+      _id: product._id || product.id,
       name: product.name,
       price: product.price,
       quantity,
@@ -232,21 +243,9 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
     window.location.href = "/checkout";
   }
 
-  const handleUpdateQuantity = (productId: number, size: string, quantity: number) => {
-    setCartItems((prev) =>
-      prev.map((item) => (item.id === productId && item.size === size ? { ...item, quantity } : item)),
-    )
-  }
 
-  const handleRemoveItem = (productId: number, size: string) => {
-    setCartItems((prev) => prev.filter((item) => !(item.id === productId && item.size === size)))
-  }
 
-  function formatDateYYYYMMDD(date: string) {
-    if (!date) return '';
-    const d = new Date(date);
-    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-  }
+
 
   return (
     <PageLoading loadingMessage="Loading Shithaa Collection..." minLoadingTime={1500}>
@@ -489,7 +488,7 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
                     </div>
                   </div>
                   {/* Sleeve Type Filter - Show next to sort on desktop */}
-                  {shouldShowSleeveFilter() && availableSleeveTypes.length > 0 && (
+                  {shouldShowSleeveFilter() && (
                     <div className="flex-shrink-0 hidden sm:block">
                       <Select value={sleeveTypeFilter} onValueChange={setSleeveTypeFilter}>
                         <SelectTrigger className="w-48 h-12 border-2 border-gray-200 focus:border-[rgb(71,60,102)] rounded-lg">
@@ -497,7 +496,7 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="">All Sleeve Types</SelectItem>
-                          {availableSleeveTypes.map((sleeveType) => (
+                          {(availableSleeveTypes.length > 0 ? availableSleeveTypes : ['Sleeveless', 'Short Sleeve', 'Long Sleeve', '3/4 Sleeve']).map((sleeveType) => (
                             <SelectItem key={sleeveType} value={sleeveType}>
                               {sleeveType}
                             </SelectItem>
@@ -530,7 +529,7 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
                 </div>
 
                 {/* Sleeve Type Filter - Mobile version (full width) */}
-                {shouldShowSleeveFilter() && availableSleeveTypes.length > 0 && (
+                {shouldShowSleeveFilter() && (
                   <div className="flex w-full gap-2 mt-2 sm:hidden">
                     <div className="flex-1">
                       <Select value={sleeveTypeFilter} onValueChange={setSleeveTypeFilter}>
@@ -539,7 +538,7 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="">All Sleeve Types</SelectItem>
-                          {availableSleeveTypes.map((sleeveType) => (
+                          {(availableSleeveTypes.length > 0 ? availableSleeveTypes : ['Sleeveless', 'Short Sleeve', 'Long Sleeve', '3/4 Sleeve']).map((sleeveType) => (
                             <SelectItem key={sleeveType} value={sleeveType}>
                               {sleeveType}
                             </SelectItem>
@@ -648,18 +647,12 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
           </div>
         </div>
 
-        <CartSidebar
-          isOpen={isCartSidebarOpen}
-          onClose={() => setIsCartSidebarOpen(false)}
-          items={cartItems}
-          onUpdateQuantity={handleUpdateQuantity}
-          onRemoveItem={handleRemoveItem}
-        />
+        <CartSidebar />
 
         <SizeSelectionSidebar
           isOpen={isSizeSelectionOpen}
           onClose={() => setIsSizeSelectionOpen(false)}
-          product={sizeSelectionProduct}
+          product={sizeSelectionProduct as any}
           onAddToCart={handleSizeSelectionAddToCart}
           onBuyNow={handleSizeSelectionBuyNow}
         />
@@ -669,7 +662,7 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
           onClose={() => setIsCheckoutPromptOpen(false)}
           onViewCart={() => {
             setIsCheckoutPromptOpen(false)
-            setIsCartSidebarOpen(true)
+            // Cart sidebar is handled by the cart context
           }}
           onCheckout={handleCheckout}
           product={addedProduct}

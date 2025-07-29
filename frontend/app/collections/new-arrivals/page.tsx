@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronRight, Home, Search, Filter, SlidersHorizontal, Sparkles, Star } from "lucide-react";
+import { Search, SlidersHorizontal, Sparkles } from "lucide-react";
 import Image from "next/image";
 import PageLoading from "@/components/page-loading";
 import SizeSelectionSidebar from "@/components/size-selection-sidebar";
@@ -101,7 +101,7 @@ export default function NewArrivalsPage() {
     setFilteredProducts(filtered);
   }, [products, searchQuery, sortBy]);
 
-  const handleProductClick = (productId: number) => {
+  const handleProductClick = (productId: string) => {
     window.location.href = `/product/${productId}`;
   };
 
@@ -119,7 +119,7 @@ export default function NewArrivalsPage() {
     setIsSizeSelectionOpen(true);
   };
 
-  const handleSizeSelectionAddToCart = (product: any, size: string, quantity: number) => {
+  const handleSizeSelectionAddToCart = (product: any, size: string, quantity: number, _stock: number) => {
     addToCart({
       id: product._id,
       _id: product._id,
@@ -156,7 +156,7 @@ export default function NewArrivalsPage() {
     window.location.href = "/checkout";
   }
 
-  function formatDateYYYYMMDD(date) {
+  function formatDateYYYYMMDD(date: string) {
     if (!date) return '';
     const d = new Date(date);
     return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
@@ -311,7 +311,7 @@ export default function NewArrivalsPage() {
         <SizeSelectionSidebar
           isOpen={isSizeSelectionOpen}
           onClose={() => setIsSizeSelectionOpen(false)}
-          product={sizeSelectionProduct}
+          product={sizeSelectionProduct as any}
           onAddToCart={handleSizeSelectionAddToCart}
           onBuyNow={handleSizeSelectionBuyNow}
         />
