@@ -1,11 +1,19 @@
 // Server-side utilities for handling API calls and errors
 export function getApiUrl(): string {
-  // In production, use the full URL for server-side requests
+  // Check if we're on server-side
+  const isServer = typeof window === 'undefined';
+
   if (process.env.NODE_ENV === 'production') {
-    return process.env.NEXT_PUBLIC_API_URL || 'https://shithaa.in/api';
+    if (isServer) {
+      // For server-side rendering in production, use internal backend URL
+      return 'http://localhost:4000';
+    } else {
+      // For client-side in production, use the public API URL
+      return process.env.NEXT_PUBLIC_API_URL || 'https://shithaa.in';
+    }
   }
-  
-  // In development, use localhost
+
+  // In development, always use localhost
   return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 }
 

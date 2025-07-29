@@ -11,6 +11,7 @@ import PageLoading from "@/components/page-loading"
 import { useCart } from "@/components/cart-context"
 import CheckoutPromptModal from "@/components/checkout-prompt-modal"
 import { useBuyNow } from "@/components/buy-now-context"
+import { safeFetch } from "@/lib/api-health"
 
 interface Product {
   id: number
@@ -51,7 +52,12 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
         await new Promise((resolve) => setTimeout(resolve, 1000))
 
         const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + '/api/products/' + productId;
-        const res = await fetch(apiUrl);
+        const res = await safeFetch(apiUrl);
+
+        if (!res || !res.ok) {
+          throw new Error(`Failed to fetch product: ${res?.status || 'Network error'}`);
+        }
+
         const data = await res.json();
         if (data.data || data.product) {
           const p = data.data || data.product;
@@ -73,7 +79,9 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
         }
         setLoading(false)
       } catch (error) {
-        console.error("Error fetching product:", error)
+        if (process.env.NODE_ENV === 'development') {
+          console.error("Error fetching product:", error)
+        }
         setLoading(false)
       }
     }
