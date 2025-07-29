@@ -161,10 +161,6 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body min-h-screen flex flex-col">
-        <Script
-          src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`}
-          strategy="beforeInteractive"
-        />
         <Providers>
           <LayoutClient>{children}</LayoutClient>
           <CartSidebar />
