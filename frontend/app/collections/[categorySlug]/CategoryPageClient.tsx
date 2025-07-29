@@ -49,7 +49,7 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
   const [isCheckoutPromptOpen, setIsCheckoutPromptOpen] = useState(false)
   const [addedProduct, setAddedProduct] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
-  const [sleeveTypeFilter, setSleeveTypeFilter] = useState("")
+  const [sleeveTypeFilter, setSleeveTypeFilter] = useState("all")
   const [availableSleeveTypes, setAvailableSleeveTypes] = useState<string[]>([])
   const { setBuyNowItem } = useBuyNow()
   const { addToCart } = useCart()
@@ -62,42 +62,34 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
 
   const shouldShowSleeveFilter = () => {
     // Show sleeve filter for all lounge wear and feeding wear categories
-    const shouldShow = categorySlug === "zipless-feeding-lounge-wear" ||
+    return categorySlug === "zipless-feeding-lounge-wear" ||
            categorySlug === "non-feeding-lounge-wear" ||
            categorySlug === "maternity-feeding-wear";
-    console.log('DEBUG: shouldShowSleeveFilter', { categorySlug, shouldShow });
-    return shouldShow;
   };
 
   // Fetch available sleeve types for the current category
   useEffect(() => {
     async function getSleeveTypes() {
       if (!shouldShowSleeveFilter()) {
-        console.log('DEBUG: Not showing sleeve filter for category:', categorySlug);
         return;
       }
 
-      console.log('DEBUG: Fetching sleeve types for category:', categorySlug);
       try {
         const url = new URL(`${process.env.NEXT_PUBLIC_API_URL}/api/products/sleeve-types`);
         url.searchParams.append('categorySlug', categorySlug);
 
-        console.log('DEBUG: Fetching from URL:', url.toString());
         const response = await fetch(url.toString());
         const data = await response.json();
 
-        console.log('DEBUG: Sleeve types response:', data);
         if (data.success && Array.isArray(data.sleeveTypes)) {
           setAvailableSleeveTypes(data.sleeveTypes);
-          console.log('DEBUG: Set available sleeve types:', data.sleeveTypes);
         } else {
-          console.log('DEBUG: No sleeve types found or invalid response');
-          // For debugging, let's add some default sleeve types
+          // Fallback to default sleeve types if none found
           setAvailableSleeveTypes(['Sleeveless', 'Short Sleeve', 'Long Sleeve']);
         }
       } catch (error) {
         console.error('Error fetching sleeve types:', error);
-        // For debugging, let's add some default sleeve types
+        // Fallback to default sleeve types on error
         setAvailableSleeveTypes(['Sleeveless', 'Short Sleeve', 'Long Sleeve']);
       }
     }
@@ -116,7 +108,7 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
           url.searchParams.append('sortOrder', 'asc');
         }
         // Add sleeve type filter to API call if selected
-        if (sleeveTypeFilter) {
+        if (sleeveTypeFilter && sleeveTypeFilter !== 'all') {
           url.searchParams.append('sleeveType', sleeveTypeFilter);
         }
         const res = await fetch(url.toString());
@@ -161,7 +153,7 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
     }
 
     // Sleeve type filter
-    if (sleeveTypeFilter) {
+    if (sleeveTypeFilter && sleeveTypeFilter !== 'all') {
       filtered = filtered.filter(product => product.sleeveType === sleeveTypeFilter)
     }
 
@@ -495,7 +487,7 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
                           <SelectValue placeholder="Filter by Sleeve Type" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">All Sleeve Types</SelectItem>
+                          <SelectItem value="all">All Sleeve Types</SelectItem>
                           {(availableSleeveTypes.length > 0 ? availableSleeveTypes : ['Sleeveless', 'Short Sleeve', 'Long Sleeve', '3/4 Sleeve']).map((sleeveType) => (
                             <SelectItem key={sleeveType} value={sleeveType}>
                               {sleeveType}
@@ -537,7 +529,7 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
                           <SelectValue placeholder="Filter by Sleeve Type" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">All Sleeve Types</SelectItem>
+                          <SelectItem value="all">All Sleeve Types</SelectItem>
                           {(availableSleeveTypes.length > 0 ? availableSleeveTypes : ['Sleeveless', 'Short Sleeve', 'Long Sleeve', '3/4 Sleeve']).map((sleeveType) => (
                             <SelectItem key={sleeveType} value={sleeveType}>
                               {sleeveType}
@@ -555,7 +547,7 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
                 <p className="text-gray-600">
                   Showing {filteredProducts.length} of {products.length} products
                   {searchQuery && ` for "${searchQuery}"`}
-                  {sleeveTypeFilter && ` with ${sleeveTypeFilter}`}
+                  {sleeveTypeFilter && sleeveTypeFilter !== 'all' && ` with ${sleeveTypeFilter}`}
                 </p>
               </div>
             </div>
