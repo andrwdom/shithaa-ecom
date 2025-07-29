@@ -33,7 +33,7 @@ export default function CategoryCards() {
       title: "Zipless Feeding Dupatta Lounge Wear",
       description: "Zipless design with attached dupatta for more comfort",
       image: "/placeholder.svg?height=300&width=400",
-      color: "from-purple-100 to-purple-200",
+      color: "from-yellow-100 to-yellow-200",
     },
   ]
 

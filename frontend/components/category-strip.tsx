@@ -47,12 +47,12 @@ export default function CategoryStrip({ onCategoryClick, currentCategory }: Cate
       icon: Heart,
       title: "Dupatta Lounge",
       slug: "zipless-feeding-dupatta-lounge-wear",
-      bgColor: "bg-purple-50",
-      hoverBgColor: "hover:bg-purple-100",
-      borderColor: "border-purple-200",
-      hoverBorderColor: "hover:border-purple-400",
-      textColor: "text-purple-700",
-      hoverTextColor: "hover:text-purple-800",
+      bgColor: "bg-yellow-50",
+      hoverBgColor: "hover:bg-yellow-100",
+      borderColor: "border-yellow-200",
+      hoverBorderColor: "hover:border-yellow-400",
+      textColor: "text-yellow-700",
+      hoverTextColor: "hover:text-yellow-800",
     },
   ]
 

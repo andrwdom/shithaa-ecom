@@ -446,11 +446,11 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
                       icon: Heart,
                       title: "Dupatta Lounge",
                       slug: "zipless-feeding-dupatta-lounge-wear",
-                      bgColor: "bg-purple-50",
-                      borderColor: "border-purple-200",
-                      textColor: "text-purple-700",
-                      activeBgColor: "bg-purple-100",
-                      activeBorderColor: "border-purple-400",
+                      bgColor: "bg-yellow-50",
+                      borderColor: "border-yellow-200",
+                      textColor: "text-yellow-700",
+                      activeBgColor: "bg-yellow-100",
+                      activeBorderColor: "border-yellow-400",
                     },
                   ].map(category => {
                     const isActive = categorySlug === category.slug;

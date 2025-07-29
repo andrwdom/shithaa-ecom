@@ -70,13 +70,13 @@ export default function CategorySidebar({ isOpen, onClose, onCategorySelect, cur
       title: "Zipless Feeding Dupatta Lounge Wear",
       slug: "zipless-feeding-dupatta-lounge-wear",
       description: "Zipless design with attached dupatta for comfort",
-      // Use purple pastel colors
-      bgColor: "bg-purple-50/80",
-      hoverBgColor: "hover:bg-purple-100/80",
-      borderColor: "border-purple-100",
-      hoverBorderColor: "hover:border-purple-300",
-      iconBgColor: "bg-purple-100",
-      activeIconBgColor: "bg-purple-500",
+      // Use yellow pastel colors
+      bgColor: "bg-yellow-50/80",
+      hoverBgColor: "hover:bg-yellow-100/80",
+      borderColor: "border-yellow-100",
+      hoverBorderColor: "hover:border-yellow-300",
+      iconBgColor: "bg-yellow-100",
+      activeIconBgColor: "bg-yellow-500",
     },
   ]
 
