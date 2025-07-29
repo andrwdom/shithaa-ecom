@@ -35,7 +35,7 @@ export const getSleeveTypes = async (req, res) => {
             filter.categorySlug = categorySlug;
         } else {
             // Default to lounge wear and feeding wear categories if no specific category provided
-            filter.categorySlug = { $in: ['zipless-feeding-lounge-wear', 'non-feeding-lounge-wear', 'maternity-feeding-wear'] };
+            filter.categorySlug = { $in: ['zipless-feeding-lounge-wear', 'non-feeding-lounge-wear', 'maternity-feeding-wear', 'zipless-feeding-dupatta-lounge-wear'] };
         }
 
         // Get unique sleeve types from products that have them

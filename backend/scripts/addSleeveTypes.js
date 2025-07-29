@@ -43,13 +43,13 @@ async function addSleeveTypesToProducts() {
 
     // Also add some default sleeve types to other lounge wear products
     const loungeWearProducts = await productModel.find({
-      categorySlug: { $in: ['zipless-feeding-lounge-wear', 'non-feeding-lounge-wear', 'maternity-feeding-wear'] },
+      categorySlug: { $in: ['zipless-feeding-lounge-wear', 'non-feeding-lounge-wear', 'maternity-feeding-wear', 'zipless-feeding-dupatta-lounge-wear'] },
       sleeveType: { $exists: false }
     }).limit(10);
 
     console.log(`Found ${loungeWearProducts.length} lounge wear products without sleeve types`);
 
-    const sleeveTypes = ['Short Sleeve', 'Long Sleeve', '3/4 Sleeve', 'Normal Sleeve'];
+    const sleeveTypes = ['Puff Sleeve', 'Normal Sleeve'];
     
     for (let i = 0; i < loungeWearProducts.length; i++) {
       const product = loungeWearProducts[i];

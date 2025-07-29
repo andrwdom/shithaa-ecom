@@ -43,6 +43,17 @@ export default function CategoryStrip({ onCategoryClick, currentCategory }: Cate
       textColor: "text-green-700",
       hoverTextColor: "hover:text-green-800",
     },
+    {
+      icon: Heart,
+      title: "Dupatta Lounge",
+      slug: "zipless-feeding-dupatta-lounge-wear",
+      bgColor: "bg-purple-50",
+      hoverBgColor: "hover:bg-purple-100",
+      borderColor: "border-purple-200",
+      hoverBorderColor: "hover:border-purple-400",
+      textColor: "text-purple-700",
+      hoverTextColor: "hover:text-purple-800",
+    },
   ]
 
   const handleCategoryClick = (slug: string) => {

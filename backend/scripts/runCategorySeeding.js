@@ -26,18 +26,32 @@ const categories = [
   }
 ];
 
-async function seed() {
-  await connectDB();
-  for (const cat of categories) {
-    const exists = await Category.findOne({ slug: cat.slug });
-    if (!exists) {
-      await Category.create(cat);
-      console.log(`Added category: ${cat.name}`);
-    } else {
-      console.log(`Category already exists: ${cat.name}`);
+async function seedCategories() {
+  try {
+    await connectDB();
+    console.log('Connected to MongoDB');
+
+    // Check if categories already exist
+    for (const categoryData of categories) {
+      const existingCategory = await Category.findOne({ slug: categoryData.slug });
+      
+      if (!existingCategory) {
+        const category = new Category(categoryData);
+        await category.save();
+        console.log(`✅ Created category: ${categoryData.name}`);
+      } else {
+        console.log(`⚠️  Category already exists: ${categoryData.name}`);
+      }
     }
+
+    console.log('✅ Category seeding completed!');
+    
+  } catch (error) {
+    console.error('❌ Error seeding categories:', error);
+  } finally {
+    await mongoose.disconnect();
+    console.log('Disconnected from MongoDB');
   }
-  mongoose.connection.close();
 }
 
-seed(); 
+seedCategories();

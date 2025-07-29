@@ -16,7 +16,7 @@ const productSchema = new mongoose.Schema({
     categorySlug: { type: String, default: "" },
     subCategory: { type: String, default: "" },
     type: { type: String, default: "" },
-    sleeveType: { type: String, enum: ["Sleeveless", "Short Sleeve", "Long Sleeve", "3/4 Sleeve", "Normal Sleeve", "Puff Sleeve"], default: null },
+    sleeveType: { type: String, enum: ["Puff Sleeve", "Normal Sleeve"], default: null },
     sizes: [sizeSchema],
     availableSizes: [{ type: String }],
     features: [{ type: String }],

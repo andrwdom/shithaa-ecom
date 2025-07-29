@@ -64,7 +64,8 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
     // Show sleeve filter for all lounge wear and feeding wear categories
     return categorySlug === "zipless-feeding-lounge-wear" ||
            categorySlug === "non-feeding-lounge-wear" ||
-           categorySlug === "maternity-feeding-wear";
+           categorySlug === "maternity-feeding-wear" ||
+           categorySlug === "zipless-feeding-dupatta-lounge-wear";
   };
 
   // Fetch available sleeve types for the current category
@@ -85,12 +86,12 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
           setAvailableSleeveTypes(data.sleeveTypes);
         } else {
           // Fallback to default sleeve types if none found
-          setAvailableSleeveTypes(['Sleeveless', 'Short Sleeve', 'Long Sleeve']);
+          setAvailableSleeveTypes(['Puff Sleeve', 'Normal Sleeve']);
         }
       } catch (error) {
         console.error('Error fetching sleeve types:', error);
         // Fallback to default sleeve types on error
-        setAvailableSleeveTypes(['Sleeveless', 'Short Sleeve', 'Long Sleeve']);
+        setAvailableSleeveTypes(['Puff Sleeve', 'Normal Sleeve']);
       }
     }
 
@@ -441,6 +442,16 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
                       activeBgColor: "bg-green-100",
                       activeBorderColor: "border-green-400",
                     },
+                    {
+                      icon: Heart,
+                      title: "Dupatta Lounge",
+                      slug: "zipless-feeding-dupatta-lounge-wear",
+                      bgColor: "bg-purple-50",
+                      borderColor: "border-purple-200",
+                      textColor: "text-purple-700",
+                      activeBgColor: "bg-purple-100",
+                      activeBorderColor: "border-purple-400",
+                    },
                   ].map(category => {
                     const isActive = categorySlug === category.slug;
                     return (
@@ -488,7 +499,7 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">All Sleeve Types</SelectItem>
-                          {(availableSleeveTypes.length > 0 ? availableSleeveTypes : ['Sleeveless', 'Short Sleeve', 'Long Sleeve', '3/4 Sleeve']).map((sleeveType) => (
+                          {(availableSleeveTypes.length > 0 ? availableSleeveTypes : ['Puff Sleeve', 'Normal Sleeve']).map((sleeveType) => (
                             <SelectItem key={sleeveType} value={sleeveType}>
                               {sleeveType}
                             </SelectItem>
@@ -530,7 +541,7 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">All Sleeve Types</SelectItem>
-                          {(availableSleeveTypes.length > 0 ? availableSleeveTypes : ['Sleeveless', 'Short Sleeve', 'Long Sleeve', '3/4 Sleeve']).map((sleeveType) => (
+                          {(availableSleeveTypes.length > 0 ? availableSleeveTypes : ['Puff Sleeve', 'Normal Sleeve']).map((sleeveType) => (
                             <SelectItem key={sleeveType} value={sleeveType}>
                               {sleeveType}
                             </SelectItem>

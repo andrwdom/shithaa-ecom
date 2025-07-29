@@ -30,10 +30,11 @@ const Add = ({token}) => {
    const CATEGORY_OPTIONS = [
      "Maternity Feeding Wear",
      "Zipless Feeding Lounge Wear",
-     "Non-Feeding Lounge Wear"
+     "Non-Feeding Lounge Wear",
+     "Zipless Feeding Dupatta Lounge Wear"
    ];
 
-   const SLEEVE_TYPE_OPTIONS = ["Sleeveless", "Short Sleeve", "Long Sleeve", "3/4 Sleeve", "Normal Sleeve", "Puff Sleeve"];
+   const SLEEVE_TYPE_OPTIONS = ["Puff Sleeve", "Normal Sleeve"];
 
    const [loading, setLoading] = useState(false)
 

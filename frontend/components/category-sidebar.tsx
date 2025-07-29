@@ -65,6 +65,19 @@ export default function CategorySidebar({ isOpen, onClose, onCategorySelect, cur
       iconBgColor: "bg-green-100",
       activeIconBgColor: "bg-green-500",
     },
+    {
+      icon: Heart,
+      title: "Zipless Feeding Dupatta Lounge Wear",
+      slug: "zipless-feeding-dupatta-lounge-wear",
+      description: "Zipless design with attached dupatta for comfort",
+      // Use purple pastel colors
+      bgColor: "bg-purple-50/80",
+      hoverBgColor: "hover:bg-purple-100/80",
+      borderColor: "border-purple-100",
+      hoverBorderColor: "hover:border-purple-300",
+      iconBgColor: "bg-purple-100",
+      activeIconBgColor: "bg-purple-500",
+    },
   ]
 
   const handleCategorySelect = (slug: string) => {

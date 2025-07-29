@@ -31,6 +31,15 @@ export default function HeroSection() {
       backdropColor: "backdrop-blur-md bg-green-50/90",
       image: "/leopard-dress.jpg",
     },
+    {
+      id: 4,
+      title: "Zipless Feeding Dupatta Lounge Wear",
+      subtitle: "Zipless design with attached dupatta for more comfort",
+      slug: "zipless-feeding-dupatta-lounge-wear",
+      overlayColor: "bg-purple-500/20",
+      backdropColor: "backdrop-blur-md bg-purple-50/90",
+      image: "/placeholder.svg?height=400&width=300",
+    },
   ]
 
   const handleCategoryClick = (slug: string) => {

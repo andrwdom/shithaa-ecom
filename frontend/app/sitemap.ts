@@ -64,6 +64,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.9,
     },
     {
+      url: `${baseUrl}/collections/zipless-feeding-dupatta-lounge-wear`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly' as const,
+      priority: 0.9,
+    },
+    {
       url: `${baseUrl}/collections/new-arrivals`,
       lastModified: new Date(),
       changeFrequency: 'daily' as const,
