@@ -24,44 +24,6 @@ export const getProductById = async (req, res) => {
     }
 };
 
-// GET /api/products/sleeve-types - Get unique sleeve types for filtering
-export const getSleeveTypes = async (req, res) => {
-    try {
-        const { categorySlug } = req.query;
-
-        // Build filter for lounge wear categories
-        const filter = {};
-        if (categorySlug) {
-            filter.categorySlug = categorySlug;
-        } else {
-            // Default to lounge wear and feeding wear categories if no specific category provided
-            filter.categorySlug = { $in: ['zipless-feeding-lounge-wear', 'non-feeding-lounge-wear', 'maternity-feeding-wear', 'zipless-feeding-dupatta-lounge-wear'] };
-        }
-
-        // Get unique sleeve types from products that have them
-        const sleeveTypes = await productModel.distinct('sleeveType', {
-            ...filter,
-            sleeveType: { $ne: null, $ne: '' }
-        });
-
-        // Filter out null/empty values and sort
-        const validSleeveTypes = sleeveTypes
-            .filter(type => type && type.trim() !== '')
-            .sort();
-
-        res.status(200).json({
-            success: true,
-            sleeveTypes: validSleeveTypes
-        });
-    } catch (error) {
-        console.error('Get Sleeve Types Error:', error);
-        res.status(500).json({
-            success: false,
-            error: error.message
-        });
-    }
-};
-
 // GET /api/products/category/:category or /api/products?category=...
 export const getAllProducts = async (req, res) => {
     try {
@@ -76,16 +38,13 @@ export const getAllProducts = async (req, res) => {
             sortBy = 'createdAt',
             minPrice,
             maxPrice,
-            categorySlug,
-            sleeveType
+            categorySlug
         } = req.query;
-        
         const filter = {};
         if (category) filter.categorySlug = category.toLowerCase();
         if (categorySlug) filter.categorySlug = categorySlug;
         if (isNewArrival) filter.isNewArrival = isNewArrival === 'true';
         if (isBestSeller) filter.isBestSeller = isBestSeller === 'true';
-        if (sleeveType) filter.sleeveType = sleeveType;
         if (minPrice || maxPrice) {
             filter.price = {};
             if (minPrice) filter.price.$gte = Number(minPrice);
@@ -123,7 +82,7 @@ export const addProduct = async (req, res) => {
         console.log('Add Product Request Body:', req.body);
         console.log('Add Product Files:', req.files);
 
-        const { customId, name, description, price, category, subCategory, type, sizes, bestseller, originalPrice, categorySlug, features, isNewArrival, isBestSeller, availableSizes, stock, sleeveType } = req.body
+        const { customId, name, description, price, category, subCategory, type, sizes, bestseller, originalPrice, categorySlug, features, isNewArrival, isBestSeller, availableSizes, stock } = req.body
 
         // Validate required fields
         if (!customId) {
@@ -248,7 +207,6 @@ export const addProduct = async (req, res) => {
             subCategory: subCategory || "",
             type: type || "",
             categorySlug: categorySlug || "",
-            sleeveType: sleeveType || null,
             bestseller: bestsellerValue,
             isBestSeller: bestsellerValue,
             isNewArrival: isNewArrival === "true" ? true : false,
@@ -353,7 +311,7 @@ export const singleProduct = async (req, res) => {
 export const updateProduct = async (req, res) => {
     try {
         const id = req.params.id;
-        const { customId, name, description, price, category, subCategory, type, sizes, bestseller, originalPrice, categorySlug, features, isNewArrival, isBestSeller, stock, sleeveType } = req.body;
+        const { customId, name, description, price, category, subCategory, type, sizes, bestseller, originalPrice, categorySlug, features, isNewArrival, isBestSeller, stock } = req.body;
 
         if (!id) {
             return res.status(400).json({ success: false, message: "Product ID is required" });
@@ -431,8 +389,7 @@ export const updateProduct = async (req, res) => {
             features: parsedFeatures,
             images: imagesUrl,
             updatedAt: new Date(),
-            ...(stock !== undefined ? { stock: Number(stock) } : {}),
-            ...(sleeveType !== undefined ? { sleeveType } : {})
+            ...(stock !== undefined ? { stock: Number(stock) } : {})
         };
 
         // Only update sizes if explicitly provided
