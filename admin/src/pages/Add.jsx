@@ -31,7 +31,8 @@ const Add = ({token}) => {
      "Maternity Feeding Wear",
      "Zipless Feeding Lounge Wear",
      "Non-Feeding Lounge Wear",
-     "Zipless Feeding Dupatta Lounge Wear"
+     "Zipless Feeding Dupatta Lounge Wear",
+     "Duppata Lounge Wear"
    ];
 
    const SLEEVE_TYPE_OPTIONS = ["Puff Sleeve", "Normal Sleeve"];
@@ -52,7 +53,7 @@ const Add = ({token}) => {
 
    // Check if current category should show sleeve type field
    const shouldShowSleeveType = () => {
-     return category === "Zipless Feeding Lounge Wear" || category === "Non-Feeding Lounge Wear";
+     return category === "Zipless Feeding Lounge Wear" || category === "Non-Feeding Lounge Wear" || category === "Duppata Lounge Wear";
    };
 
    const onSubmitHandler = async (e) => {
