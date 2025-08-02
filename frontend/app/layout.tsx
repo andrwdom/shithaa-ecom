@@ -130,11 +130,7 @@ export default function RootLayout({
         <link rel="preload" as="image" href="/leopard-dress.jpg" type="image/jpeg" />
         <link rel="preload" as="image" href="/shithaa-logo.jpg" type="image/jpeg" />
         
-        {/* Preload WebP versions if available */}
-        <link rel="preload" as="image" href="/blue-dress.webp" type="image/webp" />
-        <link rel="preload" as="image" href="/prink-dress.webp" type="image/webp" />
-        <link rel="preload" as="image" href="/leopard-dress.webp" type="image/webp" />
-        <link rel="preload" as="image" href="/shithaa-logo.webp" type="image/webp" />
+        {/* WebP preloads will be added after running the optimization script */}
         
         {/* Structured Data */}
         <script

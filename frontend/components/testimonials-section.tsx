@@ -123,7 +123,7 @@ const TestimonialCard = ({ testimonial, index, isActive }: TestimonialCardProps)
         {/* Instagram DM Screenshot */}
         <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100">
           <Image
-            src={`/testimonials/testi${index + 1}.jpg`}
+            src="/placeholder.jpg"
             alt={`Customer testimonial ${index + 1} - Instagram DM screenshot`}
             width={400}
             height={600}

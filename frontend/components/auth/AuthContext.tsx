@@ -29,9 +29,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (res.ok && data.data) {
               setMongoUser(data.data);
             } else {
+              // Silently handle 401/403 errors - user might not be logged in to backend
+              if (res.status !== 401 && res.status !== 403) {
+                console.warn('Profile fetch failed:', data.message);
+              }
               setMongoUser(null);
             }
           } catch (e) {
+            // Silently handle network errors
             setMongoUser(null);
           }
         } else {

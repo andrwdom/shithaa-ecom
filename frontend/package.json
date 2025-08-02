@@ -9,6 +9,7 @@
     "start": "next start",
     "lint": "next lint",
     "optimize-images": "node scripts/optimize-images.js",
+    "generate-webp": "node scripts/generate-webp.js",
     "analyze": "ANALYZE=true npm run build"
   },
   "dependencies": {

@@ -1,6 +1,6 @@
 "use client"
 
-import React from 'react'
+import React, { useState } from 'react'
 import Image from 'next/image'
 
 interface OptimizedImageProps {
@@ -30,6 +30,8 @@ export default function OptimizedImage({
   placeholder = 'empty',
   blurDataURL
 }: OptimizedImageProps) {
+  const [webpError, setWebpError] = useState(false)
+
   // Skip optimization for SVG files
   if (src.endsWith('.svg')) {
     return (
@@ -50,12 +52,33 @@ export default function OptimizedImage({
     )
   }
 
-  // For non-SVG images, use the picture element with WebP support
+  // For non-SVG images, check if WebP version exists
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://shithaa.in'
   const fullSrc = src.startsWith('http') ? src : `${baseUrl}${src}`
   
-  // Generate WebP version URL (assuming your server can serve WebP)
+  // Generate WebP version URL
   const webpSrc = fullSrc.replace(/\.(jpg|jpeg|png)$/i, '.webp')
+  
+  // If WebP failed to load or doesn't exist, just use the original image
+  if (webpError) {
+    return (
+      <Image
+        src={src}
+        alt={alt}
+        width={width}
+        height={height}
+        fill={fill}
+        priority={priority}
+        className={className}
+        sizes={sizes}
+        quality={quality}
+        placeholder={placeholder}
+        blurDataURL={blurDataURL}
+        loading={priority ? 'eager' : 'lazy'}
+        style={{ maxWidth: '100%', height: 'auto' }}
+      />
+    )
+  }
   
   return (
     <picture className={className}>
@@ -64,6 +87,7 @@ export default function OptimizedImage({
         srcSet={webpSrc}
         type="image/webp"
         sizes={sizes}
+        onError={() => setWebpError(true)}
       />
       {/* Fallback for older browsers */}
       <Image
