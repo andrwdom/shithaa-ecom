@@ -125,7 +125,7 @@ export default function BannerCarousel({
     )
   }
 
-  // Error state
+  // Error state - only show for unexpected errors, not 401/404
   if (error && carouselImages.length === 0) {
     return (
       <div className={`w-full h-64 md:h-80 lg:h-96 bg-gray-50 rounded-lg flex items-center justify-center ${className}`}>
@@ -137,7 +137,7 @@ export default function BannerCarousel({
     )
   }
 
-  // No images state
+  // No images state - show fallback carousel
   if (carouselImages.length === 0) {
     return <FallbackCarousel className={className} />
   }

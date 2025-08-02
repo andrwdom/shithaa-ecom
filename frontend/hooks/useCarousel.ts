@@ -15,7 +15,19 @@ export function useCarousel(): UseCarouselReturn {
       const response = await fetch(`${apiUrl}/api/carousels`)
       
       if (!response.ok) {
-        throw new Error(`Failed to fetch carousel images: ${response.status}`)
+        // Handle different error statuses gracefully
+        if (response.status === 401) {
+          console.log('Carousel API: Authentication required (expected for now)')
+          setError(null) // Don't show error for 401
+          setImages([]) // Use fallback images
+        } else if (response.status === 404) {
+          console.log('Carousel API: Endpoint not found (expected for now)')
+          setError(null) // Don't show error for 404
+          setImages([]) // Use fallback images
+        } else {
+          throw new Error(`Failed to fetch carousel images: ${response.status}`)
+        }
+        return
       }
       
       const data: CarouselResponse = await response.json()
@@ -38,7 +50,12 @@ export function useCarousel(): UseCarouselReturn {
       setImages(activeImages)
     } catch (err) {
       console.error('Error fetching carousel images:', err)
-      setError(err instanceof Error ? err.message : 'Failed to load carousel images')
+      // Only set error for unexpected errors, not 401/404
+      if (err instanceof Error && !err.message.includes('401') && !err.message.includes('404')) {
+        setError(err.message)
+      } else {
+        setError(null)
+      }
       setImages([])
     } finally {
       setLoading(false)

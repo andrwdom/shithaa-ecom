@@ -32,10 +32,33 @@ const uploadBuffer = (buffer) => {
 // Get all carousel banners
 export const getCarouselBanners = async (req, res) => {
   try {
-    const banners = await CarouselBanner.find().sort({ order: 1 });
-    res.json(banners);
+    const banners = await CarouselBanner.find({ isActive: { $ne: false } }).sort({ order: 1 });
+    
+    // Transform data to match frontend expectations
+    const carouselData = banners.map(banner => ({
+      id: banner._id.toString(),
+      url: banner.image,
+      alt: banner.title || 'Carousel banner',
+      title: banner.title,
+      link: banner.link || null,
+      order: banner.order || 0,
+      isActive: banner.isActive !== false,
+      createdAt: banner.createdAt?.toISOString(),
+      updatedAt: banner.updatedAt?.toISOString()
+    }));
+
+    res.json({
+      success: true,
+      data: carouselData,
+      message: 'Carousel images retrieved successfully'
+    });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Error fetching carousel banners:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to fetch carousel images',
+      error: error.message 
+    });
   }
 };
 

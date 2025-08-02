@@ -13,6 +13,10 @@ const carouselBannerSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  link: {
+    type: String,
+    default: null
+  },
   sectionId: {
     type: String,
     default: null
@@ -28,7 +32,17 @@ const carouselBannerSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now
   }
+});
+
+// Update the updatedAt field before saving
+carouselBannerSchema.pre('save', function(next) {
+  this.updatedAt = new Date();
+  next();
 });
 
 export default mongoose.model('CarouselBanner', carouselBannerSchema); 
