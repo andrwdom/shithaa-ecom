@@ -26,7 +26,13 @@ const EditProduct = ({ product, token, onClose, onUpdate }) => {
     console.log('Token comparison:', token === localStorage.getItem('token'));
   }, [token]);
 
+  // Updated category options with all required categories
   const CATEGORY_OPTIONS = [
+    "Kurti",
+    "Nightwear", 
+    "Maternity Wear",
+    "Dupatta",
+    "Dupatta Lounge Wear",
     "Maternity Feeding Wear",
     "Zipless Feeding Lounge Wear",
     "Non-Feeding Lounge Wear",
@@ -37,6 +43,14 @@ const EditProduct = ({ product, token, onClose, onUpdate }) => {
 
   // Helper: all possible sizes
   const ALL_SIZES = ["S", "M", "L", "XL", "XXL"];
+
+  // Updated function to check if current category should show sleeve type field
+  const shouldShowSleeveType = () => {
+    return category === "Zipless Feeding Lounge Wear" || 
+           category === "Non-Feeding Lounge Wear" || 
+           category === "Dupatta Lounge Wear" ||
+           category === "Lounge Wear";
+  };
 
   // Parse initial sizes: support both ["S", ...] and [{ size, stock }]
   function parseInitialSizes(sizes) {
@@ -84,7 +98,13 @@ const EditProduct = ({ product, token, onClose, onUpdate }) => {
       formData.append("sizes", JSON.stringify(sizes.filter(s => s.stock > 0)))
       formData.append("stock", stock)
       formData.append("customId", customId)
-      formData.append("sleeveType", sleeveType)
+      
+      // Add sleeve type if applicable
+      if (shouldShowSleeveType() && sleeveType) {
+        formData.append("sleeveType", sleeveType);
+      } else {
+        formData.append("sleeveType", ""); // Clear sleeve type if not applicable
+      }
 
       if (image1) formData.append("image1", image1)
       if (image2) formData.append("image2", image2)
@@ -264,19 +284,23 @@ const EditProduct = ({ product, token, onClose, onUpdate }) => {
           </select>
         </div>
 
-        <div>
-          <p className='mb-2'>Sleeve Type</p>
-          <select
-            value={sleeveType}
-            onChange={e => setSleeveType(e.target.value)}
-            className='w-full px-3 py-2 border rounded bg-white text-gray-900'
-          >
-            <option value="">Select Sleeve Type (Optional)</option>
-            {SLEEVE_TYPE_OPTIONS.map(option => (
-              <option key={option} value={option}>{option}</option>
-            ))}
-          </select>
-        </div>
+        {/* Sleeve Type Field - Only show for Lounge Wear categories */}
+        {shouldShowSleeveType() && (
+          <div>
+            <p className='mb-2'>Sleeve Type</p>
+            <select
+              value={sleeveType}
+              onChange={e => setSleeveType(e.target.value)}
+              className='w-full px-3 py-2 border rounded bg-white text-gray-900'
+              required
+            >
+              <option value="">Select Sleeve Type</option>
+              {SLEEVE_TYPE_OPTIONS.map(option => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div>
           <p className='mb-2'>Product Price</p>
@@ -332,39 +356,28 @@ const EditProduct = ({ product, token, onClose, onUpdate }) => {
       </div>
 
       <div className='flex gap-2 mt-2'>
-        <input
-          onChange={() => setBestseller(prev => !prev)}
-          checked={bestseller}
-          type="checkbox"
-          id='bestseller'
+        <input 
+          onChange={() => setBestseller(prev => !prev)} 
+          checked={bestseller} 
+          type="checkbox" 
+          id='bestseller' 
         />
-        <label className='cursor-pointer' htmlFor="bestseller">
-          Add to bestseller
-        </label>
+        <label className='cursor-pointer' htmlFor="bestseller">Add to bestseller</label>
       </div>
 
-      <div className="flex gap-4">
-        <button
-          type="submit"
-          className={`px-6 py-2 bg-[#4D1E64] text-white rounded hover:bg-[#3a164d] transition-colors flex items-center gap-2 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-          disabled={loading}
-        >
-          {loading && (
-            <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-            </svg>
-          )}
-          {loading ? 'Processing...' : 'Update'}
-        </button>
-        <button
-          type="button"
-          onClick={onClose}
-          className='px-6 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors'
-        >
-          Cancel
-        </button>
-      </div>
+      <button 
+        type="submit" 
+        className={`w-28 py-3 mt-4 bg-[#4D1E64] hover:bg-[#3a164d] transition-colors px-5 rounded-xl text-white flex items-center justify-center gap-2 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`} 
+        disabled={loading}
+      >
+        {loading && (
+          <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+          </svg>
+        )}
+        {loading ? 'Updating...' : 'UPDATE'}
+      </button>
     </form>
   )
 }

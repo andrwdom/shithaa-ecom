@@ -27,12 +27,17 @@ const Add = ({token}) => {
    const [selectedCategorySlug, setSelectedCategorySlug] = useState("");
    const [customId, setCustomId] = useState("");
 
+   // Updated category options with all required categories
    const CATEGORY_OPTIONS = [
+     "Kurti",
+     "Nightwear", 
+     "Maternity Wear",
+     "Dupatta",
+     "Dupatta Lounge Wear",
      "Maternity Feeding Wear",
      "Zipless Feeding Lounge Wear",
      "Non-Feeding Lounge Wear",
-     "Zipless Feeding Dupatta Lounge Wear",
-     "Duppata Lounge Wear"
+     "Zipless Feeding Dupatta Lounge Wear"
    ];
 
    const SLEEVE_TYPE_OPTIONS = ["Puff Sleeve", "Normal Sleeve"];
@@ -51,9 +56,12 @@ const Add = ({token}) => {
      });
    }, []);
 
-   // Check if current category should show sleeve type field
+   // Updated function to check if current category should show sleeve type field
    const shouldShowSleeveType = () => {
-     return category === "Zipless Feeding Lounge Wear" || category === "Non-Feeding Lounge Wear" || category === "Duppata Lounge Wear";
+     return category === "Zipless Feeding Lounge Wear" || 
+            category === "Non-Feeding Lounge Wear" || 
+            category === "Dupatta Lounge Wear" ||
+            category === "Lounge Wear";
    };
 
    const onSubmitHandler = async (e) => {
@@ -162,7 +170,7 @@ const Add = ({token}) => {
         <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full'>
           <div>
             <p className='mb-2'>Category</p>
-            <select onChange={(e) => setCategory(e.target.value)} className='w-full px-3 py-2'>
+            <select onChange={(e) => setCategory(e.target.value)} className='w-full px-3 py-2' required>
               <option value="">Select a Category</option>
               {CATEGORY_OPTIONS.map(option => (
                 <option key={option} value={option}>{option}</option>
@@ -170,7 +178,7 @@ const Add = ({token}) => {
             </select>
           </div>
 
-          {/* Add Sleeve Type Field Here */}
+          {/* Sleeve Type Field - Only show for Lounge Wear categories */}
           {shouldShowSleeveType() && (
             <div className='w-full'>
               <p className='mb-2'>Sleeve Type</p>
@@ -190,7 +198,7 @@ const Add = ({token}) => {
 
           <div>
             <p className='mb-2'>Product Price</p>
-            <input onChange={(e) => setPrice(e.target.value)} value={price} className='w-full px-3 py-2' type="number" placeholder='25' />
+            <input onChange={(e) => setPrice(e.target.value)} value={price} className='w-full px-3 py-2' type="number" placeholder='25' required />
           </div>
         </div>
 

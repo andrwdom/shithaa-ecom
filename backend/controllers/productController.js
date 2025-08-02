@@ -82,7 +82,7 @@ export const addProduct = async (req, res) => {
         console.log('Add Product Request Body:', req.body);
         console.log('Add Product Files:', req.files);
 
-        const { customId, name, description, price, category, subCategory, type, sizes, bestseller, originalPrice, categorySlug, features, isNewArrival, isBestSeller, availableSizes, stock } = req.body
+        const { customId, name, description, price, category, subCategory, type, sizes, bestseller, originalPrice, categorySlug, features, isNewArrival, isBestSeller, availableSizes, stock, sleeveType } = req.body
 
         // Validate required fields
         if (!customId) {
@@ -197,6 +197,15 @@ export const addProduct = async (req, res) => {
         // Ensure both bestseller and isBestSeller are set for compatibility
         const bestsellerValue = (bestseller === "true" || isBestSeller === "true") ? true : false;
 
+        // Validate sleeveType if provided
+        const validSleeveTypes = ["Puff Sleeve", "Normal Sleeve"];
+        if (sleeveType && !validSleeveTypes.includes(sleeveType)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid sleeve type. Must be 'Puff Sleeve' or 'Normal Sleeve'"
+            });
+        }
+
         const productData = {
             customId,
             name,
@@ -215,7 +224,8 @@ export const addProduct = async (req, res) => {
             features: parsedFeatures,
             images: imagesUrl,
             date: Date.now(),
-            stock: stock !== undefined ? Number(stock) : 0
+            stock: stock !== undefined ? Number(stock) : 0,
+            sleeveType: sleeveType || null // Add sleeveType to product data
         }
 
         // After parsing sizes, always sync main stock field
@@ -311,7 +321,7 @@ export const singleProduct = async (req, res) => {
 export const updateProduct = async (req, res) => {
     try {
         const id = req.params.id;
-        const { customId, name, description, price, category, subCategory, type, sizes, bestseller, originalPrice, categorySlug, features, isNewArrival, isBestSeller, stock } = req.body;
+        const { customId, name, description, price, category, subCategory, type, sizes, bestseller, originalPrice, categorySlug, features, isNewArrival, isBestSeller, stock, sleeveType } = req.body;
 
         if (!id) {
             return res.status(400).json({ success: false, message: "Product ID is required" });
@@ -329,6 +339,15 @@ export const updateProduct = async (req, res) => {
                 return res.status(400).json({ success: false, message: "Custom product ID already exists" });
             }
             product.customId = customId;
+        }
+
+        // Validate sleeveType if provided
+        const validSleeveTypes = ["Puff Sleeve", "Normal Sleeve"];
+        if (sleeveType !== undefined && sleeveType !== null && !validSleeveTypes.includes(sleeveType)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid sleeve type. Must be 'Puff Sleeve' or 'Normal Sleeve'"
+            });
         }
 
         // Parse features if provided
@@ -389,7 +408,9 @@ export const updateProduct = async (req, res) => {
             features: parsedFeatures,
             images: imagesUrl,
             updatedAt: new Date(),
-            ...(stock !== undefined ? { stock: Number(stock) } : {})
+            ...(stock !== undefined ? { stock: Number(stock) } : {}),
+            // Handle sleeveType - allow null/empty to clear the field
+            ...(sleeveType !== undefined ? { sleeveType: sleeveType || null } : {})
         };
 
         // Only update sizes if explicitly provided
