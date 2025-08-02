@@ -158,10 +158,8 @@ export default function AccountPageClient() {
   async function handleLogout() {
     try {
       await logout()
-      setUserProfile(null)
-      setOrders([])
-      setShowLogin(true)
-      toast.success("Successfully logged out")
+      // Don't set showLogin to true here - let the AuthContext handle the redirect
+      // The logout function in AuthContext will show the toast and redirect to home
     } catch (error) {
       console.error("Logout error:", error)
       toast.error("Failed to logout. Please try again.")
@@ -180,16 +178,18 @@ export default function AccountPageClient() {
   function getStatusColor(status: string) {
     switch (status.toLowerCase()) {
       case "delivered":
-        return "text-green-600 bg-green-100"
+        return "text-green-700 bg-green-100 border border-green-200"
       case "shipped":
       case "out for delivery":
-        return "text-blue-600 bg-blue-100"
+        return "text-blue-700 bg-blue-100 border border-blue-200"
       case "packing":
-        return "text-yellow-600 bg-yellow-100"
+        return "text-purple-700 bg-purple-100 border border-purple-200"
+      case "pending":
+        return "text-yellow-700 bg-yellow-100 border border-yellow-200"
       case "cancelled":
-        return "text-red-600 bg-red-100"
+        return "text-red-700 bg-red-100 border border-red-200"
       default:
-        return "text-gray-600 bg-gray-100"
+        return "text-gray-700 bg-gray-100 border border-gray-200"
     }
   }
 
@@ -206,10 +206,12 @@ export default function AccountPageClient() {
 
   if (showLogin) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Sign in to view your account</h2>
-          <p className="text-gray-600 mb-6">You must be logged in to access your account.</p>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome to Shithaa</h2>
+            <p className="text-gray-600">Sign in to access your account</p>
+          </div>
           <LoginModal open={true} onClose={() => setShowLogin(false)} onSuccess={handleLoginSuccess} />
         </div>
       </div>
@@ -217,23 +219,27 @@ export default function AccountPageClient() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-purple-50">
       <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Header */}
-        <div className="bg-white rounded-xl shadow-md p-6 mb-8">
+        <div className="bg-white rounded-2xl shadow-lg p-8 mb-8 border border-pink-100">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-            <div className="flex items-center space-x-4 mb-4 md:mb-0">
-              <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
-                <User className="w-8 h-8 text-white" />
+            <div className="flex items-center space-x-6 mb-6 md:mb-0">
+              <div className="w-20 h-20 bg-gradient-to-br from-pink-400 to-purple-500 rounded-full flex items-center justify-center shadow-lg border-4 border-white">
+                <User className="w-10 h-10 text-white" />
               </div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">{userProfile?.name}</h1>
-                <p className="text-gray-600">{userProfile?.email}</p>
+              <div className="space-y-2">
+                <h1 className="text-3xl font-bold text-gray-900">{userProfile?.name}</h1>
+                <p className="text-gray-500 text-sm">{userProfile?.email}</p>
+                <div className="space-y-1">
+                  <p className="text-lg font-semibold text-pink-600">Hello Mama 👋, welcome back!</p>
+                  <p className="text-sm text-purple-600 font-medium">You deserve comfort, care & style 💜</p>
+                </div>
               </div>
             </div>
             <button
               onClick={handleLogout}
-              className="flex items-center space-x-2 px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+              className="flex items-center space-x-2 px-6 py-3 bg-red-50 text-red-600 border border-red-200 rounded-xl text-sm font-medium hover:bg-red-100 transition-all duration-200 shadow-sm"
             >
               <LogOut className="w-4 h-4" />
               <span>Logout</span>
@@ -243,45 +249,67 @@ export default function AccountPageClient() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Package className="w-6 h-6 text-blue-600" />
+          <div className="bg-white rounded-2xl shadow-lg p-6 border border-pink-100 hover:shadow-xl transition-all duration-300">
+            <div className="flex items-center space-x-4">
+              <div className="w-14 h-14 bg-pink-100 rounded-xl flex items-center justify-center">
+                <Package className="w-7 h-7 text-pink-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-600">Total Orders</p>
-                <p className="text-2xl font-bold text-gray-900">{orderCount}</p>
+                <p className="text-sm text-gray-500 font-medium">Total Orders</p>
+                <p className="text-3xl font-bold text-gray-900">{orderCount}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <Calendar className="w-6 h-6 text-green-600" />
+          <div className="bg-white rounded-2xl shadow-lg p-6 border border-green-100 hover:shadow-xl transition-all duration-300">
+            <div className="flex items-center space-x-4">
+              <div className="w-14 h-14 bg-green-100 rounded-xl flex items-center justify-center">
+                <Calendar className="w-7 h-7 text-green-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-600">Member Since</p>
-                <p className="text-2xl font-bold text-gray-900">{memberSince || "-"}</p>
+                <p className="text-sm text-gray-500 font-medium">Member Since</p>
+                <p className="text-3xl font-bold text-gray-900">{memberSince || "-"}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-lg p-6 border border-purple-100 hover:shadow-xl transition-all duration-300">
+            <div className="flex items-center space-x-4">
+              <div className="w-14 h-14 bg-purple-100 rounded-xl flex items-center justify-center">
+                <CreditCard className="w-7 h-7 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-500 font-medium">Payment Methods</p>
+                <p className="text-3xl font-bold text-gray-900">{uniquePaymentMethods}</p>
               </div>
             </div>
           </div>
         </div>
 
         {/* Order History */}
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <h2 className="text-xl font-semibold mb-6">Order History</h2>
+        <div className="bg-white rounded-2xl shadow-lg p-8 border border-pink-100">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">Order History</h2>
+            {orders.length > 0 && (
+              <p className="text-sm text-gray-500 italic">
+                You've placed <span className="font-semibold text-pink-600">{orderCount} orders</span> since <span className="font-semibold text-green-600">{memberSince}</span>. Thank you for being a valued customer 🌸
+              </p>
+            )}
+          </div>
+          
           {ordersLoading ? (
-            <div className="text-center py-8">
-              <div className="loading loading-spinner loading-lg text-[rgb(71,60,102)]"></div>
-              <p className="mt-4 text-gray-600">Loading your orders...</p>
+            <div className="text-center py-12">
+              <div className="loading loading-spinner loading-lg text-pink-600"></div>
+              <p className="mt-4 text-gray-600 font-medium">Loading your orders...</p>
             </div>
           ) : orders.length === 0 ? (
-            <div className="text-center py-8">
-              <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No orders yet</h3>
-              <p className="text-gray-600 mb-4">Start shopping to see your order history here.</p>
-              <a href="/collections/maternity-feeding-wear" className="btn btn-primary">
+            <div className="text-center py-12">
+              <div className="w-20 h-20 bg-pink-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Package className="w-10 h-10 text-pink-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">No orders yet</h3>
+              <p className="text-gray-600 mb-6 max-w-md mx-auto">Start shopping to see your order history here. We have beautiful maternity wear waiting for you!</p>
+              <a href="/collections/maternity-feeding-wear" className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-pink-500 to-purple-600 text-white font-semibold rounded-xl hover:from-pink-600 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl">
                 Start Shopping
               </a>
             </div>

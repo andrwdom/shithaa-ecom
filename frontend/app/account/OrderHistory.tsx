@@ -2,17 +2,17 @@
 import { useState } from "react";
 
 const STATUS_COLORS = {
-  Pending: "bg-yellow-100 text-yellow-800",
-  Packing: "bg-blue-100 text-blue-800",
-  Shipped: "bg-green-100 text-green-800",
-  Delivered: "bg-green-700 text-white",
-  Cancelled: "bg-red-100 text-red-800",
+  Pending: "bg-yellow-100 text-yellow-800 border border-yellow-200",
+  Packing: "bg-purple-100 text-purple-800 border border-purple-200",
+  Shipped: "bg-blue-100 text-blue-800 border border-blue-200",
+  Delivered: "bg-green-100 text-green-800 border border-green-200",
+  Cancelled: "bg-red-100 text-red-800 border border-red-200",
 };
 
 function StatusBadge({ status }: { status: string }) {
-  const color = STATUS_COLORS[status as keyof typeof STATUS_COLORS] || "bg-gray-100 text-gray-700";
+  const color = STATUS_COLORS[status as keyof typeof STATUS_COLORS] || "bg-gray-100 text-gray-700 border border-gray-200";
   return (
-    <span className={`px-2 py-1 rounded text-xs font-semibold ${color}`}>
+    <span className={`px-3 py-1 rounded-full text-xs font-medium ${color}`}>
       {status}
     </span>
   );
@@ -32,27 +32,27 @@ function formatDateTime(date: string | number) {
 // Accent bar color by status
 const STATUS_ACCENT = {
   Pending: "from-yellow-300 to-yellow-400",
-  Packing: "from-blue-300 to-blue-400",
-  Shipped: "from-green-300 to-green-400",
-  Delivered: "from-green-500 to-green-700",
+  Packing: "from-purple-300 to-purple-400",
+  Shipped: "from-blue-300 to-blue-400",
+  Delivered: "from-green-300 to-green-400",
   Cancelled: "from-red-400 to-red-600",
 };
 
 // Border color by status
 const STATUS_BORDER = {
   Pending: "border-yellow-400 ring-yellow-100",
-  Packing: "border-blue-400 ring-blue-100",
-  Shipped: "border-green-400 ring-green-100",
-  Delivered: "border-green-700 ring-green-200",
+  Packing: "border-purple-400 ring-purple-100",
+  Shipped: "border-blue-400 ring-blue-100",
+  Delivered: "border-green-400 ring-green-100",
   Cancelled: "border-red-500 ring-red-100",
 };
 
 // Left border color by status
 const STATUS_BORDER_LEFT = {
   Pending: "border-l-4 border-yellow-400",
-  Packing: "border-l-4 border-blue-400",
-  Shipped: "border-l-4 border-green-400",
-  Delivered: "border-l-4 border-green-700",
+  Packing: "border-l-4 border-purple-400",
+  Shipped: "border-l-4 border-blue-400",
+  Delivered: "border-l-4 border-green-400",
   Cancelled: "border-l-4 border-red-500",
 };
 
@@ -65,7 +65,7 @@ export default function OrderHistory({ orders }: { orders: any[] }) {
       {orders.length === 0 && (
         <div className="text-center py-8 text-gray-500">
           <div className="text-4xl mb-2">🛒</div>
-          <div className="font-semibold text-lg">You haven’t placed any orders yet.</div>
+          <div className="font-semibold text-lg">You haven't placed any orders yet.</div>
           <div className="text-sm mt-1">Browse our collection and start shopping!</div>
         </div>
       )}
@@ -80,7 +80,7 @@ export default function OrderHistory({ orders }: { orders: any[] }) {
         return (
           <div
             key={order._id}
-            className={`relative flex items-stretch bg-white rounded-2xl shadow-md ${borderLeft} transition-all duration-200 hover:shadow-xl hover:-translate-y-1 group overflow-hidden`}
+            className={`relative flex items-stretch bg-white rounded-2xl shadow-lg border border-pink-100 ${borderLeft} transition-all duration-200 hover:shadow-xl hover:-translate-y-1 group overflow-hidden`}
           >
             {/* Accent bar (optional, can remove if only border is needed) */}
             {/* Cancelled sticker */}
@@ -89,26 +89,26 @@ export default function OrderHistory({ orders }: { orders: any[] }) {
                 <span className="bg-red-600 text-white text-xs font-bold px-4 py-1 rounded shadow-lg drop-shadow-lg border-2 border-white">Cancelled</span>
               </div>
             )}
-            <div className="flex flex-1 items-center gap-4 p-4">
+            <div className="flex flex-1 items-center gap-6 p-6">
               {/* Product thumbnail */}
               {items[0]?.image && (
                 <img
                   src={Array.isArray(items[0].image) ? items[0].image[0] : items[0].image}
                   alt={items[0].name}
-                  className="w-16 h-16 object-cover rounded-xl border-2 border-purple-100 shadow-sm bg-gray-50"
+                  className="w-20 h-20 object-cover rounded-xl border-2 border-pink-100 shadow-sm bg-gray-50"
                 />
               )}
               <div className="flex-1 min-w-0">
-                <div className="font-bold text-lg text-gray-900 truncate">
+                <div className="font-bold text-xl text-gray-900 truncate mb-2">
                   {items.length === 1 ? items[0].name : `${items[0]?.name} +${items.length - 1} more`}
                 </div>
-                <div className="text-xs text-gray-500 mt-1 font-medium">
+                <div className="text-sm text-gray-500 mb-3 font-medium">
                   Ordered: {formatDateTime(orderDate)}
                 </div>
-                <div className="flex items-center gap-2 mt-3">
+                <div className="flex items-center gap-3">
                   <StatusBadge status={status} />
                   <button
-                    className="btn btn-xs btn-outline rounded-full px-4 py-1 font-semibold text-purple-700 border-purple-200 bg-purple-50 hover:bg-purple-100 hover:scale-105 transition-transform duration-150 shadow-sm"
+                    className="px-4 py-2 rounded-xl font-medium text-purple-700 border border-purple-200 bg-purple-50 hover:bg-purple-100 hover:scale-105 transition-all duration-200 shadow-sm"
                     onClick={() => setSelectedOrder(order)}
                   >
                     View Details
