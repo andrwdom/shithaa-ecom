@@ -4,7 +4,7 @@ import { GoogleAuthProvider, signInWithPopup, getIdToken } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { toast } from "sonner";
 
-export default function GoogleLoginButton({ onSuccess, mode = "login" }: { onSuccess: () => void, mode?: "login" | "signup" }) {
+export default function GoogleLoginButton({ onSuccess }: { onSuccess: () => void }) {
   const [loading, setLoading] = useState(false);
 
   async function handleGoogleLogin() {
@@ -33,14 +33,19 @@ export default function GoogleLoginButton({ onSuccess, mode = "login" }: { onSuc
         
         // Enhanced welcome message with user's name
         const userName = result.user.displayName?.split(' ')[0] || 'there';
-        const welcomeMessage = mode === "signup" 
-          ? `🎉 Welcome to Shithaa, ${userName}! You've successfully signed in.`
-          : `👋 Welcome back, ${userName}! You've successfully signed in.`;
+        const isNewUser = result._tokenResponse?.isNewUser;
         
-        toast.success(welcomeMessage, {
-          description: "Explore our elegant maternity wear collections now.",
-          duration: 5000,
-        });
+        if (isNewUser) {
+          toast.success(`🎉 Welcome to Shithaa, ${userName}!`, {
+            description: "You've successfully signed up. Explore our elegant maternity wear collections now.",
+            duration: 5000,
+          });
+        } else {
+          toast.success(`👋 Welcome back, ${userName}!`, {
+            description: "You've successfully signed in to Shithaa.",
+            duration: 5000,
+          });
+        }
         
         onSuccess();
       } else {
