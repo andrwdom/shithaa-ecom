@@ -54,11 +54,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const userName = user?.displayName?.split(' ')[0] || 'there';
       
+      console.log("About to show logout toast notification...", { userName });
+      
       // Show logout confirmation toast
       toast.success(`👋 Goodbye, ${userName}!`, {
         description: "You've been logged out successfully. Please sign in again to continue.",
         duration: 4000,
       });
+
+      console.log("Logout toast notification should have been shown");
 
       // Clear local storage
       localStorage.removeItem("token");

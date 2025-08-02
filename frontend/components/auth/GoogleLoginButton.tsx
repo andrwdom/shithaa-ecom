@@ -35,18 +35,23 @@ export default function GoogleLoginButton({ onSuccess }: { onSuccess: () => void
         const userName = result.user.displayName?.split(' ')[0] || 'there';
         const isNewUser = result._tokenResponse?.isNewUser;
         
+        console.log("About to show toast notification...", { userName, isNewUser });
+        
         if (isNewUser) {
+          console.log("Showing new user welcome toast");
           toast.success(`🎉 Welcome to Shithaa, ${userName}!`, {
             description: "You've successfully signed up. Explore our elegant maternity wear collections now.",
             duration: 5000,
           });
         } else {
+          console.log("Showing returning user welcome toast");
           toast.success(`👋 Welcome back, ${userName}!`, {
             description: "You've successfully signed in to Shithaa.",
             duration: 5000,
           });
         }
         
+        console.log("Toast notification should have been shown");
         onSuccess();
       } else {
         console.error("Backend Google login failed:", data.message);
