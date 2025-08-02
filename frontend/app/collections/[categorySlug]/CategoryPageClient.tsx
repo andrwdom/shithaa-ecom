@@ -6,7 +6,7 @@ import CartSidebar from "@/components/cart-sidebar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ChevronRight, Home, Search, Filter, SlidersHorizontal, Baby, Heart, Shirt } from "lucide-react"
+import { ChevronRight, Home, Search, Filter, SlidersHorizontal, Baby, Heart, Shirt, X } from "lucide-react"
 import Image from "next/image"
 import PageLoading from "@/components/page-loading"
 import SizeSelectionSidebar from "@/components/size-selection-sidebar"
@@ -15,6 +15,7 @@ import ErrorBoundary from "@/components/error-boundary"
 import { safeFetch } from "@/lib/api-health"
 import { useBuyNow } from "@/components/buy-now-context"
 import { useCart } from "@/components/cart-context"
+import { useRouter, useSearchParams } from "next/navigation"
 
 interface Product {
   id: string
@@ -33,13 +34,14 @@ interface Product {
   dateAdded?: string
 }
 
-
-
 interface CategoryPageClientProps {
   categorySlug: string
 }
 
 export default function CategoryPageClient({ categorySlug }: CategoryPageClientProps) {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  
   const [products, setProducts] = useState<Product[]>([])
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
@@ -52,8 +54,56 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
   const [error, setError] = useState<string | null>(null)
   const [sleeveTypeFilter, setSleeveTypeFilter] = useState("all")
   const [availableSleeveTypes, setAvailableSleeveTypes] = useState<string[]>([])
+  const [selectedSize, setSelectedSize] = useState<string>("")
   const { setBuyNowItem } = useBuyNow()
   const { addToCart } = useCart()
+
+  // Available sizes for filtering
+  const AVAILABLE_SIZES = ["XS", "S", "M", "L", "XL", "XXL", "3XL"]
+
+  // Initialize filters from URL params
+  useEffect(() => {
+    const sizeParam = searchParams.get('size')
+    if (sizeParam) {
+      setSelectedSize(sizeParam)
+    }
+  }, [searchParams])
+
+  // Update URL when filters change
+  const updateURL = (newSize?: string) => {
+    const params = new URLSearchParams(searchParams.toString())
+    
+    if (newSize) {
+      params.set('size', newSize)
+    } else {
+      params.delete('size')
+    }
+    
+    const newURL = `${window.location.pathname}?${params.toString()}`
+    router.push(newURL, { scroll: false })
+  }
+
+  // Handle size filter selection
+  const handleSizeFilter = (size: string) => {
+    if (selectedSize === size) {
+      // Deselect if already selected
+      setSelectedSize("")
+      updateURL("")
+    } else {
+      // Select new size
+      setSelectedSize(size)
+      updateURL(size)
+    }
+  }
+
+  // Clear all filters
+  const clearAllFilters = () => {
+    setSelectedSize("")
+    setSleeveTypeFilter("all")
+    setSearchQuery("")
+    setSortBy("featured")
+    updateURL("")
+  }
 
   // Compute category name from slug
   const categoryName = categorySlug
@@ -121,6 +171,10 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
         if (sleeveTypeFilter && sleeveTypeFilter !== 'all') {
           url.searchParams.append('sleeveType', sleeveTypeFilter);
         }
+        // Add size filter to API call if selected
+        if (selectedSize) {
+          url.searchParams.append('size', selectedSize);
+        }
 
         const res = await safeFetch(url.toString());
 
@@ -155,7 +209,7 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
       }
     }
     getProducts();
-  }, [categorySlug, sleeveTypeFilter]);
+  }, [categorySlug, sleeveTypeFilter, selectedSize]);
 
   // Filter and sort products
   useEffect(() => {
@@ -253,9 +307,8 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
     window.location.href = "/checkout";
   }
 
-
-
-
+  // Check if any filters are active
+  const hasActiveFilters = selectedSize || sleeveTypeFilter !== 'all' || searchQuery
 
   return (
     <ErrorBoundary>
@@ -539,13 +592,73 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
                 )}
               </div>
 
-              {/* Results Count */}
+              {/* Filter and Sort Section */}
               <div className="mb-6 w-full">
-                <p className="text-gray-600">
-                  Showing {filteredProducts.length} of {products.length} products
-                  {searchQuery && ` for "${searchQuery}"`}
-                  {sleeveTypeFilter && sleeveTypeFilter !== 'all' && ` with ${sleeveTypeFilter}`}
-                </p>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <Filter className="h-5 w-5 text-gray-600" />
+                    <span className="text-gray-700 font-medium">Filter and sort</span>
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    {filteredProducts.length} of {products.length} products
+                  </div>
+                </div>
+
+                {/* Applied Filters */}
+                {(selectedSize || sleeveTypeFilter !== 'all') && (
+                  <div className="flex items-center gap-2 mb-4 flex-wrap">
+                    {selectedSize && (
+                      <div className="flex items-center gap-2 bg-gray-100 px-3 py-1 rounded-full text-sm">
+                        <span className="text-gray-700">Size: {selectedSize}</span>
+                        <button
+                          onClick={() => handleSizeFilter(selectedSize)}
+                          className="text-gray-500 hover:text-gray-700"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )}
+                    {sleeveTypeFilter !== 'all' && (
+                      <div className="flex items-center gap-2 bg-gray-100 px-3 py-1 rounded-full text-sm">
+                        <span className="text-gray-700">Sleeve: {sleeveTypeFilter}</span>
+                        <button
+                          onClick={() => setSleeveTypeFilter('all')}
+                          className="text-gray-500 hover:text-gray-700"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )}
+                    {hasActiveFilters && (
+                      <button
+                        onClick={clearAllFilters}
+                        className="text-sm text-gray-500 hover:text-gray-700 underline"
+                      >
+                        Remove all
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Size Filter Buttons */}
+                <div className="mb-4">
+                  <h3 className="text-sm font-medium text-gray-700 mb-3">Filter by Size</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {AVAILABLE_SIZES.map((size) => (
+                      <button
+                        key={size}
+                        onClick={() => handleSizeFilter(size)}
+                        className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                          selectedSize === size
+                            ? 'bg-black text-white shadow-md'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        {size}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -621,10 +734,7 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
                   <h3 className="text-xl font-medium text-gray-900 mb-2">No products found</h3>
                   <p className="text-gray-600 mb-6">Try adjusting your search or filter criteria</p>
                   <Button
-                    onClick={() => {
-                      setSearchQuery("")
-                      setSortBy("featured")
-                    }}
+                    onClick={clearAllFilters}
                     variant="outline"
                     className="border border-brand text-brand hover:bg-brand hover:text-white bg-white rounded-none px-6 focus:ring-2 focus:ring-brand"
                   >

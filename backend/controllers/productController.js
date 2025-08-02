@@ -38,7 +38,9 @@ export const getAllProducts = async (req, res) => {
             sortBy = 'createdAt',
             minPrice,
             maxPrice,
-            categorySlug
+            categorySlug,
+            size,
+            sleeveType
         } = req.query;
         const filter = {};
         if (category) filter.categorySlug = category.toLowerCase();
@@ -56,6 +58,17 @@ export const getAllProducts = async (req, res) => {
                 { description: { $regex: search, $options: 'i' } }
             ];
         }
+        
+        // Size filtering - check if the size exists in availableSizes array
+        if (size) {
+            filter.availableSizes = { $in: [size] };
+        }
+        
+        // Sleeve type filtering
+        if (sleeveType) {
+            filter.sleeveType = sleeveType;
+        }
+        
         // --- Sorting logic update for displayOrder ---
         const sortField = req.query.sortBy || 'createdAt';
         const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
