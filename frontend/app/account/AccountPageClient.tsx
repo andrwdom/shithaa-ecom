@@ -115,33 +115,58 @@ export default function AccountPageClient() {
       // Ensure backend JWT token is available
       const token = await ensureBackendToken()
       if (token) {
+        console.log("Token available, fetching orders...")
+        
         // Fetch order count
-        const countRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/orders/user/count`, {
-          headers: { token }
-        })
-        if (countRes.ok) {
-          const countData = await countRes.json()
-          if (countData.success) {
-            setOrderCount(countData.count)
+        try {
+          const countRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/orders/user/count`, {
+            headers: { token }
+          })
+          console.log("Order count response status:", countRes.status)
+          if (countRes.ok) {
+            const countData = await countRes.json()
+            console.log("Order count data:", countData)
+            if (countData.success) {
+              setOrderCount(countData.count)
+            }
+          } else {
+            console.error("Failed to fetch order count:", countRes.status, countRes.statusText)
           }
+        } catch (error) {
+          console.error("Error fetching order count:", error)
         }
+        
         // Fetch all orders for this email
-        const res = await fetch((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + `/api/orders/by-email/${encodeURIComponent(user.email)}`);
-        const data = await res.json();
-        if (res.ok && data.orders) {
-          // Robust date sorting: prefer createdAt, then date, then orderDate, then updatedAt
-          const getOrderDate = (order: any) => order.createdAt || order.date || order.orderDate || order.updatedAt || 0;
-          const sortedOrders = data.orders.slice().sort((a: any, b: any) => new Date(getOrderDate(b)).getTime() - new Date(getOrderDate(a)).getTime());
-          setOrders(sortedOrders);
-          // Calculate unique payment methods
-          const methods = new Set(sortedOrders.map((o: any) => o.paymentMethod && o.paymentMethod.toLowerCase()))
-          setUniquePaymentMethods(methods.has(undefined) ? methods.size - 1 : methods.size)
-        } else {
+        try {
+          console.log("Fetching orders for email:", user.email)
+          const res = await fetch((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + `/api/orders/by-email/${encodeURIComponent(user.email)}`);
+          console.log("Orders response status:", res.status)
+          const data = await res.json();
+          console.log("Orders response data:", data);
+          
+          if (res.ok && data.orders) {
+            console.log("Orders found:", data.orders.length)
+            // Robust date sorting: prefer createdAt, then date, then orderDate, then updatedAt
+            const getOrderDate = (order: any) => order.createdAt || order.date || order.orderDate || order.updatedAt || 0;
+            const sortedOrders = data.orders.slice().sort((a: any, b: any) => new Date(getOrderDate(b)).getTime() - new Date(getOrderDate(a)).getTime());
+            setOrders(sortedOrders);
+            // Calculate unique payment methods
+            const methods = new Set(sortedOrders.map((o: any) => o.paymentMethod && o.paymentMethod.toLowerCase()))
+            setUniquePaymentMethods(methods.has(undefined) ? methods.size - 1 : methods.size)
+          } else {
+            console.log("No orders found or error response")
+            setOrders([]);
+            setUniquePaymentMethods(0)
+          }
+        } catch (error) {
+          console.error("Error fetching orders:", error)
           setOrders([]);
           setUniquePaymentMethods(0)
         }
       } else {
         console.log("No token found in localStorage and could not refresh it")
+        setOrders([]);
+        setUniquePaymentMethods(0)
       }
     } catch (error) {
       console.error("Error fetching account data:", error)
