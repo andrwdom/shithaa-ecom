@@ -39,11 +39,17 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
   };
 
   const handleAccountClick = () => {
+    console.log('Account button clicked!', { user: !!user });
     if (user) {
       setShowUserMenu(!showUserMenu);
     } else {
       setShowLogin(true);
     }
+  };
+
+  const handleSignInClick = () => {
+    console.log('Sign in button clicked!');
+    setShowLogin(true);
   };
 
   return (
@@ -112,7 +118,7 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
                   <div className="relative">
                     <button
                       onClick={() => setShowUserMenu(!showUserMenu)}
-                      className="navbar-link-effect flex items-center gap-2 text-gray-600 font-medium transition-all duration-200 focus:outline-none hover:text-[rgb(71,60,102)]"
+                      className="flex items-center gap-2 text-gray-600 font-medium transition-all duration-200 focus:outline-none hover:text-[rgb(71,60,102)] cursor-pointer px-3 py-2 rounded-lg hover:bg-gray-50"
                     >
                       {user.photoURL ? (
                         <img 
@@ -164,8 +170,8 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
                   </div>
                 ) : (
                   <button
-                    onClick={() => setShowLogin(true)}
-                    className="navbar-link-effect flex items-center gap-1 text-gray-600 font-medium transition-all duration-200 focus:outline-none hover:text-[rgb(71,60,102)]"
+                    onClick={handleSignInClick}
+                    className="flex items-center gap-1 text-gray-600 font-medium transition-all duration-200 focus:outline-none hover:text-[rgb(71,60,102)] cursor-pointer px-3 py-2 rounded-lg hover:bg-gray-50"
                   >
                     <User className="h-5 w-5" />
                     <span className="hidden lg:block">Sign In</span>
