@@ -12,6 +12,7 @@ import CategorySidebar from "@/components/category-sidebar"
 import CartSidebar from "@/components/cart-sidebar"
 import PageLoading from "@/components/page-loading"
 import TestimonialsSection from "@/components/testimonials-section"
+import PerformanceMonitor from "@/components/performance-monitor"
 
 interface CartItem {
   id: number
@@ -116,14 +117,17 @@ export default function Home() {
 
   return (
     <PageLoading loadingMessage="Welcome to Shithaa" minLoadingTime={2000}>
-      <div className="min-h-screen bg-white">
-        <HeroSection />
-        <CategoryStrip onCategoryClick={handleCategorySelect} currentCategory={undefined} />
-        <TestimonialsSection />
-        <FAQAccordion />
+      <main>
+        <PerformanceMonitor />
+        <div className="min-h-screen bg-white">
+          <HeroSection />
+          <CategoryStrip onCategoryClick={handleCategorySelect} currentCategory={undefined} />
+          <TestimonialsSection />
+          <FAQAccordion />
 
-        <CartSidebar />
-      </div>
+          <CartSidebar />
+        </div>
+      </main>
     </PageLoading>
   )
 }

@@ -9,6 +9,7 @@ import { Flame } from "lucide-react"
 import Image from "next/image"
 import SizeSelectionSidebar from "./size-selection-sidebar"
 import CheckoutPromptModal from "./checkout-prompt-modal"
+import OptimizedImage from "./optimized-image"
 
 interface Product {
   id: string
@@ -129,11 +130,13 @@ export default function ProductSlider({
               <CardContent className="p-0">
                 {/* Consistent aspect ratio for all screen sizes */}
                 <div className="relative aspect-[2/3] bg-gray-100">
-                  <Image
+                  <OptimizedImage
                     src={product.image || "/placeholder.svg"}
-                    alt={product.name}
+                    alt={`${product.name} - ${product.category}`}
                     fill
+                    loading="lazy"
                     className="object-cover group-hover:scale-105 transition-transform duration-300"
+                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                   />
 
                   {/* Bestseller Badge */}

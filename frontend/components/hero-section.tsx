@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import Image from "next/image"
+import OptimizedImage from "./optimized-image"
 
 const HeroSection = () => {
   const categories = [
@@ -69,11 +69,13 @@ const HeroSection = () => {
             >
               {/* Background Image */}
               <div className="absolute inset-0">
-                <Image
+                <OptimizedImage
                   src={category.image || "/placeholder.svg"}
-                  alt={category.title}
+                  alt={`${category.title} - ${category.subtitle}`}
                   fill
+                  priority={index < 2} // Load first 2 images with priority
                   className="object-cover group-hover:scale-110 transition-transform duration-700"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
                 />
               </div>
 

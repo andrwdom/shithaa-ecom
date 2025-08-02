@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Heart, ShoppingBag } from "lucide-react"
 import Image from "next/image"
+import OptimizedImage from "./optimized-image"
 
 interface Product {
   id: number
@@ -42,11 +43,13 @@ export default function ProductCard({ product, onClick }: ProductCardProps) {
     >
       <CardContent className="p-0">
         <div className="relative h-64 bg-gradient-to-br from-pink-50 to-purple-50 rounded-t-lg overflow-hidden">
-          <Image
+          <OptimizedImage
             src={product.image || "/placeholder.svg"}
-            alt={product.name}
+            alt={`${product.name} - ${product.category}`}
             fill
-            className="object-cover group-hover:scale-110 transition-transform duration-500"
+            loading="lazy"
+            className="object-cover group-hover:scale-105 transition-transform duration-300"
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
           />
 
           {/* Overlay buttons */}

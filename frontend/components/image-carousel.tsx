@@ -4,6 +4,7 @@ import { useState } from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
+import OptimizedImage from "./optimized-image"
 
 interface ImageCarouselProps {
   images: string[]
@@ -25,11 +26,13 @@ export default function ImageCarousel({ images, productName }: ImageCarouselProp
     <div className="space-y-4">
       {/* Main Image */}
       <div className="relative h-96 lg:h-[500px] bg-white rounded-2xl overflow-hidden shadow-lg group">
-        <Image
+        <OptimizedImage
           src={images[selectedImage] || "/placeholder.svg"}
-          alt={`${productName} ${selectedImage + 1}`}
+          alt={`${productName} - Image ${selectedImage + 1} of ${images.length}`}
           fill
+          priority={selectedImage === 0}
           className="object-cover"
+          sizes="(max-width: 768px) 100vw, 50vw"
         />
 
         {/* Navigation Arrows */}
@@ -75,11 +78,12 @@ export default function ImageCarousel({ images, productName }: ImageCarouselProp
                   : "border-gray-200 hover:border-pink-300"
               }`}
             >
-              <Image
+              <OptimizedImage
                 src={image || "/placeholder.svg"}
-                alt={`${productName} ${index + 1}`}
+                alt={`${productName} thumbnail ${index + 1}`}
                 width={80}
                 height={80}
+                loading="lazy"
                 className="object-cover w-full h-full"
               />
             </button>

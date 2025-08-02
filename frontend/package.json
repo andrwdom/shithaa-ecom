@@ -3,10 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build": "next build",
     "dev": "next dev",
+    "build": "next build",
+    "build:optimized": "node scripts/build-optimized.js",
+    "start": "next start",
     "lint": "next lint",
-    "start": "next start"
+    "optimize-images": "node scripts/optimize-images.js",
+    "analyze": "ANALYZE=true npm run build"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
