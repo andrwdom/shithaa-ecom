@@ -22,6 +22,7 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
   function handleProtectedNav(action: string, callback: () => void) {
     if (!user) {
       setShowLogin(true);
+      return; // Don't execute callback if user is not logged in
     } else {
       callback();
     }
@@ -35,6 +36,14 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
   const handleLogout = async () => {
     await logout();
     closeMenus();
+  };
+
+  const handleAccountClick = () => {
+    if (user) {
+      setShowUserMenu(!showUserMenu);
+    } else {
+      setShowLogin(true);
+    }
   };
 
   return (
@@ -129,14 +138,14 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
                           <p className="text-xs text-gray-500">{user.email}</p>
                         </div>
                         <button
-                          onClick={() => { handleProtectedNav('account', () => window.location.href = "/account"); closeMenus(); }}
+                          onClick={() => { window.location.href = "/account"; closeMenus(); }}
                           className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
                         >
                           <User className="w-4 h-4" />
                           My Account
                         </button>
                         <button
-                          onClick={() => { handleProtectedNav('account', () => window.location.href = "/account/orders"); closeMenus(); }}
+                          onClick={() => { window.location.href = "/account/orders"; closeMenus(); }}
                           className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
                         >
                           <ShoppingBag className="w-4 h-4" />
@@ -185,7 +194,7 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
                   variant="ghost"
                   size="sm"
                   className="md:hidden text-gray-600 hover:text-[rgb(71,60,102)]"
-                  onClick={() => user ? setShowUserMenu(!showUserMenu) : setShowLogin(true)}
+                  onClick={handleAccountClick}
                 >
                   {user && user.photoURL ? (
                     <img 
@@ -268,14 +277,14 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
                       </div>
                     </div>
                     <button
-                      onClick={() => { handleProtectedNav('account', () => window.location.href = "/account"); closeMenus(); }}
+                      onClick={() => { window.location.href = "/account"; closeMenus(); }}
                       className="flex items-center gap-3 text-gray-600 hover:text-[rgb(71,60,102)] font-medium px-2 py-2 rounded-lg hover:bg-white transition-all text-left"
                     >
                       <User className="h-5 w-5" />
                       <span>my account</span>
                     </button>
                     <button
-                      onClick={() => { handleProtectedNav('account', () => window.location.href = "/account/orders"); closeMenus(); }}
+                      onClick={() => { window.location.href = "/account/orders"; closeMenus(); }}
                       className="flex items-center gap-3 text-gray-600 hover:text-[rgb(71,60,102)] font-medium px-2 py-2 rounded-lg hover:bg-white transition-all text-left"
                     >
                       <ShoppingBag className="h-5 w-5" />
