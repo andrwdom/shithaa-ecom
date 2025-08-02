@@ -33,7 +33,6 @@ const Add = ({token}) => {
      "Nightwear", 
      "Maternity Wear",
      "Dupatta",
-     "Dupatta Lounge Wear",
      "Maternity Feeding Wear",
      "Zipless Feeding Lounge Wear",
      "Non-Feeding Lounge Wear",
@@ -60,7 +59,7 @@ const Add = ({token}) => {
    const shouldShowSleeveType = () => {
      return category === "Zipless Feeding Lounge Wear" || 
             category === "Non-Feeding Lounge Wear" || 
-            category === "Dupatta Lounge Wear" ||
+            category === "Zipless Feeding Dupatta Lounge Wear" ||
             category === "Lounge Wear";
    };
 
