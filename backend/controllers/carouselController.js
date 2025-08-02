@@ -65,7 +65,7 @@ export const getCarouselBanners = async (req, res) => {
 // Create a new carousel banner
 export const createCarouselBanner = async (req, res) => {
   try {
-    const { title, description, sectionId, order } = req.body;
+    const { title, description, link, sectionId, order, isActive } = req.body;
     const imageFile = req.file;
 
     if (!imageFile) {
@@ -80,8 +80,10 @@ export const createCarouselBanner = async (req, res) => {
         image: imageUrl,
         title,
         description,
-        sectionId,
-        order: order || 0
+        link: link || null,
+        sectionId: sectionId || null,
+        order: order || 0,
+        isActive: isActive === 'true' || isActive === true || isActive === undefined
       });
 
       await banner.save();
@@ -103,15 +105,16 @@ export const createCarouselBanner = async (req, res) => {
 export const updateCarouselBanner = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, description, sectionId, order, isActive } = req.body;
+    const { title, description, link, sectionId, order, isActive } = req.body;
     const imageFile = req.file;
 
     const updateData = {
       title,
       description,
+      link,
       sectionId,
       order,
-      isActive
+      isActive: isActive === 'true' || isActive === true
     };
 
     if (imageFile) {
@@ -132,6 +135,7 @@ export const updateCarouselBanner = async (req, res) => {
 
     res.json(banner);
   } catch (error) {
+    console.error('Update banner error:', error);
     res.status(400).json({ message: error.message });
   }
 };
