@@ -5,8 +5,11 @@ import upload from '../middleware/multer.js';
 
 const router = express.Router();
 
-// Public route to get all active banners
+// Public route to get all active banners (for frontend)
 router.get('/', getCarouselBanners);
+
+// Admin route to get all banners (including inactive ones)
+router.get('/admin', isAdmin, getCarouselBanners);
 
 // Admin routes
 router.post('/', isAdmin, upload.single('image'), createCarouselBanner);

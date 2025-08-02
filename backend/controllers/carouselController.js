@@ -32,7 +32,17 @@ const uploadBuffer = (buffer) => {
 // Get all carousel banners
 export const getCarouselBanners = async (req, res) => {
   try {
-    const banners = await CarouselBanner.find({ isActive: { $ne: false } }).sort({ order: 1 });
+    // Check if this is an admin request (has admin middleware)
+    const isAdminRequest = req.user && req.user.role === 'admin';
+    
+    let banners;
+    if (isAdminRequest) {
+      // Admin gets all banners (including inactive ones)
+      banners = await CarouselBanner.find({}).sort({ order: 1 });
+    } else {
+      // Public gets only active banners
+      banners = await CarouselBanner.find({ isActive: { $ne: false } }).sort({ order: 1 });
+    }
     
     // Transform data to match frontend expectations
     const carouselData = banners.map(banner => ({

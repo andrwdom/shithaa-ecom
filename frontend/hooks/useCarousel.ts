@@ -12,7 +12,7 @@ export function useCarousel(): UseCarouselReturn {
       setError(null)
       
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
-      const response = await fetch(`${apiUrl}/api/carousels`)
+      const response = await fetch(`${apiUrl}/api/carousel`)
       
       if (!response.ok) {
         // Handle different error statuses gracefully

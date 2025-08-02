@@ -5,7 +5,7 @@ import { backendUrl } from '../App';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 
 const CarouselManagement = ({ token }) => {
-  const [banners, setBanners] = useState([]);
+  const [banners, setBanners] = useState([]); // Ensure it's initialized as an empty array
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
@@ -24,13 +24,34 @@ const CarouselManagement = ({ token }) => {
 
   const fetchBanners = async () => {
     try {
-      const response = await axios.get(`${backendUrl}/api/carousel`, {
+      console.log('Fetching banners from:', `${backendUrl}/api/carousel/admin`);
+      const response = await axios.get(`${backendUrl}/api/carousel/admin`, {
         headers: { token }
       });
-      setBanners(response.data);
+      
+      console.log('API Response:', response.data);
+      console.log('Response type:', typeof response.data);
+      console.log('Is array:', Array.isArray(response.data));
+      
+      // Ensure we always set an array, even if the response is unexpected
+      if (response.data && Array.isArray(response.data)) {
+        console.log('Setting banners from response.data (array)');
+        setBanners(response.data);
+      } else if (response.data && Array.isArray(response.data.data)) {
+        console.log('Setting banners from response.data.data (array)');
+        setBanners(response.data.data);
+      } else if (response.data && Array.isArray(response.data.banners)) {
+        console.log('Setting banners from response.data.banners (array)');
+        setBanners(response.data.banners);
+      } else {
+        console.warn('Unexpected API response format:', response.data);
+        setBanners([]); // Fallback to empty array
+      }
     } catch (error) {
-      toast.error('Failed to fetch banners');
       console.error('Error fetching banners:', error);
+      console.error('Error response:', error.response?.data);
+      toast.error('Failed to fetch banners');
+      setBanners([]); // Ensure we always have an array
     }
   };
 
@@ -338,7 +359,7 @@ const CarouselManagement = ({ token }) => {
                 ref={provided.innerRef}
                 className="space-y-4"
               >
-                {banners.map((banner, index) => (
+                {Array.isArray(banners) && banners.map((banner, index) => (
                   <Draggable
                     key={banner._id}
                     draggableId={banner._id}
@@ -418,7 +439,7 @@ const CarouselManagement = ({ token }) => {
           </Droppable>
         </DragDropContext>
         
-        {banners.length === 0 && (
+        {(!Array.isArray(banners) || banners.length === 0) && (
           <div className="text-center py-8 text-gray-500">
             <p>No banners created yet. Create your first banner above.</p>
           </div>
