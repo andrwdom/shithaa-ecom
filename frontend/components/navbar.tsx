@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Menu, ShoppingBag, X, User, Mail, Info, Home, LogOut, Settings } from "lucide-react"
+import { Menu, ShoppingBag, X, User, Mail, Info, Home, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useCart } from "@/components/cart-context"
 import { useAuth } from "@/components/auth/useAuth"
@@ -17,20 +17,9 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const { user, logout } = useAuth();
   const [showLogin, setShowLogin] = useState(false);
-  const [showUserMenu, setShowUserMenu] = useState(false);
-
-  function handleProtectedNav(action: string, callback: () => void) {
-    if (!user) {
-      setShowLogin(true);
-      return; // Don't execute callback if user is not logged in
-    } else {
-      callback();
-    }
-  }
 
   function closeMenus() {
     setIsMenuOpen(false);
-    setShowUserMenu(false);
   }
 
   const handleLogout = async () => {
@@ -41,7 +30,7 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
   const handleAccountClick = () => {
     console.log('Account button clicked!', { user: !!user });
     if (user) {
-      setShowUserMenu(!showUserMenu);
+      window.location.href = "/account";
     } else {
       setShowLogin(true);
     }
@@ -117,7 +106,7 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
                 {user ? (
                   <div className="relative">
                     <button
-                      onClick={() => setShowUserMenu(!showUserMenu)}
+                      onClick={() => window.location.href = "/account"}
                       className="flex items-center gap-2 text-gray-600 font-medium transition-all duration-200 focus:outline-none hover:text-[rgb(71,60,102)] cursor-pointer px-3 py-2 rounded-lg hover:bg-gray-50"
                     >
                       {user.photoURL ? (
@@ -135,38 +124,6 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
                         {user.displayName?.split(' ')[0] || 'Account'}
                       </span>
                     </button>
-                    
-                    {/* User Dropdown Menu */}
-                    {showUserMenu && (
-                      <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
-                        <div className="px-4 py-2 border-b border-gray-100">
-                          <p className="text-sm font-medium text-gray-900">{user.displayName}</p>
-                          <p className="text-xs text-gray-500">{user.email}</p>
-                        </div>
-                        <button
-                          onClick={() => { window.location.href = "/account"; closeMenus(); }}
-                          className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                        >
-                          <User className="w-4 h-4" />
-                          My Account
-                        </button>
-                        <button
-                          onClick={() => { window.location.href = "/account/orders"; closeMenus(); }}
-                          className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                        >
-                          <ShoppingBag className="w-4 h-4" />
-                          My Orders
-                        </button>
-                        <div className="border-t border-gray-100 my-1"></div>
-                        <button
-                          onClick={handleLogout}
-                          className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
-                        >
-                          <LogOut className="w-4 h-4" />
-                          Sign Out
-                        </button>
-                      </div>
-                    )}
                   </div>
                 ) : (
                   <button
@@ -259,65 +216,11 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
                   <Info className="h-5 w-5" />
                   <span>about us</span>
                 </a>
-                
-                {/* Mobile User Menu */}
-                {user && (
-                  <>
-                    <div className="border-t border-gray-200 pt-3 mt-3">
-                      <div className="flex items-center gap-3 px-2 py-2">
-                        {user.photoURL ? (
-                          <img 
-                            src={user.photoURL} 
-                            alt={user.displayName || 'User'} 
-                            className="w-8 h-8 rounded-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-8 h-8 rounded-full bg-[rgb(71,60,102)] flex items-center justify-center text-white text-sm font-semibold">
-                            {user.displayName?.charAt(0)?.toUpperCase() || 'U'}
-                          </div>
-                        )}
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">{user.displayName}</p>
-                          <p className="text-xs text-gray-500">{user.email}</p>
-                        </div>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => { window.location.href = "/account"; closeMenus(); }}
-                      className="flex items-center gap-3 text-gray-600 hover:text-[rgb(71,60,102)] font-medium px-2 py-2 rounded-lg hover:bg-white transition-all text-left"
-                    >
-                      <User className="h-5 w-5" />
-                      <span>my account</span>
-                    </button>
-                    <button
-                      onClick={() => { window.location.href = "/account/orders"; closeMenus(); }}
-                      className="flex items-center gap-3 text-gray-600 hover:text-[rgb(71,60,102)] font-medium px-2 py-2 rounded-lg hover:bg-white transition-all text-left"
-                    >
-                      <ShoppingBag className="h-5 w-5" />
-                      <span>my orders</span>
-                    </button>
-                    <button
-                      onClick={handleLogout}
-                      className="flex items-center gap-3 text-red-600 hover:text-red-700 font-medium px-2 py-2 rounded-lg hover:bg-red-50 transition-all text-left"
-                    >
-                      <LogOut className="h-5 w-5" />
-                      <span>sign out</span>
-                    </button>
-                  </>
-                )}
               </div>
             </div>
           )}
         </div>
       </nav>
-      
-      {/* Click outside to close user menu */}
-      {showUserMenu && (
-        <div 
-          className="fixed inset-0 z-40" 
-          onClick={() => setShowUserMenu(false)}
-        />
-      )}
       
       <LoginModal open={showLogin} onClose={() => setShowLogin(false)} onSuccess={() => {
         setShowLogin(false);
