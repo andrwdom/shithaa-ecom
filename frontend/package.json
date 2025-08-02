@@ -9,8 +9,11 @@
     "start": "next start",
     "lint": "next lint",
     "optimize-images": "node scripts/optimize-images.js",
+    "optimize-fashion-images": "node scripts/optimize-fashion-images.js",
     "generate-webp": "node scripts/generate-webp.js",
-    "analyze": "ANALYZE=true npm run build"
+    "analyze": "ANALYZE=true npm run build",
+    "performance:monitor": "node scripts/performance-monitor.js",
+    "performance:audit": "lighthouse http://localhost:3000 --output=json --output-path=./lighthouse-report.json"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
@@ -74,6 +77,8 @@
     "@types/react-dom": "^19",
     "postcss": "^8.5",
     "tailwindcss": "^3.4.17",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "sharp": "^0.33.0",
+    "lighthouse": "^11.6.0"
   }
 }
