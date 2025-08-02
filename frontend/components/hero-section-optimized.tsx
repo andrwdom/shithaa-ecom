@@ -8,7 +8,6 @@ const HeroSectionOptimized = () => {
     {
       id: 1,
       title: "Maternity Feeding Wear",
-      subtitle: "Comfortable and stylish feeding wear for new mothers",
       slug: "maternity-feeding-wear",
       image: "/blue-dress.JPG",
       ctaText: "See Styles",
@@ -17,7 +16,6 @@ const HeroSectionOptimized = () => {
     {
       id: 2,
       title: "Zipless Feeding Lounge Wear",
-      subtitle: "Revolutionary zipless design for hassle-free feeding",
       slug: "zipless-feeding-lounge-wear",
       image: "/prink-dress.JPG",
       ctaText: "View Drop",
@@ -26,7 +24,6 @@ const HeroSectionOptimized = () => {
     {
       id: 3,
       title: "Non-Feeding Lounge Wear",
-      subtitle: "Comfortable everyday wear for expecting mothers",
       slug: "non-feeding-lounge-wear",
       image: "/leopard-dress.jpg",
       ctaText: "Unveil Now",
@@ -35,7 +32,6 @@ const HeroSectionOptimized = () => {
     {
       id: 4,
       title: "Zipless Feeding Dupatta Lounge Wear",
-      subtitle: "Zipless design with attached dupatta for more comfort",
       slug: "zipless-feeding-dupatta-lounge-wear",
       image: "/placeholder.svg?height=400&width=300",
       ctaText: "Coming Soon",
@@ -73,7 +69,7 @@ const HeroSectionOptimized = () => {
                 <div className="aspect-[3/4] sm:aspect-[2/3] lg:aspect-[3/4] xl:aspect-[2/3]">
                   <OptimizedImage
                     src={category.image || "/placeholder.svg"}
-                    alt={`${category.title} - ${category.subtitle}`}
+                    alt={category.title}
                     fill
                     priority={index < 2} // Load first 2 images with priority
                     className="object-cover object-center group-hover:scale-105 transition-transform duration-700"
@@ -85,7 +81,7 @@ const HeroSectionOptimized = () => {
                 {/* Gradient Overlay - Improved for Mobile */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
 
-                {/* Content Overlay - Responsive Typography */}
+                {/* Content Overlay - Reduced Size */}
                 <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 lg:p-5">
                   <div className={
                     (category.id === 1
@@ -99,15 +95,10 @@ const HeroSectionOptimized = () => {
                       : "bg-gray-100/90 backdrop-blur-sm ") +
                     "rounded-xl p-3 sm:p-4 border border-white/30 shadow-lg"
                   }>
-                    <div className="text-center space-y-2 sm:space-y-3">
+                    <div className="text-center space-y-2">
                       <h3 className="text-sm sm:text-base lg:text-lg font-bold text-gray-900 font-serif line-clamp-2 leading-tight">
                         {category.title}
                       </h3>
-                      <p className="text-xs sm:text-sm text-gray-700 leading-relaxed line-clamp-2 px-1">
-                        {category.subtitle}
-                      </p>
-                    </div>
-                    <div className="text-center pt-2 sm:pt-3 border-t border-white/30 mt-2 sm:mt-3">
                       <div className="inline-flex items-center text-xs sm:text-sm font-medium text-gray-800 group-hover:text-gray-900 transition-colors">
                         {category.ctaText}
                         {!category.isComingSoon && (
