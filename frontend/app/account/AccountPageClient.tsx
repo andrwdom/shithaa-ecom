@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react"
 import { useAuth } from "@/components/auth/useAuth"
+import { useWishlist } from "@/components/wishlist-context"
 import LoginModal from "@/components/auth/LoginModal"
 import { toast } from "sonner"
-import { Package, Calendar, CreditCard, MapPin, Phone, Mail, User, LogOut } from "lucide-react"
+import { Package, Calendar, Heart, MapPin, Phone, Mail, User, LogOut } from "lucide-react"
 import { getIdToken } from "firebase/auth"
 import OrderHistory from "./OrderHistory"
 
@@ -42,6 +43,7 @@ interface UserProfile {
 
 export default function AccountPageClient() {
   const { user, loading: authLoading, logout } = useAuth()
+  const { wishlistCount } = useWishlist()
   const [showLogin, setShowLogin] = useState(false)
   const [orders, setOrders] = useState<Order[]>([])
   const [orderCount, setOrderCount] = useState<number>(0)
@@ -232,7 +234,6 @@ export default function AccountPageClient() {
                 <h1 className="text-3xl font-bold text-gray-900">{userProfile?.name}</h1>
                 <p className="text-gray-500 text-sm">{userProfile?.email}</p>
                 <div className="space-y-1">
-                  <p className="text-lg font-semibold text-pink-600">Hello Mama 👋, welcome back!</p>
                   <p className="text-sm text-purple-600 font-medium">You deserve comfort, care & style 💜</p>
                 </div>
               </div>
@@ -273,14 +274,14 @@ export default function AccountPageClient() {
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-lg p-6 border border-purple-100 hover:shadow-xl transition-all duration-300">
+          <div className="bg-white rounded-2xl shadow-lg p-6 border border-purple-100 hover:shadow-xl transition-all duration-300 cursor-pointer" onClick={() => window.location.href = '/wishlist'}>
             <div className="flex items-center space-x-4">
               <div className="w-14 h-14 bg-purple-100 rounded-xl flex items-center justify-center">
-                <CreditCard className="w-7 h-7 text-purple-600" />
+                <Heart className="w-7 h-7 text-purple-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-500 font-medium">Payment Methods</p>
-                <p className="text-3xl font-bold text-gray-900">{uniquePaymentMethods}</p>
+                <p className="text-sm text-gray-500 font-medium">Wishlist</p>
+                <p className="text-3xl font-bold text-gray-900">{wishlistCount}</p>
               </div>
             </div>
           </div>
@@ -314,7 +315,7 @@ export default function AccountPageClient() {
               </a>
             </div>
           ) : (
-            <OrderHistory orders={orders} formatDate={formatDate} getStatusColor={getStatusColor} />
+            <OrderHistory orders={orders} />
           )}
         </div>
       </div>

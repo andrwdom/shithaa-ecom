@@ -4,9 +4,10 @@ import type React from "react"
 
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Heart, ShoppingBag } from "lucide-react"
+import { ShoppingBag } from "lucide-react"
 import Image from "next/image"
 import OptimizedImage from "./optimized-image"
+import WishlistButton from "./WishlistButton"
 
 interface Product {
   id: number
@@ -26,11 +27,6 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product, onClick }: ProductCardProps) {
-  const handleWishlist = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    alert("Added to wishlist!")
-  }
-
   const handleQuickAdd = (e: React.MouseEvent) => {
     e.stopPropagation()
     alert("Added to cart!")
@@ -54,9 +50,7 @@ export default function ProductCard({ product, onClick }: ProductCardProps) {
 
           {/* Overlay buttons */}
           <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-3">
-            <Button size="sm" variant="secondary" className="rounded-full" onClick={handleWishlist}>
-              <Heart className="h-4 w-4" />
-            </Button>
+            <WishlistButton productId={product.id.toString()} size="sm" />
             <Button size="sm" className="rounded-full bg-pink-400 hover:bg-pink-500" onClick={handleQuickAdd}>
               <ShoppingBag className="h-4 w-4" />
             </Button>

@@ -1,9 +1,10 @@
 "use client"
 
 import { useState } from "react"
-import { Menu, ShoppingBag, X, User, Mail, Info, Home, LogOut } from "lucide-react"
+import { Menu, ShoppingBag, X, User, Mail, Info, Home, LogOut, Heart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useCart } from "@/components/cart-context"
+import { useWishlist } from "@/components/wishlist-context"
 import { useAuth } from "@/components/auth/useAuth"
 import LoginModal from "@/components/auth/LoginModal"
 
@@ -14,6 +15,8 @@ interface NavbarProps {
 export default function Navbar({ onCategoriesClick }: NavbarProps) {
   const { cartItems, openCartSidebar } = useCart();
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+  const { wishlistItems } = useWishlist();
+  const wishlistCount = wishlistItems.length;
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const { user, logout } = useAuth();
   const [showLogin, setShowLogin] = useState(false);
@@ -148,6 +151,20 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
                   {cartCount > 0 && (
                     <span className="absolute -top-1 -right-1 bg-[rgb(71,60,102)] text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                       {cartCount}
+                    </span>
+                  )}
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="relative text-gray-600 hover:text-[rgb(71,60,102)]"
+                  onClick={() => window.location.href = '/wishlist'}
+                >
+                  <Heart className="h-5 w-5" />
+                  {wishlistCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-[rgb(71,60,102)] text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      {wishlistCount}
                     </span>
                   )}
                 </Button>

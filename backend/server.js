@@ -12,6 +12,7 @@ import couponRouter from './routes/couponRoutes.js'
 import carouselRouter from './routes/carouselRoutes.js'
 import categoryRouter from './routes/categoryRoute.js'
 import contactRouter from './routes/contactRoute.js'
+import wishlistRouter from './routes/wishlistRoutes.js'
 import admin from 'firebase-admin'
 import orderModel from './models/orderModel.js'
 import Category from './models/Category.js'
@@ -181,6 +182,7 @@ app.use('/api/coupons', couponRouter)
 app.use('/api/carousel', carouselRouter)
 app.use('/api/categories', categoryRouter)
 app.use('/api/contact', contactRouter)
+app.use('/api/wishlist', wishlistRouter)
 
 // Legacy routes for backward compatibility
 app.use('/api/product', productRouter)

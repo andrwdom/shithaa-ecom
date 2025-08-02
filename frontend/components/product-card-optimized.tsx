@@ -3,8 +3,9 @@
 import React from 'react'
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Heart, ShoppingBag } from "lucide-react"
+import { ShoppingBag } from "lucide-react"
 import OptimizedImage from "./optimized-image"
+import WishlistButton from "./WishlistButton"
 
 interface Product {
   id: number
@@ -25,11 +26,6 @@ interface ProductCardOptimizedProps {
 }
 
 export default function ProductCardOptimized({ product, onClick, index = 0 }: ProductCardOptimizedProps) {
-  const handleWishlist = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    // Add wishlist functionality
-  }
-
   const handleQuickAdd = (e: React.MouseEvent) => {
     e.stopPropagation()
     // Add quick add functionality
@@ -60,14 +56,7 @@ export default function ProductCardOptimized({ product, onClick, index = 0 }: Pr
 
           {/* Overlay buttons - Responsive positioning */}
           <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-2 sm:gap-3">
-            <Button 
-              size="sm" 
-              variant="secondary" 
-              className="rounded-full bg-white/90 hover:bg-white shadow-lg" 
-              onClick={handleWishlist}
-            >
-              <Heart className="h-3 w-3 sm:h-4 sm:w-4" />
-            </Button>
+            <WishlistButton productId={product.id.toString()} size="sm" />
             <Button 
               size="sm" 
               className="rounded-full bg-pink-500 hover:bg-pink-600 shadow-lg" 
