@@ -33,7 +33,7 @@ export default function LoginModal({ open, onClose, onSuccess }: { open: boolean
     setLoading(true);
     try {
       console.log("Attempting Firebase login...");
-      await signInWithEmailAndPassword(auth, email, password);
+      const result = await signInWithEmailAndPassword(auth, email, password);
       console.log("Firebase login successful, getting ID token...");
       
       const idToken = await getIdToken(auth.currentUser);
@@ -52,7 +52,14 @@ export default function LoginModal({ open, onClose, onSuccess }: { open: boolean
       if (data.success && data.data.token) {
         localStorage.setItem("token", data.data.token);
         console.log("Token stored in localStorage");
-        toast.success("Successfully logged in. Welcome back!");
+        
+        // Enhanced welcome message
+        const userName = result.user.displayName?.split(' ')[0] || 'there';
+        toast.success(`👋 Welcome back, ${userName}!`, {
+          description: "You've successfully signed in to Shithaa.",
+          duration: 5000,
+        });
+        
         setEmail(""); setPassword(""); setName("");
         setError(null);
         onSuccess();
@@ -119,7 +126,14 @@ export default function LoginModal({ open, onClose, onSuccess }: { open: boolean
       if (data2.success && data2.data.token) {
         localStorage.setItem("token", data2.data.token);
         console.log("Token stored in localStorage");
-        toast.success("Successfully signed up! Welcome to Shitha Maternity.");
+        
+        // Enhanced welcome message
+        const userName = name.split(' ')[0];
+        toast.success(`🎉 Welcome to Shithaa, ${userName}!`, {
+          description: "You've successfully signed up. Explore our elegant maternity wear collections now.",
+          duration: 5000,
+        });
+        
         setEmail(""); setPassword(""); setName("");
         setError(null);
         onSuccess();
@@ -156,28 +170,136 @@ export default function LoginModal({ open, onClose, onSuccess }: { open: boolean
   }
 
   return (
-    <div className={`fixed inset-0 z-50 flex items-center justify-center bg-black/40 ${open ? "" : "hidden"}`}>
-      <div className="bg-white rounded-xl shadow-lg w-full max-w-sm p-6 relative animate-fade-in">
-        <button className="absolute top-2 right-2 btn btn-ghost btn-sm" onClick={handleClose}>&times;</button>
-        <div className="flex mb-4 border-b">
+    <div className={`fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm transition-all duration-300 ${open ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
+      <div className={`bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 relative transform transition-all duration-300 ${open ? "scale-100 opacity-100" : "scale-95 opacity-0"}`}>
+        {/* Close button */}
+        <button 
+          className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors duration-200 text-gray-600 hover:text-gray-800" 
+          onClick={handleClose}
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+
+        {/* Brand Header */}
+        <div className="text-center mb-8">
+          <h2 className="text-2xl font-bold text-[#473C66] mb-2">Welcome to Shithaa</h2>
+          <p className="text-gray-600 text-sm">Elegant Maternity & Feeding Wear</p>
+        </div>
+
+        {/* Tab Navigation */}
+        <div className="flex mb-6 border-b border-gray-200">
           <button
-            className={`flex-1 py-2 transition-all duration-150 ${tab === "login" ? "font-bold border-b-2 border-[#473C66] text-[#473C66]" : "text-gray-500"}`}
+            className={`flex-1 py-3 transition-all duration-200 font-medium ${
+              tab === "login" 
+                ? "text-[#473C66] border-b-2 border-[#473C66]" 
+                : "text-gray-500 hover:text-gray-700"
+            }`}
             onClick={() => { setTab("login"); setError(null); }}
             type="button"
           >
-            Login
+            Sign In
           </button>
           <button
-            className={`flex-1 py-2 transition-all duration-150 ${tab === "signup" ? "font-bold border-b-2 border-[#473C66] text-[#473C66]" : "text-gray-500"}`}
+            className={`flex-1 py-3 transition-all duration-200 font-medium ${
+              tab === "signup" 
+                ? "text-[#473C66] border-b-2 border-[#473C66]" 
+                : "text-gray-500 hover:text-gray-700"
+            }`}
             onClick={() => { setTab("signup"); setError(null); }}
             type="button"
           >
             Sign Up
           </button>
         </div>
-        {/* Only Google login/signup allowed */}
-        <div className="flex flex-col items-center justify-center py-8">
-          <GoogleLoginButton onSuccess={() => { onSuccess(); onClose(); }} />
+
+        {/* Error Display */}
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-red-700 text-sm">{error}</p>
+          </div>
+        )}
+
+        {/* Google Login Button */}
+        <div className="mb-6">
+          <GoogleLoginButton onSuccess={() => { onSuccess(); onClose(); }} mode={tab} />
+        </div>
+
+        {/* Divider */}
+        <div className="relative mb-6">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-300"></div>
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="px-2 bg-white text-gray-500">or continue with email</span>
+          </div>
+        </div>
+
+        {/* Email/Password Form */}
+        <form onSubmit={tab === "login" ? handleLogin : handleSignup} className="space-y-4">
+          {tab === "signup" && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#473C66] focus:border-transparent transition-all duration-200"
+                placeholder="Enter your full name"
+                required
+              />
+            </div>
+          )}
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#473C66] focus:border-transparent transition-all duration-200"
+              placeholder="Enter your email"
+              required
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#473C66] focus:border-transparent transition-all duration-200"
+              placeholder="Enter your password"
+              required
+            />
+          </div>
+          
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-[#473C66] text-white py-3 px-4 rounded-lg font-semibold hover:bg-[#36234d] focus:ring-4 focus:ring-[#473C66]/20 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02] active:scale-[0.98]"
+          >
+            {loading ? (
+              <div className="flex items-center justify-center gap-2">
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <span>{tab === "login" ? "Signing in..." : "Creating account..."}</span>
+              </div>
+            ) : (
+              tab === "login" ? "Sign In" : "Create Account"
+            )}
+          </button>
+        </form>
+
+        {/* Footer */}
+        <div className="mt-6 text-center">
+          <p className="text-xs text-gray-500">
+            By continuing, you agree to our{" "}
+            <a href="/terms" className="text-[#473C66] hover:underline">Terms of Service</a>
+            {" "}and{" "}
+            <a href="/privacy" className="text-[#473C66] hover:underline">Privacy Policy</a>
+          </p>
         </div>
       </div>
     </div>

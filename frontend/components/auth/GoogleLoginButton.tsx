@@ -11,7 +11,7 @@ export default function GoogleLoginButton({ onSuccess, mode = "login" }: { onSuc
     setLoading(true);
     try {
       console.log("Attempting Google login...");
-      await signInWithPopup(auth, new GoogleAuthProvider());
+      const result = await signInWithPopup(auth, new GoogleAuthProvider());
       console.log("Google login successful, getting ID token...");
       
       const idToken = await getIdToken(auth.currentUser);
@@ -30,7 +30,18 @@ export default function GoogleLoginButton({ onSuccess, mode = "login" }: { onSuc
       if (data.success && data.data.token) {
         localStorage.setItem("token", data.data.token);
         console.log("Token stored in localStorage");
-        toast.success(mode === "signup" ? "Successfully signed up! Welcome to Shitha Maternity." : "Successfully logged in. Welcome back!");
+        
+        // Enhanced welcome message with user's name
+        const userName = result.user.displayName?.split(' ')[0] || 'there';
+        const welcomeMessage = mode === "signup" 
+          ? `🎉 Welcome to Shithaa, ${userName}! You've successfully signed in.`
+          : `👋 Welcome back, ${userName}! You've successfully signed in.`;
+        
+        toast.success(welcomeMessage, {
+          description: "Explore our elegant maternity wear collections now.",
+          duration: 5000,
+        });
+        
         onSuccess();
       } else {
         console.error("Backend Google login failed:", data.message);
@@ -47,13 +58,13 @@ export default function GoogleLoginButton({ onSuccess, mode = "login" }: { onSuc
   return (
     <button
       type="button"
-      className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl border-2 border-[#473C66] bg-white shadow-sm hover:bg-[#ede9f7] transition-all duration-150 font-semibold text-[#473C66] hover:text-[#36234d] focus:ring-2 focus:ring-[#473C66]/30 active:scale-95 group"
+      className="w-full flex items-center justify-center gap-3 py-4 px-6 rounded-xl border-2 border-[#473C66] bg-white shadow-lg hover:bg-[#ede9f7] hover:shadow-xl transition-all duration-300 font-semibold text-[#473C66] hover:text-[#36234d] focus:ring-4 focus:ring-[#473C66]/20 active:scale-95 group transform"
       onClick={handleGoogleLogin}
       disabled={loading}
-      style={{ minHeight: 48 }}
+      style={{ minHeight: 56 }}
     >
-      <span className="flex items-center justify-center w-8 h-8 rounded-full bg-white shadow group-hover:scale-110 transition-transform duration-150">
-        <svg width="24" height="24" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <span className="flex items-center justify-center w-10 h-10 rounded-full bg-white shadow-md group-hover:scale-110 transition-transform duration-300">
+        <svg width="28" height="28" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
           <g clipPath="url(#clip0_17_40)">
             <path d="M47.5 24.5C47.5 22.6 47.3 20.8 46.9 19H24V29.1H37.6C36.9 32.2 34.8 34.7 31.8 36.3V42.1H39.3C44 38 47.5 31.9 47.5 24.5Z" fill="#4285F4"/>
             <path d="M24 48C30.6 48 36.2 45.9 39.3 42.1L31.8 36.3C30.1 37.4 27.9 38.1 24 38.1C17.7 38.1 12.2 33.9 10.3 28.3H2.5V34.3C5.7 41.1 14.1 48 24 48Z" fill="#34A853"/>
@@ -67,8 +78,15 @@ export default function GoogleLoginButton({ onSuccess, mode = "login" }: { onSuc
           </defs>
         </svg>
       </span>
-      <span className="flex-1 text-center text-base font-medium tracking-wide">
-        {loading ? <span className="loading loading-spinner"></span> : "Continue with Google"}
+      <span className="flex-1 text-center text-lg font-semibold tracking-wide">
+        {loading ? (
+          <div className="flex items-center justify-center gap-2">
+            <div className="w-5 h-5 border-2 border-[#473C66] border-t-transparent rounded-full animate-spin"></div>
+            <span>Signing in...</span>
+          </div>
+        ) : (
+          "Continue with Google"
+        )}
       </span>
     </button>
   );

@@ -3,6 +3,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { onAuthStateChanged, signOut, User } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { useRouter } from 'next/navigation';
+import { toast } from "sonner";
 
 const AuthContext = createContext<any>(null);
 
@@ -49,9 +50,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => unsubscribe();
   }, []);
 
-  function logout() {
-    localStorage.removeItem("token");
-    return signOut(auth);
+  async function logout() {
+    try {
+      const userName = user?.displayName?.split(' ')[0] || 'there';
+      
+      // Show logout confirmation toast
+      toast.success(`👋 Goodbye, ${userName}!`, {
+        description: "You've been logged out successfully. Please sign in again to continue.",
+        duration: 4000,
+      });
+
+      // Clear local storage
+      localStorage.removeItem("token");
+      
+      // Sign out from Firebase
+      await signOut(auth);
+      
+      // Redirect to home page after a short delay
+      setTimeout(() => {
+        router.push('/');
+      }, 1500);
+      
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast.error("There was an issue logging out. Please try again.");
+    }
   }
 
   // Merge Firebase user and MongoDB user
