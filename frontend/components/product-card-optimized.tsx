@@ -54,9 +54,13 @@ export default function ProductCardOptimized({ product, onClick, index = 0 }: Pr
             />
           </div>
 
+          {/* Always visible wishlist button */}
+          <div className="absolute top-3 right-3 z-10">
+            <WishlistButton productId={product.id.toString()} size="sm" />
+          </div>
+
           {/* Overlay buttons - Responsive positioning */}
           <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-2 sm:gap-3">
-            <WishlistButton productId={product.id.toString()} size="sm" />
             <Button 
               size="sm" 
               className="rounded-full bg-pink-500 hover:bg-pink-600 shadow-lg" 

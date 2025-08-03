@@ -48,9 +48,13 @@ export default function ProductCard({ product, onClick }: ProductCardProps) {
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
           />
 
-          {/* Overlay buttons */}
-          <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-3">
+          {/* Always visible wishlist button */}
+          <div className="absolute top-3 right-3 z-10">
             <WishlistButton productId={product.id.toString()} size="sm" />
+          </div>
+
+          {/* Overlay buttons on hover */}
+          <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-3">
             <Button size="sm" className="rounded-full bg-pink-400 hover:bg-pink-500" onClick={handleQuickAdd}>
               <ShoppingBag className="h-4 w-4" />
             </Button>

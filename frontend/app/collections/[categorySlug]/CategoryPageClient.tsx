@@ -6,7 +6,7 @@ import CartSidebar from "@/components/cart-sidebar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ChevronRight, Home, Search, Filter, SlidersHorizontal, Baby, Heart, Shirt, X } from "lucide-react"
+import { ChevronRight, Home, Search, Filter, SlidersHorizontal, Baby, Heart, Shirt, X, ShoppingBag } from "lucide-react"
 import Image from "next/image"
 import PageLoading from "@/components/page-loading"
 import SizeSelectionSidebar from "@/components/size-selection-sidebar"
@@ -122,39 +122,10 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
 
   // Fetch available sleeve types for the current category
   useEffect(() => {
-    async function getSleeveTypes() {
-      if (!shouldShowSleeveFilter()) {
-        return;
-      }
-
-      try {
-        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-        const url = new URL(`${baseUrl}/api/products/sleeve-types`);
-        url.searchParams.append('categorySlug', categorySlug);
-
-        const response = await safeFetch(url.toString());
-
-        if (response && response.ok) {
-          const data = await response.json();
-          if (data.success && Array.isArray(data.sleeveTypes)) {
-            setAvailableSleeveTypes(data.sleeveTypes);
-          } else {
-            // Fallback to default sleeve types if none found
-            setAvailableSleeveTypes(['Puff Sleeve', 'Normal Sleeve']);
-          }
-        } else {
-          throw new Error(`HTTP error! status: ${response?.status || 'Network error'}`);
-        }
-      } catch (error) {
-        if (process.env.NODE_ENV === 'development') {
-          console.error('Error fetching sleeve types:', error);
-        }
-        // Fallback to default sleeve types on error
-        setAvailableSleeveTypes(['Puff Sleeve', 'Normal Sleeve']);
-      }
+    // Use default sleeve types since the API endpoint doesn't exist
+    if (shouldShowSleeveFilter()) {
+      setAvailableSleeveTypes(['Puff Sleeve', 'Normal Sleeve']);
     }
-
-    getSleeveTypes();
   }, [categorySlug]);
 
   useEffect(() => {
@@ -698,9 +669,13 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
                           className="object-cover group-hover:scale-105 transition-transform duration-300 rounded-lg"
                         />
                         
-                        {/* Overlay buttons */}
-                        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-3">
+                        {/* Always visible wishlist button */}
+                        <div className="absolute top-3 right-3 z-10">
                           <WishlistButton productId={product.id.toString()} size="sm" />
+                        </div>
+                        
+                        {/* Overlay buttons on hover */}
+                        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-3">
                           <Button 
                             size="sm" 
                             className="rounded-full bg-pink-500 hover:bg-pink-600 shadow-lg"

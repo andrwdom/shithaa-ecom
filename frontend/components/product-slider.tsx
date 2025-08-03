@@ -142,9 +142,13 @@ export default function ProductSlider({
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
                   />
 
-                  {/* Overlay buttons */}
-                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-3">
+                  {/* Always visible wishlist button */}
+                  <div className="absolute top-3 right-3 z-10">
                     <WishlistButton productId={product.id.toString()} size="sm" />
+                  </div>
+
+                  {/* Overlay buttons on hover */}
+                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-3">
                     <Button 
                       size="sm" 
                       className="rounded-full bg-pink-500 hover:bg-pink-600 shadow-lg"

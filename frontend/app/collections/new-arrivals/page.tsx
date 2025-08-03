@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, SlidersHorizontal, Sparkles } from "lucide-react";
+import { Search, SlidersHorizontal, Sparkles, ShoppingBag } from "lucide-react";
 import Image from "next/image";
 import PageLoading from "@/components/page-loading";
 import SizeSelectionSidebar from "@/components/size-selection-sidebar";
@@ -265,9 +265,13 @@ export default function NewArrivalsPage() {
                       </div>
                     )}
                     
-                    {/* Overlay buttons */}
-                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-3">
+                    {/* Always visible wishlist button */}
+                    <div className="absolute top-3 right-3 z-10">
                       <WishlistButton productId={product.id.toString()} size="sm" />
+                    </div>
+                    
+                    {/* Overlay buttons on hover */}
+                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-3">
                       <Button 
                         size="sm" 
                         className="rounded-full bg-pink-500 hover:bg-pink-600 shadow-lg"
