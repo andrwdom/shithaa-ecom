@@ -125,25 +125,14 @@ const allowedOrigins = [
     'https://shitha-frontend.vercel.app',
     'https://admin.shithaa.com',
     'https://shithaa.com',
+    // Add any additional domains that might be needed
+    'https://www.shithaa.in',
+    'https://www.admin.shithaa.in'
 ];
 
+// TEMPORARY EMERGENCY FIX - Allow all origins for debugging
 const corsOptions = {
-    origin: function (origin, callback) {
-        // Allow requests with no origin (like mobile apps or curl requests)
-        if (!origin) return callback(null, true);
-        
-        // Debug logging
-        console.log('CORS Request from origin:', origin);
-        console.log('Allowed origins:', allowedOrigins);
-        
-        if (allowedOrigins.includes(origin)) {
-            console.log('CORS: Origin allowed');
-            return callback(null, true);
-        }
-        
-        console.log('CORS: Origin blocked:', origin);
-        return callback(new Error('Not allowed by CORS'));
-    },
+    origin: true, // Allow all origins temporarily
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: [
@@ -153,11 +142,13 @@ const corsOptions = {
         'x-requested-with',
         'Accept',
         'Origin',
-        'X-Requested-With'
+        'X-Requested-With',
+        'Cache-Control'
     ],
     exposedHeaders: [
         'Content-Range',
-        'X-Content-Range'
+        'X-Content-Range',
+        'X-Total-Count'
     ],
     preflightContinue: false,
     optionsSuccessStatus: 204,
@@ -166,6 +157,26 @@ const corsOptions = {
 
 // Apply CORS middleware only once
 app.use(cors(corsOptions));
+
+// Add a fallback CORS handler for any missed requests
+app.use((req, res, next) => {
+    // Set CORS headers for all responses
+    const origin = req.headers.origin;
+    if (origin && allowedOrigins.includes(origin)) {
+        res.header('Access-Control-Allow-Origin', origin);
+    }
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, token, x-requested-with, Accept, Origin, X-Requested-With, Cache-Control');
+    
+    // Handle preflight requests
+    if (req.method === 'OPTIONS') {
+        res.status(200).end();
+        return;
+    }
+    
+    next();
+});
 
 // middlewares
 app.use(express.json())
@@ -200,28 +211,17 @@ app.get('/api/orders/public-list', async (req, res) => {
   }
 });
 
-app.get('/', (req, res) => {
-    res.send("API Working")
-})
-
-// Test static file serving
-app.get('/test-images', (req, res) => {
-    res.json({
-        message: 'Static file serving test',
-        uploadPath: '/var/www/shithaa-ecom/uploads',
-        imagePath: '/images',
-        testUrl: `${process.env.BASE_URL || 'https://shithaa.in'}/images/products/test.jpg`
-    });
-});
-
 // CORS test endpoint
 app.get('/api/cors-test', (req, res) => {
-    res.json({ 
-        success: true, 
-        message: 'CORS test successful',
-        origin: req.headers.origin,
-        timestamp: new Date().toISOString()
-    });
+  console.log('CORS test endpoint hit');
+  console.log('Origin:', req.headers.origin);
+  console.log('Referer:', req.headers.referer);
+  res.json({ 
+    success: true, 
+    message: 'CORS test successful',
+    origin: req.headers.origin,
+    timestamp: new Date().toISOString()
+  });
 });
 
 // CORS error handler - simplified

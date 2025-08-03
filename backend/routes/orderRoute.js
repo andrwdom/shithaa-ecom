@@ -39,6 +39,10 @@ orderRouter.post('/cancel', verifyToken, cancelOrder)
 
 orderRouter.get('/', async (req, res) => {
   try {
+    console.log('Orders GET request received');
+    console.log('Origin:', req.headers.origin);
+    console.log('User-Agent:', req.headers['user-agent']);
+    
     const { email } = req.query;
     let orders;
     if (email) {
@@ -52,8 +56,11 @@ orderRouter.get('/', async (req, res) => {
     } else {
       orders = await (await import('../models/orderModel.js')).default.find().sort({ createdAt: -1 });
     }
+    
+    console.log(`Found ${orders.length} orders`);
     res.json({ success: true, orders });
   } catch (err) {
+    console.error('Error in orders GET route:', err);
     res.status(500).json({ success: false, message: 'Failed to fetch orders', error: err.message });
   }
 });
