@@ -8,7 +8,20 @@ const nextConfig = {
   },
   images: {
     unoptimized: false, // Enable image optimization
-    domains: ['localhost', 'shithaa.in'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'shithaa.in',
+        port: '',
+        pathname: '/images/**',
+      },
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+        port: '',
+        pathname: '/images/**',
+      },
+    ],
     formats: ['image/webp', 'image/avif'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
