@@ -51,8 +51,12 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     try {
       setIsLoading(true)
       const token = localStorage.getItem('token')
-      if (!token) return
+      if (!token) {
+        console.log('No token found for wishlist fetch')
+        return
+      }
 
+      console.log('Fetching wishlist from:', `${apiUrl}/api/wishlist`)
       const response = await fetch(`${apiUrl}/api/wishlist`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -60,10 +64,17 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
         }
       })
 
+      console.log('Wishlist response status:', response.status)
+      
       if (response.ok) {
         const data = await response.json()
+        console.log('Wishlist data received:', data)
         setWishlistItems(data.data || [])
         setWishlistCount(data.data?.length || 0)
+      } else {
+        console.error('Wishlist fetch failed:', response.status, response.statusText)
+        const errorData = await response.json().catch(() => ({}))
+        console.error('Error details:', errorData)
       }
     } catch (error) {
       console.error('Error fetching wishlist:', error)
@@ -85,6 +96,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
         return
       }
 
+      console.log('Adding to wishlist:', productId)
       const response = await fetch(`${apiUrl}/api/wishlist/add`, {
         method: 'POST',
         headers: {
@@ -94,7 +106,9 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({ productId })
       })
 
+      console.log('Add to wishlist response status:', response.status)
       const data = await response.json()
+      console.log('Add to wishlist response data:', data)
 
       if (response.ok) {
         toast.success(data.message || "Added to wishlist 💖")
@@ -115,6 +129,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
       const token = localStorage.getItem('token')
       if (!token) return
 
+      console.log('Removing from wishlist:', productId)
       const response = await fetch(`${apiUrl}/api/wishlist/remove/${productId}`, {
         method: 'DELETE',
         headers: {
@@ -123,7 +138,9 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
         }
       })
 
+      console.log('Remove from wishlist response status:', response.status)
       const data = await response.json()
+      console.log('Remove from wishlist response data:', data)
 
       if (response.ok) {
         toast.success(data.message || "Removed from wishlist")

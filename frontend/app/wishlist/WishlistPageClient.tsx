@@ -31,6 +31,13 @@ export default function WishlistPageClient() {
   const { addToCart } = useCart()
   const [showLogin, setShowLogin] = useState(false)
 
+  // Debug logging
+  useEffect(() => {
+    console.log('WishlistPageClient - User:', user)
+    console.log('WishlistPageClient - Wishlist items:', wishlistItems)
+    console.log('WishlistPageClient - Loading:', isLoading)
+  }, [user, wishlistItems, isLoading])
+
   const handleRemoveFromWishlist = async (productId: string) => {
     try {
       await removeFromWishlist(productId)
