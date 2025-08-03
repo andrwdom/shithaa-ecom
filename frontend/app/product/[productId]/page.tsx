@@ -23,12 +23,12 @@ export const generateMetadata = async ({ params }: { params: Promise<{ productId
   }
 }
 
-export default async function ProductPage({ params }: { params: Promise<{ productId: string }> }) {
-  const { productId } = await params;
+export default function ProductPage({ params }: { params: { productId: string } }) {
+  const { productId } = params;
 
   return (
     <PageErrorBoundary pageName="Product Page">
       <ProductPageClient productId={productId} />
     </PageErrorBoundary>
-  )
+  );
 }
