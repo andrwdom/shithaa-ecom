@@ -2,6 +2,7 @@ import productModel from "../models/productModel.js"
 import { successResponse, errorResponse, paginatedResponse } from '../utils/response.js'
 import path from "path";
 import fs from "fs";
+import imageOptimizer from '../utils/imageOptimizer.js';
 
 // GET /api/products/:id or /api/products/custom/:customId - RESTful single product fetch
 export const getProductById = async (req, res) => {
@@ -31,7 +32,7 @@ export const getAllProducts = async (req, res) => {
         console.log('GET /api/products category query:', category);
         const {
             page = 1,
-            limit,
+            limit = 20,
             search,
             isNewArrival,
             isBestSeller,
@@ -93,16 +94,33 @@ export const getAllProducts = async (req, res) => {
         const sortField = req.query.sortBy || 'createdAt';
         const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
         const sort = { [sortField]: sortOrder };
-        const skip = (page - 1) * (limit ? Number(limit) : 0);
+        
+        // Pagination
+        const pageNum = parseInt(page);
+        const limitNum = parseInt(limit);
+        const skip = (pageNum - 1) * limitNum;
+        
+        // Get total count for pagination
+        const total = await productModel.countDocuments(filter);
+        
         const products = await productModel.find(filter)
             .sort(sort)
             .skip(skip)
-            .limit(limit ? Number(limit) : 0)
+            .limit(limitNum)
             .lean();
+            
         // Always include customId in the response
         const productsWithCustomId = products.map(p => ({ ...p, customId: p.customId }));
+        
         console.log('Products returned:', productsWithCustomId.map(p => ({ name: p.name, category: p.category, categorySlug: p.categorySlug, _id: p._id })));
-        res.status(200).json({ products: productsWithCustomId });
+        
+        res.status(200).json({ 
+            products: productsWithCustomId,
+            total,
+            page: pageNum,
+            pages: Math.ceil(total / limitNum),
+            limit: limitNum
+        });
     } catch (error) {
         console.error('Get All Products Error:', error);
         res.status(500).json({ error: error.message });
@@ -205,9 +223,25 @@ export const addProduct = async (req, res) => {
             });
         }
 
-        // Build image URLs for VPS
+        // Optimize images
+        console.log('🔄 Starting image optimization...');
+        const uploadDir = "/var/www/shithaa-ecom/uploads/products/";
+        const optimizationResult = await imageOptimizer.optimizeMultipleImages(images, uploadDir);
+        
+        const { optimizedFiles, results } = optimizationResult;
+        const stats = imageOptimizer.getOptimizationStats(results);
+
+        console.log('📊 Image Optimization Summary:');
+        console.log(`   Total files: ${stats.totalFiles}`);
+        console.log(`   Successful: ${stats.successful}`);
+        console.log(`   Failed: ${stats.failed}`);
+        console.log(`   Total size reduction: ${imageOptimizer.formatFileSize(stats.totalSizeReduction)}`);
+        console.log(`   Average compression: ${stats.avgCompressionRatio}%`);
+        console.log(`   Total processing time: ${stats.totalProcessingTime}ms`);
+
+        // Build image URLs for VPS using optimized filenames
         const baseUrl = process.env.BASE_URL || 'https://shithaa.in';
-        const imagesUrl = images.map(img => `${baseUrl}/images/products/${img.filename}`);
+        const imagesUrl = optimizedFiles.map(img => `${baseUrl}/images/products/${img.filename}`);
 
         // Parse features if provided
         let parsedFeatures = [];
@@ -272,7 +306,21 @@ export const addProduct = async (req, res) => {
 
         console.log('Product saved successfully:', product._id);
 
-        res.status(201).json({ product });
+        // Return response with optimization stats
+        res.status(201).json({ 
+            product,
+            imageOptimization: {
+                stats,
+                details: results.map(result => ({
+                    originalName: result.originalName,
+                    optimizedName: result.optimizedName,
+                    originalSize: imageOptimizer.formatFileSize(result.originalSize),
+                    optimizedSize: imageOptimizer.formatFileSize(result.optimizedSize),
+                    compressionRatio: result.compressionRatio,
+                    processingTime: result.processingTime
+                }))
+            }
+        });
     } catch (error) {
         console.error('Add Product Error:', error);
         res.status(500).json({ error: error.message });
@@ -402,6 +450,8 @@ export const updateProduct = async (req, res) => {
 
         // Handle image uploads if provided
         let imagesUrl = product.images;
+        let imageOptimizationStats = null;
+        
         if (req.files && Object.keys(req.files).length > 0) {
             const image1 = req.files?.image1?.[0]
             const image2 = req.files?.image2?.[0]
@@ -412,13 +462,45 @@ export const updateProduct = async (req, res) => {
 
             if (newImages.length > 0) {
                 try {
+                    // Optimize new images
+                    console.log('🔄 Starting image optimization for update...');
+                    const uploadDir = "/var/www/shithaa-ecom/uploads/products/";
+                    const optimizationResult = await imageOptimizer.optimizeMultipleImages(newImages, uploadDir);
+                    
+                    const { optimizedFiles, results } = optimizationResult;
+                    const stats = imageOptimizer.getOptimizationStats(results);
+
+                    console.log('📊 Image Optimization Summary (Update):');
+                    console.log(`   Total files: ${stats.totalFiles}`);
+                    console.log(`   Successful: ${stats.successful}`);
+                    console.log(`   Failed: ${stats.failed}`);
+                    console.log(`   Total size reduction: ${imageOptimizer.formatFileSize(stats.totalSizeReduction)}`);
+                    console.log(`   Average compression: ${stats.avgCompressionRatio}%`);
+                    console.log(`   Total processing time: ${stats.totalProcessingTime}ms`);
+
+                    // Build image URLs using optimized filenames
                     const baseUrl = process.env.BASE_URL || 'https://shithaa.in';
-                    const uploadedImages = newImages.map(img => `${baseUrl}/images/products/${img.filename}`);
+                    const uploadedImages = optimizedFiles.map(img => `${baseUrl}/images/products/${img.filename}`);
                     imagesUrl = uploadedImages;
+                    
+                    // Store optimization stats for response
+                    imageOptimizationStats = {
+                        stats,
+                        details: results.map(result => ({
+                            originalName: result.originalName,
+                            optimizedName: result.optimizedName,
+                            originalSize: imageOptimizer.formatFileSize(result.originalSize),
+                            optimizedSize: imageOptimizer.formatFileSize(result.optimizedSize),
+                            compressionRatio: result.compressionRatio,
+                            processingTime: result.processingTime
+                        }))
+                    };
+                    
                 } catch (error) {
+                    console.error('Image optimization error in update:', error);
                     return res.status(500).json({
                         success: false,
-                        message: "Failed to upload images",
+                        message: "Failed to optimize images",
                         error: error.message
                     });
                 }
@@ -467,7 +549,14 @@ export const updateProduct = async (req, res) => {
         }
 
         const updatedProduct = await productModel.findByIdAndUpdate(id, updateData, { new: true });
-        res.status(200).json({ success: true, product: updatedProduct });
+        
+        // Return response with optimization stats if images were processed
+        const response = { success: true, product: updatedProduct };
+        if (imageOptimizationStats) {
+            response.imageOptimization = imageOptimizationStats;
+        }
+        
+        res.status(200).json(response);
 
     } catch (error) {
         console.error('Update Product Error:', error);
