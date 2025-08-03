@@ -12,7 +12,7 @@ export const generateMetadata = async ({ params }: { params: Promise<{ productId
       title: "Premium Maternity Wear - Shithaa",
       description: "Discover elegant maternity wear and feeding essentials at Shithaa.",
       images: ['/shithaa-logo.jpg'],
-      type: 'product',
+      type: 'website',
     },
     twitter: {
       title: "Premium Maternity Wear - Shithaa",

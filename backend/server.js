@@ -16,6 +16,7 @@ import wishlistRouter from './routes/wishlistRoutes.js'
 import admin from 'firebase-admin'
 import orderModel from './models/orderModel.js'
 import Category from './models/Category.js'
+import productModel from './models/productModel.js'
 
 // App Config
 const app = express()
