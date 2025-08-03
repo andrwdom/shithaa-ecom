@@ -59,9 +59,29 @@ export const getAllProducts = async (req, res) => {
             ];
         }
         
-        // Size filtering - check if the size exists in availableSizes array
+        // Size filtering - check if the size exists in availableSizes array AND has stock
         if (size) {
-            filter.availableSizes = { $in: [size] };
+            // Filter products that have the selected size AND have stock for that size
+            filter.$and = [
+                { availableSizes: { $in: [size] } },
+                {
+                    $or: [
+                        // Products with size objects that have stock > 0
+                        {
+                            'sizes': {
+                                $elemMatch: {
+                                    'size': size,
+                                    'stock': { $gt: 0 }
+                                }
+                            }
+                        },
+                        // Products with simple size arrays (legacy support)
+                        {
+                            'sizes': size
+                        }
+                    ]
+                }
+            ];
         }
         
         // Sleeve type filtering

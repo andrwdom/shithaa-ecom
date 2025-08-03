@@ -56,7 +56,7 @@ export default function ProductSlider({
     // Add sizes to product if not present
     const productWithSizes = {
       ...product,
-      sizes: ["XS", "S", "M", "L", "XL", "XXL", "3XL"],
+      sizes: ["S", "M", "L", "XL", "XXL", "3XL"],
       images: [product.image, product.image], // Add multiple images for the sidebar
     }
 

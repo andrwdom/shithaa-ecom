@@ -28,7 +28,7 @@ interface Product {
   images?: string[]
   category: string
   description: string
-  sizes: string[]
+  sizes: any[] // Can be string[] or { size: string, stock: number }[]
   bestseller: boolean
   isBestSeller: boolean
   sleeveType?: string
@@ -59,8 +59,45 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
   const { setBuyNowItem } = useBuyNow()
   const { addToCart } = useCart()
 
-  // Available sizes for filtering
-  const AVAILABLE_SIZES = ["XS", "S", "M", "L", "XL", "XXL", "3XL"]
+  // Available sizes for filtering (removed XS)
+  const AVAILABLE_SIZES = ["S", "M", "L", "XL", "XXL", "3XL"]
+
+  // Calculate available sizes with stock
+  const getAvailableSizesWithStock = () => {
+    const sizeCounts: { [key: string]: number } = {};
+    
+    // Initialize all sizes with 0 count
+    AVAILABLE_SIZES.forEach(size => {
+      sizeCounts[size] = 0;
+    });
+    
+    // Count products available for each size
+    products.forEach(product => {
+      if (product.sizes && Array.isArray(product.sizes)) {
+        product.sizes.forEach((sizeObj: any) => {
+          if (typeof sizeObj === 'object' && sizeObj.size && sizeObj.stock > 0) {
+            // New format: { size: "S", stock: 5 }
+            if (sizeCounts.hasOwnProperty(sizeObj.size)) {
+              sizeCounts[sizeObj.size]++;
+            }
+          } else if (typeof sizeObj === 'string') {
+            // Legacy format: "S"
+            if (sizeCounts.hasOwnProperty(sizeObj)) {
+              sizeCounts[sizeObj]++;
+            }
+          }
+        });
+      }
+    });
+    
+    // Return sizes with their counts
+    return AVAILABLE_SIZES.filter(size => sizeCounts[size] > 0).map(size => ({
+      size,
+      count: sizeCounts[size]
+    }));
+  };
+
+  const availableSizesWithStock = getAvailableSizesWithStock();
 
   // Initialize filters from URL params
   useEffect(() => {
@@ -163,11 +200,13 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
           price: p.price,
           originalPrice: p.originalPrice,
           image: (Array.isArray(p.images) && p.images.length > 0) ? p.images[0] : '/placeholder.svg',
+          images: Array.isArray(p.images) ? p.images : [p.image || '/placeholder.svg'],
           category: p.category,
           description: p.description,
-          sizes: p.sizes,
+          sizes: p.sizes || [],
           bestseller: p.bestseller,
           isBestSeller: p.isBestSeller,
+          sleeveType: p.sleeveType,
           dateAdded: p.createdAt,
         }));
         setProducts(mappedProducts);
@@ -616,17 +655,17 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
                 <div className="mb-4">
                   <h3 className="text-sm font-medium text-gray-700 mb-3">Filter by Size</h3>
                   <div className="flex flex-wrap gap-2">
-                    {AVAILABLE_SIZES.map((size) => (
+                    {availableSizesWithStock.map((sizeWithCount) => (
                       <button
-                        key={size}
-                        onClick={() => handleSizeFilter(size)}
+                        key={sizeWithCount.size}
+                        onClick={() => handleSizeFilter(sizeWithCount.size)}
                         className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                          selectedSize === size
+                          selectedSize === sizeWithCount.size
                             ? 'bg-black text-white shadow-md'
                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                         }`}
                       >
-                        {size}
+                        {sizeWithCount.size} ({sizeWithCount.count})
                       </button>
                     ))}
                   </div>
