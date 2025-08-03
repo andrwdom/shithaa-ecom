@@ -3,7 +3,16 @@ import userModel from '../models/userModel.js'
 
 const verifyToken = async (req, res, next) => {
     try {
-        const token = req.headers.token;
+        // Check for token in both formats
+        let token = req.headers.token;
+        
+        // If not found in token header, check Authorization header
+        if (!token && req.headers.authorization) {
+            const authHeader = req.headers.authorization;
+            if (authHeader.startsWith('Bearer ')) {
+                token = authHeader.substring(7); // Remove 'Bearer ' prefix
+            }
+        }
         
         if (!token) {
             return res.status(401).json({
@@ -34,7 +43,16 @@ const verifyToken = async (req, res, next) => {
 };
 
 const isAdmin = async (req, res, next) => {
-    const { token } = req.headers;
+    // Check for token in both formats
+    let token = req.headers.token;
+    
+    // If not found in token header, check Authorization header
+    if (!token && req.headers.authorization) {
+        const authHeader = req.headers.authorization;
+        if (authHeader.startsWith('Bearer ')) {
+            token = authHeader.substring(7); // Remove 'Bearer ' prefix
+        }
+    }
 
     if (!token) {
         return res.status(401).json({ 
@@ -66,7 +84,17 @@ const isAdmin = async (req, res, next) => {
 
 const optionalVerifyToken = async (req, res, next) => {
     try {
-        const token = req.headers.token;
+        // Check for token in both formats
+        let token = req.headers.token;
+        
+        // If not found in token header, check Authorization header
+        if (!token && req.headers.authorization) {
+            const authHeader = req.headers.authorization;
+            if (authHeader.startsWith('Bearer ')) {
+                token = authHeader.substring(7); // Remove 'Bearer ' prefix
+            }
+        }
+        
         if (!token) {
             req.user = null;
             return next();
