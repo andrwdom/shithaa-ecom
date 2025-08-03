@@ -12,6 +12,7 @@ import SizeSelectionSidebar from "@/components/size-selection-sidebar";
 import CheckoutPromptModal from "@/components/checkout-prompt-modal";
 import { useCart } from "@/components/cart-context";
 import { useBuyNow } from "@/components/buy-now-context";
+import WishlistButton from "@/components/WishlistButton";
 
 export default function NewArrivalsPage() {
   const { addToCart } = useCart();
@@ -263,6 +264,21 @@ export default function NewArrivalsPage() {
                         New Arrival
                       </div>
                     )}
+                    
+                    {/* Overlay buttons */}
+                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-3">
+                      <WishlistButton productId={product.id.toString()} size="sm" />
+                      <Button 
+                        size="sm" 
+                        className="rounded-full bg-pink-500 hover:bg-pink-600 shadow-lg"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleAddToCart(product)
+                        }}
+                      >
+                        <ShoppingBag className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                   {/* Product Info */}
                   <div className="space-y-3">

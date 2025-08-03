@@ -5,11 +5,12 @@ import { useState } from "react"
 
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Flame } from "lucide-react"
+import { Flame, ShoppingBag } from "lucide-react"
 import Image from "next/image"
 import SizeSelectionSidebar from "./size-selection-sidebar"
 import CheckoutPromptModal from "./checkout-prompt-modal"
 import OptimizedImage from "./optimized-image"
+import WishlistButton from "./WishlistButton"
 
 interface Product {
   id: string
@@ -21,6 +22,8 @@ interface Product {
   category: string
   sizes?: string[]
   images?: string[]
+  bestseller?: boolean
+  isBestSeller?: boolean
 }
 
 interface ProductSliderProps {
@@ -129,19 +132,34 @@ export default function ProductSlider({
             >
               <CardContent className="p-0">
                 {/* Consistent aspect ratio for all screen sizes */}
-                <div className="relative aspect-[2/3] bg-gray-100">
+                <div className="relative aspect-[2/3] bg-gray-100 rounded-lg overflow-hidden">
                   <OptimizedImage
                     src={product.image || "/placeholder.svg"}
                     alt={`${product.name} - ${product.category}`}
                     fill
                     loading="lazy"
-                    className="object-cover group-hover:scale-105 transition-transform duration-300"
-                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                    className="object-cover group-hover:scale-105 transition-transform duration-300 rounded-lg"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
                   />
 
+                  {/* Overlay buttons */}
+                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-3">
+                    <WishlistButton productId={product.id.toString()} size="sm" />
+                    <Button 
+                      size="sm" 
+                      className="rounded-full bg-pink-500 hover:bg-pink-600 shadow-lg"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleAddToCart(e, product)
+                      }}
+                    >
+                      <ShoppingBag className="h-4 w-4" />
+                    </Button>
+                  </div>
+
                   {/* Bestseller Badge */}
-                  {showBestsellerBadge && (
-                    <div className="absolute top-2 left-2 lg:top-4 lg:left-4 bg-[rgb(71,60,102)] text-white px-2 py-1 lg:px-3 lg:py-1 rounded-full text-xs font-medium flex items-center gap-1 shadow-lg">
+                  {showBestsellerBadge && (product.bestseller || product.isBestSeller) && (
+                    <div className="absolute top-2 left-2 lg:top-4 lg:left-4 bg-purple-600 text-white px-2 py-1 lg:px-3 lg:py-1 rounded-full text-xs font-semibold flex items-center gap-1 shadow-lg">
                       <Flame className="h-3 w-3" />
                       <span className="hidden sm:inline">Bestseller</span>
                     </div>
