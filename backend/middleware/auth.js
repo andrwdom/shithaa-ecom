@@ -14,6 +14,12 @@ const verifyToken = async (req, res, next) => {
             }
         }
         
+        console.log('Auth middleware - Token found:', !!token);
+        console.log('Auth middleware - Headers:', {
+            token: req.headers.token ? 'present' : 'missing',
+            authorization: req.headers.authorization ? 'present' : 'missing'
+        });
+        
         if (!token) {
             return res.status(401).json({
                 success: false,
@@ -22,7 +28,10 @@ const verifyToken = async (req, res, next) => {
         }
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        console.log('Auth middleware - Decoded token:', decoded);
+        
         const user = await userModel.findById(decoded.id);
+        console.log('Auth middleware - User found:', !!user);
 
         if (!user) {
             return res.status(401).json({
@@ -33,8 +42,10 @@ const verifyToken = async (req, res, next) => {
 
         req.user = user;
         req.user.id = user._id.toString();
+        console.log('Auth middleware - Set user ID:', req.user.id);
         next();
     } catch (error) {
+        console.error('Auth middleware - Error:', error);
         return res.status(401).json({
             success: false,
             message: 'Invalid token'

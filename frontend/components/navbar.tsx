@@ -1,9 +1,10 @@
 "use client"
 
 import { useState } from "react"
-import { Menu, ShoppingBag, X, User, Mail, Info, Home, LogOut } from "lucide-react"
+import { Menu, ShoppingBag, X, User, Mail, Info, Home, LogOut, Heart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useCart } from "@/components/cart-context"
+import { useWishlist } from "@/components/wishlist-context"
 import { useAuth } from "@/components/auth/useAuth"
 import LoginModal from "@/components/auth/LoginModal"
 
@@ -13,6 +14,7 @@ interface NavbarProps {
 
 export default function Navbar({ onCategoriesClick }: NavbarProps) {
   const { cartItems, openCartSidebar } = useCart();
+  const { wishlistCount } = useWishlist();
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const { user, logout } = useAuth();
@@ -39,6 +41,14 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
   const handleSignInClick = () => {
     console.log('Sign in button clicked!');
     setShowLogin(true);
+  };
+
+  const handleWishlistClick = () => {
+    if (user) {
+      window.location.href = "/wishlist";
+    } else {
+      setShowLogin(true);
+    }
   };
 
   return (
@@ -98,133 +108,118 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
                 <a href="/contact" className="navbar-link-effect text-gray-600 font-medium transition-all duration-200">
                   contact us
                 </a>
-                <a href="/about" className="navbar-link-effect text-gray-600 font-medium transition-all duration-200">
-                  about us
-                </a>
-                
-                {/* User Account Section (Desktop) */}
-                {user ? (
-                  <div className="relative">
-                    <button
-                      onClick={() => window.location.href = "/account"}
-                      className="flex items-center gap-2 text-gray-600 font-medium transition-all duration-200 focus:outline-none hover:text-[rgb(71,60,102)] cursor-pointer px-3 py-2 rounded-lg hover:bg-gray-50"
-                    >
-                      {user.photoURL ? (
-                        <img 
-                          src={user.photoURL} 
-                          alt={user.displayName || 'User'} 
-                          className="w-8 h-8 rounded-full object-cover border-2 border-gray-200"
-                        />
-                      ) : (
-                        <div className="w-8 h-8 rounded-full bg-[rgb(71,60,102)] flex items-center justify-center text-white text-sm font-semibold">
-                          {user.displayName?.charAt(0)?.toUpperCase() || 'U'}
-                        </div>
-                      )}
-                      <span className="hidden lg:block text-sm">
-                        {user.displayName?.split(' ')[0] || 'Account'}
-                      </span>
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={handleSignInClick}
-                    className="flex items-center gap-1 text-gray-600 font-medium transition-all duration-200 focus:outline-none hover:text-[rgb(71,60,102)] cursor-pointer px-3 py-2 rounded-lg hover:bg-gray-50"
-                  >
-                    <User className="h-5 w-5" />
-                    <span className="hidden lg:block">Sign In</span>
-                  </button>
-                )}
               </div>
 
-              {/* Icons */}
-              <div className="flex items-center space-x-3">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="relative text-gray-600 hover:text-[rgb(71,60,102)]"
-                  onClick={openCartSidebar}
+              {/* Icons Section */}
+              <div className="flex items-center space-x-4">
+                {/* Wishlist Icon */}
+                <button
+                  onClick={handleWishlistClick}
+                  className="relative p-2 text-gray-600 hover:text-pink-500 transition-colors duration-200"
+                  aria-label="Wishlist"
                 >
-                  <ShoppingBag className="h-5 w-5" />
-                  {cartCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-[rgb(71,60,102)] text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                      {cartCount}
+                  <Heart className="h-6 w-6" />
+                  {wishlistCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-pink-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
+                      {wishlistCount > 9 ? '9+' : wishlistCount}
                     </span>
                   )}
-                </Button>
-                
-                {/* Mobile Account Button */}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="md:hidden text-gray-600 hover:text-[rgb(71,60,102)]"
-                  onClick={handleAccountClick}
+                </button>
+
+                {/* Cart Icon */}
+                <button
+                  onClick={openCartSidebar}
+                  className="relative p-2 text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200"
+                  aria-label="Shopping cart"
                 >
-                  {user && user.photoURL ? (
-                    <img 
-                      src={user.photoURL} 
-                      alt={user.displayName || 'User'} 
-                      className="w-6 h-6 rounded-full object-cover"
-                    />
-                  ) : (
-                    <User className="h-5 w-5" />
+                  <ShoppingBag className="h-6 w-6" />
+                  {cartCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-[rgb(71,60,102)] text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
+                      {cartCount > 9 ? '9+' : cartCount}
+                    </span>
                   )}
-                </Button>
+                </button>
+
+                {/* User Icon */}
+                <button
+                  onClick={handleAccountClick}
+                  className="p-2 text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200"
+                  aria-label="Account"
+                >
+                  <User className="h-6 w-6" />
+                </button>
               </div>
             </div>
           </div>
 
-          {/* Mobile Navigation */}
+          {/* Mobile Menu */}
           {isMenuOpen && (
-            <div className="md:hidden border-t border-gray-200 py-4 bg-gray-50">
-              <div className="flex flex-col space-y-3">
-                {/* Home button with icon and text */}
-                <a
-                  href="/"
-                  className="flex items-center gap-3 text-gray-600 hover:text-[rgb(71,60,102)] font-medium px-2 py-2 rounded-lg hover:bg-white transition-all"
-                >
-                  <Home className="h-5 w-5" />
-                  <span>home</span>
-                </a>
-                {/* Categories button */}
+            <div className="md:hidden bg-white border-t border-gray-200 py-4">
+              <div className="space-y-4 px-4">
                 <button
                   onClick={() => {
-                    onCategoriesClick?.()
+                    onCategoriesClick?.();
+                    closeMenus();
                   }}
-                  className="flex items-center gap-3 text-gray-600 hover:text-[rgb(71,60,102)] font-medium px-2 py-2 rounded-lg hover:bg-white transition-all text-left"
+                  className="block w-full text-left text-gray-600 font-medium py-2 hover:text-[rgb(71,60,102)] transition-colors duration-200"
                 >
-                  <Menu className="h-5 w-5" />
-                  <span>categories</span>
+                  Categories
                 </button>
                 <a
                   href="/collections/new-arrivals"
-                  className="flex items-center gap-3 text-gray-600 hover:text-[rgb(71,60,102)] font-medium px-2 py-2 rounded-lg hover:bg-white transition-all"
+                  onClick={closeMenus}
+                  className="block text-gray-600 font-medium py-2 hover:text-[rgb(71,60,102)] transition-colors duration-200"
                 >
-                  <ShoppingBag className="h-5 w-5" />
-                  <span>new arrivals</span>
+                  New Arrivals
                 </a>
                 <a
                   href="/contact"
-                  className="flex items-center gap-3 text-gray-600 hover:text-[rgb(71,60,102)] font-medium px-2 py-2 rounded-lg hover:bg-white transition-all"
+                  onClick={closeMenus}
+                  className="block text-gray-600 font-medium py-2 hover:text-[rgb(71,60,102)] transition-colors duration-200"
                 >
-                  <Mail className="h-5 w-5" />
-                  <span>contact us</span>
+                  Contact Us
                 </a>
-                <a
-                  href="/about"
-                  className="flex items-center gap-3 text-gray-600 hover:text-[rgb(71,60,102)] font-medium px-2 py-2 rounded-lg hover:bg-white transition-all"
-                >
-                  <Info className="h-5 w-5" />
-                  <span>about us</span>
-                </a>
+                <div className="border-t border-gray-200 pt-4">
+                  {user ? (
+                    <div className="space-y-2">
+                      <a
+                        href="/account"
+                        onClick={closeMenus}
+                        className="block text-gray-600 font-medium py-2 hover:text-[rgb(71,60,102)] transition-colors duration-200"
+                      >
+                        My Account
+                      </a>
+                      <a
+                        href="/wishlist"
+                        onClick={closeMenus}
+                        className="block text-gray-600 font-medium py-2 hover:text-[rgb(71,60,102)] transition-colors duration-200"
+                      >
+                        Wishlist ({wishlistCount})
+                      </a>
+                      <button
+                        onClick={handleLogout}
+                        className="block w-full text-left text-red-600 font-medium py-2 hover:text-red-700 transition-colors duration-200"
+                      >
+                        Logout
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={handleSignInClick}
+                      className="block w-full text-left text-gray-600 font-medium py-2 hover:text-[rgb(71,60,102)] transition-colors duration-200"
+                    >
+                      Sign In
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           )}
         </div>
       </nav>
-      
-      <LoginModal open={showLogin} onClose={() => setShowLogin(false)} onSuccess={() => {
-        setShowLogin(false);
-      }} />
+
+      {/* Login Modal */}
+      <LoginModal open={showLogin} onClose={() => setShowLogin(false)} onSuccess={() => setShowLogin(false)} />
     </>
   )
 }
