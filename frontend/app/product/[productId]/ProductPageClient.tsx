@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowLeft, Heart, Share2, Truck, Shield, RotateCcw, Plus, Minus, Star, ChevronRight } from "lucide-react"
+import { ArrowLeft, Share2, Truck, Shield, RotateCcw, Plus, Minus, Star, ChevronRight } from "lucide-react"
 import Image from "next/image"
 import Script from "next/script"
 import PageLoading from "@/components/page-loading"
@@ -12,6 +12,7 @@ import { useCart } from "@/components/cart-context"
 import CheckoutPromptModal from "@/components/checkout-prompt-modal"
 import { useBuyNow } from "@/components/buy-now-context"
 import { safeFetch } from "@/lib/api-health"
+import WishlistButton from "@/components/WishlistButton"
 
 interface Product {
   id: number
@@ -186,6 +187,7 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
               </Button>
               <h1 className="text-lg font-semibold text-gray-900 truncate flex-1">{product.name}</h1>
               <div className="flex items-center space-x-2">
+                <WishlistButton productId={product.id.toString()} size="sm" />
                 <Button
                   variant="ghost"
                   size="sm"
