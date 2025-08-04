@@ -59,23 +59,24 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
       </div>
 
       {/* Main Navbar */}
-      <nav className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
+      <nav className="bg-white border-b border-gray-200 sticky top-0 z-[60] shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16 lg:h-18">
-            {/* Left Section - Desktop Navigation */}
-            <div className="flex items-center space-x-6 lg:space-x-8 flex-1">
+          <div className="navbar-container flex items-center justify-between h-16 lg:h-18">
+            
+            {/* Left Section */}
+            <div className="navbar-left">
               {/* Mobile menu button */}
               <Button
                 variant="ghost"
                 size="sm"
-                className="md:hidden text-gray-600 hover:text-[rgb(71,60,102)]"
+                className="md:hidden text-gray-600 hover:text-[rgb(71,60,102)] p-2"
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
               >
-                {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                {isMenuOpen ? <X className="navbar-icon" /> : <Menu className="navbar-icon" />}
               </Button>
 
-              {/* Desktop Navigation Links */}
-              <div className="hidden md:flex items-center space-x-8">
+              {/* Desktop Navigation Links - Left */}
+              <div className="hidden md:flex items-center space-x-8 ml-8">
                 <button
                   onClick={onCategoriesClick}
                   className="navbar-link-effect text-gray-600 font-medium transition-all duration-200"
@@ -92,35 +93,35 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
             </div>
 
             {/* Center - Logo */}
-            <div className="flex-shrink-0">
+            <div className="navbar-logo">
               <button
                 onClick={() => (window.location.href = "/")}
-                className="text-xl lg:text-2xl xl:text-3xl font-bold text-[rgb(71,60,102)] tracking-wider font-serif hover:text-[rgb(71,60,102)]/80 transition-colors duration-300 cursor-pointer"
+                className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold text-[rgb(71,60,102)] tracking-wider font-serif hover:text-[rgb(71,60,102)]/80 transition-colors duration-300 cursor-pointer"
               >
                 SHITHAA
               </button>
             </div>
 
-            {/* Right Section - Navigation & Icons */}
-            <div className="flex items-center justify-end space-x-6 flex-1">
-              {/* Desktop Navigation Links */}
-              <div className="hidden md:flex items-center space-x-8">
+            {/* Right Section */}
+            <div className="navbar-right">
+              {/* Desktop Navigation Links - Right */}
+              <div className="hidden md:flex items-center space-x-8 mr-6">
                 <a href="/contact" className="navbar-link-effect text-gray-600 font-medium transition-all duration-200">
                   contact us
                 </a>
               </div>
 
               {/* Icons Section */}
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2 sm:space-x-4">
                 {/* Wishlist Icon */}
                 <button
                   onClick={handleWishlistClick}
                   className="relative p-2 text-gray-600 hover:text-pink-500 transition-colors duration-200"
                   aria-label="Wishlist"
                 >
-                  <Heart className="h-6 w-6" />
+                  <Heart className="navbar-icon" />
                   {wishlistCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-pink-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
+                    <span className="navbar-badge bg-pink-500 text-white">
                       {wishlistCount > 9 ? '9+' : wishlistCount}
                     </span>
                   )}
@@ -132,9 +133,9 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
                   className="relative p-2 text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200"
                   aria-label="Shopping cart"
                 >
-                  <ShoppingBag className="h-6 w-6" />
+                  <ShoppingBag className="navbar-icon" />
                   {cartCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-[rgb(71,60,102)] text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
+                    <span className="navbar-badge bg-[rgb(71,60,102)] text-white">
                       {cartCount > 9 ? '9+' : cartCount}
                     </span>
                   )}
@@ -146,7 +147,7 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
                   className="p-2 text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200"
                   aria-label="Account"
                 >
-                  <User className="h-6 w-6" />
+                  <User className="navbar-icon" />
                 </button>
               </div>
             </div>
@@ -154,7 +155,7 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
 
           {/* Mobile Menu */}
           {isMenuOpen && (
-            <div className="md:hidden bg-white border-t border-gray-200 py-4">
+            <div className="md:hidden bg-white border-t border-gray-200 py-4 absolute top-full left-0 right-0 z-[55] shadow-lg">
               <div className="space-y-4 px-4">
                 <button
                   onClick={() => {
