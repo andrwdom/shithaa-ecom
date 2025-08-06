@@ -292,6 +292,8 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
       quantity,
       size,
       image: product.image,
+      category: product.category,
+      categorySlug: product.categorySlug,
     });
     setAddedProduct({
       name: product.name,
@@ -312,6 +314,8 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
       quantity,
       size,
       image: product.image,
+      category: product.category,
+      categorySlug: product.categorySlug,
     });
     window.location.href = "/checkout?mode=buynow";
   };

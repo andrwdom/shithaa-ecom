@@ -11,6 +11,7 @@ import { useRouter } from 'next/navigation'
 import PageLoading from '@/components/page-loading';
 import Script from 'next/script';
 import { useAuth } from '@/components/auth/useAuth'
+import { calculateShippingCost, ShippingInfo } from '@/lib/shipping-calculator'
 
 function ProductPreviewSection({ items, onEdit }: any) {
   if (!items || items.length === 0) {
@@ -65,16 +66,21 @@ export default function CheckoutPage() {
     const subtotal = cartTotal || cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
     // Calculate discount
     const discount = coupon ? Math.round((subtotal * coupon.discountPercentage) / 100) : 0;
-    // Shipping: free if shipping.state is 'tamil nadu', else 49 if subtotal > 0
-    let shippingCost = 0;
-    if (subtotal > 0) {
-      if (!shipping?.state || typeof shipping.state !== 'string' || shipping.state.trim().toLowerCase() !== 'tamil nadu') {
-        shippingCost = 49;
-      }
-    }
+    
+    // Calculate shipping using new shipping logic
+    const shippingCalculation = calculateShippingCost(cartItems, shipping as ShippingInfo);
+    const shippingCost = shippingCalculation.shippingCost;
+    
     // Calculate total
     const total = subtotal - discount + shippingCost;
-    setOrderSummary({ subtotal, discount, shipping: shippingCost, total });
+    setOrderSummary({ 
+      subtotal, 
+      discount, 
+      shipping: shippingCost, 
+      total,
+      shippingMessage: shippingCalculation.shippingMessage,
+      isFreeShipping: shippingCalculation.isFreeShipping
+    });
   }, [cartItems, coupon, shipping, cartTotal]);
 
   // PhonePe payment handler

@@ -86,6 +86,8 @@ export default function Home() {
       quantity: 1,
       size: "M", // Default size
       image: product.image,
+      category: product.category,
+      categorySlug: product.categorySlug,
     }
 
     setCartItems((prev) => {

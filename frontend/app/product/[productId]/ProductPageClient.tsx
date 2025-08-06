@@ -462,6 +462,8 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
                         quantity,
                         size: selectedSize,
                         image: product.images[0] || "/placeholder.svg",
+                        category: product.category,
+                        categorySlug: product.categorySlug,
                       }, false);
                       setAddedProduct({
                         name: product.name,

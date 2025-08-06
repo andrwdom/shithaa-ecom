@@ -11,6 +11,7 @@ export interface CartItem {
   size: string;
   image: string;
   categorySlug?: string; // Add categorySlug for offer calculation
+  category?: string; // Add category name for shipping calculation
 }
 
 export interface OfferDetails {

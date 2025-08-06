@@ -207,6 +207,9 @@ export default function CartSidebar() {
                 )}
               </div>
             </div>
+            <div className="text-xs text-gray-500 text-center mb-4">
+              Shipping calculated based on your location and items
+            </div>
             <Button className="w-full bg-[rgb(71,60,102)] hover:bg-[rgb(71,60,102)]/90 text-white py-3 rounded-xl font-semibold" onClick={() => { window.location.href = "/checkout"; }}>
               Proceed to Checkout
             </Button>

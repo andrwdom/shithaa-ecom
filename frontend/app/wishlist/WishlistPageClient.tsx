@@ -65,6 +65,8 @@ export default function WishlistPageClient() {
       quantity: 1,
       size: "M", // Default size, user can change later
       image: item.product.images[0] || "/placeholder.svg",
+      category: item.product.category,
+      categorySlug: item.product.categorySlug,
     }, false)
     
     toast.success("Added to cart!")
