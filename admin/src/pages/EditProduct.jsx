@@ -26,6 +26,13 @@ const EditProduct = ({ product, token, onClose, onUpdate }) => {
     console.log('Token comparison:', token === localStorage.getItem('token'));
   }, [token]);
 
+  // Clear sleeveType when category doesn't require it
+  useEffect(() => {
+    if (!shouldShowSleeveType()) {
+      setSleeveType("");
+    }
+  }, [category]);
+
   // Only the 4 required categories as specified
   const CATEGORY_OPTIONS = [
     "Maternity Feeding Wear",
@@ -75,6 +82,12 @@ const EditProduct = ({ product, token, onClose, onUpdate }) => {
     if (!price || isNaN(Number(price)) || Number(price) <= 0) return 'Valid price is required.';
     if (!category) return 'Product category is required.';
     if (!Array.isArray(sizes) || sizes.length === 0) return 'At least one size must be selected.';
+    
+    // Validate sleeveType only if category requires it
+    if (shouldShowSleeveType() && !sleeveType) {
+      return 'Sleeve type is required for this category.';
+    }
+    
     return null;
   };
 
@@ -106,12 +119,11 @@ const EditProduct = ({ product, token, onClose, onUpdate }) => {
       formData.append("stock", stock)
       formData.append("customId", customId)
       
-      // Add sleeve type if applicable
+      // Add sleeve type only if applicable
       if (shouldShowSleeveType() && sleeveType) {
         formData.append("sleeveType", sleeveType);
-      } else {
-        formData.append("sleeveType", ""); // Clear sleeve type if not applicable
       }
+      // Don't send sleeveType at all for non-sleeve categories
 
       if (image1) formData.append("image1", image1)
       if (image2) formData.append("image2", image2)

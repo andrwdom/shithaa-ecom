@@ -259,13 +259,25 @@ export const addProduct = async (req, res) => {
         // Ensure both bestseller and isBestSeller are set for compatibility
         const bestsellerValue = (bestseller === "true" || isBestSeller === "true") ? true : false;
 
-        // Validate sleeveType if provided
+        // Validate sleeveType if provided - only for categories that require it
         const validSleeveTypes = ["Puff Sleeve", "Normal Sleeve"];
-        if (sleeveType && !validSleeveTypes.includes(sleeveType)) {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid sleeve type. Must be 'Puff Sleeve' or 'Normal Sleeve'"
-            });
+        const categoriesRequiringSleeveType = [
+            "Zipless Feeding Lounge Wear",
+            "Non-Feeding Lounge Wear", 
+            "Zipless Feeding Dupatta Lounge Wear"
+        ];
+        
+        // Only validate sleeveType if the category requires it
+        if (categoriesRequiringSleeveType.includes(category)) {
+            if (sleeveType && !validSleeveTypes.includes(sleeveType)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Invalid sleeve type. Must be 'Puff Sleeve' or 'Normal Sleeve'"
+                });
+            }
+        } else {
+            // For categories that don't require sleeveType, don't include it in product data
+            console.log(`Category "${category}" does not require sleeveType`);
         }
 
         const productData = {
@@ -287,7 +299,8 @@ export const addProduct = async (req, res) => {
             images: imagesUrl,
             date: Date.now(),
             stock: stock !== undefined ? Number(stock) : 0,
-            sleeveType: sleeveType || null // Add sleeveType to product data
+            // Only include sleeveType if category requires it
+            ...(categoriesRequiringSleeveType.includes(category) ? { sleeveType: sleeveType || null } : {})
         }
 
         // After parsing sizes, always sync main stock field
@@ -417,13 +430,31 @@ export const updateProduct = async (req, res) => {
             product.customId = customId;
         }
 
-        // Validate sleeveType if provided
+        // Validate sleeveType if provided - only for categories that require it
         const validSleeveTypes = ["Puff Sleeve", "Normal Sleeve"];
-        if (sleeveType !== undefined && sleeveType !== null && !validSleeveTypes.includes(sleeveType)) {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid sleeve type. Must be 'Puff Sleeve' or 'Normal Sleeve'"
-            });
+        const categoriesRequiringSleeveType = [
+            "Zipless Feeding Lounge Wear",
+            "Non-Feeding Lounge Wear", 
+            "Zipless Feeding Dupatta Lounge Wear"
+        ];
+        
+        // Get the category being updated (use provided category or existing product category)
+        const updatedCategory = category || product.category;
+        
+        // Only validate sleeveType if the category requires it
+        if (categoriesRequiringSleeveType.includes(updatedCategory)) {
+            if (sleeveType !== undefined && sleeveType !== null && sleeveType !== "" && !validSleeveTypes.includes(sleeveType)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Invalid sleeve type. Must be 'Puff Sleeve' or 'Normal Sleeve'"
+                });
+            }
+        } else {
+            // For categories that don't require sleeveType, clear it if provided
+            if (sleeveType !== undefined) {
+                // Allow clearing sleeveType for non-sleeve categories
+                console.log(`Clearing sleeveType for category: ${updatedCategory}`);
+            }
         }
 
         // Parse features if provided
@@ -519,8 +550,11 @@ export const updateProduct = async (req, res) => {
             images: imagesUrl,
             updatedAt: new Date(),
             ...(stock !== undefined ? { stock: Number(stock) } : {}),
-            // Handle sleeveType - allow null/empty to clear the field
-            ...(sleeveType !== undefined ? { sleeveType: sleeveType || null } : {})
+            // Handle sleeveType conditionally based on category
+            ...(categoriesRequiringSleeveType.includes(updatedCategory) 
+                ? { sleeveType: sleeveType !== undefined ? (sleeveType || null) : product.sleeveType }
+                : { sleeveType: null } // Clear sleeveType for non-sleeve categories
+            )
         };
 
         // Only update sizes if explicitly provided
