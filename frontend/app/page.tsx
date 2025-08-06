@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react"
 import { Metadata } from "next"
 import HeroSection from "@/components/hero-section"
-import BannerCarousel from "@/components/banner-carousel"
 import ProductSlider from "@/components/product-slider"
 import CategoryStrip from "@/components/category-strip"
 import TestimonialCarousel from "@/components/testimonial-carousel"
@@ -122,19 +121,6 @@ export default function Home() {
         <PerformanceMonitor />
         <div className="min-h-screen bg-white">
           <HeroSection />
-          
-          {/* Banner Carousel */}
-          <section className="px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
-            <div className="max-w-7xl mx-auto">
-              <BannerCarousel 
-                autoPlay={true}
-                interval={6000}
-                showArrows={true}
-                showDots={true}
-                className="w-full"
-              />
-            </div>
-          </section>
           
           <CategoryStrip onCategoryClick={handleCategorySelect} currentCategory={undefined} />
           <TestimonialsSection />
