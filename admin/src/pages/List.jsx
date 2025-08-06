@@ -87,9 +87,9 @@ const ProductCard = ({ product, onEdit, onDelete, isDragging, onDragStart, onDra
               {/* Product Image */}
         <div className="relative aspect-[4/5] bg-gray-50">
           {/* Drag Handle */}
-          <div className="absolute top-2 left-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-            <div className="bg-white/90 backdrop-blur-sm rounded-full p-1 cursor-grab active:cursor-grabbing">
-              <GripVertical className="h-4 w-4 text-gray-600" />
+          <div className="absolute top-2 left-2 z-10 opacity-100">
+            <div className="bg-blue-600 text-white rounded-full p-1.5 cursor-grab active:cursor-grabbing shadow-lg">
+              <GripVertical className="h-3 w-3" />
             </div>
           </div>
           
@@ -214,8 +214,10 @@ const ProductTableRow = ({ product, onEdit, onDelete, isDragging, onDragStart, o
       <td className="px-6 py-4">
         <div className="flex items-center gap-3">
           {/* Drag Handle */}
-          <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-            <GripVertical className="h-4 w-4 text-gray-400 cursor-grab active:cursor-grabbing" />
+          <div className="opacity-100">
+            <div className="bg-blue-600 text-white rounded-full p-1 cursor-grab active:cursor-grabbing">
+              <GripVertical className="h-3 w-3" />
+            </div>
           </div>
           
           <img
@@ -749,6 +751,21 @@ const List = ({ token }) => {
 
             {/* View Mode Toggle */}
             <div className="flex items-center gap-4">
+              {/* Reorder Mode Button */}
+              <button
+                onClick={() => {
+                  if (selectedCategory !== 'all') {
+                    toast.info('Drag products to reorder them. Changes are saved automatically.')
+                  } else {
+                    toast.warning('Please select a category first to reorder products.')
+                  }
+                }}
+                className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+              >
+                <GripVertical className="h-4 w-4" />
+                Reorder Mode
+              </button>
+              
               {/* Reorder Status */}
               {isReordering && (
                 <div className="flex items-center gap-2 text-blue-600">
@@ -807,7 +824,12 @@ const List = ({ token }) => {
                       : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
                   }`}
                 >
-                  {category.name}
+                  <div className="flex items-center gap-2">
+                    {category.name}
+                    {selectedCategory === category.slug && (
+                      <GripVertical className="h-3 w-3 opacity-75" />
+                    )}
+                  </div>
                 </button>
               ))}
             </div>
@@ -971,10 +993,23 @@ const List = ({ token }) => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Drag & Drop Indicator */}
         {isDragging && (
-          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="flex items-center gap-2 text-blue-700">
+          <div className="mb-4 p-4 bg-blue-600 text-white rounded-lg shadow-lg">
+            <div className="flex items-center gap-3">
+              <GripVertical className="h-5 w-5" />
+              <span className="font-medium">Drag to reorder products</span>
+              <span className="text-blue-100 text-sm">Drop on another product to change order</span>
+            </div>
+          </div>
+        )}
+
+        {/* Reorder Instructions */}
+        {selectedCategory !== 'all' && !isDragging && (
+          <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-center gap-2 text-green-700">
               <GripVertical className="h-4 w-4" />
-              <span className="text-sm font-medium">Drag to reorder products</span>
+              <span className="text-sm font-medium">
+                Reorder Mode Active: Drag the blue handles to reorder products in "{categories.find(cat => cat.slug === selectedCategory)?.name}"
+              </span>
             </div>
           </div>
         )}
