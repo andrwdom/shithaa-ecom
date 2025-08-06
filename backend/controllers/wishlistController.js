@@ -81,11 +81,23 @@ export const getWishlist = async (req, res) => {
       .populate('product')
       .sort({ addedAt: -1 });
 
-    console.log('Get wishlist - Found items:', wishlistItems.length);
+    // Filter out items where product is null (deleted products)
+    const validWishlistItems = wishlistItems.filter(item => item.product !== null);
+    
+    // Remove invalid wishlist items from database
+    const invalidItems = wishlistItems.filter(item => item.product === null);
+    if (invalidItems.length > 0) {
+      console.log(`Removing ${invalidItems.length} invalid wishlist items`);
+      await Wishlist.deleteMany({ 
+        _id: { $in: invalidItems.map(item => item._id) } 
+      });
+    }
+
+    console.log('Get wishlist - Found items:', validWishlistItems.length);
 
     res.json({ 
       success: true, 
-      data: wishlistItems 
+      data: validWishlistItems 
     });
   } catch (error) {
     console.error('Get wishlist error:', error);

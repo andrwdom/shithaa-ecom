@@ -52,6 +52,11 @@ export default function WishlistPageClient() {
       return
     }
 
+    if (!item.product) {
+      toast.error("Product data not available")
+      return
+    }
+
     addToCart({
       id: item.product._id,
       _id: item.product._id,
@@ -147,7 +152,7 @@ export default function WishlistPageClient() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {wishlistItems.map((item) => (
+            {wishlistItems.filter(item => item.product).map((item) => (
               <Card key={item._id} className="group cursor-pointer border-0 shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 bg-white overflow-hidden">
                 <CardContent className="p-0">
                   <div className="relative h-64 bg-gradient-to-br from-pink-50 to-purple-50 overflow-hidden">

@@ -155,7 +155,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
   }
 
   const isInWishlist = (productId: string): boolean => {
-    return wishlistItems.some(item => item.product._id === productId)
+    return wishlistItems.some(item => item.product && item.product._id === productId)
   }
 
   const refreshWishlist = async () => {
