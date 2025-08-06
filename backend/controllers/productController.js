@@ -76,9 +76,9 @@ export const getAllProducts = async (req, res) => {
                                 }
                             }
                         },
-                        // Products with simple size arrays (legacy support)
+                        // Products with simple size arrays (legacy support) - handle as string
                         {
-                            'sizes': size
+                            'sizes': { $in: [size] }
                         }
                     ]
                 }

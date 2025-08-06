@@ -1,40 +1,25 @@
 #!/bin/bash
 
-# Quick Server Fix Script
-echo "🚀 Starting quick server fix..."
+echo "🚨 QUICK SERVER FIX - Resolving 502 Bad Gateway Error"
+echo "=================================================="
 
 # Navigate to backend directory
 cd /var/www/shithaa-ecom/backend
 
-# Install sharp package
-echo "📦 Installing sharp package..."
-npm install sharp@^0.33.2
+echo "📦 Installing dependencies..."
+npm install
 
-# Check if installation was successful
-if [ $? -eq 0 ]; then
-    echo "✅ Sharp package installed successfully"
-else
-    echo "❌ Failed to install sharp package"
-    exit 1
-fi
+echo "🔄 Restarting backend server..."
+pm2 restart shitha-backend
 
-# Restart PM2 processes
-echo "🔄 Restarting PM2 processes..."
-pm2 stop all
-pm2 delete all
-pm2 start ecosystem.config.js
+echo "⏳ Waiting 5 seconds for server to start..."
+sleep 5
 
-# Check PM2 status
-echo "📊 Checking PM2 status..."
+echo "🔍 Checking server status..."
 pm2 status
 
-# Test backend locally
-echo "🧪 Testing backend..."
-sleep 3
+echo "🧪 Testing backend API..."
 curl -s http://localhost:4000/api/cors-test
 
-echo "✅ Quick fix completed!"
-echo "📝 Next steps:"
-echo "1. Check if backend is responding: curl http://localhost:4000/api/cors-test"
-echo "2. Test external access: curl https://shithaa.in/api/cors-test"
-echo "3. Check admin panel: https://admin.shithaa.in" 
+echo "✅ Fix completed!"
+echo "🌐 Test the website: https://shithaa.in" 
