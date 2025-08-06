@@ -13,49 +13,41 @@ interface NavbarProps {
 }
 
 export default function Navbar({ onCategoriesClick }: NavbarProps) {
-  const { cartItems, openCartSidebar } = useCart();
-  const { wishlistCount } = useWishlist();
-  const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const { user, logout } = useAuth();
-  const [showLogin, setShowLogin] = useState(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
+  const { cartItems, openCartSidebar } = useCart()
+  const { wishlistItems } = useWishlist()
+  const { user, logout } = useAuth()
 
-  function closeMenus() {
-    setIsMenuOpen(false);
-  }
-
-  const handleLogout = async () => {
-    await logout();
-    closeMenus();
-  };
+  const cartCount = cartItems.reduce((total, item) => total + item.quantity, 0)
+  const wishlistCount = wishlistItems.length
 
   const handleAccountClick = () => {
-    console.log('Account button clicked!', { user: !!user });
     if (user) {
-      window.location.href = "/account";
+      // Show account menu or navigate to account page
+      console.log("User is logged in:", user)
     } else {
-      setShowLogin(true);
+      setIsLoginModalOpen(true)
     }
-  };
+  }
 
-  const handleSignInClick = () => {
-    console.log('Sign in button clicked!');
-    setShowLogin(true);
-  };
-
-  const handleWishlistClick = () => {
-    if (user) {
-      window.location.href = "/wishlist";
-    } else {
-      setShowLogin(true);
-    }
-  };
+  const handleLogout = () => {
+    logout()
+    setIsMenuOpen(false)
+  }
 
   return (
     <>
-      {/* Top Banner */}
-      <div className="bg-[rgb(71,60,102)] text-white text-center py-3 text-sm font-medium">
-        FREE DELIVERY WITHIN TAMIL NADU.
+      {/* Animated Top Banner */}
+      <div className="bg-[rgb(71,60,102)] text-white py-3 overflow-hidden relative">
+        <div className="banner-ticker">
+          <div className="banner-message">
+            FREE DELIVERY WITHIN TAMIL NADU.
+          </div>
+          <div className="banner-message">
+            🔥 BUY 3 & GET 10% OFF ON MATERNITY ESSENTIALS! 🔥
+          </div>
+        </div>
       </div>
 
       {/* Main Navbar */}
@@ -141,64 +133,48 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
 
           {/* Mobile Menu */}
           {isMenuOpen && (
-            <div className="md:hidden bg-white border-t border-gray-200 py-4 absolute top-full left-0 right-0 z-[55] shadow-lg">
-              <div className="space-y-4 px-4">
+            <div className="md:hidden border-t border-gray-200 py-4">
+              <div className="flex flex-col space-y-4">
                 <button
-                  onClick={() => {
-                    onCategoriesClick?.();
-                    closeMenus();
-                  }}
-                  className="block w-full text-left text-gray-600 font-medium py-2 hover:text-[rgb(71,60,102)] transition-colors duration-200"
+                  onClick={onCategoriesClick}
+                  className="text-left text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200"
                 >
-                  Categories
+                  categories
                 </button>
                 <a
                   href="/collections/new-arrivals"
-                  onClick={closeMenus}
-                  className="block text-gray-600 font-medium py-2 hover:text-[rgb(71,60,102)] transition-colors duration-200"
+                  className="text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200"
                 >
-                  New Arrivals
+                  new arrivals
                 </a>
                 <a
                   href="/contact"
-                  onClick={closeMenus}
-                  className="block text-gray-600 font-medium py-2 hover:text-[rgb(71,60,102)] transition-colors duration-200"
+                  className="text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200"
                 >
-                  Contact Us
+                  contact us
                 </a>
-                <div className="border-t border-gray-200 pt-4">
-                  {user ? (
-                    <div className="space-y-2">
-                      <a
-                        href="/account"
-                        onClick={closeMenus}
-                        className="block text-gray-600 font-medium py-2 hover:text-[rgb(71,60,102)] transition-colors duration-200"
-                      >
-                        My Account
-                      </a>
-                      <a
-                        href="/wishlist"
-                        onClick={closeMenus}
-                        className="block text-gray-600 font-medium py-2 hover:text-[rgb(71,60,102)] transition-colors duration-200"
-                      >
-                        Wishlist ({wishlistCount})
-                      </a>
-                      <button
-                        onClick={handleLogout}
-                        className="block w-full text-left text-red-600 font-medium py-2 hover:text-red-700 transition-colors duration-200"
-                      >
-                        Logout
-                      </button>
+                {user ? (
+                  <div className="border-t border-gray-200 pt-4">
+                    <div className="flex items-center space-x-2 mb-4">
+                      <User className="h-5 w-5 text-gray-600" />
+                      <span className="text-gray-900 font-medium">{user.email}</span>
                     </div>
-                  ) : (
                     <button
-                      onClick={handleSignInClick}
-                      className="block w-full text-left text-gray-600 font-medium py-2 hover:text-[rgb(71,60,102)] transition-colors duration-200"
+                      onClick={handleLogout}
+                      className="flex items-center space-x-2 text-red-600 hover:text-red-700 transition-colors duration-200"
                     >
-                      Sign In
+                      <LogOut className="h-5 w-5" />
+                      <span>Logout</span>
                     </button>
-                  )}
-                </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setIsLoginModalOpen(true)}
+                    className="text-left text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200"
+                  >
+                    Login
+                  </button>
+                )}
               </div>
             </div>
           )}
@@ -206,7 +182,53 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
       </nav>
 
       {/* Login Modal */}
-      <LoginModal open={showLogin} onClose={() => setShowLogin(false)} onSuccess={() => setShowLogin(false)} />
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+      />
+
+      {/* CSS for animated banner */}
+      <style jsx>{`
+        .banner-ticker {
+          display: flex;
+          animation: ticker 12s linear infinite;
+          white-space: nowrap;
+        }
+        
+        .banner-message {
+          flex-shrink: 0;
+          width: 100%;
+          text-align: center;
+          font-weight: 500;
+          font-size: 0.875rem;
+          padding: 0 1rem;
+        }
+        
+        @keyframes ticker {
+          0% {
+            transform: translateX(0);
+          }
+          50% {
+            transform: translateX(-100%);
+          }
+          100% {
+            transform: translateX(-200%);
+          }
+        }
+        
+        /* Pause animation on hover */
+        .banner-ticker:hover {
+          animation-play-state: paused;
+        }
+        
+        /* Mobile responsive */
+        @media (max-width: 640px) {
+          .banner-message {
+            font-size: 0.75rem;
+            padding: 0 0.5rem;
+          }
+        }
+      `}</style>
     </>
   )
 }

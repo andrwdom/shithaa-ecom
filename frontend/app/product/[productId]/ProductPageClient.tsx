@@ -368,6 +368,29 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
 
               <p className="text-gray-600 leading-relaxed mb-6">{product.description}</p>
 
+              {/* Loungewear Offer Banner */}
+              {(product.category === "Zipless Feeding Lounge Wear" || 
+                product.category === "Non-Feeding Lounge Wear" || 
+                product.category === "Zipless Feeding Dupatta Lounge Wear") && (
+                <div className="mb-6 p-4 bg-gradient-to-r from-pink-50 to-purple-50 border border-pink-200 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="flex-shrink-0">
+                      <div className="w-8 h-8 bg-pink-100 rounded-full flex items-center justify-center">
+                        <span className="text-pink-600 text-sm font-bold">🔥</span>
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-pink-800 text-sm">
+                        Buy 3 Loungewear for ₹1299!
+                      </p>
+                      <p className="text-xs text-pink-600 mt-1">
+                        Add 2 more loungewear items to your cart to unlock this special bundle offer
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Custom Size, Quantity, and Action Section */}
               <div className="space-y-4">
                 {/* Size label and Sizing guide */}

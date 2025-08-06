@@ -460,6 +460,29 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
                 </p>
               </div>
 
+              {/* Loungewear Offer Banner */}
+              {(categorySlug === "zipless-feeding-lounge-wear" || 
+                categorySlug === "non-feeding-lounge-wear" || 
+                categorySlug === "zipless-feeding-dupatta-lounge-wear") && (
+                <div className="mb-6 p-4 bg-gradient-to-r from-pink-50 to-purple-50 border border-pink-200 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="flex-shrink-0">
+                      <div className="w-8 h-8 bg-pink-100 rounded-full flex items-center justify-center">
+                        <span className="text-pink-600 text-sm font-bold">🔥</span>
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-pink-800 text-sm">
+                        Buy 3 Loungewear for ₹1299!
+                      </p>
+                      <p className="text-xs text-pink-600 mt-1">
+                        Add any 3 loungewear items to your cart to unlock this special bundle offer
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Mobile Category Navigation - Only visible on mobile */}
               <div className="lg:hidden px-0 pb-6 w-full">
                 <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide w-full">
