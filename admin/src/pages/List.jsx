@@ -17,12 +17,38 @@ const ALL_SIZES = ["S", "M", "L", "XL", "XXL"];
 
 // Skeleton Loader Component
 const ProductCardSkeleton = () => (
-  <div className="bg-white rounded-lg shadow-md p-4 animate-pulse">
-    <div className="bg-gray-200 h-48 rounded-lg mb-4"></div>
-    <div className="space-y-2">
-      <div className="bg-gray-200 h-4 rounded w-3/4"></div>
-      <div className="bg-gray-200 h-4 rounded w-1/2"></div>
+  <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden animate-pulse">
+    {/* Image Skeleton - 9:16 aspect ratio */}
+    <div className="aspect-[9/16] bg-gray-200"></div>
+    
+    {/* Content Skeleton */}
+    <div className="p-4 space-y-3">
+      {/* Title skeleton */}
+      <div className="space-y-2">
+        <div className="bg-gray-200 h-3 rounded w-4/5"></div>
+        <div className="bg-gray-200 h-3 rounded w-3/5"></div>
+      </div>
+      
+      {/* Size badges skeleton */}
+      <div className="flex gap-1.5">
+        <div className="bg-gray-200 h-5 rounded-full w-12"></div>
+        <div className="bg-gray-200 h-5 rounded-full w-12"></div>
+        <div className="bg-gray-200 h-5 rounded-full w-12"></div>
+      </div>
+      
+      {/* Price skeleton */}
       <div className="bg-gray-200 h-6 rounded w-1/3"></div>
+      
+      {/* Category skeleton */}
+      <div className="bg-gray-200 h-6 rounded w-2/3"></div>
+      
+      {/* Action buttons skeleton */}
+      <div className="flex justify-between pt-2 border-t border-gray-100">
+        <div className="flex space-x-2">
+          <div className="bg-gray-200 h-8 w-8 rounded-lg"></div>
+          <div className="bg-gray-200 h-8 w-8 rounded-lg"></div>
+        </div>
+      </div>
     </div>
   </div>
 );
@@ -30,93 +56,133 @@ const ProductCardSkeleton = () => (
 // Memoized Product Card Component
 const ProductCard = memo(({ item, onEdit, onDelete, position, isReorderMode, moveUp, moveDown, isFirst, isLast, dragHandleProps, showDragHandle = false }) => {
   const getBadgeVariant = (stock) => {
-    if (stock === 0) return "bg-red-100 text-red-800";
-    if (stock <= 3) return "bg-yellow-100 text-yellow-800";
-    return "bg-green-100 text-green-800";
+    if (stock === 0) return "bg-red-50 text-red-700 border-red-200";
+    if (stock <= 3) return "bg-amber-50 text-amber-700 border-amber-200";
+    return "bg-emerald-50 text-emerald-700 border-emerald-200";
   };
 
   const StockBadge = ({ stock, size }) => (
-    <span className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${getBadgeVariant(stock)}`}>
-      {size}: {stock}
+    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${getBadgeVariant(stock)}`}>
+      {size}:{stock}
     </span>
   );
 
   const itemSizes = typeof item.sizes[0] === 'string' ? item.sizes : item.sizes.map(s => s.size);
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-4 relative group">
+    <div className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100 overflow-hidden group">
       {/* Drag Handle */}
       {showDragHandle && (
-        <div {...dragHandleProps} className="absolute top-2 left-2 z-10 cursor-grab active:cursor-grabbing">
+        <div {...dragHandleProps} className="absolute top-3 left-3 z-10 cursor-grab active:cursor-grabbing bg-white/80 backdrop-blur-sm rounded-lg p-1.5">
           <GripVertical className="h-4 w-4 text-gray-400" />
         </div>
       )}
 
-      {/* Product Image */}
-      <div className="relative mb-4">
-        <img 
-          src={item.images && item.images[0] ? item.images[0] : '/placeholder.svg'} 
-          alt={item.name}
-          className="w-full h-48 object-cover rounded-lg"
-          loading="lazy"
-        />
+      {/* Product Image - Instagram Story Aspect Ratio (9:16) */}
+      <div className="relative bg-gray-50">
+        <div className="aspect-[9/16] w-full">
+          <img 
+            src={item.images && item.images[0] ? item.images[0] : '/placeholder.svg'} 
+            alt={item.name}
+            className="w-full h-full object-cover"
+            loading="lazy"
+          />
+        </div>
         
-        {/* Stock Badges */}
-        <div className="absolute top-2 right-2 space-y-1">
+        {/* Stock Badges Overlay */}
+        <div className="absolute top-3 right-3 flex flex-col gap-1.5 max-w-[80px]">
           {item.sizes && item.sizes.slice(0, 3).map((sizeObj, index) => {
             const size = typeof sizeObj === 'string' ? sizeObj : sizeObj.size;
             const stock = typeof sizeObj === 'string' ? 0 : (sizeObj.stock || 0);
             return <StockBadge key={index} stock={stock} size={size} />;
           })}
+          {item.sizes && item.sizes.length > 3 && (
+            <span className="text-xs text-gray-500 bg-white/80 backdrop-blur-sm px-2 py-1 rounded-full">
+              +{item.sizes.length - 3} more
+            </span>
+          )}
         </div>
       </div>
 
       {/* Product Info */}
-      <div className="space-y-2">
-        <h3 className="font-semibold text-gray-900 line-clamp-2">{item.name}</h3>
-        <p className="text-sm text-gray-600 line-clamp-2">{item.description}</p>
+      <div className="p-4 space-y-3">
+        {/* Product Name */}
+        <h3 className="font-semibold text-gray-900 text-sm leading-tight line-clamp-2 min-h-[2.5rem]">
+          {item.name}
+        </h3>
+
+        {/* Size Availability Pills */}
+        <div className="flex flex-wrap gap-1.5">
+          {item.sizes && item.sizes.map((sizeObj, index) => {
+            const size = typeof sizeObj === 'string' ? sizeObj : sizeObj.size;
+            const stock = typeof sizeObj === 'string' ? 0 : (sizeObj.stock || 0);
+            return (
+              <span
+                key={index}
+                className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getBadgeVariant(stock)}`}
+              >
+                {size}:{stock}
+              </span>
+            );
+          })}
+        </div>
+
+        {/* Price */}
         <div className="flex items-center justify-between">
-          <span className="text-lg font-bold text-gray-900">{currency}{item.price}</span>
-          <span className="text-sm text-gray-500">{item.category}</span>
-        </div>
-      </div>
-
-      {/* Action Buttons */}
-      <div className="mt-4 flex items-center justify-between">
-        <div className="flex space-x-2">
-          <button
-            onClick={() => onEdit(item)}
-            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-          >
-            <Edit className="h-4 w-4" />
-          </button>
-          <button
-            onClick={() => onDelete(item._id)}
-            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
+          <span className="text-xl font-bold text-gray-900">{currency}{item.price}</span>
+          {item.originalPrice && item.originalPrice > item.price && (
+            <span className="text-sm text-gray-500 line-through">{currency}{item.originalPrice}</span>
+          )}
         </div>
 
-        {/* Reorder Controls */}
-        {isReorderMode && (
-          <div className="flex space-x-1">
+        {/* Product Type */}
+        <div className="text-xs text-gray-600 bg-gray-50 px-2.5 py-1.5 rounded-lg font-medium">
+          {item.category || "General"}
+        </div>
+
+        {/* Action Buttons - Bottom Aligned */}
+        <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+          <div className="flex items-center space-x-2">
             <button
-              onClick={() => moveUp(item)}
-              disabled={isFirst}
-              className={`p-1 rounded ${isFirst ? 'text-gray-300' : 'text-gray-600 hover:bg-gray-100'}`}
+              onClick={() => onEdit(item)}
+              className="inline-flex items-center justify-center w-8 h-8 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+              title="Edit Product"
             >
-              ↑
+              <Edit className="h-4 w-4" />
             </button>
             <button
-              onClick={() => moveDown(item)}
-              disabled={isLast}
-              className={`p-1 rounded ${isLast ? 'text-gray-300' : 'text-gray-600 hover:bg-gray-100'}`}
+              onClick={() => onDelete(item._id)}
+              className="inline-flex items-center justify-center w-8 h-8 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              title="Delete Product"
             >
-              ↓
+              <Trash2 className="h-4 w-4" />
             </button>
           </div>
-        )}
+
+          {/* Reorder Controls */}
+          {isReorderMode && (
+            <div className="flex items-center space-x-1">
+              <button
+                onClick={() => moveUp(item)}
+                disabled={isFirst}
+                className={`inline-flex items-center justify-center w-6 h-6 rounded text-xs ${
+                  isFirst ? 'text-gray-300 cursor-not-allowed' : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                ↑
+              </button>
+              <button
+                onClick={() => moveDown(item)}
+                disabled={isLast}
+                className={`inline-flex items-center justify-center w-6 h-6 rounded text-xs ${
+                  isLast ? 'text-gray-300 cursor-not-allowed' : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                ↓
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -515,6 +581,125 @@ const List = ({ token }) => {
     </div>
   );
 
+  // Desktop Horizontal Filter Bar
+  const HorizontalFilterBar = () => (
+    <div className="hidden lg:block bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 items-end">
+        {/* Search */}
+        <div className="lg:col-span-2">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Search Products</label>
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search by name or ID..."
+            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+          />
+        </div>
+
+        {/* Category Filter */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+          >
+            <option value="">All Categories</option>
+            {categories.map((cat) => (
+              <option key={cat._id} value={cat.slug}>
+                {cat.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Price Range */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Price Range</label>
+          <div className="grid grid-cols-2 gap-2">
+            <input
+              type="number"
+              value={priceMin}
+              onChange={(e) => setPriceMin(e.target.value)}
+              placeholder="Min ₹"
+              className="px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-sm"
+            />
+            <input
+              type="number"
+              value={priceMax}
+              onChange={(e) => setPriceMax(e.target.value)}
+              placeholder="Max ₹"
+              className="px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-sm"
+            />
+          </div>
+        </div>
+
+        {/* Size Filter & Clear */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Size</label>
+          <div className="flex gap-2">
+            <select
+              value={sizeFilter}
+              onChange={(e) => setSizeFilter(e.target.value)}
+              className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+            >
+              <option value="">All Sizes</option>
+              {ALL_SIZES.map((size) => (
+                <option key={size} value={size}>
+                  {size}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={() => {
+                setCategoryFilter('');
+                setPriceMin('');
+                setPriceMax('');
+                setSizeFilter('');
+                setSearchTerm('');
+              }}
+              className="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium whitespace-nowrap"
+              title="Clear all filters"
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      {/* Filter Summary */}
+      {(categoryFilter || priceMin || priceMax || sizeFilter || searchTerm) && (
+        <div className="mt-4 pt-4 border-t border-gray-100">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm text-gray-600">Active filters:</span>
+            {searchTerm && (
+              <span className="inline-flex items-center px-2.5 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-full border border-blue-200">
+                Search: "{searchTerm}"
+              </span>
+            )}
+            {categoryFilter && (
+              <span className="inline-flex items-center px-2.5 py-1 bg-purple-50 text-purple-700 text-xs font-medium rounded-full border border-purple-200">
+                Category: {categories.find(cat => cat.slug === categoryFilter)?.name || categoryFilter}
+              </span>
+            )}
+            {(priceMin || priceMax) && (
+              <span className="inline-flex items-center px-2.5 py-1 bg-green-50 text-green-700 text-xs font-medium rounded-full border border-green-200">
+                Price: ₹{priceMin || '0'} - ₹{priceMax || '∞'}
+              </span>
+            )}
+            {sizeFilter && (
+              <span className="inline-flex items-center px-2.5 py-1 bg-orange-50 text-orange-700 text-xs font-medium rounded-full border border-orange-200">
+                Size: {sizeFilter}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  // Mobile Filter Panel (unchanged)
   const FilterPanel = ({ isMobile = false }) => (
     <div className={`${isMobile ? '' : 'hidden lg:block'} space-y-6`}>
       {/* Search */}
@@ -624,12 +809,12 @@ const List = ({ token }) => {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Products</h1>
-              <p className="text-sm text-gray-600">
-                {totalProducts} products • Page {currentPage} of {totalPages}
+              <h1 className="text-3xl font-bold text-gray-900">Product Management</h1>
+              <p className="text-sm text-gray-600 mt-1">
+                {totalProducts} products total • Page {currentPage} of {totalPages}
               </p>
             </div>
             
@@ -664,44 +849,42 @@ const List = ({ token }) => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex gap-8">
-          {/* Sidebar Filters - Desktop */}
-          <div className="hidden lg:block w-64 flex-shrink-0">
-            <FilterPanel />
-          </div>
+      {/* Main Container */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Desktop Horizontal Filters */}
+        <HorizontalFilterBar />
 
-          {/* Main Content */}
-          <div className="flex-1">
-            {/* Loading State */}
-            {loading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {Array.from({ length: productsPerPage }).map((_, index) => (
-                  <ProductCardSkeleton key={index} />
-                ))}
-              </div>
-            ) : (
-              <>
-                {/* Products Grid */}
-                {viewMode === 'card' ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {list.map((item, index) => (
-                      <ProductCard
-                        key={item._id}
-                        item={item}
-                        onEdit={setEditingProduct}
-                        onDelete={removeProduct}
-                        position={index}
-                        isReorderMode={isReorderMode}
-                        moveUp={moveUp}
-                        moveDown={moveDown}
-                        isFirst={index === 0}
-                        isLast={index === list.length - 1}
-                        showDragHandle={isReorderMode}
-                      />
-                    ))}
-                  </div>
-                ) : (
+        {/* Main Content */}
+        <div className="w-full">
+          {/* Loading State */}
+          {loading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6">
+              {Array.from({ length: productsPerPage }).map((_, index) => (
+                <ProductCardSkeleton key={index} />
+              ))}
+            </div>
+          ) : (
+            <>
+              {/* Products Grid */}
+              {viewMode === 'card' ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6">
+                  {list.map((item, index) => (
+                    <ProductCard
+                      key={item._id}
+                      item={item}
+                      onEdit={setEditingProduct}
+                      onDelete={removeProduct}
+                      position={index}
+                      isReorderMode={isReorderMode}
+                      moveUp={moveUp}
+                      moveDown={moveDown}
+                      isFirst={index === 0}
+                      isLast={index === list.length - 1}
+                      showDragHandle={isReorderMode}
+                    />
+                  ))}
+                </div>
+              ) : (
                   <div className="bg-white rounded-lg shadow overflow-hidden">
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">
@@ -789,18 +972,17 @@ const List = ({ token }) => {
                   </div>
                 )}
 
-                {/* Pagination */}
-                {totalPages > 1 && (
-                  <Pagination
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    onPageChange={handlePageChange}
-                    isLoading={loading}
-                  />
-                )}
-              </>
-            )}
-          </div>
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={handlePageChange}
+                  isLoading={loading}
+                />
+              )}
+            </>
+          )}
         </div>
       </div>
 
