@@ -7,7 +7,8 @@ import {
     updateProduct,
     getProductById,
     getAllProducts,
-    reorderProducts
+    reorderProducts,
+    generateCustomId
 } from '../controllers/productController.js'
 import upload from '../middleware/multer.js';
 import { isAdmin } from '../middleware/auth.js';
@@ -20,6 +21,9 @@ productRouter.get('/category/:category', getAllProducts); // GET /api/products/c
 
 // Batch reorder route must come before any dynamic :id routes
 productRouter.put('/reorder', reorderProducts);
+
+// Generate customId route
+productRouter.get('/generate-custom-id', isAdmin, generateCustomId);
 
 // Admin routes - protected with isAdmin middleware
 productRouter.post('/', isAdmin, upload.fields([{name:'image1',maxCount:1},{name:'image2',maxCount:1},{name:'image3',maxCount:1},{name:'image4',maxCount:1}]), addProduct); // POST /api/products

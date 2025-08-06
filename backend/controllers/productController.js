@@ -4,6 +4,33 @@ import path from "path";
 import fs from "fs";
 import imageOptimizer from '../utils/imageOptimizer.js';
 
+// Helper function to generate unique customId
+const generateUniqueCustomId = async (prefix = 'SCF') => {
+    let customId;
+    let isUnique = false;
+    let attempts = 0;
+    const maxAttempts = 10;
+
+    while (!isUnique && attempts < maxAttempts) {
+        // Generate a random number between 10000 and 99999
+        const randomNum = Math.floor(Math.random() * 90000) + 10000;
+        customId = `${prefix}L${randomNum.toString().padStart(5, '0')}`;
+        
+        // Check if this customId already exists
+        const existingProduct = await productModel.findOne({ customId });
+        if (!existingProduct) {
+            isUnique = true;
+        }
+        attempts++;
+    }
+
+    if (!isUnique) {
+        throw new Error('Unable to generate unique customId after maximum attempts');
+    }
+
+    return customId;
+};
+
 // GET /api/products/:id or /api/products/custom/:customId - RESTful single product fetch
 export const getProductById = async (req, res) => {
     try {
@@ -135,9 +162,19 @@ export const addProduct = async (req, res) => {
 
         const { customId, name, description, price, category, subCategory, type, sizes, bestseller, originalPrice, categorySlug, features, isNewArrival, isBestSeller, availableSizes, stock, sleeveType } = req.body
 
-        // Validate required fields
-        if (!customId) {
-            return res.status(400).json({ success: false, message: "Custom product ID is required" });
+        // Auto-generate customId if not provided
+        let finalCustomId = customId;
+        if (!finalCustomId) {
+            try {
+                finalCustomId = await generateUniqueCustomId();
+                console.log('Auto-generated customId:', finalCustomId);
+            } catch (error) {
+                return res.status(500).json({ 
+                    success: false, 
+                    message: "Failed to generate unique customId",
+                    error: error.message
+                });
+            }
         }
         if (!name || !description || !price || !category) {
             console.log('Missing fields:', {
@@ -274,7 +311,7 @@ export const addProduct = async (req, res) => {
         }
 
         const productData = {
-            customId,
+            customId: finalCustomId,
             name,
             description,
             category,
@@ -301,6 +338,21 @@ export const addProduct = async (req, res) => {
 
         console.log('Creating product with data:', productData);
 
+        // Check if finalCustomId already exists
+        const existingProduct = await productModel.findOne({ customId: finalCustomId });
+        if (existingProduct) {
+            return res.status(409).json({
+                success: false,
+                message: `Product with customId '${finalCustomId}' already exists`,
+                error: "DUPLICATE_CUSTOM_ID",
+                existingProduct: {
+                    id: existingProduct._id,
+                    name: existingProduct.name,
+                    customId: existingProduct.customId
+                }
+            });
+        }
+
         const product = new productModel(productData);
         await product.save();
 
@@ -323,7 +375,50 @@ export const addProduct = async (req, res) => {
         });
     } catch (error) {
         console.error('Add Product Error:', error);
-        res.status(500).json({ error: error.message });
+        
+        // Handle MongoDB duplicate key error specifically
+        if (error.code === 11000 && error.keyPattern && error.keyPattern.customId) {
+            return res.status(409).json({
+                success: false,
+                message: `Product with customId '${error.keyValue.customId}' already exists`,
+                error: "DUPLICATE_CUSTOM_ID",
+                details: error.errmsg
+            });
+        }
+        
+        // Handle other duplicate key errors
+        if (error.code === 11000) {
+            return res.status(409).json({
+                success: false,
+                message: "Duplicate entry detected",
+                error: "DUPLICATE_KEY_ERROR",
+                details: error.errmsg
+            });
+        }
+        
+        res.status(500).json({ 
+            success: false,
+            error: error.message || "Internal server error"
+        });
+    }
+}
+
+// Generate unique customId endpoint
+export const generateCustomId = async (req, res) => {
+    try {
+        const { prefix } = req.query;
+        const customId = await generateUniqueCustomId(prefix || 'SCF');
+        res.json({ 
+            success: true, 
+            customId,
+            message: "Unique customId generated successfully"
+        });
+    } catch (error) {
+        console.error('Generate CustomId Error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: error.message || "Failed to generate customId" 
+        });
     }
 }
 
