@@ -337,8 +337,11 @@ const List = ({ token }) => {
   const [totalPages, setTotalPages] = useState(1)
   const [totalProducts, setTotalProducts] = useState(0)
   
-  // UI state
-  const [viewMode, setViewMode] = useState('card') // 'card' or 'table'
+  // UI state - Set default view mode based on screen size
+  const [viewMode, setViewMode] = useState(() => {
+    // Default to 'table' (list view) for desktop, 'card' (grid) for mobile
+    return window.innerWidth >= 1024 ? 'table' : 'card'
+  })
   const [editingProduct, setEditingProduct] = useState(null)
   
   // Filter state
@@ -358,6 +361,7 @@ const List = ({ token }) => {
       try {
         const response = await axios.get(`${backendUrl}/api/categories`)
         if (response.data.success) {
+          console.log('Loaded categories:', response.data.data.map(cat => ({ name: cat.name, slug: cat.slug })))
           setCategories(response.data.data)
         }
       } catch (error) {
@@ -376,6 +380,17 @@ const List = ({ token }) => {
     return () => clearTimeout(timer)
   }, [searchTerm])
 
+  // Handle window resize to update view mode
+  useEffect(() => {
+    const handleResize = () => {
+      const newViewMode = window.innerWidth >= 1024 ? 'table' : 'card'
+      setViewMode(newViewMode)
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
   // Fetch products
   const fetchProducts = useCallback(async () => {
     try {
@@ -393,6 +408,7 @@ const List = ({ token }) => {
         params.append('search', debouncedSearchTerm.trim())
       }
       if (categoryFilter) {
+        console.log('Filtering by category slug:', categoryFilter)
         params.append('categorySlug', categoryFilter)
       }
       if (sizeFilter) {
@@ -602,10 +618,10 @@ const List = ({ token }) => {
                 }`}
               >
                 <ListIcon className="h-4 w-4" />
-            </button>
-          </div>
+          </button>
         </div>
       </div>
+    </div>
           </div>
 
             {/* Filters */}
@@ -613,69 +629,69 @@ const List = ({ token }) => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           {/* Filter Controls */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mb-4">
-            {/* Search */}
-            <div className="lg:col-span-2">
+        {/* Search */}
+        <div className="lg:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input
-                  type="text"
+          <input
+            type="text"
                   placeholder="Search by name or ID..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
+          />
               </div>
-            </div>
-            
-            {/* Category Filter */}
-            <div>
+        </div>
+
+        {/* Category Filter */}
+        <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-              <select
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">All Categories</option>
-                {categories.map((cat) => (
-                  <option key={cat._id} value={cat.slug}>
-                    {cat.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            
+          >
+            <option value="">All Categories</option>
+            {categories.map((cat) => (
+              <option key={cat._id} value={cat.slug}>
+                {cat.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
             {/* Size Filter */}
-            <div>
+        <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Size</label>
-              <select
-                value={sizeFilter}
-                onChange={(e) => setSizeFilter(e.target.value)}
+            <select
+              value={sizeFilter}
+              onChange={(e) => setSizeFilter(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">All Sizes</option>
-                {ALL_SIZES.map((size) => (
-                  <option key={size} value={size}>
-                    {size}
-                  </option>
-                ))}
-              </select>
-            </div>
-            
+            >
+              <option value="">All Sizes</option>
+              {ALL_SIZES.map((size) => (
+                <option key={size} value={size}>
+                  {size}
+                </option>
+              ))}
+            </select>
+      </div>
+      
             {/* Stock Filter */}
-            <div>
+      <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Stock Status</label>
-              <select
+        <select
                 value={stockFilter}
                 onChange={(e) => setStockFilter(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        >
                 <option value="">All Stock</option>
                 <option value="low">Low Stock</option>
                 <option value="out">Out of Stock</option>
-              </select>
-            </div>
-            
+        </select>
+      </div>
+
             {/* Clear Filters */}
             <div className="flex items-end">
               <button
@@ -693,24 +709,24 @@ const List = ({ token }) => {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">Price Range</label>
-              <div className="grid grid-cols-2 gap-2">
-                <input
-                  type="number"
+        <div className="grid grid-cols-2 gap-2">
+          <input
+            type="number"
                   placeholder="Min price"
                   value={priceRange.min}
                   onChange={(e) => setPriceRange(prev => ({ ...prev, min: e.target.value }))}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-                <input
-                  type="number"
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+          <input
+            type="number"
                   placeholder="Max price"
                   value={priceRange.max}
                   onChange={(e) => setPriceRange(prev => ({ ...prev, max: e.target.value }))}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-            </div>
-          </div>
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+      </div>
+      </div>
 
           {/* Active Filters Tags */}
           {activeFilters.length > 0 && (
@@ -723,16 +739,16 @@ const List = ({ token }) => {
                     className="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 text-blue-700 text-sm rounded-full border border-blue-200"
                   >
                     {filter.label}
-                    <button
+    <button
                       onClick={() => removeFilter(filter.type)}
                       className="ml-1 hover:bg-blue-200 rounded-full p-0.5 transition-colors"
                       title={`Remove ${filter.label}`}
                     >
                       <X className="h-3 w-3" />
-                    </button>
+    </button>
                   </span>
                 ))}
-              </div>
+            </div>
             </div>
           )}
         </div>
@@ -758,10 +774,10 @@ const List = ({ token }) => {
             <p className="mt-1 text-sm text-gray-500">
               Try adjusting your search or filters
             </p>
-          </div>
-        ) : (
+            </div>
+          ) : (
           /* Products Display */
-          <>
+            <>
               {viewMode === 'card' ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
                 {products.map((product) => (

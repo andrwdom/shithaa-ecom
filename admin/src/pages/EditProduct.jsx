@@ -174,16 +174,16 @@ const EditProduct = ({ product, token, onClose, onUpdate }) => {
         {/* Modal Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <h2 className="text-xl font-semibold text-gray-900">Edit Product</h2>
-          <button
-            type="button"
-            onClick={onClose}
+        <button
+          type="button"
+          onClick={onClose}
             className="text-gray-400 hover:text-gray-600 transition-colors"
-          >
+        >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
-          </button>
-        </div>
+        </button>
+      </div>
 
         {/* Modal Body - Scrollable */}
         <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
@@ -196,126 +196,126 @@ const EditProduct = ({ product, token, onClose, onUpdate }) => {
                   <label htmlFor="image1" className="cursor-pointer block">
                     <img
                       className='w-20 h-20 object-cover border-2 border-gray-300 rounded-lg hover:border-blue-400 transition-colors'
-                      src={image1 ? URL.createObjectURL(image1) : product.images[0]}
+              src={image1 ? URL.createObjectURL(image1) : product.images[0]}
                       alt="Product image 1"
-                    />
-                    <input
-                      onChange={(e) => setImage1(e.target.files[0])}
-                      type="file"
-                      id="image1"
+            />
+            <input
+              onChange={(e) => setImage1(e.target.files[0])}
+              type="file"
+              id="image1"
                       accept="image/*"
-                      hidden
-                    />
-                  </label>
+              hidden
+            />
+          </label>
                   <p className="text-xs text-gray-500 text-center">Main</p>
                 </div>
                 <div className="space-y-1">
                   <label htmlFor="image2" className="cursor-pointer block">
-                    <img
+            <img
                       className='w-20 h-20 object-cover border-2 border-gray-300 rounded-lg hover:border-blue-400 transition-colors'
-                      src={image2 ? URL.createObjectURL(image2) : (product.images[1] || assets.upload_area)}
+              src={image2 ? URL.createObjectURL(image2) : (product.images[1] || assets.upload_area)}
                       alt="Product image 2"
-                    />
-                    <input
-                      onChange={(e) => setImage2(e.target.files[0])}
-                      type="file"
-                      id="image2"
+            />
+            <input
+              onChange={(e) => setImage2(e.target.files[0])}
+              type="file"
+              id="image2"
                       accept="image/*"
-                      hidden
-                    />
-                  </label>
+              hidden
+            />
+          </label>
                   <p className="text-xs text-gray-500 text-center">Alt 1</p>
                 </div>
                 <div className="space-y-1">
                   <label htmlFor="image3" className="cursor-pointer block">
-                    <img
+            <img
                       className='w-20 h-20 object-cover border-2 border-gray-300 rounded-lg hover:border-blue-400 transition-colors'
-                      src={image3 ? URL.createObjectURL(image3) : (product.images[2] || assets.upload_area)}
+              src={image3 ? URL.createObjectURL(image3) : (product.images[2] || assets.upload_area)}
                       alt="Product image 3"
-                    />
-                    <input
-                      onChange={(e) => setImage3(e.target.files[0])}
-                      type="file"
-                      id="image3"
+            />
+            <input
+              onChange={(e) => setImage3(e.target.files[0])}
+              type="file"
+              id="image3"
                       accept="image/*"
-                      hidden
-                    />
-                  </label>
+              hidden
+            />
+          </label>
                   <p className="text-xs text-gray-500 text-center">Alt 2</p>
                 </div>
                 <div className="space-y-1">
                   <label htmlFor="image4" className="cursor-pointer block">
-                    <img
+            <img
                       className='w-20 h-20 object-cover border-2 border-gray-300 rounded-lg hover:border-blue-400 transition-colors'
-                      src={image4 ? URL.createObjectURL(image4) : (product.images[3] || assets.upload_area)}
+              src={image4 ? URL.createObjectURL(image4) : (product.images[3] || assets.upload_area)}
                       alt="Product image 4"
-                    />
-                    <input
-                      onChange={(e) => setImage4(e.target.files[0])}
-                      type="file"
-                      id="image4"
+            />
+            <input
+              onChange={(e) => setImage4(e.target.files[0])}
+              type="file"
+              id="image4"
                       accept="image/*"
-                      hidden
-                    />
-                  </label>
+              hidden
+            />
+          </label>
                   <p className="text-xs text-gray-500 text-center">Alt 3</p>
-                </div>
+        </div>
               </div>
               <p className="text-sm text-gray-600">Click on any image to upload a new one. First image is the main product image.</p>
-            </div>
+      </div>
 
             <div className='space-y-2'>
               <label className='block text-sm font-medium text-gray-700'>Product ID</label>
-              <input
-                value={customId}
+        <input
+          value={customId}
                 className='w-full max-w-md px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500'
-                type="text"
+          type="text"
                 placeholder='Product ID (auto-generated)'
                 readOnly
                 disabled
-              />
+        />
               <p className="text-xs text-gray-500">Product ID cannot be changed after creation</p>
-            </div>
+      </div>
 
             <div className='space-y-2'>
               <label className='block text-sm font-medium text-gray-700'>Product Name <span className="text-red-500">*</span></label>
-              <input
-                onChange={(e) => setName(e.target.value)}
-                value={name}
+        <input
+          onChange={(e) => setName(e.target.value)}
+          value={name}
                 className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-                type="text"
+          type="text"
                 placeholder='Enter product name'
-                required
-              />
-            </div>
+          required
+        />
+      </div>
 
             <div className='space-y-2'>
               <label className='block text-sm font-medium text-gray-700'>Product Description <span className="text-red-500">*</span></label>
-              <textarea
-                onChange={(e) => setDescription(e.target.value)}
-                value={description}
+        <textarea
+          onChange={(e) => setDescription(e.target.value)}
+          value={description}
                 className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-                rows="4"
+          rows="4"
                 placeholder='Enter detailed product description'
-                required
-              />
-            </div>
+          required
+        />
+      </div>
 
             <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
               <div className='space-y-2'>
                 <label className='block text-sm font-medium text-gray-700'>Category <span className="text-red-500">*</span></label>
-                <select
-                  value={category}
-                  onChange={e => setCategory(e.target.value)}
+          <select
+            value={category}
+            onChange={e => setCategory(e.target.value)}
                   className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white'
-                  required
-                >
-                  <option value="" disabled>Select a Category</option>
-                  {CATEGORY_OPTIONS.map(option => (
-                    <option key={option} value={option}>{option}</option>
-                  ))}
-                </select>
-              </div>
+            required
+          >
+            <option value="" disabled>Select a Category</option>
+            {CATEGORY_OPTIONS.map(option => (
+              <option key={option} value={option}>{option}</option>
+            ))}
+          </select>
+        </div>
 
         {/* Sleeve Type Field - Only show for Lounge Wear categories */}
         {shouldShowSleeveType() && (
@@ -411,20 +411,20 @@ const EditProduct = ({ product, token, onClose, onUpdate }) => {
           >
             Cancel
           </button>
-          <button 
-            type="submit" 
+      <button 
+        type="submit" 
             form="edit-product-form"
             className={`px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-2 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`} 
-            disabled={loading}
-          >
-            {loading && (
+        disabled={loading}
+      >
+        {loading && (
               <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-              </svg>
-            )}
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+          </svg>
+        )}
             {loading ? 'Updating...' : 'Update Product'}
-          </button>
+      </button>
         </div>
       </div>
     </div>
