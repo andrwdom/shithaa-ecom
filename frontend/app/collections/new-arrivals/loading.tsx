@@ -6,7 +6,7 @@ export default function Loading() {
       <div className="mb-8">
         <Image
           src="/shithaa-logo.jpg"
-          alt="Shitha Clothing"
+          alt="Shithaa - Elegant Maternity Wear"
           width={120}
           height={120}
           className="animate-fade-pulse"
