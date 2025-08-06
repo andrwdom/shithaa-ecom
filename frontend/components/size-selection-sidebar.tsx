@@ -103,10 +103,10 @@ export default function SizeSelectionSidebar({
   return (
     <>
       {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/50 z-70" onClick={onClose} />
+      <div className="fixed inset-0 bg-black/50 z-50" onClick={onClose} />
 
       {/* Sidebar */}
-      <div className="fixed inset-x-0 bottom-0 md:right-0 md:top-0 md:left-auto md:w-96 md:inset-y-0 bg-white z-80 transform transition-transform duration-300 md:shadow-2xl">
+      <div className="fixed inset-x-0 bottom-0 md:right-0 md:top-0 md:left-auto md:w-96 md:inset-y-0 bg-white z-50 transform transition-transform duration-300 md:shadow-2xl">
         {/* Mobile: Bottom sheet style, Desktop: Right sidebar */}
         <div className="h-full flex flex-col max-h-[90vh] md:max-h-full">
           {/* Header */}
