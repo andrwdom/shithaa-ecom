@@ -15,7 +15,9 @@ import {
   Package,
   AlertTriangle,
   CheckCircle,
-  X
+  X,
+  GripVertical,
+  Save
 } from 'lucide-react'
 
 // Constants
@@ -64,7 +66,7 @@ const StockBadge = ({ size, stock }) => {
 }
 
 // Product Card Component
-const ProductCard = ({ product, onEdit, onDelete }) => {
+const ProductCard = ({ product, onEdit, onDelete, isDragging, onDragStart, onDragOver, onDrop, onDragEnd }) => {
   const totalStock = product.sizes?.reduce((sum, sizeObj) => {
     return sum + (typeof sizeObj === 'object' ? sizeObj.stock || 0 : 0)
   }, 0) || 0
@@ -72,15 +74,31 @@ const ProductCard = ({ product, onEdit, onDelete }) => {
   const stockInfo = getStockStatus(totalStock)
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-all duration-200 overflow-hidden group">
-      {/* Product Image */}
-      <div className="relative aspect-[4/5] bg-gray-50">
-        <img
-          src={product.images?.[0] || '/placeholder.svg'}
-          alt={product.name}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          loading="lazy"
-        />
+    <div 
+      className={`bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-all duration-200 overflow-hidden group ${
+        isDragging ? 'opacity-50' : ''
+      }`}
+      draggable
+      onDragStart={(e) => onDragStart(e, product)}
+      onDragOver={onDragOver}
+      onDrop={(e) => onDrop(e, product)}
+      onDragEnd={onDragEnd}
+    >
+              {/* Product Image */}
+        <div className="relative aspect-[4/5] bg-gray-50">
+          {/* Drag Handle */}
+          <div className="absolute top-2 left-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="bg-white/90 backdrop-blur-sm rounded-full p-1 cursor-grab active:cursor-grabbing">
+              <GripVertical className="h-4 w-4 text-gray-600" />
+            </div>
+          </div>
+          
+          <img
+            src={product.images?.[0] || '/placeholder.svg'}
+            alt={product.name}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            loading="lazy"
+          />
         
         {/* Quick Stock Status */}
         <div className="absolute top-2 right-2">
@@ -179,15 +197,27 @@ const ProductCard = ({ product, onEdit, onDelete }) => {
 }
 
 // Table Row Component
-const ProductTableRow = ({ product, onEdit, onDelete }) => {
+const ProductTableRow = ({ product, onEdit, onDelete, isDragging, onDragStart, onDragOver, onDrop, onDragEnd }) => {
   const totalStock = product.sizes?.reduce((sum, sizeObj) => {
     return sum + (typeof sizeObj === 'object' ? sizeObj.stock || 0 : 0)
   }, 0) || 0
 
   return (
-    <tr className="hover:bg-gray-50">
+    <tr 
+      className={`hover:bg-gray-50 ${isDragging ? 'opacity-50' : ''}`}
+      draggable
+      onDragStart={(e) => onDragStart(e, product)}
+      onDragOver={onDragOver}
+      onDrop={(e) => onDrop(e, product)}
+      onDragEnd={onDragEnd}
+    >
       <td className="px-6 py-4">
         <div className="flex items-center gap-3">
+          {/* Drag Handle */}
+          <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+            <GripVertical className="h-4 w-4 text-gray-400 cursor-grab active:cursor-grabbing" />
+          </div>
+          
           <img
             src={product.images?.[0] || '/placeholder.svg'}
             alt={product.name}
@@ -351,9 +381,17 @@ const List = ({ token }) => {
   const [priceRange, setPriceRange] = useState({ min: '', max: '' })
   const [stockFilter, setStockFilter] = useState('') // 'all', 'low', 'out'
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('')
+  const [sortBy, setSortBy] = useState('displayOrder')
+  const [sortOrder, setSortOrder] = useState('asc')
   
   // Categories
   const [categories, setCategories] = useState([])
+  
+  // Drag & Drop state
+  const [isDragging, setIsDragging] = useState(false)
+  const [draggedProduct, setDraggedProduct] = useState(null)
+  const [isReordering, setIsReordering] = useState(false)
+  const [selectedCategory, setSelectedCategory] = useState('all')
 
   // Fetch categories
   useEffect(() => {
@@ -391,6 +429,16 @@ const List = ({ token }) => {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
+  // Show category selection feedback
+  useEffect(() => {
+    if (selectedCategory !== 'all') {
+      const category = categories.find(cat => cat.slug === selectedCategory)
+      if (category) {
+        toast.info(`Showing products from: ${category.name}`)
+      }
+    }
+  }, [selectedCategory, categories])
+
   // Fetch products
   const fetchProducts = useCallback(async () => {
     try {
@@ -399,17 +447,20 @@ const List = ({ token }) => {
       const params = new URLSearchParams({
         page: currentPage,
         limit: PRODUCTS_PER_PAGE,
-        sortBy: 'createdAt',
-        sortOrder: 'desc'
+        sortBy: sortBy,
+        sortOrder: sortOrder
       })
       
       // Add filters - use debounced search
       if (debouncedSearchTerm.trim()) {
         params.append('search', debouncedSearchTerm.trim())
       }
-      if (categoryFilter) {
-        console.log('Filtering by category slug:', categoryFilter)
-        params.append('categorySlug', categoryFilter)
+      
+      // Use selectedCategory for filtering if not 'all'
+      const categoryToFilter = selectedCategory !== 'all' ? selectedCategory : categoryFilter
+      if (categoryToFilter) {
+        console.log('Filtering by category slug:', categoryToFilter)
+        params.append('categorySlug', categoryToFilter)
       }
       if (sizeFilter) {
         params.append('size', sizeFilter)
@@ -452,10 +503,13 @@ const List = ({ token }) => {
     } catch (error) {
       console.error('Error fetching products:', error)
       toast.error('Failed to fetch products')
+      setProducts([])
+      setTotalPages(1)
+      setTotalProducts(0)
     } finally {
       setLoading(false)
     }
-  }, [token, currentPage, debouncedSearchTerm, categoryFilter, sizeFilter, priceRange, stockFilter])
+  }, [token, currentPage, debouncedSearchTerm, categoryFilter, selectedCategory, sizeFilter, priceRange, stockFilter, sortBy, sortOrder])
 
   // Fetch products when dependencies change
   useEffect(() => {
@@ -465,7 +519,7 @@ const List = ({ token }) => {
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1)
-  }, [debouncedSearchTerm, categoryFilter, sizeFilter, priceRange, stockFilter])
+  }, [debouncedSearchTerm, categoryFilter, selectedCategory, sizeFilter, priceRange, stockFilter, sortBy, sortOrder])
 
   // Handle product deletion
   const handleDeleteProduct = async (productId) => {
@@ -492,6 +546,8 @@ const List = ({ token }) => {
     setSizeFilter('')
     setPriceRange({ min: '', max: '' })
     setStockFilter('')
+    setSortBy('displayOrder')
+    setSortOrder('asc')
   }
 
   // Remove individual filter
@@ -514,6 +570,10 @@ const List = ({ token }) => {
         break
       case 'stock':
         setStockFilter('')
+        break
+      case 'sort':
+        setSortBy('displayOrder')
+        setSortOrder('asc')
         break
     }
   }
@@ -575,11 +635,101 @@ const List = ({ token }) => {
       })
     }
     
+    if (sortBy !== 'displayOrder' || sortOrder !== 'asc') {
+      const sortLabels = {
+        'createdAt-desc': 'Newest First',
+        'createdAt-asc': 'Oldest First',
+        'price-asc': 'Price: Low to High',
+        'price-desc': 'Price: High to Low',
+        'name-asc': 'Name: A to Z',
+        'name-desc': 'Name: Z to A'
+      }
+      const sortKey = `${sortBy}-${sortOrder}`
+      if (sortLabels[sortKey]) {
+        filters.push({
+          type: 'sort',
+          label: `Sort: ${sortLabels[sortKey]}`,
+          value: sortKey
+        })
+      }
+    }
+    
     return filters
   }
 
   const activeFilters = getActiveFilters()
   const activeFiltersCount = activeFilters.length
+
+  // Drag & Drop functions
+  const handleDragStart = (e, product) => {
+    setIsDragging(true)
+    setDraggedProduct(product)
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/html', e.target.outerHTML)
+  }
+
+  const handleDragOver = (e) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+  }
+
+  const handleDrop = async (e, targetProduct) => {
+    e.preventDefault()
+    setIsDragging(false)
+    setDraggedProduct(null)
+    
+    if (!draggedProduct || draggedProduct._id === targetProduct._id) return
+    
+    // Reorder products
+    const currentProducts = [...products]
+    const draggedIndex = currentProducts.findIndex(p => p._id === draggedProduct._id)
+    const targetIndex = currentProducts.findIndex(p => p._id === targetProduct._id)
+    
+    if (draggedIndex === -1 || targetIndex === -1) return
+    
+    // Remove dragged item and insert at new position
+    const [removed] = currentProducts.splice(draggedIndex, 1)
+    currentProducts.splice(targetIndex, 0, removed)
+    
+    // Update display order
+    const updatedProducts = currentProducts.map((product, index) => ({
+      ...product,
+      displayOrder: (index + 1) * 10
+    }))
+    
+    setProducts(updatedProducts)
+    
+    // Save to backend
+    try {
+      setIsReordering(true)
+      const categorySlug = selectedCategory === 'all' ? null : selectedCategory
+      const productsToReorder = updatedProducts.map(p => ({
+        _id: p._id,
+        displayOrder: p.displayOrder
+      }))
+      
+      await axios.post(`${backendUrl}/api/products/reorder`, {
+        products: productsToReorder,
+        categorySlug
+      }, {
+        headers: { token }
+      })
+      
+      toast.success('Product order updated successfully')
+    } catch (error) {
+      console.error('Error reordering products:', error)
+      toast.error('Failed to update product order')
+      // Revert to original order
+      fetchProducts()
+    } finally {
+      setIsReordering(false)
+    }
+  }
+
+  const handleDragEnd = () => {
+    setIsDragging(false)
+    setDraggedProduct(null)
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -587,7 +737,7 @@ const List = ({ token }) => {
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between py-6">
-        <div>
+            <div>
               <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
                 <Package className="h-6 w-6" />
                 Product Management
@@ -595,40 +745,81 @@ const List = ({ token }) => {
               <p className="text-sm text-gray-600 mt-1">
                 {totalProducts} products • Page {currentPage} of {totalPages}
               </p>
-        </div>
+            </div>
 
             {/* View Mode Toggle */}
-            <div className="flex items-center bg-gray-100 rounded-lg p-1">
+            <div className="flex items-center gap-4">
+              {/* Reorder Status */}
+              {isReordering && (
+                <div className="flex items-center gap-2 text-blue-600">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                  <span className="text-sm">Saving order...</span>
+                </div>
+              )}
+              
+              <div className="flex items-center bg-gray-100 rounded-lg p-1">
+                <button
+                  onClick={() => setViewMode('card')}
+                  className={`p-2 rounded-md transition-colors ${
+                    viewMode === 'card'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  <Grid className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => setViewMode('table')}
+                  className={`p-2 rounded-md transition-colors ${
+                    viewMode === 'table'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  <ListIcon className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Category Tabs */}
+        <div className="border-t border-gray-200 bg-gray-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center gap-2 py-3 overflow-x-auto">
               <button
-                onClick={() => setViewMode('card')}
-                className={`p-2 rounded-md transition-colors ${
-                  viewMode === 'card'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
+                onClick={() => setSelectedCategory('all')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                  selectedCategory === 'all'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
                 }`}
               >
-                <Grid className="h-4 w-4" />
+                All Categories
               </button>
-            <button
-                onClick={() => setViewMode('table')}
-                className={`p-2 rounded-md transition-colors ${
-                  viewMode === 'table'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                <ListIcon className="h-4 w-4" />
-          </button>
+              {categories.map((category) => (
+                <button
+                  key={category._id}
+                  onClick={() => setSelectedCategory(category.slug)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                    selectedCategory === category.slug
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
+                  }`}
+                >
+                  {category.name}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
-    </div>
-          </div>
 
             {/* Filters */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           {/* Filter Controls */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mb-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-4 mb-4">
         {/* Search */}
         <div className="lg:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
@@ -689,6 +880,28 @@ const List = ({ token }) => {
                 <option value="">All Stock</option>
                 <option value="low">Low Stock</option>
                 <option value="out">Out of Stock</option>
+        </select>
+      </div>
+
+            {/* Sort Filter */}
+      <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Sort By</label>
+        <select
+                value={`${sortBy}-${sortOrder}`}
+                onChange={(e) => {
+                  const [field, order] = e.target.value.split('-')
+                  setSortBy(field)
+                  setSortOrder(order)
+                }}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        >
+                <option value="displayOrder-asc">Order (Custom)</option>
+                <option value="createdAt-desc">Newest First</option>
+                <option value="createdAt-asc">Oldest First</option>
+                <option value="price-asc">Price: Low to High</option>
+                <option value="price-desc">Price: High to Low</option>
+                <option value="name-asc">Name: A to Z</option>
+                <option value="name-desc">Name: Z to A</option>
         </select>
       </div>
 
@@ -756,6 +969,15 @@ const List = ({ token }) => {
 
         {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Drag & Drop Indicator */}
+        {isDragging && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center gap-2 text-blue-700">
+              <GripVertical className="h-4 w-4" />
+              <span className="text-sm font-medium">Drag to reorder products</span>
+            </div>
+          </div>
+        )}
           {loading ? (
           /* Loading State */
           <div className={viewMode === 'card' 
@@ -786,6 +1008,11 @@ const List = ({ token }) => {
                     product={product}
                       onEdit={setEditingProduct}
                     onDelete={handleDeleteProduct}
+                    isDragging={draggedProduct?._id === product._id}
+                    onDragStart={handleDragStart}
+                    onDragOver={handleDragOver}
+                    onDrop={handleDrop}
+                    onDragEnd={handleDragEnd}
                     />
                   ))}
                 </div>
@@ -794,6 +1021,9 @@ const List = ({ token }) => {
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                         <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-8">
+                            {/* Drag handle column */}
+                          </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Product
                           </th>
@@ -804,7 +1034,7 @@ const List = ({ token }) => {
                             Price
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Stock by Size
+                            Stock by Size
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Actions
@@ -818,6 +1048,11 @@ const List = ({ token }) => {
                         product={product}
                         onEdit={setEditingProduct}
                         onDelete={handleDeleteProduct}
+                        isDragging={draggedProduct?._id === product._id}
+                        onDragStart={handleDragStart}
+                        onDragOver={handleDragOver}
+                        onDrop={handleDrop}
+                        onDragEnd={handleDragEnd}
                       />
                         ))}
                       </tbody>
