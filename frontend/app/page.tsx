@@ -5,6 +5,7 @@ import { Metadata } from "next"
 import HeroSection from "@/components/hero-section"
 import ProductSlider from "@/components/product-slider"
 import CategoryStrip from "@/components/category-strip"
+import TestimonialCarousel from "@/components/testimonial-carousel"
 import FAQAccordion from "@/components/faq-accordion"
 import Footer from "@/components/footer"
 import CategorySidebar from "@/components/category-sidebar"
@@ -120,7 +121,6 @@ export default function Home() {
         <PerformanceMonitor />
         <div className="min-h-screen bg-white">
           <HeroSection />
-          
           <CategoryStrip onCategoryClick={handleCategorySelect} currentCategory={undefined} />
           <TestimonialsSection />
           <FAQAccordion />
