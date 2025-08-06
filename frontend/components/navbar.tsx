@@ -24,8 +24,8 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
 
   const handleAccountClick = () => {
     if (user) {
-      // Show account menu or navigate to account page
-      console.log("User is logged in:", user)
+      // Navigate to account page when user is logged in
+      window.location.href = "/account"
     } else {
       setIsLoginModalOpen(true)
     }
@@ -45,7 +45,7 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
         FREE DELIVERY WITHIN TAMIL NADU.
           </div>
           <div className="banner-message">
-            🔥 BUY 3 & GET 10% OFF ON MATERNITY ESSENTIALS! 🔥
+            🔥 Buy 3 Lounge wear @1299rs 🔥
           </div>
         </div>
       </div>
@@ -61,8 +61,9 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
               <Button
                 variant="ghost"
                 size="sm"
-                className="md:hidden text-gray-600 hover:text-[rgb(71,60,102)] p-2"
+                className="md:hidden text-gray-600 hover:text-[rgb(71,60,102)] p-2 z-10 cursor-pointer"
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
+                type="button"
               >
                 {isMenuOpen ? <X className="navbar-icon" /> : <Menu className="navbar-icon" />}
               </Button>
@@ -108,8 +109,9 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
                 {/* Cart Icon */}
                 <button
                   onClick={openCartSidebar}
-                  className="relative p-2 text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200"
+                  className="relative p-2 text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200 z-10 cursor-pointer"
                   aria-label="Shopping cart"
+                  type="button"
                 >
                   <ShoppingBag className="navbar-icon" />
                   {cartCount > 0 && (
@@ -122,8 +124,9 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
                 {/* User Icon */}
                 <button
                   onClick={handleAccountClick}
-                  className="p-2 text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200"
+                  className="p-2 text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200 relative z-10 cursor-pointer"
                   aria-label="Account"
+                  type="button"
                 >
                   <User className="navbar-icon" />
                 </button>
