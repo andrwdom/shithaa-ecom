@@ -341,16 +341,25 @@ export const addProduct = async (req, res) => {
         // Check if finalCustomId already exists
         const existingProduct = await productModel.findOne({ customId: finalCustomId });
         if (existingProduct) {
-            return res.status(409).json({
-                success: false,
-                message: `Product with customId '${finalCustomId}' already exists`,
-                error: "DUPLICATE_CUSTOM_ID",
-                existingProduct: {
-                    id: existingProduct._id,
-                    name: existingProduct.name,
-                    customId: existingProduct.customId
-                }
-            });
+            console.error(`Duplicate customId detected: ${finalCustomId}`);
+            
+            // Try to generate a new unique customId automatically
+            try {
+                const newUniqueId = await generateUniqueCustomId();
+                console.log(`Auto-generating new customId: ${newUniqueId}`);
+                finalCustomId = newUniqueId;
+            } catch (genError) {
+                return res.status(409).json({
+                    success: false,
+                    message: `Product with customId '${finalCustomId}' already exists and unable to generate new unique ID`,
+                    error: "DUPLICATE_CUSTOM_ID",
+                    existingProduct: {
+                        id: existingProduct._id,
+                        name: existingProduct.name,
+                        customId: existingProduct.customId
+                    }
+                });
+            }
         }
 
         const product = new productModel(productData);

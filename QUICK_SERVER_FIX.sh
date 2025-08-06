@@ -9,7 +9,10 @@ cd /var/www/shithaa-ecom/backend
 echo "📦 Installing dependencies..."
 npm install
 
-echo "🔧 Running duplicate customId cleanup..."
+echo "🔧 Running immediate fix for SCFL00130..."
+node scripts/immediate-fix.js
+
+echo "🔧 Running complete duplicate customId cleanup..."
 node scripts/fix-duplicate-custom-ids.js
 
 echo "🔄 Restarting backend server..."
