@@ -42,7 +42,7 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
       <div className="bg-[rgb(71,60,102)] text-white py-3 overflow-hidden relative">
         <div className="banner-ticker">
           <div className="banner-message">
-            FREE DELIVERY WITHIN TAMIL NADU.
+        FREE DELIVERY WITHIN TAMIL NADU.
           </div>
           <div className="banner-message">
             🔥 BUY 3 & GET 10% OFF ON MATERNITY ESSENTIALS! 🔥
@@ -154,7 +154,7 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
                   contact us
                 </a>
                 {user ? (
-                  <div className="border-t border-gray-200 pt-4">
+                <div className="border-t border-gray-200 pt-4">
                     <div className="flex items-center space-x-2 mb-4">
                       <User className="h-5 w-5 text-gray-600" />
                       <span className="text-gray-900 font-medium">{user.email}</span>
@@ -173,8 +173,8 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
                     className="text-left text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200"
                   >
                     Login
-                  </button>
-                )}
+                    </button>
+                  )}
               </div>
             </div>
           )}

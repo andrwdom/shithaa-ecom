@@ -1,5 +1,6 @@
 "use client"
 
+import React from "react"
 import { X, Plus, Minus, ShoppingBag, Gift } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
