@@ -619,3 +619,90 @@ export const reorderProducts = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// Move product to top or bottom of category
+export const moveProduct = async (req, res) => {
+  try {
+    const { productId, action, categorySlug } = req.body;
+    console.log('Move product request:', { productId, action, categorySlug });
+    
+    if (!productId || !action || !categorySlug) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'productId, action (top/bottom), and categorySlug are required' 
+      });
+    }
+    
+    if (!['top', 'bottom'].includes(action)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'action must be either "top" or "bottom"' 
+      });
+    }
+    
+    // Get the product to move
+    const product = await productModel.findById(productId);
+    if (!product) {
+      return res.status(404).json({ success: false, message: 'Product not found' });
+    }
+    
+    // Get all products in the category
+    const categoryProducts = await productModel.find({
+      $or: [
+        { categorySlug: categorySlug },
+        { category: categorySlug }
+      ]
+    }).sort({ displayOrder: 1 });
+    
+    console.log('Found products in category:', categoryProducts.length);
+    
+    if (categoryProducts.length === 0) {
+      return res.status(400).json({ success: false, message: 'No products found in category' });
+    }
+    
+    // Remove the product from current position
+    const productsWithoutTarget = categoryProducts.filter(p => String(p._id) !== String(productId));
+    
+    let newOrder;
+    if (action === 'top') {
+      // Move to top (displayOrder: 0)
+      newOrder = [
+        { _id: productId, displayOrder: 0 },
+        ...productsWithoutTarget.map((p, i) => ({ _id: p._id, displayOrder: (i + 1) * 10 }))
+      ];
+    } else {
+      // Move to bottom (highest displayOrder + 10)
+      const maxOrder = Math.max(...productsWithoutTarget.map(p => p.displayOrder || 0), 0);
+      newOrder = [
+        ...productsWithoutTarget.map((p, i) => ({ _id: p._id, displayOrder: i * 10 })),
+        { _id: productId, displayOrder: maxOrder + 10 }
+      ];
+    }
+    
+    // Prepare bulk operations
+    const ops = newOrder.map(p => ({
+      updateOne: {
+        filter: { _id: p._id },
+        update: { $set: { displayOrder: p.displayOrder } }
+      }
+    }));
+    
+    console.log('Updating products with ops:', ops.length);
+    await productModel.bulkWrite(ops);
+    
+    // Fetch updated products to return
+    const updatedProducts = await productModel.find({
+      _id: { $in: newOrder.map(p => p._id) }
+    }).sort({ displayOrder: 1 });
+    
+    console.log('Successfully moved product, updatedProducts.length:', updatedProducts.length);
+    res.status(200).json({ 
+      success: true, 
+      message: `Product moved to ${action} of category`, 
+      products: updatedProducts 
+    });
+  } catch (error) {
+    console.error('Move product error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

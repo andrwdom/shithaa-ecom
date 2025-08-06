@@ -17,7 +17,9 @@ import {
   CheckCircle,
   X,
   GripVertical,
-  Save
+  Save,
+  ChevronUp,
+  ChevronDown
 } from 'lucide-react'
 
 // Constants
@@ -66,7 +68,7 @@ const StockBadge = ({ size, stock }) => {
 }
 
 // Product Card Component
-const ProductCard = ({ product, onEdit, onDelete, isDragging, onDragStart, onDragOver, onDrop, onDragEnd }) => {
+const ProductCard = ({ product, onEdit, onDelete, isDragging, onDragStart, onDragOver, onDrop, onDragEnd, onMoveTop, onMoveBottom }) => {
   const totalStock = product.sizes?.reduce((sum, sizeObj) => {
     return sum + (typeof sizeObj === 'object' ? sizeObj.stock || 0 : 0)
   }, 0) || 0
@@ -176,28 +178,48 @@ const ProductCard = ({ product, onEdit, onDelete, isDragging, onDragStart, onDra
 
         {/* Action Buttons */}
         <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1">
             <button
-            onClick={() => onEdit(product)}
-            className="flex items-center gap-1 px-3 py-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors text-sm font-medium"
+              onClick={() => onEdit(product)}
+              className="flex items-center gap-1 px-3 py-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors text-sm font-medium"
             >
-            <Edit className="h-3 w-3" />
-            Edit
+              <Edit className="h-3 w-3" />
+              Edit
             </button>
             <button
-            onClick={() => onDelete(product._id)}
-            className="flex items-center gap-1 px-3 py-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors text-sm font-medium"
+              onClick={() => onDelete(product._id)}
+              className="flex items-center gap-1 px-3 py-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors text-sm font-medium"
             >
-            <Trash2 className="h-3 w-3" />
-            Delete
+              <Trash2 className="h-3 w-3" />
+              Delete
             </button>
           </div>
+          
+          {/* Move Buttons */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => onMoveTop(product._id)}
+              className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors"
+              title="Move to top"
+            >
+              <ChevronUp className="h-3 w-3" />
+            </button>
+            <button
+              onClick={() => onMoveBottom(product._id)}
+              className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors"
+              title="Move to bottom"
+            >
+              <ChevronDown className="h-3 w-3" />
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   )
 }
 
 // Table Row Component
-const ProductTableRow = ({ product, onEdit, onDelete, isDragging, onDragStart, onDragOver, onDrop, onDragEnd }) => {
+const ProductTableRow = ({ product, onEdit, onDelete, isDragging, onDragStart, onDragOver, onDrop, onDragEnd, onMoveTop, onMoveBottom }) => {
   const totalStock = product.sizes?.reduce((sum, sizeObj) => {
     return sum + (typeof sizeObj === 'object' ? sizeObj.stock || 0 : 0)
   }, 0) || 0
@@ -258,21 +280,39 @@ const ProductTableRow = ({ product, onEdit, onDelete, isDragging, onDragStart, o
       </td>
       <td className="px-6 py-4">
         <div className="flex items-center gap-2">
-              <button
+          <button
             onClick={() => onEdit(product)}
             className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
             title="Edit Product"
           >
             <Edit className="h-4 w-4" />
-              </button>
-              <button
+          </button>
+          <button
             onClick={() => onDelete(product._id)}
             className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
             title="Delete Product"
           >
             <Trash2 className="h-4 w-4" />
-              </button>
-            </div>
+          </button>
+          
+          {/* Move Buttons */}
+          <div className="flex items-center gap-1 ml-2">
+            <button
+              onClick={() => onMoveTop(product._id)}
+              className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+              title="Move to top"
+            >
+              <ChevronUp className="h-3 w-3" />
+            </button>
+            <button
+              onClick={() => onMoveBottom(product._id)}
+              className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+              title="Move to bottom"
+            >
+              <ChevronDown className="h-3 w-3" />
+            </button>
+          </div>
+        </div>
       </td>
     </tr>
   )
@@ -710,7 +750,7 @@ const List = ({ token }) => {
         displayOrder: p.displayOrder
       }))
       
-      await axios.post(`${backendUrl}/api/products/reorder`, {
+      await axios.put(`${backendUrl}/api/products/reorder`, {
         products: productsToReorder,
         categorySlug
       }, {
@@ -731,6 +771,39 @@ const List = ({ token }) => {
   const handleDragEnd = () => {
     setIsDragging(false)
     setDraggedProduct(null)
+  }
+
+  // Move product to top or bottom
+  const handleMoveProduct = async (productId, action) => {
+    if (selectedCategory === 'all') {
+      toast.warning('Please select a category first to move products')
+      return
+    }
+
+    try {
+      setIsReordering(true)
+      const response = await axios.put(
+        `${backendUrl}/api/products/move`,
+        {
+          productId,
+          action, // 'top' or 'bottom'
+          categorySlug: selectedCategory
+        },
+        { headers: { token } }
+      )
+
+      if (response.data.success) {
+        toast.success(`Product moved to ${action} successfully`)
+        fetchProducts() // Refresh the list
+      } else {
+        toast.error(response.data.message || 'Failed to move product')
+      }
+    } catch (error) {
+      console.error('Move product error:', error)
+      toast.error(error.response?.data?.message || 'Failed to move product')
+    } finally {
+      setIsReordering(false)
+    }
   }
 
   return (
@@ -1048,6 +1121,8 @@ const List = ({ token }) => {
                     onDragOver={handleDragOver}
                     onDrop={handleDrop}
                     onDragEnd={handleDragEnd}
+                    onMoveTop={(productId) => handleMoveProduct(productId, 'top')}
+                    onMoveBottom={(productId) => handleMoveProduct(productId, 'bottom')}
                     />
                   ))}
                 </div>
@@ -1088,6 +1163,8 @@ const List = ({ token }) => {
                         onDragOver={handleDragOver}
                         onDrop={handleDrop}
                         onDragEnd={handleDragEnd}
+                        onMoveTop={(productId) => handleMoveProduct(productId, 'top')}
+                        onMoveBottom={(productId) => handleMoveProduct(productId, 'bottom')}
                       />
                         ))}
                       </tbody>
