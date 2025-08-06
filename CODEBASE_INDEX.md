@@ -1,381 +1,382 @@
-# Shithaa Maternity Wear - Codebase Index
+# Shithaa Maternity E-commerce Platform - Codebase Index
 
-## 📋 Project Overview
+## 🏗️ Project Overview
 
-**Shithaa** is a modern, production-ready e-commerce platform for premium maternity wear and feeding essentials. The platform is built with a microservices architecture consisting of three main applications:
+**Shithaa** is a modern, production-ready e-commerce platform for premium maternity wear and feeding essentials. The platform consists of three main applications:
 
 1. **Frontend** (Next.js 14) - Customer-facing e-commerce website
 2. **Backend** (Node.js/Express) - REST API server
 3. **Admin Panel** (React/Vite) - Content management system
 
-## 🏗️ Architecture Overview
+## 📁 Project Structure
 
 ```
 shitha-maternity2/
-├── frontend/          # Next.js 14 customer website
-├── backend/           # Express.js API server
-├── admin/            # React admin panel
-├── nginx-config/     # Production deployment config
-└── scripts/          # Utility scripts
+├── frontend/                 # Next.js 14 Frontend (Customer Site)
+├── backend/                  # Express.js API Server
+├── admin/                    # React Admin Panel (Vite)
+└── nginx-config/            # Nginx configuration files
 ```
 
-## 🚀 Technology Stack
+## 🎯 Frontend (Next.js 14) - `/frontend`
 
-### Frontend (Next.js 14)
+### Core Architecture
 - **Framework**: Next.js 14 with App Router
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS + DaisyUI
-- **UI Components**: Radix UI primitives
-- **State Management**: React Context + Hooks
+- **State Management**: React Context (Cart, Wishlist, Auth)
 - **Authentication**: Firebase Auth
 - **Payments**: Razorpay integration
-- **Animations**: Framer Motion
-- **Performance**: React Server Components, Image optimization
+- **Performance**: Optimized images, lazy loading, PWA support
 
-### Backend (Node.js/Express)
-- **Runtime**: Node.js with ES modules
-- **Framework**: Express.js
+### Key Directories & Files
+
+#### `/app` - App Router Pages
+- `layout.tsx` - Root layout with SEO metadata, fonts, providers
+- `page.tsx` - Homepage with hero, carousel, product sliders
+- `globals.css` - Global styles and Tailwind configuration
+- `providers.tsx` - Context providers (Auth, Cart, Wishlist, Theme)
+
+#### `/app` Subdirectories
+- `/about/` - About page with company information
+- `/account/` - User account management and order history
+- `/checkout/` - Complete checkout flow with payment integration
+- `/collections/[categorySlug]/` - Category pages with product filtering
+- `/contact/` - Contact form and company details
+- `/product/[productId]/` - Individual product pages
+- `/wishlist/` - User wishlist management
+- `/payment/phonepe/callback/` - Payment gateway callbacks
+- `/order-success/` - Order confirmation page
+- `/confirmation/` - Order confirmation details
+- `/privacy-policy/`, `/terms/`, `/shipping-info/`, `/return-policy/` - Legal pages
+
+#### `/components` - Reusable Components
+- **UI Components**: `/ui/` - Radix UI components (buttons, forms, modals, etc.)
+- **Layout**: `navbar.tsx`, `footer.tsx`, `layout-client.tsx`
+- **Product**: `product-card.tsx`, `product-page.tsx`, `product-slider.tsx`
+- **Cart**: `cart-sidebar.tsx`, `cart-context.tsx`, `quantity-selector.tsx`
+- **Carousel**: `banner-carousel.tsx`, `image-carousel.tsx`, `fallback-carousel.tsx`
+- **Auth**: `/auth/` - Authentication components
+- **Performance**: `performance-monitor.tsx`, `error-boundary.tsx`
+- **Category**: `category-sidebar.tsx`, `category-strip.tsx`, `category-cards.tsx`
+
+#### `/hooks` - Custom React Hooks
+- `use-mobile.tsx` - Mobile detection
+- `use-toast.ts` - Toast notifications
+- `useCarousel.ts` - Carousel functionality
+
+#### `/lib` - Utility Libraries
+- `api-health.ts` - API health monitoring
+- `firebase.ts` - Firebase configuration
+- `image-utils.ts` - Image optimization utilities
+- `server-utils.ts` - Server-side utilities
+- `utils.ts` - General utility functions
+
+#### `/scripts` - Build & Performance Tools
+- `build-optimized.js` - Optimized build process
+- `performance-audit.js` - Performance monitoring
+- `optimize-images.js` - Image optimization
+- `generate-webp.js` - WebP conversion
+
+#### `/public` - Static Assets
+- Product images and logos
+- Placeholder images
+- Manifest and PWA files
+
+### Key Features
+- **SEO Optimized**: Comprehensive metadata, structured data, sitemap
+- **Performance**: Image optimization, lazy loading, code splitting
+- **Mobile First**: Responsive design with touch-friendly interface
+- **PWA Ready**: Service worker, manifest, offline support
+- **Accessibility**: ARIA labels, keyboard navigation, screen reader support
+
+## 🔧 Backend (Express.js) - `/backend`
+
+### Core Architecture
+- **Framework**: Express.js with ES modules
 - **Database**: MongoDB with Mongoose ODM
 - **Authentication**: JWT + Firebase Admin
 - **Payments**: Razorpay + PhonePe integration
-- **File Upload**: Multer
-- **Email**: Nodemailer
+- **File Upload**: Multer with Sharp image processing
 - **Security**: Rate limiting, CORS, input validation
 
-### Admin Panel (React/Vite)
+### Key Directories & Files
+
+#### `/models` - Database Models
+- `productModel.js` - Product schema with sizes, categories, inventory
+- `orderModel.js` - Order schema with shipping, payment, refund tracking
+- `User.js` - User authentication and profile data
+- `Category.js` - Product categories and slugs
+- `Coupon.js` - Discount codes and promotions
+- `CarouselBanner.js` - Homepage banner management
+- `Contact.js` - Contact form submissions
+- `Wishlist.js` - User wishlist items
+- `counterModel.js` - Auto-increment counters
+
+#### `/routes` - API Endpoints
+- `productRoute.js` - Product CRUD operations
+- `orderRoute.js` - Order management and tracking
+- `userRoute.js` - User authentication and profiles
+- `cartRoute.js` - Shopping cart operations
+- `paymentRoute.js` - Payment processing (Razorpay/PhonePe)
+- `couponRoutes.js` - Discount code management
+- `categoryRoute.js` - Category management
+- `carouselRoutes.js` - Banner carousel management
+- `contactRoute.js` - Contact form handling
+- `wishlistRoutes.js` - Wishlist operations
+
+#### `/controllers` - Business Logic
+- `productController.js` - Product operations
+- `orderController.js` - Order processing and management
+- `userController.js` - User authentication and management
+- `paymentController.js` - Payment gateway integration
+- `cartController.js` - Cart operations
+- `couponController.js` - Discount management
+- `categoryController.js` - Category operations
+- `carouselController.js` - Banner management
+- `contactController.js` - Contact form processing
+- `wishlistController.js` - Wishlist operations
+- `refundController.js` - Refund processing
+- `webhookController.js` - Payment webhook handling
+
+#### `/middleware` - Express Middleware
+- `auth.js` - JWT authentication
+- `adminAuth.js` - Admin-only route protection
+- `multer.js` - File upload handling
+
+#### `/config` - Configuration
+- `mongodb.js` - Database connection setup
+
+#### `/utils` - Utility Functions
+- `response.js` - Standardized API responses
+- `imageOptimizer.js` - Image processing utilities
+- `invoiceGenerator.js` - PDF invoice generation
+
+#### `/scripts` - Database Tools
+- Migration scripts for data consistency
+- Seeding scripts for initial data
+- Order reconciliation tools
+
+### Key Features
+- **RESTful API**: Standard HTTP methods and status codes
+- **Rate Limiting**: Protection against abuse
+- **File Upload**: Image processing with Sharp
+- **Payment Integration**: Multiple payment gateways
+- **Order Management**: Complete order lifecycle
+- **Inventory Management**: Real-time stock tracking
+- **Admin Authentication**: Secure admin access
+
+## 🛠️ Admin Panel (React/Vite) - `/admin`
+
+### Core Architecture
 - **Framework**: React 18 with Vite
-- **Styling**: Tailwind CSS
-- **UI**: Custom components + Radix UI
-- **State**: React Context + Hooks
-- **Drag & Drop**: @hello-pangea/dnd
+- **Routing**: React Router DOM
+- **UI**: Tailwind CSS + custom components
+- **State Management**: React Context + local state
+- **HTTP Client**: Axios for API calls
 
-## 📁 Detailed Structure
+### Key Components
+- `App.jsx` - Main application component
+- `Login.jsx` - Admin authentication
+- `Navbar.jsx` - Navigation header
+- `Sidebar.jsx` - Admin menu sidebar
+- `ProtectedRoute.jsx` - Route protection
 
-### Frontend (`/frontend/`)
+### Pages
+- `Add.jsx` - Add new products
+- `List.jsx` - Product listing and management
+- `EditProduct.jsx` - Product editing
+- `Orders.jsx` - Order management
+- `CarouselManagement.jsx` - Banner carousel management
+- `CouponManagement.jsx` - Discount code management
 
-#### Core Application (`/app/`)
-```
-app/
-├── layout.tsx                    # Root layout with metadata
-├── page.tsx                      # Homepage
-├── globals.css                   # Global styles
-├── providers.tsx                 # Context providers
-├── sitemap.ts                    # Dynamic sitemap generation
-├── robots.ts                     # SEO robots configuration
-├── not-found.tsx                 # 404 error page
-├── about/                        # About page
-├── account/                      # User account management
-├── checkout/                     # Shopping cart & checkout
-├── collections/                  # Product category pages
-├── confirmation/                 # Order confirmation
-├── contact/                      # Contact page
-├── order-success/                # Order success page
-├── payment/                      # Payment processing
-├── product/                      # Individual product pages
-├── wishlist/                     # User wishlist
-└── api/                         # API routes
-```
-
-#### Components (`/components/`)
-```
-components/
-├── auth/                         # Authentication components
-│   ├── AuthContext.tsx          # Auth state management
-│   ├── GoogleLoginButton.tsx    # Google OAuth
-│   ├── LoginModal.tsx           # Login modal
-│   └── useAuth.ts              # Auth hooks
-├── ui/                          # Reusable UI components
-│   ├── button.tsx              # Button component
-│   ├── dialog.tsx              # Modal dialogs
-│   ├── form.tsx                # Form components
-│   └── ...                     # 40+ UI components
-├── banner-carousel.tsx          # Hero carousel
-├── cart-context.tsx             # Shopping cart state
-├── cart-sidebar.tsx             # Cart sidebar
-├── navbar.tsx                   # Navigation header
-├── footer.tsx                   # Site footer
-├── product-card.tsx             # Product display
-├── product-grid-optimized.tsx   # Product grid
-├── wishlist-context.tsx         # Wishlist state
-└── ...                         # 50+ components
-```
-
-#### Utilities (`/lib/`)
-```
-lib/
-├── api-health.ts                # API health checks
-├── firebase.ts                  # Firebase configuration
-├── image-utils.ts              # Image optimization
-├── server-utils.ts             # Server utilities
-└── utils.ts                    # General utilities
-```
-
-#### Scripts (`/scripts/`)
-```
-scripts/
-├── build-optimized.js          # Optimized build process
-├── generate-webp.js            # Image format conversion
-├── optimize-images.js          # Image optimization
-├── performance-audit.js        # Performance monitoring
-└── test-api.js                # API testing
-```
-
-### Backend (`/backend/`)
-
-#### Server Configuration
-```
-server.js                        # Main Express server
-ecosystem.config.js             # PM2 configuration
-```
-
-#### Models (`/models/`)
-```
-models/
-├── User.js                      # User authentication model
-├── userModel.js                # Extended user model
-├── productModel.js             # Product catalog model
-├── orderModel.js               # Order management model
-├── Category.js                 # Product categories
-├── Coupon.js                   # Discount coupons
-├── CarouselBanner.js          # Homepage banners
-├── Contact.js                  # Contact form submissions
-├── Wishlist.js                # User wishlists
-└── counterModel.js            # Auto-increment counters
-```
-
-#### Controllers (`/controllers/`)
-```
-controllers/
-├── userController.js           # User authentication & management
-├── productController.js        # Product CRUD operations
-├── orderController.js          # Order processing & management
-├── paymentController.js        # Payment processing
-├── cartController.js           # Shopping cart operations
-├── categoryController.js       # Category management
-├── couponController.js         # Discount management
-├── carouselController.js       # Banner management
-├── contactController.js        # Contact form handling
-├── wishlistController.js       # Wishlist operations
-├── refundController.js         # Refund processing
-└── webhookController.js        # Payment webhooks
-```
-
-#### Routes (`/routes/`)
-```
-routes/
-├── userRoute.js                # User authentication routes
-├── productRoute.js             # Product API endpoints
-├── orderRoute.js               # Order management routes
-├── paymentRoute.js             # Payment processing routes
-├── cartRoute.js                # Shopping cart routes
-├── categoryRoute.js            # Category routes
-├── couponRoutes.js             # Coupon routes
-├── carouselRoutes.js           # Banner routes
-├── contactRoute.js             # Contact form routes
-└── wishlistRoutes.js           # Wishlist routes
-```
-
-#### Middleware (`/middleware/`)
-```
-middleware/
-├── auth.js                     # JWT authentication
-├── adminAuth.js                # Admin authorization
-└── multer.js                   # File upload handling
-```
-
-#### Configuration (`/config/`)
-```
-config/
-└── mongodb.js                  # Database connection
-```
-
-#### Utilities (`/utils/`)
-```
-utils/
-├── invoiceGenerator.js         # PDF invoice generation
-└── response.js                 # Standardized API responses
-```
-
-#### Scripts (`/scripts/`)
-```
-scripts/
-├── migrate-orders.js           # Order data migration
-├── seedCategories.js           # Category seeding
-├── seed-carousel.js            # Banner seeding
-├── addSleeveTypes.js          # Product attribute migration
-├── migrateOrderUserIds.js      # User ID migration
-├── normalizeCategorySlugs.js   # URL slug normalization
-├── printOrdersByEmail.js       # Order reporting
-├── reconcilePhonePeOrders.js   # Payment reconciliation
-└── runCategorySeeding.js       # Category setup
-```
-
-### Admin Panel (`/admin/`)
-
-#### Core Structure
-```
-admin/
-├── src/
-│   ├── App.jsx                 # Main application
-│   ├── main.jsx                # Entry point
-│   ├── components/             # Admin components
-│   │   ├── Login.jsx          # Admin login
-│   │   ├── Navbar.jsx         # Admin navigation
-│   │   ├── Sidebar.jsx        # Admin sidebar
-│   │   ├── ProtectedRoute.jsx # Route protection
-│   │   └── ...                # 10+ components
-│   ├── pages/                 # Admin pages
-│   │   ├── List.jsx           # Product listing
-│   │   ├── Add.jsx            # Add products
-│   │   ├── EditProduct.jsx    # Edit products
-│   │   ├── Orders.jsx         # Order management
-│   │   ├── CarouselManagement.jsx # Banner management
-│   │   └── CouponManagement.jsx   # Coupon management
-│   └── assets/                # Static assets
-├── public/                     # Public assets
-├── index.html                  # Entry HTML
-└── vite.config.js             # Vite configuration
-```
-
-## 🔧 Key Features
-
-### E-commerce Functionality
-- **Product Catalog**: Categories, filtering, search
-- **Shopping Cart**: Add/remove items, quantity management
-- **Wishlist**: Save favorite products
-- **Checkout**: Multi-step checkout process
-- **Payment Processing**: Razorpay + PhonePe integration
-- **Order Management**: Order tracking, history
-- **User Accounts**: Registration, login, profile management
-
-### Admin Features
+### Features
 - **Product Management**: CRUD operations for products
-- **Order Management**: View, update, process orders
-- **Category Management**: Organize products
-- **Banner Management**: Homepage carousel
-- **Coupon Management**: Discount codes
-- **User Management**: Customer accounts
-- **Analytics**: Sales reports, order tracking
+- **Order Management**: View and update order status
+- **Inventory Control**: Stock management
+- **Content Management**: Banner carousel and promotions
+- **User Management**: Customer data access
 
-### Technical Features
-- **SEO Optimization**: Meta tags, sitemap, structured data
-- **Performance**: Image optimization, code splitting
-- **Mobile Responsive**: Touch-friendly interface
-- **Security**: JWT auth, rate limiting, input validation
-- **File Upload**: Product images, banners
-- **Email Notifications**: Order confirmations
-- **PDF Generation**: Invoices, receipts
+## 🔄 Data Flow Architecture
 
-## 🚀 Deployment
+### Frontend → Backend Communication
+1. **API Calls**: Frontend makes HTTP requests to backend endpoints
+2. **Authentication**: JWT tokens for user sessions
+3. **Real-time Updates**: Polling for order status changes
+4. **File Upload**: Multipart form data for images
 
-### Production Configuration
-- **Frontend**: Vercel/Netlify deployment
-- **Backend**: Railway/Render deployment
+### Database Schema Relationships
+- **Users** → **Orders** (one-to-many)
+- **Products** → **Order Items** (one-to-many)
+- **Categories** → **Products** (one-to-many)
+- **Users** → **Wishlist** (one-to-many)
+
+### Payment Flow
+1. **Cart** → **Checkout** → **Payment Gateway**
+2. **Payment Success** → **Order Creation** → **Inventory Update**
+3. **Order Confirmation** → **Email Notification**
+
+## 🚀 Deployment Architecture
+
+### Frontend Deployment
+- **Platform**: Vercel/Netlify
+- **Build**: `npm run build`
+- **Environment**: Production-optimized Next.js
+
+### Backend Deployment
+- **Platform**: Railway/Render
+- **Process**: PM2 ecosystem
 - **Database**: MongoDB Atlas
-- **CDN**: Cloudinary for images
-- **Monitoring**: PM2 process management
+
+### Nginx Configuration
+- **Reverse Proxy**: Routes traffic to frontend/backend
+- **SSL**: HTTPS enforcement
+- **Static Files**: Optimized serving
+
+## 🔧 Development Workflow
+
+### Local Development
+1. **Backend**: `cd backend && npm run dev` (Port 4000)
+2. **Frontend**: `cd frontend && npm run dev` (Port 3000)
+3. **Admin**: `cd admin && npm run dev` (Port 5173)
 
 ### Environment Variables
+- **Frontend**: `.env.local` - API URLs, payment keys
+- **Backend**: `.env` - Database, JWT, payment secrets
+- **Admin**: `.env` - API endpoints
 
-#### Frontend (.env.local)
-```
-NEXT_PUBLIC_API_URL=http://localhost:5000
-NEXT_PUBLIC_SITE_URL=https://shithaa.in
-NEXT_PUBLIC_RAZORPAY_KEY_ID=your_razorpay_key
-```
-
-#### Backend (.env)
-```
-MONGODB_URI=mongodb://localhost:27017/shitha
-JWT_SECRET=your_jwt_secret
-RAZORPAY_KEY_ID=your_razorpay_key
-RAZORPAY_KEY_SECRET=your_razorpay_secret
-```
+### Database Management
+- **Migrations**: Run scripts in `/backend/scripts/`
+- **Seeding**: Initial data setup
+- **Backups**: Regular MongoDB backups
 
 ## 📊 Performance & SEO
 
-### Web Vitals Targets
-- **LCP**: < 2.5s
-- **FID**: < 100ms
-- **CLS**: < 0.1
+### Frontend Optimizations
+- **Image Optimization**: Next.js Image component
+- **Code Splitting**: Dynamic imports
+- **Bundle Analysis**: Webpack bundle analyzer
+- **Lighthouse**: Performance monitoring
 
-### SEO Features
-- Dynamic meta tags
-- Open Graph & Twitter Cards
-- Structured data (Organization schema)
-- Dynamic sitemap generation
-- Robots.txt configuration
-- Canonical URLs
-- Mobile-first responsive design
+### SEO Implementation
+- **Meta Tags**: Dynamic titles and descriptions
+- **Structured Data**: JSON-LD schemas
+- **Sitemap**: Dynamic generation
+- **Robots.txt**: Search engine directives
+
+### Monitoring
+- **Performance**: Lighthouse CI
+- **Errors**: Error boundaries and logging
+- **Analytics**: Google Analytics integration
 
 ## 🔒 Security Features
 
-- JWT-based authentication
-- Firebase Auth integration
-- Rate limiting on API endpoints
-- Input validation and sanitization
-- CORS configuration
-- Secure payment processing
-- HTTPS enforcement (production)
+### Authentication & Authorization
+- **JWT Tokens**: Secure session management
+- **Firebase Auth**: Social login integration
+- **Admin Protection**: Role-based access control
 
-## 📈 Monitoring & Analytics
+### Data Protection
+- **Input Validation**: Request sanitization
+- **Rate Limiting**: API abuse prevention
+- **CORS**: Cross-origin request handling
+- **HTTPS**: SSL/TLS encryption
 
-### Performance Monitoring
-- Lighthouse audits
-- Core Web Vitals tracking
-- Image optimization monitoring
-- Bundle size analysis
+### Payment Security
+- **PCI Compliance**: Secure payment processing
+- **Webhook Verification**: Payment confirmation
+- **Refund Tracking**: Complete audit trail
 
-### Business Analytics
-- Order tracking
-- Sales reports
-- User behavior analysis
-- Payment reconciliation
+## 📱 Mobile & PWA Features
 
-## 🛠️ Development Workflow
+### Responsive Design
+- **Mobile First**: Touch-friendly interface
+- **Breakpoints**: Tailwind responsive classes
+- **Performance**: Optimized for mobile networks
 
-### Local Development
-1. Clone repository
-2. Install dependencies for all three apps
-3. Set up environment variables
-4. Start MongoDB
-5. Run backend server
-6. Run frontend development server
-7. Run admin panel (if needed)
+### PWA Capabilities
+- **Service Worker**: Offline functionality
+- **Manifest**: App-like experience
+- **Install Prompt**: Add to home screen
 
-### Code Quality
-- TypeScript for type safety
-- ESLint for code linting
-- Prettier for code formatting
-- Git hooks for pre-commit checks
+## 🎯 Business Logic
 
-## 📝 Recent Updates
+### Product Management
+- **Categories**: Maternity feeding wear, lounge wear
+- **Sizes**: Stock tracking per size
+- **Features**: New arrivals, best sellers
+- **Inventory**: Real-time stock updates
 
-### ✅ Completed Features
-- Order visibility system fixed
-- Comprehensive SEO implementation
-- Performance optimizations
-- Mobile responsiveness
-- Payment integration
-- Admin panel functionality
-- Image optimization
-- Error handling improvements
+### Order Processing
+- **Status Tracking**: Pending → Confirmed → Shipped → Delivered
+- **Payment Status**: Pending → Paid → Refunded
+- **Shipping**: Address validation and tracking
+- **Notifications**: Email confirmations
 
-### 🔄 Ongoing Improvements
-- Performance monitoring
-- SEO optimization
-- User experience enhancements
-- Security hardening
-- Analytics integration
+### Customer Experience
+- **Wishlist**: Save favorite products
+- **Cart**: Persistent shopping cart
+- **Search**: Product discovery
+- **Reviews**: Customer feedback system
 
-## 📞 Support & Contact
+## 🔄 API Endpoints Summary
 
-- **Email**: info.shitha@gmail.com
-- **Phone**: 8148480720
-- **Address**: 118/1 Mahalingapuram, Vellalore, Coimbatore 641111
+### Products
+- `GET /api/products` - List products with filtering
+- `GET /api/products/:id` - Get single product
+- `POST /api/products` - Create product (admin)
+- `PUT /api/products/:id` - Update product (admin)
+
+### Orders
+- `GET /api/orders` - List orders (admin)
+- `POST /api/orders` - Create order
+- `PUT /api/orders/:id` - Update order status
+
+### Users
+- `POST /api/user/login` - User authentication
+- `GET /api/user/profile` - Get user profile
+- `PUT /api/user/profile` - Update profile
+
+### Payments
+- `POST /api/payment/create` - Initialize payment
+- `POST /api/payment/verify` - Verify payment
+- `POST /api/payment/webhook` - Payment webhook
+
+### Cart & Wishlist
+- `GET /api/cart` - Get user cart
+- `POST /api/cart` - Add to cart
+- `GET /api/wishlist` - Get wishlist
+- `POST /api/wishlist` - Add to wishlist
+
+## 📈 Analytics & Monitoring
+
+### Performance Metrics
+- **Core Web Vitals**: LCP, FID, CLS
+- **Page Load Times**: Server and client metrics
+- **Error Rates**: JavaScript and API errors
+
+### Business Metrics
+- **Conversion Rate**: Cart to purchase
+- **Revenue Tracking**: Order value analysis
+- **User Behavior**: Page views and interactions
+
+## 🚀 Future Enhancements
+
+### Planned Features
+- **Multi-language**: Internationalization
+- **Advanced Search**: Elasticsearch integration
+- **Recommendations**: ML-based product suggestions
+- **Live Chat**: Customer support integration
+- **Analytics Dashboard**: Business intelligence
+
+### Technical Improvements
+- **Microservices**: Service decomposition
+- **GraphQL**: Flexible data fetching
+- **Real-time**: WebSocket integration
+- **CDN**: Global content delivery
 
 ---
 
-**Built with ❤️ for expecting mothers everywhere**
-
-*Last updated: [Current Date]* 
+**Last Updated**: December 2024
+**Version**: 1.0.0
+**Status**: Production Ready 

@@ -113,20 +113,6 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
 
               {/* Icons Section */}
               <div className="flex items-center space-x-2 sm:space-x-4">
-                {/* Wishlist Icon */}
-                <button
-                  onClick={handleWishlistClick}
-                  className="relative p-2 text-gray-600 hover:text-pink-500 transition-colors duration-200"
-                  aria-label="Wishlist"
-                >
-                  <Heart className="navbar-icon" />
-                  {wishlistCount > 0 && (
-                    <span className="navbar-badge bg-pink-500 text-white">
-                      {wishlistCount > 9 ? '9+' : wishlistCount}
-                    </span>
-                  )}
-                </button>
-
                 {/* Cart Icon */}
                 <button
                   onClick={openCartSidebar}
