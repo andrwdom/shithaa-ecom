@@ -38,10 +38,10 @@ export default function CheckoutPromptModal({
   return (
     <>
       {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/50 z-90" onClick={onClose} />
+      <div className="fixed inset-0 bg-black/50 z-100" onClick={onClose} />
 
       {/* Modal */}
-      <div className="fixed inset-0 z-90 flex items-center justify-center p-4">
+      <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
         <Card className="w-full max-w-md bg-white rounded-2xl shadow-2xl transform transition-all duration-300 scale-100">
           <CardContent className="p-6 text-center space-y-6">
             {/* Success Icon */}
