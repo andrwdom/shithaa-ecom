@@ -96,10 +96,10 @@ export default function CategorySidebar({ isOpen, onClose, onCategorySelect, cur
   return (
     <>
       {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/50 z-55" onClick={onClose} />
+      <div className="fixed inset-0 bg-black/50 z-60" onClick={onClose} />
 
       {/* Sidebar */}
-      <div className="fixed left-0 top-0 h-full w-80 bg-white shadow-2xl z-55 transform transition-transform duration-300">
+      <div className="fixed left-0 top-0 h-full w-80 bg-white shadow-2xl z-60 transform transition-transform duration-300">
         <div className="p-6">
           {/* Header */}
           <div className="flex items-center justify-between mb-8">
