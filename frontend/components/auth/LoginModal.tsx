@@ -17,7 +17,7 @@ export default function LoginModal({ open, onClose, onSuccess }: { open: boolean
   }
 
   return (
-    <div className={`fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm transition-all duration-300 ${open ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
+    <div className={`fixed inset-0 z-90 flex items-center justify-center bg-black/50 backdrop-blur-sm transition-all duration-300 ${open ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
       <div className={`bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 relative transform transition-all duration-300 ${open ? "scale-100 opacity-100" : "scale-95 opacity-0"}`}>
         {/* Close button */}
         <button 

@@ -1,10 +1,10 @@
 "use client"
 
 import { useState } from "react"
-import { Menu, ShoppingBag, X, User, Mail, Info, Home, LogOut, Heart } from "lucide-react"
+import { Menu, ShoppingBag, X, User, Mail, Info, Home, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useCart } from "@/components/cart-context"
-import { useWishlist } from "@/components/wishlist-context"
+
 import { useAuth } from "@/components/auth/useAuth"
 import LoginModal from "@/components/auth/LoginModal"
 
@@ -16,11 +16,9 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
   const { cartItems, openCartSidebar } = useCart()
-  const { wishlistItems } = useWishlist()
   const { user, logout } = useAuth()
 
   const cartCount = cartItems.reduce((total, item) => total + item.quantity, 0)
-  const wishlistCount = wishlistItems.length
 
   const handleAccountClick = () => {
     if (user) {
@@ -51,9 +49,9 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
       </div>
 
       {/* Main Navbar */}
-      <nav className="bg-white border-b border-gray-200 sticky top-0 z-[60] shadow-sm">
+      <nav className="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="navbar-container flex items-center justify-between h-16 lg:h-18">
+          <div className="navbar-container flex items-center justify-between h-16 lg:h-18 relative">
             
             {/* Left Section */}
             <div className="navbar-left">
