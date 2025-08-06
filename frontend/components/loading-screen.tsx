@@ -1,23 +1,33 @@
 "use client"
 
 import Image from "next/image"
+import { useState } from "react"
 
 interface LoadingScreenProps {
   message?: string
 }
 
 export default function LoadingScreen({ message = "Loading..." }: LoadingScreenProps) {
+  const [logoError, setLogoError] = useState(false)
+
   return (
     <div className="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center">
       {/* Logo with fade animation */}
       <div className="mb-8">
         <Image
-          src="/shithaa-logo.jpg"
+          src={logoError ? "/placeholder-logo.png" : "/shithaa-logo.jpg"}
           alt="Shitha Clothing"
           width={200}
           height={200}
           className="animate-fade-pulse"
           priority
+          onError={() => {
+            console.error('Failed to load logo, using placeholder');
+            setLogoError(true);
+          }}
+          onLoad={() => {
+            console.log('Logo loaded successfully');
+          }}
         />
       </div>
 

@@ -7,6 +7,7 @@ import CartSidebar from "@/components/cart-sidebar"
 import LayoutClient from "@/components/layout-client"
 import ErrorBoundary from "@/components/error-boundary"
 import ServerErrorBoundary from "@/components/server-error-boundary"
+import InitialLoading from "@/components/initial-loading"
 import Script from "next/script";
 import PerformanceMonitor from "@/components/performance-monitor"
 
@@ -125,10 +126,11 @@ export default function RootLayout({
         <meta name="format-detection" content="telephone=no" />
         
         {/* Preload critical images */}
+        <link rel="preload" as="image" href="/shithaa-logo.jpg" type="image/jpeg" />
+        <link rel="preload" as="image" href="/placeholder-logo.png" type="image/png" />
         <link rel="preload" as="image" href="/blue-dress.JPG" type="image/jpeg" />
         <link rel="preload" as="image" href="/prink-dress.JPG" type="image/jpeg" />
         <link rel="preload" as="image" href="/leopard-dress.jpg" type="image/jpeg" />
-        <link rel="preload" as="image" href="/shithaa-logo.jpg" type="image/jpeg" />
         
         {/* WebP preloads will be added after running the optimization script */}
         
@@ -181,8 +183,10 @@ export default function RootLayout({
         <ServerErrorBoundary>
           <ErrorBoundary>
             <Providers>
-              <LayoutClient>{children}</LayoutClient>
-              <CartSidebar />
+              <InitialLoading>
+                <LayoutClient>{children}</LayoutClient>
+                <CartSidebar />
+              </InitialLoading>
             </Providers>
           </ErrorBoundary>
         </ServerErrorBoundary>

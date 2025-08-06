@@ -14,7 +14,7 @@ export default function LayoutClient({ children }: { children: React.ReactNode }
   }, [pathname]);
 
   return (
-    <>
+    <div className="animate-fade-in">
       <Navbar onCategoriesClick={() => setIsCategorySidebarOpen(true)} />
       <CategorySidebar
         isOpen={isCategorySidebarOpen}
@@ -26,6 +26,6 @@ export default function LayoutClient({ children }: { children: React.ReactNode }
       />
       <main className="flex-1 flex flex-col">{children}</main>
       <Footer />
-    </>
+    </div>
   );
 } 
