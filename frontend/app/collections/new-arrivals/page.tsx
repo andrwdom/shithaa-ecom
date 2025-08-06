@@ -47,8 +47,9 @@ export default function NewArrivalsPage() {
         const latest = sorted.slice(0, 8);
         // Map backend product to frontend shape
         const mappedProducts = latest.map((p) => ({
-          id: p._id,
+          id: p.customId || p._id, // Use customId for routing, fallback to _id
           _id: p._id,
+          customId: p.customId || p._id,
           name: p.name,
           price: p.price,
           originalPrice: p.originalPrice,
@@ -267,7 +268,7 @@ export default function NewArrivalsPage() {
                     
                     {/* Always visible wishlist button */}
                     <div className="absolute top-3 right-3 z-10">
-                      <WishlistButton productId={product.id.toString()} size="sm" />
+                      <WishlistButton productId={product._id} size="sm" />
                     </div>
                     
                     {/* Overlay buttons on hover */}

@@ -11,6 +11,7 @@ import WishlistButton from "./WishlistButton"
 
 interface Product {
   id: number
+  _id?: string // MongoDB ID for wishlist operations
   name: string
   price: number
   originalPrice: number
@@ -50,7 +51,7 @@ export default function ProductCard({ product, onClick }: ProductCardProps) {
 
           {/* Always visible wishlist button */}
           <div className="absolute top-3 right-3 z-10">
-            <WishlistButton productId={product.id.toString()} size="sm" />
+            <WishlistButton productId={product._id || product.id.toString()} size="sm" />
           </div>
 
           {/* Overlay buttons on hover */}

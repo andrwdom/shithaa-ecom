@@ -19,8 +19,9 @@ import { useRouter, useSearchParams } from "next/navigation"
 import WishlistButton from "@/components/WishlistButton"
 
 interface Product {
-  id: string
-  _id: string
+  id: string // This will be the customId for routing
+  _id: string // MongoDB ID for internal use
+  customId: string // Custom product ID from admin
   name: string
   price: number
   originalPrice: number
@@ -194,8 +195,9 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
         const data = await res.json();
         // Map backend fields to frontend
         const mappedProducts = (data.products || []).map((p: any) => ({
-          id: String(p._id),
+          id: String(p.customId || p._id), // Use customId for routing, fallback to _id
           _id: String(p._id),
+          customId: String(p.customId || p._id),
           name: p.name,
           price: p.price,
           originalPrice: p.originalPrice,
@@ -710,7 +712,7 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
                         
                         {/* Always visible wishlist button */}
                         <div className="absolute top-3 right-3 z-10">
-                          <WishlistButton productId={product.id.toString()} size="sm" />
+                          <WishlistButton productId={product._id} size="sm" />
                         </div>
                         
                         {/* Overlay buttons on hover */}

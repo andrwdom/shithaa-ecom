@@ -144,7 +144,7 @@ export default function ProductSlider({
 
                   {/* Always visible wishlist button */}
                   <div className="absolute top-3 right-3 z-10">
-                    <WishlistButton productId={product.id.toString()} size="sm" />
+                    <WishlistButton productId={product._id} size="sm" />
                   </div>
 
                   {/* Overlay buttons on hover */}
