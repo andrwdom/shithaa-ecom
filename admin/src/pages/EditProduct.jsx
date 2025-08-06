@@ -26,12 +26,8 @@ const EditProduct = ({ product, token, onClose, onUpdate }) => {
     console.log('Token comparison:', token === localStorage.getItem('token'));
   }, [token]);
 
-  // Updated category options with all required categories
+  // Only the 4 required categories as specified
   const CATEGORY_OPTIONS = [
-    "Kurti",
-    "Nightwear", 
-    "Maternity Wear",
-    "Dupatta",
     "Maternity Feeding Wear",
     "Zipless Feeding Lounge Wear",
     "Non-Feeding Lounge Wear",
@@ -39,6 +35,17 @@ const EditProduct = ({ product, token, onClose, onUpdate }) => {
   ];
 
   const SLEEVE_TYPE_OPTIONS = ["Puff Sleeve", "Normal Sleeve"];
+
+  // Category to slug mapping
+  const getCategorySlug = (categoryName) => {
+    const categoryMap = {
+      "Maternity Feeding Wear": "maternity-feeding-wear",
+      "Zipless Feeding Lounge Wear": "zipless-feeding-lounge-wear",
+      "Non-Feeding Lounge Wear": "non-feeding-lounge-wear",
+      "Zipless Feeding Dupatta Lounge Wear": "zipless-feeding-dupatta-lounge-wear"
+    };
+    return categoryMap[categoryName] || "";
+  };
 
   // Helper: all possible sizes
   const ALL_SIZES = ["S", "M", "L", "XL", "XXL"];
@@ -93,6 +100,7 @@ const EditProduct = ({ product, token, onClose, onUpdate }) => {
       formData.append("description", description)
       formData.append("price", price)
       formData.append("category", category)
+      formData.append("categorySlug", getCategorySlug(category))
       formData.append("bestseller", bestseller)
       formData.append("sizes", JSON.stringify(sizes.filter(s => s.stock > 0)))
       formData.append("stock", stock)

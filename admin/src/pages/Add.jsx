@@ -27,12 +27,8 @@ const Add = ({token}) => {
    const [selectedCategorySlug, setSelectedCategorySlug] = useState("");
    const [customId, setCustomId] = useState("");
 
-   // Updated category options with all required categories
+   // Only the 4 required categories as specified
    const CATEGORY_OPTIONS = [
-     "Kurti",
-     "Nightwear", 
-     "Maternity Wear",
-     "Dupatta",
      "Maternity Feeding Wear",
      "Zipless Feeding Lounge Wear",
      "Non-Feeding Lounge Wear",
@@ -55,12 +51,22 @@ const Add = ({token}) => {
      });
    }, []);
 
+   // Category to slug mapping
+   const getCategorySlug = (categoryName) => {
+     const categoryMap = {
+       "Maternity Feeding Wear": "maternity-feeding-wear",
+       "Zipless Feeding Lounge Wear": "zipless-feeding-lounge-wear",
+       "Non-Feeding Lounge Wear": "non-feeding-lounge-wear",
+       "Zipless Feeding Dupatta Lounge Wear": "zipless-feeding-dupatta-lounge-wear"
+     };
+     return categoryMap[categoryName] || "";
+   };
+
    // Updated function to check if current category should show sleeve type field
    const shouldShowSleeveType = () => {
      return category === "Zipless Feeding Lounge Wear" || 
             category === "Non-Feeding Lounge Wear" || 
-            category === "Zipless Feeding Dupatta Lounge Wear" ||
-            category === "Lounge Wear";
+            category === "Zipless Feeding Dupatta Lounge Wear";
    };
 
    const onSubmitHandler = async (e) => {
@@ -78,7 +84,7 @@ const Add = ({token}) => {
       formData.append("description",description)
       formData.append("price",price)
       formData.append("category", category); // display name
-      formData.append("categorySlug", selectedCategorySlug); // correct slug
+      formData.append("categorySlug", getCategorySlug(category)); // correct slug
       formData.append("bestseller",bestseller)
       formData.append("sizes", JSON.stringify(sizes.filter(s => s.stock > 0)))
       formData.append("availableSizes", JSON.stringify(sizes.filter(s => s.stock > 0).map(s => s.size)))
