@@ -13,18 +13,12 @@ export default function LoadingScreen({ message = "Loading..." }: LoadingScreenP
   const [logoSrc, setLogoSrc] = useState("/shithaa-logo.jpg")
 
   useEffect(() => {
-    // Try to preload the logo
-    const img = new Image()
-    img.onload = () => {
-      console.log('Logo preloaded successfully')
+    // Simple delay to show logo as loaded
+    const timer = setTimeout(() => {
       setLogoLoaded(true)
-    }
-    img.onerror = () => {
-      console.error('Logo failed to preload, trying placeholder')
-      setLogoSrc("/placeholder-logo.png")
-      setLogoError(true)
-    }
-    img.src = "/shithaa-logo.jpg"
+    }, 500)
+
+    return () => clearTimeout(timer)
   }, [])
 
   return (
