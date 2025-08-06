@@ -4,26 +4,9 @@ import React from "react"
 import { X, Plus, Minus, ShoppingBag, Gift } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
-import { useCart } from "@/components/cart-context"
+import { useCart, CartItem } from "@/components/cart-context"
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-
-interface CartItem {
-  id: number
-  name: string
-  price: number
-  quantity: number
-  size: string
-  image: string
-}
-
-interface CartSidebarProps {
-  isOpen: boolean
-  onClose: () => void
-  items: CartItem[]
-  onUpdateQuantity: (id: number, quantity: number) => void
-  onRemoveItem: (id: number) => void
-}
 
 export default function CartSidebar() {
   const {
@@ -67,7 +50,7 @@ export default function CartSidebar() {
   if (!isCartSidebarOpen) return null;
 
   return (
-    <>
+    <React.Fragment>
       {/* Backdrop */}
       <div className="fixed inset-0 bg-black/50 z-40" onClick={closeCartSidebar} />
       {/* Sidebar */}
@@ -95,7 +78,7 @@ export default function CartSidebar() {
               <p className="text-gray-500">Your cart is empty</p>
             </div>
           ) : (
-            <>
+            <React.Fragment>
               {/* Discount Banner */}
               {offerDetails?.offerApplied && (
                 <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
@@ -149,7 +132,7 @@ export default function CartSidebar() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => updateCartItem(item.id, item.size, Math.max(1, item.quantity - 1), stock)}
+                            onClick={() => updateCartItem(item._id, item.size, Math.max(1, item.quantity - 1), stock)}
                             className="h-8 w-8 p-0"
                           >
                             <Minus className="h-3 w-3" />
@@ -158,7 +141,7 @@ export default function CartSidebar() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => updateCartItem(item.id, item.size, item.quantity + 1, stock)}
+                            onClick={() => updateCartItem(item._id, item.size, item.quantity + 1, stock)}
                             className="h-8 w-8 p-0"
                           >
                             <Plus className="h-3 w-3" />
@@ -167,7 +150,7 @@ export default function CartSidebar() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => removeFromCart(item.id, item.size)}
+                          onClick={() => removeFromCart(item._id, item.size)}
                           className="text-red-500 hover:text-red-700 text-xs"
                         >
                           Remove
@@ -178,7 +161,8 @@ export default function CartSidebar() {
                 );
               })}
             </div>
-          )}
+          </React.Fragment>
+        )}
         </div>
         {/* Footer */}
         {cartItems.length > 0 && (
@@ -236,6 +220,6 @@ export default function CartSidebar() {
           </div>
         )}
       </div>
-    </>
+    </React.Fragment>
   );
 }
