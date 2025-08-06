@@ -3,7 +3,7 @@ import axios from 'axios'
 import { backendUrl, currency } from '../App'
 import { toast } from 'react-toastify'
 import EditProduct from './EditProduct'
-import { 
+import {
   Search, 
   Filter, 
   Edit, 
@@ -45,8 +45,8 @@ const ProductSkeleton = () => (
         <div className="h-8 bg-gray-200 rounded w-16"></div>
         <div className="h-8 bg-gray-200 rounded w-16"></div>
       </div>
-    </div>
-  </div>
+        </div>
+      </div>
 )
 
 // Stock Badge Component
@@ -102,10 +102,10 @@ const ProductCard = ({ product, onEdit, onDelete }) => {
             <img
               src={product.images[1]}
               alt={product.name}
-              className="w-full h-full object-cover"
-              loading="lazy"
-            />
-          </div>
+            className="w-full h-full object-cover"
+            loading="lazy"
+          />
+        </div>
         )}
       </div>
 
@@ -145,9 +145,9 @@ const ProductCard = ({ product, onEdit, onDelete }) => {
               <span className="text-sm text-gray-400 line-through">
                 {currency}{product.originalPrice}
               </span>
-            )}
-          </div>
-          
+          )}
+        </div>
+
           {/* Stock Status Icon */}
           <div className="flex items-center">
             {stockInfo.status === 'good' && <CheckCircle className="h-4 w-4 text-green-500" />}
@@ -158,21 +158,21 @@ const ProductCard = ({ product, onEdit, onDelete }) => {
 
         {/* Action Buttons */}
         <div className="flex items-center justify-between">
-          <button
+            <button
             onClick={() => onEdit(product)}
             className="flex items-center gap-1 px-3 py-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors text-sm font-medium"
-          >
+            >
             <Edit className="h-3 w-3" />
             Edit
-          </button>
-          <button
+            </button>
+            <button
             onClick={() => onDelete(product._id)}
             className="flex items-center gap-1 px-3 py-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors text-sm font-medium"
-          >
+            >
             <Trash2 className="h-3 w-3" />
             Delete
-          </button>
-        </div>
+            </button>
+          </div>
       </div>
     </div>
   )
@@ -226,21 +226,21 @@ const ProductTableRow = ({ product, onEdit, onDelete }) => {
       </td>
       <td className="px-6 py-4">
         <div className="flex items-center gap-2">
-          <button
+              <button
             onClick={() => onEdit(product)}
             className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
             title="Edit Product"
           >
             <Edit className="h-4 w-4" />
-          </button>
-          <button
+              </button>
+              <button
             onClick={() => onDelete(product._id)}
             className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
             title="Delete Product"
           >
             <Trash2 className="h-4 w-4" />
-          </button>
-        </div>
+              </button>
+            </div>
       </td>
     </tr>
   )
@@ -291,39 +291,39 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
       </div>
       
       <div className="flex items-center gap-1">
-        <button
-          onClick={() => onPageChange(currentPage - 1)}
+      <button
+        onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
           className="p-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
         >
           <ChevronLeft className="h-4 w-4" />
-        </button>
-        
-        {getPageNumbers().map((page, index) => (
-          <button
-            key={index}
-            onClick={() => typeof page === 'number' && onPageChange(page)}
+      </button>
+
+      {getPageNumbers().map((page, index) => (
+        <button
+          key={index}
+          onClick={() => typeof page === 'number' && onPageChange(page)}
             disabled={page === '...'}
             className={`px-3 py-2 rounded-lg text-sm font-medium ${
-              page === currentPage
-                ? 'bg-blue-600 text-white'
-                : page === '...'
-                ? 'text-gray-400 cursor-default'
+            page === currentPage
+              ? 'bg-blue-600 text-white'
+              : page === '...'
+              ? 'text-gray-400 cursor-default'
                 : 'text-gray-700 hover:bg-gray-100'
-            }`}
-          >
-            {page}
-          </button>
-        ))}
-        
-        <button
-          onClick={() => onPageChange(currentPage + 1)}
+          }`}
+        >
+          {page}
+        </button>
+      ))}
+
+      <button
+        onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
           className="p-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
         >
           <ChevronRight className="h-4 w-4" />
-        </button>
-      </div>
+      </button>
+    </div>
     </div>
   )
 }
@@ -347,6 +347,7 @@ const List = ({ token }) => {
   const [sizeFilter, setSizeFilter] = useState('')
   const [priceRange, setPriceRange] = useState({ min: '', max: '' })
   const [stockFilter, setStockFilter] = useState('') // 'all', 'low', 'out'
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('')
   
   // Categories
   const [categories, setCategories] = useState([])
@@ -366,6 +367,15 @@ const List = ({ token }) => {
     fetchCategories()
   }, [])
 
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm)
+    }, 500)
+
+    return () => clearTimeout(timer)
+  }, [searchTerm])
+
   // Fetch products
   const fetchProducts = useCallback(async () => {
     try {
@@ -378,12 +388,22 @@ const List = ({ token }) => {
         sortOrder: 'desc'
       })
       
-      // Add filters
-      if (searchTerm.trim()) params.append('search', searchTerm.trim())
-      if (categoryFilter) params.append('categorySlug', categoryFilter)
-      if (sizeFilter) params.append('size', sizeFilter)
-      if (priceRange.min) params.append('minPrice', priceRange.min)
-      if (priceRange.max) params.append('maxPrice', priceRange.max)
+      // Add filters - use debounced search
+      if (debouncedSearchTerm.trim()) {
+        params.append('search', debouncedSearchTerm.trim())
+      }
+      if (categoryFilter) {
+        params.append('categorySlug', categoryFilter)
+      }
+      if (sizeFilter) {
+        params.append('size', sizeFilter)
+      }
+      if (priceRange.min) {
+        params.append('minPrice', priceRange.min)
+      }
+      if (priceRange.max) {
+        params.append('maxPrice', priceRange.max)
+      }
       
       const response = await axios.get(`${backendUrl}/api/products?${params}`, {
         headers: { token }
@@ -419,7 +439,7 @@ const List = ({ token }) => {
     } finally {
       setLoading(false)
     }
-  }, [token, currentPage, searchTerm, categoryFilter, sizeFilter, priceRange, stockFilter])
+  }, [token, currentPage, debouncedSearchTerm, categoryFilter, sizeFilter, priceRange, stockFilter])
 
   // Fetch products when dependencies change
   useEffect(() => {
@@ -429,7 +449,7 @@ const List = ({ token }) => {
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1)
-  }, [searchTerm, categoryFilter, sizeFilter, priceRange, stockFilter])
+  }, [debouncedSearchTerm, categoryFilter, sizeFilter, priceRange, stockFilter])
 
   // Handle product deletion
   const handleDeleteProduct = async (productId) => {
@@ -458,15 +478,92 @@ const List = ({ token }) => {
     setStockFilter('')
   }
 
-  // Active filters count
-  const activeFiltersCount = [
-    searchTerm,
-    categoryFilter,
-    sizeFilter,
-    priceRange.min,
-    priceRange.max,
-    stockFilter
-  ].filter(Boolean).length
+  // Remove individual filter
+  const removeFilter = (filterType) => {
+    switch (filterType) {
+      case 'search':
+        setSearchTerm('')
+        break
+      case 'category':
+        setCategoryFilter('')
+        break
+      case 'size':
+        setSizeFilter('')
+        break
+      case 'priceMin':
+        setPriceRange(prev => ({ ...prev, min: '' }))
+        break
+      case 'priceMax':
+        setPriceRange(prev => ({ ...prev, max: '' }))
+        break
+      case 'stock':
+        setStockFilter('')
+        break
+    }
+  }
+
+  // Get active filters for display
+  const getActiveFilters = () => {
+    const filters = []
+    
+    if (searchTerm.trim()) {
+      filters.push({
+        type: 'search',
+        label: `Search: "${searchTerm}"`,
+        value: searchTerm
+      })
+    }
+    
+    if (categoryFilter) {
+      const categoryName = categories.find(cat => cat.slug === categoryFilter)?.name || categoryFilter
+      filters.push({
+        type: 'category',
+        label: `Category: ${categoryName}`,
+        value: categoryFilter
+      })
+    }
+    
+    if (sizeFilter) {
+      filters.push({
+        type: 'size',
+        label: `Size: ${sizeFilter}`,
+        value: sizeFilter
+      })
+    }
+    
+    if (priceRange.min) {
+      filters.push({
+        type: 'priceMin',
+        label: `Min Price: ₹${priceRange.min}`,
+        value: priceRange.min
+      })
+    }
+    
+    if (priceRange.max) {
+      filters.push({
+        type: 'priceMax',
+        label: `Max Price: ₹${priceRange.max}`,
+        value: priceRange.max
+      })
+    }
+    
+    if (stockFilter) {
+      const stockLabels = {
+        'low': 'Low Stock',
+        'out': 'Out of Stock'
+      }
+      filters.push({
+        type: 'stock',
+        label: `Stock: ${stockLabels[stockFilter]}`,
+        value: stockFilter
+      })
+    }
+    
+    return filters
+  }
+
+  const activeFilters = getActiveFilters()
+  const activeFiltersCount = activeFilters.length
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -474,7 +571,7 @@ const List = ({ token }) => {
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between py-6">
-            <div>
+        <div>
               <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
                 <Package className="h-6 w-6" />
                 Product Management
@@ -482,8 +579,8 @@ const List = ({ token }) => {
               <p className="text-sm text-gray-600 mt-1">
                 {totalProducts} products • Page {currentPage} of {totalPages}
               </p>
-            </div>
-            
+        </div>
+
             {/* View Mode Toggle */}
             <div className="flex items-center bg-gray-100 rounded-lg p-1">
               <button
@@ -496,7 +593,7 @@ const List = ({ token }) => {
               >
                 <Grid className="h-4 w-4" />
               </button>
-              <button
+            <button
                 onClick={() => setViewMode('table')}
                 className={`p-2 rounded-md transition-colors ${
                   viewMode === 'table'
@@ -505,23 +602,25 @@ const List = ({ token }) => {
                 }`}
               >
                 <ListIcon className="h-4 w-4" />
-              </button>
-            </div>
+            </button>
           </div>
         </div>
       </div>
+          </div>
 
-      {/* Filters */}
+            {/* Filters */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+          {/* Filter Controls */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mb-4">
             {/* Search */}
             <div className="lg:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Search products..."
+                  placeholder="Search by name or ID..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -531,6 +630,7 @@ const List = ({ token }) => {
             
             {/* Category Filter */}
             <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
@@ -547,6 +647,7 @@ const List = ({ token }) => {
             
             {/* Size Filter */}
             <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Size</label>
               <select
                 value={sizeFilter}
                 onChange={(e) => setSizeFilter(e.target.value)}
@@ -555,7 +656,7 @@ const List = ({ token }) => {
                 <option value="">All Sizes</option>
                 {ALL_SIZES.map((size) => (
                   <option key={size} value={size}>
-                    Size {size}
+                    {size}
                   </option>
                 ))}
               </select>
@@ -563,6 +664,7 @@ const List = ({ token }) => {
             
             {/* Stock Filter */}
             <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Stock Status</label>
               <select
                 value={stockFilter}
                 onChange={(e) => setStockFilter(e.target.value)}
@@ -586,12 +688,59 @@ const List = ({ token }) => {
               </button>
             </div>
           </div>
+
+          {/* Price Range Filter */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Price Range</label>
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="number"
+                  placeholder="Min price"
+                  value={priceRange.min}
+                  onChange={(e) => setPriceRange(prev => ({ ...prev, min: e.target.value }))}
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                <input
+                  type="number"
+                  placeholder="Max price"
+                  value={priceRange.max}
+                  onChange={(e) => setPriceRange(prev => ({ ...prev, max: e.target.value }))}
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Active Filters Tags */}
+          {activeFilters.length > 0 && (
+            <div className="border-t border-gray-200 pt-4">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm font-medium text-gray-700">Active filters:</span>
+                {activeFilters.map((filter, index) => (
+                  <span
+                    key={index}
+                    className="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 text-blue-700 text-sm rounded-full border border-blue-200"
+                  >
+                    {filter.label}
+                    <button
+                      onClick={() => removeFilter(filter.type)}
+                      className="ml-1 hover:bg-blue-200 rounded-full p-0.5 transition-colors"
+                      title={`Remove ${filter.label}`}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Main Content */}
+        {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {loading ? (
+          {loading ? (
           /* Loading State */
           <div className={viewMode === 'card' 
             ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6"
@@ -599,8 +748,8 @@ const List = ({ token }) => {
           }>
             {Array.from({ length: PRODUCTS_PER_PAGE }).map((_, index) => (
               <ProductSkeleton key={index} />
-            ))}
-          </div>
+              ))}
+            </div>
         ) : products.length === 0 ? (
           /* Empty State */
           <div className="text-center py-12">
@@ -613,40 +762,40 @@ const List = ({ token }) => {
         ) : (
           /* Products Display */
           <>
-            {viewMode === 'card' ? (
+              {viewMode === 'card' ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
                 {products.map((product) => (
-                  <ProductCard
+                    <ProductCard
                     key={product._id}
                     product={product}
-                    onEdit={setEditingProduct}
+                      onEdit={setEditingProduct}
                     onDelete={handleDeleteProduct}
-                  />
-                ))}
-              </div>
-            ) : (
+                    />
+                  ))}
+                </div>
+              ) : (
               <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Product
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Category
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Price
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Product
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Category
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Price
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Stock by Size
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Actions
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
                     {products.map((product) => (
                       <ProductTableRow
                         key={product._id}
@@ -654,22 +803,22 @@ const List = ({ token }) => {
                         onEdit={setEditingProduct}
                         onDelete={handleDeleteProduct}
                       />
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
 
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
                 onPageChange={setCurrentPage}
-              />
-            )}
-          </>
-        )}
+                />
+              )}
+            </>
+          )}
       </div>
 
       {/* Edit Product Modal */}
