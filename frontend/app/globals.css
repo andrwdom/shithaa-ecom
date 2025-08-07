@@ -271,3 +271,51 @@ html, body {
 .animate-fade-pulse {
   animation: fade-pulse 2s ease-in-out infinite;
 }
+
+/* Hero card fade animations */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.hero-fade-in {
+  animation: fade-in 1s ease-in-out;
+}
+
+.hero-fade-out {
+  animation: fade-out 1s ease-in-out;
+}
+
+/* Smooth image transitions */
+.image-fade-transition {
+  transition: opacity 1s ease-in-out;
+}
+
+.image-fade-enter {
+  opacity: 0;
+}
+
+.image-fade-enter-active {
+  opacity: 1;
+}
+
+.image-fade-exit {
+  opacity: 1;
+}
+
+.image-fade-exit-active {
+  opacity: 0;
+}

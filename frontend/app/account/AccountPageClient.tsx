@@ -8,6 +8,7 @@ import { toast } from "sonner"
 import { Package, Calendar, Heart, MapPin, Phone, Mail, User, LogOut } from "lucide-react"
 import { getIdToken } from "firebase/auth"
 import OrderHistory from "./OrderHistory"
+import PageLoading from "@/components/page-loading"
 
 interface Order {
   _id: string
@@ -222,31 +223,36 @@ export default function AccountPageClient() {
 
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="loading loading-spinner loading-lg text-[rgb(71,60,102)]"></div>
-          <p className="mt-4 text-gray-600">Loading your account...</p>
+      <PageLoading loadingMessage="Loading your account..." minLoadingTime={1000}>
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="text-center">
+            <div className="loading loading-spinner loading-lg text-[rgb(71,60,102)]"></div>
+            <p className="mt-4 text-gray-600">Loading your account...</p>
+          </div>
         </div>
-      </div>
+      </PageLoading>
     )
   }
 
   if (showLogin) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
-          <div className="text-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome to Shithaa</h2>
-            <p className="text-gray-600">Sign in to access your account</p>
+      <PageLoading loadingMessage="Welcome to Shithaa..." minLoadingTime={1000}>
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+          <div className="w-full max-w-md">
+            <div className="text-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome to Shithaa</h2>
+              <p className="text-gray-600">Sign in to access your account</p>
+            </div>
+            <LoginModal open={true} onClose={() => setShowLogin(false)} onSuccess={handleLoginSuccess} />
           </div>
-          <LoginModal open={true} onClose={() => setShowLogin(false)} onSuccess={handleLoginSuccess} />
         </div>
-      </div>
+      </PageLoading>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-purple-50">
+    <PageLoading loadingMessage="Loading your account..." minLoadingTime={1000}>
+      <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-purple-50">
       <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="bg-white rounded-2xl shadow-lg p-8 mb-8 border border-pink-100">
@@ -345,5 +351,6 @@ export default function AccountPageClient() {
         </div>
       </div>
     </div>
+    </PageLoading>
   )
 } 

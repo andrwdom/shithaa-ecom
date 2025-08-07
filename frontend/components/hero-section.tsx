@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import OptimizedImage from "./optimized-image"
+import DynamicHeroCard from "./dynamic-hero-card"
 
 const HeroSection = () => {
   const categories = [
@@ -58,64 +58,15 @@ const HeroSection = () => {
         {/* Category Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 max-w-7xl mx-auto">
           {categories.map((category, index) => (
-            <div
+            <DynamicHeroCard
               key={category.id}
-              className="relative h-80 lg:h-96 xl:h-[420px] rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 cursor-pointer group"
+              categorySlug={category.slug}
+              title={category.title}
+              ctaText={category.ctaText}
+              isComingSoon={category.isComingSoon}
+              fallbackImage={category.image}
               onClick={() => !category.isComingSoon && handleCategoryClick(category.slug)}
-            >
-              {/* Background Image */}
-              <div className="absolute inset-0">
-                <OptimizedImage
-                  src={category.image || "/placeholder.svg"}
-                  alt={category.title}
-                  fill
-                  priority={index < 2} // Load first 2 images with priority
-                  className="object-cover group-hover:scale-110 transition-transform duration-700"
-                  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                />
-              </div>
-
-              {/* Gradient Overlay */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
-
-              {/* Glass Effect Content Overlay - Reduced Size */}
-              <div className="absolute bottom-0 left-0 right-0 p-6">
-                <div className={
-                  (category.id === 1
-                    ? "bg-blue-100/50 backdrop-blur-sm "
-                    : category.id === 2
-                    ? "bg-pink-100/50 backdrop-blur-sm "
-                    : category.id === 3
-                    ? "bg-green-100/50 backdrop-blur-sm "
-                    : category.id === 4
-                    ? "bg-yellow-100/50 backdrop-blur-sm "
-                    : "bg-gray-100/50 backdrop-blur-sm ") +
-                  "rounded-xl p-4 border border-white/20 shadow-xl"
-                }>
-                  <div className="text-center space-y-2">
-                    <h3 className="text-lg font-bold text-gray-900 font-serif line-clamp-2">
-                      {category.title}
-                    </h3>
-                    <div className="inline-flex items-center text-sm font-medium text-gray-800 group-hover:text-gray-900 transition-colors">
-                      {category.ctaText}
-                      {!category.isComingSoon && (
-                        <svg
-                          className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Hover Effect Border */}
-              <div className="absolute inset-0 rounded-3xl border-2 border-transparent group-hover:border-white/30 transition-all duration-300" />
-            </div>
+            />
           ))}
         </div>
       </div>
