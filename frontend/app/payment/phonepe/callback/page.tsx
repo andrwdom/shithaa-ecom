@@ -11,6 +11,7 @@ function PhonePeCallbackInner() {
   const [orderId, setOrderId] = useState('')
   const [orderDetails, setOrderDetails] = useState<any>(null)
   const [tries, setTries] = useState(0)
+  const [merchantTransactionId, setMerchantTransactionId] = useState('')
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -18,19 +19,23 @@ function PhonePeCallbackInner() {
     let interval: NodeJS.Timeout | null = null;
     let stopped = false;
     const urlParams = new URLSearchParams(window.location.search)
-    const merchantTransactionId = urlParams.get('merchantTransactionId')
+    const transactionId = urlParams.get('merchantTransactionId')
     const amount = urlParams.get('amount')
-    if (!merchantTransactionId) {
+    
+    if (!transactionId) {
       setStatus('failed')
       setMessage('Invalid payment response')
       return
     }
+    
+    setMerchantTransactionId(transactionId)
+    
     async function checkStatus() {
       try {
-        console.log('Checking payment status for:', merchantTransactionId)
-        console.log('API URL:', `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/payment/phonepe/verify/${merchantTransactionId}`)
+        console.log('Checking payment status for:', transactionId)
+        console.log('API URL:', `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/payment/phonepe/verify/${transactionId}`)
         
-        const verifyRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/payment/phonepe/verify/${merchantTransactionId}`, {
+        const verifyRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/payment/phonepe/verify/${transactionId}`, {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' }
         })
@@ -58,32 +63,32 @@ function PhonePeCallbackInner() {
             paymentData.code === 'PAYMENT_PENDING'
           )
           
-                     if (isSuccess) {
-             setStatus('success')
-             setMessage('Payment successful! Your order has been confirmed.')
-             setOrderId(paymentData.merchantTransactionId || merchantTransactionId)
-             
-             // Get order details for display
-             try {
-               const orderRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/orders/phonepe/${merchantTransactionId}`)
-               if (orderRes.ok) {
-                 const orderData = await orderRes.json()
-                 if (orderData.success && orderData.order) {
-                   setOrderDetails(orderData.order)
-                 }
-               }
-             } catch (err) {
-               console.error('Failed to fetch order details:', err)
-             }
-             
-             localStorage.setItem('lastOrder', JSON.stringify({
-               id: paymentData.merchantTransactionId || merchantTransactionId,
-               orderSummary: { total: amount ? amount / 100 : 0 },
-               paymentMethod: 'PhonePe'
-             }))
-             setTimeout(() => { router.push('/order-success') }, 5000)
-             if (interval) clearInterval(interval)
-             stopped = true
+          if (isSuccess) {
+            setStatus('success')
+            setMessage('Payment successful! Your order has been confirmed.')
+            setOrderId(paymentData.merchantTransactionId || transactionId)
+            
+            // Get order details for display
+            try {
+              const orderRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/orders/phonepe/${transactionId}`)
+              if (orderRes.ok) {
+                const orderData = await orderRes.json()
+                if (orderData.success && orderData.order) {
+                  setOrderDetails(orderData.order)
+                }
+              }
+            } catch (err) {
+              console.error('Failed to fetch order details:', err)
+            }
+            
+            localStorage.setItem('lastOrder', JSON.stringify({
+              id: paymentData.merchantTransactionId || transactionId,
+              orderSummary: { total: amount ? amount / 100 : 0 },
+              paymentMethod: 'PhonePe'
+            }))
+            setTimeout(() => { router.push('/order-success') }, 5000)
+            if (interval) clearInterval(interval)
+            stopped = true
           } else if (isPending) {
             setStatus('pending')
             setMessage('Processing your payment, please wait...')
@@ -99,7 +104,7 @@ function PhonePeCallbackInner() {
           // Try to check order status directly from our database as fallback
           try {
             console.log('Trying fallback order check...')
-            const orderCheckRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/orders/phonepe/${merchantTransactionId}`, {
+            const orderCheckRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/orders/phonepe/${transactionId}`, {
               method: 'GET',
               headers: { 'Content-Type': 'application/json' }
             })
@@ -111,12 +116,16 @@ function PhonePeCallbackInner() {
             if (orderCheckRes.ok) {
               if (orderData.success && orderData.order) {
                 console.log('Order found, payment status:', orderData.order.paymentStatus)
-                if (orderData.order.paymentStatus === 'paid') {
+                console.log('Order payment field:', orderData.order.payment)
+                
+                // Check if order is marked as paid through any means
+                if (orderData.order.paymentStatus === 'paid' || orderData.order.payment === true) {
                   setStatus('success')
                   setMessage('Payment successful! Your order has been confirmed.')
-                  setOrderId(merchantTransactionId)
+                  setOrderId(transactionId)
+                  setOrderDetails(orderData.order)
                   localStorage.setItem('lastOrder', JSON.stringify({
-                    id: merchantTransactionId,
+                    id: transactionId,
                     orderSummary: { total: amount ? amount / 100 : 0 },
                     paymentMethod: 'PhonePe'
                   }))
@@ -125,7 +134,7 @@ function PhonePeCallbackInner() {
                   stopped = true
                   return
                 } else {
-                  console.log('Order found but payment not paid. Status:', orderData.order.paymentStatus)
+                  console.log('Order found but payment not paid. Status:', orderData.order.paymentStatus, 'Payment field:', orderData.order.payment)
                 }
               }
             } else {
@@ -162,6 +171,39 @@ function PhonePeCallbackInner() {
     return () => { if (interval) clearInterval(interval) }
   }, [router, tries])
 
+  const handleManualFix = async () => {
+    if (!merchantTransactionId) {
+      alert('Transaction ID not found')
+      return
+    }
+    
+    try {
+      // Try the quick fix endpoint first
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/payment/phonepe/quick-fix/${merchantTransactionId}`, {
+        method: 'POST'
+      })
+      if (res.ok) {
+        alert('Order manually marked as paid! Please refresh the page.')
+        window.location.reload()
+        return
+      }
+      
+      // Fallback to test-success endpoint
+      const fallbackRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/payment/phonepe/test-success/${merchantTransactionId}`, {
+        method: 'POST'
+      })
+      if (fallbackRes.ok) {
+        alert('Order manually marked as paid! Please refresh the page.')
+        window.location.reload()
+      } else {
+        const errorData = await fallbackRes.json()
+        alert(`Failed to mark order as paid: ${errorData.message || 'Unknown error'}`)
+      }
+    } catch (err) {
+      alert('Failed to mark order as paid')
+    }
+  }
+
   if (status === 'loading' || status === 'pending') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -187,56 +229,38 @@ function PhonePeCallbackInner() {
             </div>
             <h1 className="text-2xl font-bold text-green-700 mb-2">Payment Successful!</h1>
             <p className="text-gray-600 mb-4">{message}</p>
-                         <div className="bg-green-50 rounded-lg p-4 mb-6">
-               <p className="text-sm text-green-700">
-                 <strong>Order ID:</strong> {orderId}
-               </p>
-               {orderDetails && (
-                 <div className="mt-3 space-y-2">
-                   <p className="text-sm text-green-700">
-                     <strong>Amount:</strong> ₹{orderDetails.amount}
-                   </p>
-                   <p className="text-sm text-green-700">
-                     <strong>Status:</strong> {orderDetails.status}
-                   </p>
-                   <p className="text-sm text-green-700">
-                     <strong>Payment Method:</strong> PhonePe
-                   </p>
-                 </div>
-               )}
-             </div>
-                         <div className="space-y-3">
-               <Link 
-                 href="/order-success" 
-                 className="btn btn-success w-full"
-               >
-                 View Order Details
-               </Link>
-               <Link 
-                 href="/" 
-                 className="btn btn-outline w-full"
-               >
-                 Continue Shopping
-               </Link>
-               <button
-                 onClick={async () => {
-                   try {
-                     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/payment/phonepe/test-success/${merchantTransactionId}`, {
-                       method: 'POST'
-                     })
-                     if (res.ok) {
-                       alert('Order manually marked as paid! Please refresh the page.')
-                       window.location.reload()
-                     }
-                   } catch (err) {
-                     alert('Failed to mark order as paid')
-                   }
-                 }}
-                 className="btn btn-warning w-full text-sm"
-               >
-                 Manual Fix (If Payment Shows Failed)
-               </button>
-             </div>
+            <div className="bg-green-50 rounded-lg p-4 mb-6">
+              <p className="text-sm text-green-700">
+                <strong>Order ID:</strong> {orderId}
+              </p>
+              {orderDetails && (
+                <div className="mt-3 space-y-2">
+                  <p className="text-sm text-green-700">
+                    <strong>Amount:</strong> ₹{orderDetails.amount}
+                  </p>
+                  <p className="text-sm text-green-700">
+                    <strong>Status:</strong> {orderDetails.status}
+                  </p>
+                  <p className="text-sm text-green-700">
+                    <strong>Payment Method:</strong> PhonePe
+                  </p>
+                </div>
+              )}
+            </div>
+            <div className="space-y-3">
+              <Link 
+                href="/order-success" 
+                className="btn btn-success w-full"
+              >
+                View Order Details
+              </Link>
+              <Link 
+                href="/" 
+                className="btn btn-outline w-full"
+              >
+                Continue Shopping
+              </Link>
+            </div>
           </>
         ) : (
           <>
@@ -248,38 +272,26 @@ function PhonePeCallbackInner() {
             </div>
             <h1 className="text-2xl font-bold text-red-700 mb-2">Payment Failed</h1>
             <p className="text-gray-600 mb-4">{message}</p>
-                         <div className="space-y-3">
-               <Link 
-                 href="/checkout" 
-                 className="btn btn-primary w-full"
-               >
-                 Try Again
-               </Link>
-               <Link 
-                 href="/" 
-                 className="btn btn-outline w-full"
-               >
-                 Back to Home
-               </Link>
-               <button
-                 onClick={async () => {
-                   try {
-                     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/payment/phonepe/test-success/${merchantTransactionId}`, {
-                       method: 'POST'
-                     })
-                     if (res.ok) {
-                       alert('Order manually marked as paid! Please refresh the page.')
-                       window.location.reload()
-                     }
-                   } catch (err) {
-                     alert('Failed to mark order as paid')
-                   }
-                 }}
-                 className="btn btn-warning w-full text-sm"
-               >
-                 Manual Fix (If Payment Actually Succeeded)
-               </button>
-             </div>
+            <div className="space-y-3">
+              <Link 
+                href="/checkout" 
+                className="btn btn-primary w-full"
+              >
+                Try Again
+              </Link>
+              <Link 
+                href="/" 
+                className="btn btn-outline w-full"
+              >
+                Back to Home
+              </Link>
+              <button
+                onClick={handleManualFix}
+                className="btn btn-warning w-full text-sm"
+              >
+                Manual Fix (If Payment Actually Succeeded)
+              </button>
+            </div>
           </>
         )}
       </div>

@@ -342,43 +342,44 @@ export const verifyPhonePePayment = async (req, res) => {
     } catch (sdkError) {
       console.error('PhonePe SDK Error:', sdkError);
       
-      // If SDK fails, check our database status
-      console.log('Using database fallback for transaction:', merchantTransactionId);
-      
-      if (order.paymentStatus === 'paid' && order.orderStatus === 'Confirmed') {
-        console.log('Database shows payment successful');
-        return res.json({
-          success: true,
-          data: {
-            code: 'PAYMENT_SUCCESS',
-            paymentState: 'COMPLETED',
-            merchantTransactionId: merchantTransactionId,
-            state: 'COMPLETED'
-          }
-        });
-      } else if (order.paymentStatus === 'failed') {
-        console.log('Database shows payment failed');
-        return res.json({
-          success: true,
-          data: {
-            code: 'PAYMENT_FAILED',
-            paymentState: 'FAILED',
-            merchantTransactionId: merchantTransactionId,
-            state: 'FAILED'
-          }
-        });
-      } else {
-        console.log('Database shows payment pending');
-        return res.json({
-          success: true,
-          data: {
-            code: 'PAYMENT_PENDING',
-            paymentState: 'PENDING',
-            merchantTransactionId: merchantTransactionId,
-            state: 'PENDING'
-          }
-        });
-      }
+          // If SDK fails, check our database status
+    console.log('Using database fallback for transaction:', merchantTransactionId);
+    
+    // Check if order was marked as paid through any means
+    if (order.paymentStatus === 'paid' || order.payment === true) {
+      console.log('Database shows payment successful');
+      return res.json({
+        success: true,
+        data: {
+          code: 'PAYMENT_SUCCESS',
+          paymentState: 'COMPLETED',
+          merchantTransactionId: merchantTransactionId,
+          state: 'COMPLETED'
+        }
+      });
+    } else if (order.paymentStatus === 'failed') {
+      console.log('Database shows payment failed');
+      return res.json({
+        success: true,
+        data: {
+          code: 'PAYMENT_FAILED',
+          paymentState: 'FAILED',
+          merchantTransactionId: merchantTransactionId,
+          state: 'FAILED'
+        }
+      });
+    } else {
+      console.log('Database shows payment pending');
+      return res.json({
+        success: true,
+        data: {
+          code: 'PAYMENT_PENDING',
+          paymentState: 'PENDING',
+          merchantTransactionId: merchantTransactionId,
+          state: 'PENDING'
+        }
+      });
+    }
     }
 
     // If we got response from PhonePe, use it

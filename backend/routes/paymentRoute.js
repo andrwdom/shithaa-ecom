@@ -181,4 +181,49 @@ paymentRouter.post('/phonepe/simulate-callback/:merchantTransactionId', async (r
   }
 });
 
+// Quick fix endpoint - mark any order as paid by transaction ID
+paymentRouter.post('/phonepe/quick-fix/:merchantTransactionId', async (req, res) => {
+  try {
+    const { merchantTransactionId } = req.params;
+    console.log('Quick fix request for transaction:', merchantTransactionId);
+    
+    // Find the order
+    const order = await (await import('../models/orderModel.js')).default.findOne({
+      phonepeTransactionId: merchantTransactionId
+    });
+    
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found',
+        merchantTransactionId
+      });
+    }
+    
+    // Mark as paid immediately
+    await (await import('../models/orderModel.js')).default.findByIdAndUpdate(order._id, {
+      payment: true,
+      paymentStatus: 'paid',
+      orderStatus: 'Confirmed',
+      status: 'Order Placed',
+      updatedAt: new Date(),
+      paymentLog: { ...order.paymentLog, quickFix: true, fixedAt: new Date() }
+    });
+    
+    return res.json({
+      success: true,
+      message: 'Order marked as paid successfully',
+      orderId: order._id,
+      merchantTransactionId
+    });
+  } catch (error) {
+    console.error('Quick fix error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Quick fix failed',
+      error: error.message
+    });
+  }
+});
+
 export default paymentRouter; 
