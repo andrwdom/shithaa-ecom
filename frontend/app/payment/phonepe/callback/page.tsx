@@ -39,162 +39,174 @@ function PhonePeCallbackInner() {
       console.error('No transaction ID found in URL parameters')
       
       // Emergency fallback: Try to find the most recent pending order
-      try {
-        console.log('Trying emergency fallback - checking recent orders...')
-        const recentOrderRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/orders/recent-pending`, {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' }
-        })
-        
-        if (recentOrderRes.ok) {
-          const recentOrderData = await recentOrderRes.json()
-          if (recentOrderData.success && recentOrderData.order) {
-            console.log('Found recent pending order:', recentOrderData.order)
-            setMerchantTransactionId(recentOrderData.order.phonepeTransactionId)
-            
-            // Check if this order is actually paid
-            if (recentOrderData.order.paymentStatus === 'paid' || recentOrderData.order.payment === true) {
-              setStatus('success')
-              setMessage('Payment successful! Your order has been confirmed.')
-              setOrderId(recentOrderData.order.phonepeTransactionId)
-              setOrderDetails(recentOrderData.order)
-              localStorage.setItem('lastOrder', JSON.stringify({
-                id: recentOrderData.order.phonepeTransactionId,
-                orderSummary: { total: recentOrderData.order.amount },
-                paymentMethod: 'PhonePe'
-              }))
-              setTimeout(() => { router.push('/order-success') }, 3000)
-              return
+      const checkRecentOrders = async () => {
+        try {
+          console.log('Trying emergency fallback - checking recent orders...')
+          const recentOrderRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/orders/recent-pending`, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' }
+          })
+          
+          if (recentOrderRes.ok) {
+            const recentOrderData = await recentOrderRes.json()
+            if (recentOrderData.success && recentOrderData.order) {
+              console.log('Found recent pending order:', recentOrderData.order)
+              setMerchantTransactionId(recentOrderData.order.phonepeTransactionId)
+              
+              // Check if this order is actually paid
+              if (recentOrderData.order.paymentStatus === 'paid' || recentOrderData.order.payment === true) {
+                setStatus('success')
+                setMessage('Payment successful! Your order has been confirmed.')
+                setOrderId(recentOrderData.order.phonepeTransactionId)
+                setOrderDetails(recentOrderData.order)
+                localStorage.setItem('lastOrder', JSON.stringify({
+                  id: recentOrderData.order.phonepeTransactionId,
+                  orderSummary: { total: recentOrderData.order.amount },
+                  paymentMethod: 'PhonePe'
+                }))
+                setTimeout(() => { router.push('/order-success') }, 3000)
+                return
+              }
             }
           }
+        } catch (fallbackError) {
+          console.error('Emergency fallback failed:', fallbackError)
         }
-      } catch (fallbackError) {
-        console.error('Emergency fallback failed:', fallbackError)
+        
+        setStatus('failed')
+        setMessage('Invalid payment response - No transaction ID found')
       }
       
-      setStatus('failed')
-      setMessage('Invalid payment response - No transaction ID found')
+      checkRecentOrders()
       return
     }
     
     setMerchantTransactionId(transactionId)
     
-    async function checkStatus() {
+    async function checkPaymentStatus() {
       try {
         console.log('Checking payment status for:', transactionId)
-        console.log('API URL:', `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/payment/phonepe/verify/${transactionId}`)
         
+        // First, try to get order details from our database
+        const orderRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/orders/phonepe/${transactionId}`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        })
+        
+        console.log('Order lookup response status:', orderRes.status)
+        
+        if (orderRes.ok) {
+          const orderData = await orderRes.json()
+          console.log('Order data:', orderData)
+          
+          if (orderData.success && orderData.order) {
+            const order = orderData.order
+            console.log('Order found, payment status:', order.paymentStatus)
+            
+            // Check if order is marked as paid
+            if (order.paymentStatus === 'paid' || order.payment === true) {
+              setStatus('success')
+              setMessage('Payment successful! Your order has been confirmed.')
+              setOrderId(transactionId)
+              setOrderDetails(order)
+              localStorage.setItem('lastOrder', JSON.stringify({
+                id: transactionId,
+                orderSummary: { total: order.amount },
+                paymentMethod: 'PhonePe'
+              }))
+              setTimeout(() => { router.push('/order-success') }, 3000)
+              if (interval) clearInterval(interval)
+              stopped = true
+              return
+            } else if (order.paymentStatus === 'failed') {
+              setStatus('failed')
+              setMessage('Payment failed. Please try again.')
+              if (interval) clearInterval(interval)
+              stopped = true
+              return
+            } else {
+              // Order exists but payment status is pending, try PhonePe verification
+              console.log('Order found but payment pending, checking PhonePe status...')
+            }
+          }
+        }
+        
+        // If order lookup failed or payment is pending, try PhonePe verification
+        console.log('Attempting PhonePe verification...')
         const verifyRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/payment/phonepe/verify/${transactionId}`, {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' }
         })
         
-        console.log('Response status:', verifyRes.status)
-        console.log('Response headers:', verifyRes.headers)
+        console.log('PhonePe verification response status:', verifyRes.status)
         
-        const verifyData = await verifyRes.json()
-        console.log('Verification response:', verifyData)
-        
-        if (verifyRes.ok && verifyData.success) {
-          const paymentData = verifyData.data
+        if (verifyRes.ok) {
+          const verifyData = await verifyRes.json()
+          console.log('PhonePe verification response:', verifyData)
           
-          // Handle different success conditions
-          const isSuccess = (
-            (paymentData.code === 'PAYMENT_SUCCESS' && paymentData.paymentState === 'COMPLETED') ||
-            (paymentData.code === 'PAYMENT_SUCCESS' && paymentData.state === 'COMPLETED') ||
-            (paymentData.paymentState === 'COMPLETED') ||
-            (paymentData.state === 'COMPLETED')
-          )
-          
-          const isPending = (
-            paymentData.paymentState === 'PENDING' || 
-            paymentData.state === 'PENDING' ||
-            paymentData.code === 'PAYMENT_PENDING'
-          )
-          
-          if (isSuccess) {
-            setStatus('success')
-            setMessage('Payment successful! Your order has been confirmed.')
-            setOrderId(paymentData.merchantTransactionId || transactionId)
+          if (verifyData.success && verifyData.data) {
+            const paymentData = verifyData.data
             
-            // Get order details for display
-            try {
-              const orderRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/orders/phonepe/${transactionId}`)
-              if (orderRes.ok) {
-                const orderData = await orderRes.json()
-                if (orderData.success && orderData.order) {
-                  setOrderDetails(orderData.order)
+            // Handle different success conditions
+            const isSuccess = (
+              (paymentData.code === 'PAYMENT_SUCCESS' && paymentData.paymentState === 'COMPLETED') ||
+              (paymentData.code === 'PAYMENT_SUCCESS' && paymentData.state === 'COMPLETED') ||
+              (paymentData.paymentState === 'COMPLETED') ||
+              (paymentData.state === 'COMPLETED')
+            )
+            
+            const isPending = (
+              paymentData.paymentState === 'PENDING' || 
+              paymentData.state === 'PENDING' ||
+              paymentData.code === 'PAYMENT_PENDING'
+            )
+            
+            if (isSuccess) {
+              setStatus('success')
+              setMessage('Payment successful! Your order has been confirmed.')
+              setOrderId(paymentData.merchantTransactionId || transactionId)
+              
+              // Get updated order details
+              try {
+                const updatedOrderRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/orders/phonepe/${transactionId}`)
+                if (updatedOrderRes.ok) {
+                  const updatedOrderData = await updatedOrderRes.json()
+                  if (updatedOrderData.success && updatedOrderData.order) {
+                    setOrderDetails(updatedOrderData.order)
+                  }
                 }
+              } catch (err) {
+                console.error('Failed to fetch updated order details:', err)
               }
-            } catch (err) {
-              console.error('Failed to fetch order details:', err)
+              
+              localStorage.setItem('lastOrder', JSON.stringify({
+                id: paymentData.merchantTransactionId || transactionId,
+                orderSummary: { total: amount ? amount / 100 : 0 },
+                paymentMethod: 'PhonePe'
+              }))
+              setTimeout(() => { router.push('/order-success') }, 3000)
+              if (interval) clearInterval(interval)
+              stopped = true
+            } else if (isPending) {
+              setStatus('pending')
+              setMessage('Processing your payment, please wait...')
+            } else {
+              setStatus('failed')
+              setMessage('Payment failed. Please try again.')
+              if (interval) clearInterval(interval)
+              stopped = true
             }
-            
-            localStorage.setItem('lastOrder', JSON.stringify({
-              id: paymentData.merchantTransactionId || transactionId,
-              orderSummary: { total: amount ? amount / 100 : 0 },
-              paymentMethod: 'PhonePe'
-            }))
-            setTimeout(() => { router.push('/order-success') }, 5000)
-            if (interval) clearInterval(interval)
-            stopped = true
-          } else if (isPending) {
-            setStatus('pending')
-            setMessage('Processing your payment, please wait...')
           } else {
+            console.error('PhonePe verification failed:', verifyData)
             setStatus('failed')
-            setMessage('Payment failed. Please try again.')
+            setMessage(verifyData.message || 'Payment verification failed. Please contact support.')
             if (interval) clearInterval(interval)
             stopped = true
           }
         } else {
-          console.error('Verification failed:', verifyData)
-          
-          // Try to check order status directly from our database as fallback
-          try {
-            console.log('Trying fallback order check...')
-            const orderCheckRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/orders/phonepe/${transactionId}`, {
-              method: 'GET',
-              headers: { 'Content-Type': 'application/json' }
-            })
-            
-            console.log('Fallback response status:', orderCheckRes.status)
-            const orderData = await orderCheckRes.json()
-            console.log('Fallback order data:', orderData)
-            
-            if (orderCheckRes.ok) {
-              if (orderData.success && orderData.order) {
-                console.log('Order found, payment status:', orderData.order.paymentStatus)
-                console.log('Order payment field:', orderData.order.payment)
-                
-                // Check if order is marked as paid through any means
-                if (orderData.order.paymentStatus === 'paid' || orderData.order.payment === true) {
-                  setStatus('success')
-                  setMessage('Payment successful! Your order has been confirmed.')
-                  setOrderId(transactionId)
-                  setOrderDetails(orderData.order)
-                  localStorage.setItem('lastOrder', JSON.stringify({
-                    id: transactionId,
-                    orderSummary: { total: amount ? amount / 100 : 0 },
-                    paymentMethod: 'PhonePe'
-                  }))
-                  setTimeout(() => { router.push('/order-success') }, 3000)
-                  if (interval) clearInterval(interval)
-                  stopped = true
-                  return
-                } else {
-                  console.log('Order found but payment not paid. Status:', orderData.order.paymentStatus, 'Payment field:', orderData.order.payment)
-                }
-              }
-            } else {
-              console.log('Fallback order check failed with status:', orderCheckRes.status)
-            }
-          } catch (fallbackError) {
-            console.error('Fallback order check failed:', fallbackError)
-          }
-          
+          console.error('PhonePe verification request failed with status:', verifyRes.status)
           setStatus('failed')
-          setMessage(verifyData.message || 'Payment verification failed. Please contact support.')
+          setMessage('Payment verification failed. Please contact support.')
           if (interval) clearInterval(interval)
           stopped = true
         }
@@ -206,17 +218,22 @@ function PhonePeCallbackInner() {
         stopped = true
       }
     }
-    checkStatus()
+    
+    // Start checking payment status
+    checkPaymentStatus()
+    
+    // Set up polling for payment status
     interval = setInterval(() => {
       if (!stopped && tries < 20) {
         setTries(t => t + 1)
-        checkStatus()
+        checkPaymentStatus()
       } else if (!stopped) {
         setStatus('failed')
         setMessage('Payment status could not be confirmed. Please contact support.')
         if (interval) clearInterval(interval)
       }
     }, 3000)
+    
     return () => { if (interval) clearInterval(interval) }
   }, [router, tries])
 
@@ -260,6 +277,9 @@ function PhonePeCallbackInner() {
           <div className="loading loading-spinner loading-lg text-blue-600 mb-4"></div>
           <h2 className="text-xl font-semibold text-gray-700 mb-2">Processing Payment...</h2>
           <p className="text-gray-500">{message || 'Please wait while we verify your payment.'}</p>
+          {tries > 0 && (
+            <p className="text-sm text-gray-400 mt-2">Attempt {tries}/20</p>
+          )}
         </div>
       </div>
     )
@@ -292,6 +312,9 @@ function PhonePeCallbackInner() {
                   </p>
                   <p className="text-sm text-green-700">
                     <strong>Payment Method:</strong> PhonePe
+                  </p>
+                  <p className="text-sm text-green-700">
+                    <strong>Order Date:</strong> {new Date(orderDetails.createdAt).toLocaleDateString()}
                   </p>
                 </div>
               )}
