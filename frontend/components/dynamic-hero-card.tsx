@@ -198,14 +198,7 @@ export default function DynamicHeroCard({
       {/* Gradient Overlay */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
 
-      {/* Image Counter (only show if multiple images) */}
-      {productImages.length > 1 && (
-        <div className="absolute top-4 right-4 bg-black/20 backdrop-blur-sm rounded-full px-2 py-1">
-          <span className="text-white text-xs font-medium">
-            {currentImageIndex + 1} / {productImages.length}
-          </span>
-        </div>
-      )}
+
 
       {/* Glass Effect Content Overlay */}
       <div className="absolute bottom-0 left-0 right-0 p-6">
