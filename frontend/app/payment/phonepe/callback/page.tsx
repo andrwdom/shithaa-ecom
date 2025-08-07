@@ -27,10 +27,16 @@ function PhonePeCallbackInner() {
     async function checkStatus() {
       try {
         console.log('Checking payment status for:', merchantTransactionId)
+        console.log('API URL:', `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/payment/phonepe/verify/${merchantTransactionId}`)
+        
         const verifyRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/payment/phonepe/verify/${merchantTransactionId}`, {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' }
         })
+        
+        console.log('Response status:', verifyRes.status)
+        console.log('Response headers:', verifyRes.headers)
+        
         const verifyData = await verifyRes.json()
         console.log('Verification response:', verifyData)
         
@@ -77,14 +83,19 @@ function PhonePeCallbackInner() {
           
           // Try to check order status directly from our database as fallback
           try {
+            console.log('Trying fallback order check...')
             const orderCheckRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/orders/phonepe/${merchantTransactionId}`, {
               method: 'GET',
               headers: { 'Content-Type': 'application/json' }
             })
             
+            console.log('Fallback response status:', orderCheckRes.status)
+            const orderData = await orderCheckRes.json()
+            console.log('Fallback order data:', orderData)
+            
             if (orderCheckRes.ok) {
-              const orderData = await orderCheckRes.json()
               if (orderData.success && orderData.order) {
+                console.log('Order found, payment status:', orderData.order.paymentStatus)
                 if (orderData.order.paymentStatus === 'paid') {
                   setStatus('success')
                   setMessage('Payment successful! Your order has been confirmed.')
@@ -98,8 +109,12 @@ function PhonePeCallbackInner() {
                   if (interval) clearInterval(interval)
                   stopped = true
                   return
+                } else {
+                  console.log('Order found but payment not paid. Status:', orderData.order.paymentStatus)
                 }
               }
+            } else {
+              console.log('Fallback order check failed with status:', orderCheckRes.status)
             }
           } catch (fallbackError) {
             console.error('Fallback order check failed:', fallbackError)

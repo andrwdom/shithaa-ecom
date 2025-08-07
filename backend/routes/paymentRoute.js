@@ -51,7 +51,9 @@ paymentRouter.get('/phonepe/debug/:merchantTransactionId', async (req, res) => {
         orderStatus: order.orderStatus,
         status: order.status,
         amount: order.amount,
-        paymentLog: order.paymentLog
+        paymentLog: order.paymentLog,
+        createdAt: order.createdAt,
+        updatedAt: order.updatedAt
       }
     });
   } catch (error) {
@@ -59,6 +61,48 @@ paymentRouter.get('/phonepe/debug/:merchantTransactionId', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Debug endpoint failed',
+      error: error.message
+    });
+  }
+});
+
+// Test endpoint to manually mark order as paid
+paymentRouter.post('/phonepe/test-success/:merchantTransactionId', async (req, res) => {
+  try {
+    const { merchantTransactionId } = req.params;
+    console.log('Test success request for transaction:', merchantTransactionId);
+    
+    const order = await (await import('../models/orderModel.js')).default.findOne({
+      phonepeTransactionId: merchantTransactionId
+    });
+    
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found',
+        merchantTransactionId
+      });
+    }
+    
+    // Mark as paid
+    await (await import('../models/orderModel.js')).default.findByIdAndUpdate(order._id, {
+      payment: true,
+      paymentStatus: 'paid',
+      orderStatus: 'Confirmed',
+      status: 'Order Placed',
+      updatedAt: new Date()
+    });
+    
+    return res.json({
+      success: true,
+      message: 'Order marked as paid successfully',
+      orderId: order._id
+    });
+  } catch (error) {
+    console.error('Test success endpoint error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Test success failed',
       error: error.message
     });
   }

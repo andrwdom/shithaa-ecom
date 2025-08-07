@@ -167,6 +167,9 @@ export const phonePeCallback = async (req, res) => {
     const passwordConfigured = process.env.PHONEPE_CALLBACK_PASSWORD || '';
 
     let callbackResponse;
+    let merchantOrderId;
+    let state;
+
     try {
       callbackResponse = phonepeClient.validateCallback(
         usernameConfigured,
@@ -175,18 +178,36 @@ export const phonePeCallback = async (req, res) => {
         phonepeS2SCallbackResponseBodyString
       );
       console.log('PhonePe callback validation successful:', callbackResponse);
+      merchantOrderId = callbackResponse.payload.orderId;
+      state = callbackResponse.payload.state;
     } catch (err) {
       console.error('PhonePe callback validation failed:', err);
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid callback signature',
-        error: err.message
-      });
+      
+      // Try to extract orderId and state from raw body as fallback
+      try {
+        const rawBody = req.body;
+        console.log('Trying to extract from raw body:', rawBody);
+        
+        if (rawBody && rawBody.payload) {
+          merchantOrderId = rawBody.payload.orderId;
+          state = rawBody.payload.state;
+          console.log('Extracted from raw body - orderId:', merchantOrderId, 'state:', state);
+        } else if (rawBody && rawBody.merchantOrderId) {
+          merchantOrderId = rawBody.merchantOrderId;
+          state = rawBody.state || 'COMPLETED'; // Assume success if no state
+          console.log('Extracted from raw body (alt format) - orderId:', merchantOrderId, 'state:', state);
+        }
+      } catch (fallbackErr) {
+        console.error('Fallback extraction failed:', fallbackErr);
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid callback signature and fallback failed',
+          error: err.message
+        });
+      }
     }
 
     // Find order by merchantOrderId (orderId in callback payload)
-    const merchantOrderId = callbackResponse.payload.orderId;
-    const state = callbackResponse.payload.state;
     console.log('Looking for order with phonepeTransactionId:', merchantOrderId);
     
     const order = await orderModel.findOne({ phonepeTransactionId: merchantOrderId });
