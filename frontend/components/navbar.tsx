@@ -25,12 +25,16 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
   // Debug logging for user state
   console.log("Navbar - User state:", user)
   console.log("Navbar - Is menu open:", isMenuOpen)
+  console.log("Navbar - Login modal open:", isLoginModalOpen)
 
   const handleAccountClick = () => {
+    console.log("Account button clicked, user:", user)
     if (user) {
       // Navigate to account page when logged in
+      console.log("Navigating to account page")
       window.location.href = "/account"
     } else {
+      console.log("Opening login modal")
       setIsLoginModalOpen(true)
     }
   }
@@ -66,7 +70,12 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
                 variant="ghost"
                 size="sm"
                 className="md:hidden text-gray-600 hover:text-[rgb(71,60,102)] p-2"
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  console.log("Mobile menu button clicked, current state:", isMenuOpen)
+                  setIsMenuOpen(!isMenuOpen)
+                }}
               >
                 {isMenuOpen ? <X className="navbar-icon" /> : <Menu className="navbar-icon" />}
               </Button>
@@ -114,9 +123,16 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
               <div className="flex items-center space-x-2 sm:space-x-4">
                 {/* Cart Icon */}
                 <button
-                  onClick={openCartSidebar}
-                  className="relative p-2 text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    console.log("Cart button clicked")
+                    openCartSidebar()
+                  }}
+                  className="relative p-2 text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200 cursor-pointer z-10"
                   aria-label="Shopping cart"
+                  type="button"
+                  style={{ pointerEvents: 'auto' }}
                 >
                   <ShoppingBag className="navbar-icon" />
                   {cartCount > 0 && (
@@ -128,9 +144,16 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
 
                 {/* User Icon */}
                 <button
-                  onClick={handleAccountClick}
-                  className="p-2 text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    console.log("Account button clicked")
+                    handleAccountClick()
+                  }}
+                  className="p-2 text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200 cursor-pointer relative z-10"
                   aria-label="Account"
+                  type="button"
+                  style={{ pointerEvents: 'auto' }}
                 >
                   <User className="navbar-icon" />
                 </button>
@@ -142,6 +165,17 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
           {isMenuOpen && (
             <div className="md:hidden border-t border-gray-200 py-4">
               <div className="flex flex-col space-y-4">
+                {/* Home Button - Mobile Only */}
+                <button
+                  onClick={() => {
+                    window.location.href = "/"
+                    setIsMenuOpen(false)
+                  }}
+                  className="text-left text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200 flex items-center gap-2"
+                >
+                  <Home className="h-4 w-4" />
+                  home
+                </button>
                 <button
                   onClick={onCategoriesClick}
                   className="text-left text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200"
@@ -182,11 +216,16 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
                   </div>
                 ) : (
                   <button
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      console.log("Mobile login button clicked")
                       setIsLoginModalOpen(true)
                       setIsMenuOpen(false)
                     }}
-                    className="text-left text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200"
+                    className="text-left text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200 cursor-pointer relative z-10"
+                    type="button"
+                    style={{ pointerEvents: 'auto' }}
                   >
                     Login
                   </button>
@@ -199,8 +238,12 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
 
       {/* Login Modal */}
       <LoginModal
-        isOpen={isLoginModalOpen}
+        open={isLoginModalOpen}
         onClose={() => setIsLoginModalOpen(false)}
+        onSuccess={() => {
+          console.log("Login successful")
+          setIsLoginModalOpen(false)
+        }}
       />
 
       {/* CSS for animated banner */}
