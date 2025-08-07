@@ -23,4 +23,45 @@ paymentRouter.get('/phonepe/refund-status/:merchantRefundId', verifyToken, getPh
 // PhonePe webhook route
 paymentRouter.post('/phonepe/webhook', phonePeWebhookHandler);
 
+// Debug endpoint for PhonePe testing
+paymentRouter.get('/phonepe/debug/:merchantTransactionId', async (req, res) => {
+  try {
+    const { merchantTransactionId } = req.params;
+    console.log('Debug request for transaction:', merchantTransactionId);
+    
+    // Check if order exists
+    const order = await (await import('../models/orderModel.js')).default.findOne({
+      phonepeTransactionId: merchantTransactionId
+    });
+    
+    if (!order) {
+      return res.json({
+        success: false,
+        message: 'Order not found',
+        merchantTransactionId
+      });
+    }
+    
+    return res.json({
+      success: true,
+      order: {
+        id: order._id,
+        phonepeTransactionId: order.phonepeTransactionId,
+        paymentStatus: order.paymentStatus,
+        orderStatus: order.orderStatus,
+        status: order.status,
+        amount: order.amount,
+        paymentLog: order.paymentLog
+      }
+    });
+  } catch (error) {
+    console.error('Debug endpoint error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Debug endpoint failed',
+      error: error.message
+    });
+  }
+});
+
 export default paymentRouter; 

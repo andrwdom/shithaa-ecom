@@ -26,26 +26,44 @@ function PhonePeCallbackInner() {
     }
     async function checkStatus() {
       try {
+        console.log('Checking payment status for:', merchantTransactionId)
         const verifyRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/payment/phonepe/verify/${merchantTransactionId}`, {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' }
         })
         const verifyData = await verifyRes.json()
+        console.log('Verification response:', verifyData)
+        
         if (verifyRes.ok && verifyData.success) {
           const paymentData = verifyData.data
-          if (paymentData.code === 'PAYMENT_SUCCESS' && paymentData.paymentState === 'COMPLETED') {
+          
+          // Handle different success conditions
+          const isSuccess = (
+            (paymentData.code === 'PAYMENT_SUCCESS' && paymentData.paymentState === 'COMPLETED') ||
+            (paymentData.code === 'PAYMENT_SUCCESS' && paymentData.state === 'COMPLETED') ||
+            (paymentData.paymentState === 'COMPLETED') ||
+            (paymentData.state === 'COMPLETED')
+          )
+          
+          const isPending = (
+            paymentData.paymentState === 'PENDING' || 
+            paymentData.state === 'PENDING' ||
+            paymentData.code === 'PAYMENT_PENDING'
+          )
+          
+          if (isSuccess) {
             setStatus('success')
             setMessage('Payment successful! Your order has been confirmed.')
-            setOrderId(paymentData.merchantTransactionId)
+            setOrderId(paymentData.merchantTransactionId || merchantTransactionId)
             localStorage.setItem('lastOrder', JSON.stringify({
-              id: paymentData.merchantTransactionId,
+              id: paymentData.merchantTransactionId || merchantTransactionId,
               orderSummary: { total: amount ? amount / 100 : 0 },
               paymentMethod: 'PhonePe'
             }))
             setTimeout(() => { router.push('/order-success') }, 3000)
             if (interval) clearInterval(interval)
             stopped = true
-          } else if (paymentData.paymentState === 'PENDING' || paymentData.state === 'PENDING') {
+          } else if (isPending) {
             setStatus('pending')
             setMessage('Processing your payment, please wait...')
           } else {
@@ -55,12 +73,45 @@ function PhonePeCallbackInner() {
             stopped = true
           }
         } else {
+          console.error('Verification failed:', verifyData)
+          
+          // Try to check order status directly from our database as fallback
+          try {
+            const orderCheckRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/orders/phonepe/${merchantTransactionId}`, {
+              method: 'GET',
+              headers: { 'Content-Type': 'application/json' }
+            })
+            
+            if (orderCheckRes.ok) {
+              const orderData = await orderCheckRes.json()
+              if (orderData.success && orderData.order) {
+                if (orderData.order.paymentStatus === 'paid') {
+                  setStatus('success')
+                  setMessage('Payment successful! Your order has been confirmed.')
+                  setOrderId(merchantTransactionId)
+                  localStorage.setItem('lastOrder', JSON.stringify({
+                    id: merchantTransactionId,
+                    orderSummary: { total: amount ? amount / 100 : 0 },
+                    paymentMethod: 'PhonePe'
+                  }))
+                  setTimeout(() => { router.push('/order-success') }, 3000)
+                  if (interval) clearInterval(interval)
+                  stopped = true
+                  return
+                }
+              }
+            }
+          } catch (fallbackError) {
+            console.error('Fallback order check failed:', fallbackError)
+          }
+          
           setStatus('failed')
-          setMessage('Payment verification failed. Please contact support.')
+          setMessage(verifyData.message || 'Payment verification failed. Please contact support.')
           if (interval) clearInterval(interval)
           stopped = true
         }
       } catch (error) {
+        console.error('Payment verification error:', error)
         setStatus('failed')
         setMessage('Payment processing error. Please contact support.')
         if (interval) clearInterval(interval)
