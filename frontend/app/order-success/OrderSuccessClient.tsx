@@ -21,8 +21,14 @@ function OrderSuccessContent() {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    // If no orderId is provided, redirect to account page
+    if (!orderId) {
+      console.log("No order ID provided, redirecting to account page");
+      router.push('/account');
+      return;
+    }
+
     async function fetchOrder() {
-      if (!orderId) return setError("No order ID provided.");
       setLoading(true);
       setError("");
       try {
@@ -42,7 +48,7 @@ function OrderSuccessContent() {
       }
     }
     fetchOrder();
-  }, [orderId]);
+  }, [orderId, router]);
 
   if (loading) {
     return (

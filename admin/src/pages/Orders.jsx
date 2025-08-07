@@ -4,41 +4,78 @@ import { backendUrl, currency } from '../App'
 import { toast } from 'react-toastify'
 import { assets } from '../assets/assets'
 import { useNavigate } from 'react-router-dom'
-import { FaUser, FaEnvelope, FaTruck, FaPhone, FaMapMarkerAlt, FaMoneyBill, FaCalendarAlt, FaBox, FaTag, FaSearch, FaFilter, FaClock, FaCheckCircle, FaTimesCircle, FaShippingFast, FaDollarSign } from 'react-icons/fa';
+import { FaUser, FaEnvelope, FaTruck, FaPhone, FaMapMarkerAlt, FaMoneyBill, FaCalendarAlt, FaBox, FaTag, FaSearch, FaFilter, FaClock, FaCheckCircle, FaTimesCircle, FaShippingFast, FaDollarSign, FaSpinner, FaCog, FaBan } from 'react-icons/fa';
 
-const STATUS_COLORS = {
-  Pending: 'bg-yellow-100 text-yellow-800',
-  'Out for delivery': 'bg-purple-100 text-purple-800',
-  Packing: 'bg-yellow-100 text-yellow-800',
-  Shipped: 'bg-green-100 text-green-800',
-  Delivered: 'bg-green-100 text-green-800',
-  Cancelled: 'bg-red-100 text-red-800',
+// Updated status colors and icons
+const STATUS_CONFIG = {
+  Pending: {
+    color: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+    icon: FaClock,
+    iconColor: 'text-yellow-500',
+    description: 'Order received, waiting to be processed'
+  },
+  Processing: {
+    color: 'bg-blue-100 text-blue-800 border-blue-200',
+    icon: FaCog,
+    iconColor: 'text-blue-500',
+    description: 'Order is being prepared and packed'
+  },
+  Shipped: {
+    color: 'bg-purple-100 text-purple-800 border-purple-200',
+    icon: FaShippingFast,
+    iconColor: 'text-purple-500',
+    description: 'Order has been shipped and is in transit'
+  },
+  Delivered: {
+    color: 'bg-green-100 text-green-800 border-green-200',
+    icon: FaCheckCircle,
+    iconColor: 'text-green-500',
+    description: 'Order has been successfully delivered'
+  },
+  Cancelled: {
+    color: 'bg-red-100 text-red-800 border-red-200',
+    icon: FaBan,
+    iconColor: 'text-red-500',
+    description: 'Order has been cancelled'
+  }
 };
 
-const ORDER_STATUSES = ['All', 'Pending', 'Packing', 'Shipped', 'Out for delivery', 'Delivered', 'Cancelled'];
+// Complete order lifecycle statuses
+const ORDER_STATUSES = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
 
 function formatDate(date) {
   return new Date(date).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
 }
 
 function StatusBadge({ status }) {
+  const config = STATUS_CONFIG[status] || STATUS_CONFIG.Pending;
+  const IconComponent = config.icon;
+  
   return (
-    <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${STATUS_COLORS[status] || 'bg-gray-100 text-gray-700'}`}>{status}</span>
+    <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold border ${config.color}`}>
+      <IconComponent className={`w-3 h-3 ${config.iconColor}`} />
+      {status}
+    </span>
   );
 }
 
-// Dashboard Summary Cards
+// Dashboard Summary Cards with updated status counting
 const DashboardSummary = ({ orders }) => {
   const today = new Date().toDateString();
   
   const pendingOrders = orders.filter(order => {
     const status = order.orderStatus || order.status || order.paymentStatus;
-    return status === 'Pending' || status === 'Packing';
+    return status === 'Pending';
+  }).length;
+  
+  const processingOrders = orders.filter(order => {
+    const status = order.orderStatus || order.status || order.paymentStatus;
+    return status === 'Processing';
   }).length;
   
   const shippedOrders = orders.filter(order => {
     const status = order.orderStatus || order.status || order.paymentStatus;
-    return status === 'Shipped' || status === 'Out for delivery';
+    return status === 'Shipped';
   }).length;
   
   const deliveredOrders = orders.filter(order => {
@@ -58,11 +95,11 @@ const DashboardSummary = ({ orders }) => {
     }, 0);
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8"> {/* Increased gap and margin */}
+    <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
       <div className="bg-white shadow-sm rounded-lg p-4 border border-gray-200 flex flex-col justify-between">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs font-medium text-gray-500">Pending Orders</p>
+            <p className="text-xs font-medium text-gray-500">Pending</p>
             <h2 className="text-lg font-bold text-gray-900">{pendingOrders}</h2>
           </div>
           <FaClock className="w-5 h-5 text-yellow-500" />
@@ -71,23 +108,32 @@ const DashboardSummary = ({ orders }) => {
       <div className="bg-white shadow-sm rounded-lg p-4 border border-gray-200 flex flex-col justify-between">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs font-medium text-gray-500">Shipped Orders</p>
-            <h2 className="text-lg font-bold text-gray-900">{shippedOrders}</h2>
+            <p className="text-xs font-medium text-gray-500">Processing</p>
+            <h2 className="text-lg font-bold text-gray-900">{processingOrders}</h2>
           </div>
-          <FaShippingFast className="w-5 h-5 text-blue-500" />
+          <FaCog className="w-5 h-5 text-blue-500" />
         </div>
       </div>
       <div className="bg-white shadow-sm rounded-lg p-4 border border-gray-200 flex flex-col justify-between">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs font-medium text-gray-500">Delivered Orders</p>
+            <p className="text-xs font-medium text-gray-500">Shipped</p>
+            <h2 className="text-lg font-bold text-gray-900">{shippedOrders}</h2>
+          </div>
+          <FaShippingFast className="w-5 h-5 text-purple-500" />
+        </div>
+      </div>
+      <div className="bg-white shadow-sm rounded-lg p-4 border border-gray-200 flex flex-col justify-between">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs font-medium text-gray-500">Delivered</p>
             <h2 className="text-lg font-bold text-gray-900">{deliveredOrders}</h2>
           </div>
           <FaCheckCircle className="w-5 h-5 text-green-500" />
         </div>
       </div>
       <div className="bg-white shadow-sm rounded-lg p-4 border border-gray-200 flex flex-col justify-between">
-        <div className="flex items-center justify-between h-full"> {/* Ensure vertical alignment */}
+        <div className="flex items-center justify-between h-full">
           <div>
             <p className="text-xs font-medium text-gray-500">Revenue Today</p>
             <h2 className="text-lg font-bold text-gray-900">{currency}{revenueToday.toFixed(2)}</h2>
@@ -99,21 +145,23 @@ const DashboardSummary = ({ orders }) => {
   );
 };
 
-// Segmented Toggle Group for Status
+// Updated Status Toggle Group with all statuses
 const StatusToggleGroup = ({ value, onChange }) => {
   const options = [
     { label: 'All', value: 'All' },
     { label: 'Pending', value: 'Pending' },
+    { label: 'Processing', value: 'Processing' },
     { label: 'Shipped', value: 'Shipped' },
     { label: 'Delivered', value: 'Delivered' },
+    { label: 'Cancelled', value: 'Cancelled' },
   ];
   return (
-    <div className="mb-4 flex gap-2">
+    <div className="mb-4 flex gap-2 overflow-x-auto">
       {options.map(opt => (
         <button
           key={opt.value}
           type="button"
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors border focus:outline-none focus:ring-2 focus:ring-[#4D1E64] ${
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors border focus:outline-none focus:ring-2 focus:ring-[#4D1E64] whitespace-nowrap ${
             value === opt.value
               ? 'bg-[#4D1E64] text-white border-[#4D1E64] shadow-sm'
               : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
@@ -128,7 +176,7 @@ const StatusToggleGroup = ({ value, onChange }) => {
   );
 };
 
-const PAYMENT_METHODS = ['All', 'COD', 'Prepaid', 'Razorpay', 'Stripe'];
+const PAYMENT_METHODS = ['All', 'COD', 'Prepaid', 'Razorpay', 'Stripe', 'PhonePe'];
 const SORT_ORDERS = [
   { value: 'newest', label: 'Newest' },
   { value: 'oldest', label: 'Oldest' },
@@ -148,8 +196,8 @@ const EnhancedSearchAndFilters = ({
   onSortOrderChange,
 }) => {
   return (
-    <div className="sticky top-0 z-20 bg-white border-b border-gray-100 mb-8"> {/* Increased margin */}
-      <div className="flex flex-col md:flex-row items-start md:items-center gap-6 px-2 py-4"> {/* Increased gap and padding */}
+    <div className="sticky top-0 z-20 bg-white border-b border-gray-100 mb-8">
+      <div className="flex flex-col md:flex-row items-start md:items-center gap-6 px-2 py-4">
         {/* Search Input */}
         <div className="w-full md:w-[260px]">
           <div className="relative">
@@ -171,9 +219,9 @@ const EnhancedSearchAndFilters = ({
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4D1E64] focus:border-transparent"
           >
             <option value="All">All Statuses</option>
-            <option value="Pending">Pending</option>
-            <option value="Shipped">Shipped</option>
-            <option value="Delivered">Delivered</option>
+            {ORDER_STATUSES.map(status => (
+              <option key={status} value={status}>{status}</option>
+            ))}
           </select>
         </div>
         {/* Date Range */}
@@ -221,7 +269,7 @@ const EnhancedSearchAndFilters = ({
   );
 };
 
-// Modern Responsive Order Card
+// Modern Responsive Order Card with updated status handling
 const ModernOrderCard = ({ order, onView, onStatusChange }) => {
   const userInfo = order.userInfo || { name: order.customerName, email: order.email };
   const shipping = order.shippingInfo || order.shippingAddress || order.address;
@@ -236,7 +284,6 @@ const ModernOrderCard = ({ order, onView, onStatusChange }) => {
   // Get shipping address lines for display
   const getShippingAddressLines = () => {
     if (order.shippingInfo) {
-      // Use new shippingInfo structure
       const lines = [
         order.shippingInfo.addressLine1,
         order.shippingInfo.addressLine2,
@@ -247,7 +294,6 @@ const ModernOrderCard = ({ order, onView, onStatusChange }) => {
       ].filter(Boolean);
       return lines;
     } else if (order.shippingAddress) {
-      // Use shippingAddress structure
       const lines = [
         order.shippingAddress.flatHouseNo,
         order.shippingAddress.areaLocality,
@@ -260,7 +306,6 @@ const ModernOrderCard = ({ order, onView, onStatusChange }) => {
       ].filter(Boolean);
       return lines;
     } else if (order.address) {
-      // Use legacy address structure
       const lines = [
         order.address.line1,
         order.address.line2,
@@ -268,7 +313,7 @@ const ModernOrderCard = ({ order, onView, onStatusChange }) => {
         order.address.state,
         order.address.pincode,
         order.address.country
-  ].filter(Boolean);
+      ].filter(Boolean);
       return lines;
     }
     return [];
@@ -277,13 +322,25 @@ const ModernOrderCard = ({ order, onView, onStatusChange }) => {
   const addressLines = getShippingAddressLines();
   const isTestOrder = order.isTestOrder || payment === 'test-paid';
 
-  // Dropdown for status change
+  // Dropdown for status change with all statuses
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showShippingModal, setShowShippingModal] = useState(false);
   const statusOptions = [
-    { label: '✅ Delivered', value: 'Delivered' },
-    { label: '🚚 Shipped', value: 'Shipped' },
-    { label: '❌ Cancelled', value: 'Cancelled' },
+    { label: '⏳ Pending', value: 'Pending', icon: FaClock },
+    { label: '⚙️ Processing', value: 'Processing', icon: FaCog },
+    { label: '🚚 Shipped', value: 'Shipped', icon: FaShippingFast },
+    { label: '✅ Delivered', value: 'Delivered', icon: FaCheckCircle },
+    { label: '❌ Cancelled', value: 'Cancelled', icon: FaBan },
   ];
+
+  const handleStatusChange = (status) => {
+    setShowDropdown(false);
+    if (status === 'Shipped') {
+      setShowShippingModal(true);
+    } else {
+      onStatusChange(order._id, status);
+    }
+  };
 
   return (
     <div className="p-4 shadow-md rounded-xl flex flex-col gap-2 bg-white border border-gray-100">
@@ -294,19 +351,19 @@ const ModernOrderCard = ({ order, onView, onStatusChange }) => {
           <p className="text-xs text-gray-500">📞 {phone}</p>
           <p className="text-xs text-gray-500">📍 {addressLines.map((line, i) => <span key={i}>{line}{i < addressLines.length - 1 ? ', ' : ''}</span>)}</p>
         </div>
-        <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${STATUS_COLORS[status] || 'bg-gray-100 text-gray-700'}`}>{status}</span>
+        <StatusBadge status={status} />
       </div>
       <div className="text-xs text-gray-600 mt-2">
         <p>💳 {payment || 'N/A'} | ₹{typeof total === 'number' && !isNaN(total) ? total.toFixed(2) : '0.00'}</p>
         <p>📅 {formatDate(placedAt)}</p>
       </div>
       <div className="flex flex-wrap justify-between gap-2 mt-3">
-      <button
+        <button
           className="px-3 py-1.5 rounded border border-gray-300 text-xs font-semibold hover:bg-gray-50 transition"
-        onClick={() => onView(order)}
-      >
-        View Details
-      </button>
+          onClick={() => onView(order)}
+        >
+          View Details
+        </button>
         <div className="relative">
           <button
             className="px-3 py-1.5 rounded bg-[#4D1E64] text-white text-xs font-semibold hover:bg-[#3a164d] transition"
@@ -316,28 +373,182 @@ const ModernOrderCard = ({ order, onView, onStatusChange }) => {
             Change Status
           </button>
           {showDropdown && (
-            <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded shadow-lg z-20">
-              {statusOptions.map(opt => (
-                <button
-                  key={opt.value}
-                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
-                  onClick={() => { setShowDropdown(false); onStatusChange(order._id, opt.value); }}
-                >
-                  {opt.label}
-                </button>
-              ))}
+            <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded shadow-lg z-20">
+              {statusOptions.map(opt => {
+                const IconComponent = opt.icon;
+                return (
+                  <button
+                    key={opt.value}
+                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+                    onClick={() => handleStatusChange(opt.value)}
+                  >
+                    <IconComponent className="w-3 h-3" />
+                    {opt.label}
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
       </div>
+
+      {/* Shipping Tracking Modal */}
+      {showShippingModal && (
+        <ShippingTrackingModal
+          order={order}
+          onClose={() => setShowShippingModal(false)}
+          onStatusChange={onStatusChange}
+        />
+      )}
     </div>
   );
 };
 
+// Shipping Tracking Modal Component
+function ShippingTrackingModal({ order, onClose, onStatusChange }) {
+  const [shippingPartner, setShippingPartner] = useState('');
+  const [trackingId, setTrackingId] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const courierOptions = [
+    { value: 'DTDC', label: 'DTDC' },
+    { value: 'ST Courier', label: 'ST Courier' },
+    { value: 'XpressBees', label: 'XpressBees' },
+    { value: 'India Post', label: 'India Post' }
+  ];
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!shippingPartner || !trackingId.trim()) {
+      toast.error('Please select a courier partner and enter tracking ID');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL || 'http://localhost:4000'}/api/orders/status`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'token': localStorage.getItem('token')
+        },
+        body: JSON.stringify({
+          orderId: order._id,
+          status: 'Shipped',
+          shippingPartner,
+          trackingId: trackingId.trim()
+        })
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        toast.success('Order marked as shipped with tracking details!');
+        onStatusChange(order._id, 'Shipped');
+        onClose();
+      } else {
+        toast.error(data.message || 'Failed to update order status');
+      }
+    } catch (error) {
+      console.error('Error updating order status:', error);
+      toast.error('Failed to update order status');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Esc key to close
+  React.useEffect(() => {
+    function handleEsc(e) {
+      if (e.key === 'Escape') onClose();
+    }
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" onClick={onClose}>
+      <div className="bg-white rounded-xl shadow-xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+        <div className="p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold text-gray-900">Add Shipping Details</h2>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <div className="mb-4">
+            <p className="text-sm text-gray-600 mb-4">
+              Order #{order.orderId} - {order.shippingInfo?.fullName || order.customerName}
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Courier Partner *
+              </label>
+              <select
+                value={shippingPartner}
+                onChange={(e) => setShippingPartner(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4D1E64] focus:border-transparent"
+                required
+              >
+                <option value="">Select courier partner</option>
+                {courierOptions.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Tracking ID *
+              </label>
+              <input
+                type="text"
+                value={trackingId}
+                onChange={(e) => setTrackingId(e.target.value)}
+                placeholder="Enter tracking ID"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4D1E64] focus:border-transparent"
+                required
+              />
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex-1 px-4 py-2 bg-[#4D1E64] text-white rounded-lg hover:bg-[#3a164d] transition-colors disabled:opacity-50"
+              >
+                {loading ? 'Updating...' : 'Update Status'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function OrderDetailsModal({ order, onClose, onStatusChange }) {
   if (!order) return null;
   const userInfo = order.userInfo || { name: order.customerName, email: order.email };
-  // Always show name (or fallback), then email
   const displayName = userInfo.name && userInfo.name.trim() ? userInfo.name : (order.customerName && order.customerName.trim() ? order.customerName : 'Unknown User');
   const displayEmail = userInfo.email || order.email || '';
   const shipping = order.shippingInfo || order.shippingAddress || order.address;
@@ -353,7 +564,6 @@ function OrderDetailsModal({ order, onClose, onStatusChange }) {
   // Get shipping information for display
   const getShippingDisplayInfo = () => {
     if (order.shippingInfo) {
-      // Use new shippingInfo structure
       return {
         name: order.shippingInfo.fullName,
         email: order.shippingInfo.email,
@@ -368,7 +578,6 @@ function OrderDetailsModal({ order, onClose, onStatusChange }) {
         ].filter(field => field.value)
       };
     } else if (order.shippingAddress) {
-      // Use shippingAddress structure
       return {
         name: order.shippingAddress.fullName,
         email: order.shippingAddress.email,
@@ -385,7 +594,6 @@ function OrderDetailsModal({ order, onClose, onStatusChange }) {
         ].filter(field => field.value)
       };
     } else if (order.address) {
-      // Use legacy address structure
       return {
         name: order.customerName,
         email: order.email,
@@ -404,7 +612,6 @@ function OrderDetailsModal({ order, onClose, onStatusChange }) {
   };
   
   const shippingDisplay = getShippingDisplayInfo();
-  // Total robust
   const totalAmount = order.totalAmount || order.totalPrice || order.total || order.orderSummary?.total || 0;
 
   // Esc key to close
@@ -431,7 +638,18 @@ function OrderDetailsModal({ order, onClose, onStatusChange }) {
             <span className="sr-only">Close</span>
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
+        </div>
+        
+        {/* Current Status Display */}
+        <div className="mb-4">
+          <div className="flex items-center gap-2 mb-2">
+            <StatusBadge status={status} />
+            <span className="text-xs text-gray-500">
+              {STATUS_CONFIG[status]?.description || 'Status updated'}
+            </span>
           </div>
+        </div>
+        
         {/* User Info Box */}
         <div className="bg-gray-100 p-3 rounded-md flex flex-col gap-1 text-sm mb-4">
           <p className="flex items-center gap-2">
@@ -440,7 +658,8 @@ function OrderDetailsModal({ order, onClose, onStatusChange }) {
           <p className="flex items-center gap-2">
             <FaEnvelope className="w-4 h-4" /> {displayEmail}
           </p>
-          </div>
+        </div>
+        
         {/* Shipping + Payment Details */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm mt-4 mb-4">
           <div><span className="font-semibold">🪪 Shipping Name:</span> {shippingDisplay.name}</div>
@@ -453,7 +672,7 @@ function OrderDetailsModal({ order, onClose, onStatusChange }) {
                 {shippingDisplay.addressFields.map((field, index) => (
                   <div key={index}>
                     <b>{field.label}:</b> {field.value}
-                    </div>
+                  </div>
                 ))}
               </div>
             </div>
@@ -462,6 +681,7 @@ function OrderDetailsModal({ order, onClose, onStatusChange }) {
           <div><span className="font-semibold">🧾 Order ID:</span> #{order.orderId || 'N/A'}</div>
           <div><span className="font-semibold">📅 Date:</span> {formatDate(placedAt)}</div>
         </div>
+        
         <div className="mb-2 text-sm"><b>🛍️ Products:</b></div>
         <ul className="mb-2 divide-y">
           {items.map((item, idx) => (
@@ -476,21 +696,49 @@ function OrderDetailsModal({ order, onClose, onStatusChange }) {
             </li>
           ))}
         </ul>
+        
         {isTestOrder && (
           <span className="inline-block px-2 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">Test Order</span>
         )}
-        <div className="mb-2">
-          <label className="block mb-1 font-medium">Update Status</label>
-          <select
-            className="w-full border rounded px-3 py-2"
-            value={status}
-            onChange={e => onStatusChange(order._id, e.target.value)}
-          >
-            {ORDER_STATUSES.filter(s => s !== 'All').map(s => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
+        
+        {/* Status Update Section */}
+        <div className="mb-4">
+          <label className="block mb-2 font-medium">Update Order Status</label>
+          <div className="grid grid-cols-1 gap-2">
+            {ORDER_STATUSES.map(statusOption => {
+              const config = STATUS_CONFIG[statusOption];
+              const IconComponent = config.icon;
+              const isCurrentStatus = status === statusOption;
+              
+              return (
+                <button
+                  key={statusOption}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg border transition-all ${
+                    isCurrentStatus 
+                      ? 'bg-[#4D1E64] text-white border-[#4D1E64]' 
+                      : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                  }`}
+                  onClick={() => onStatusChange(order._id, statusOption)}
+                  disabled={isCurrentStatus}
+                >
+                  <IconComponent className={`w-4 h-4 ${isCurrentStatus ? 'text-white' : config.iconColor}`} />
+                  <div className="text-left">
+                    <div className="font-medium">{statusOption}</div>
+                    <div className={`text-xs ${isCurrentStatus ? 'text-white/80' : 'text-gray-500'}`}>
+                      {config.description}
+                    </div>
+                  </div>
+                  {isCurrentStatus && (
+                    <div className="ml-auto">
+                      <FaCheckCircle className="w-4 h-4 text-white" />
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
+        
         {/* Payment Log Section */}
         <div className="mt-4">
           <h3 className="text-md font-semibold mb-2">Payment Log</h3>
@@ -544,17 +792,14 @@ const Orders = ({ token, setToken }) => {
         return res.data.profile.name;
       }
     } catch (err) {
-      // If 404, fallback to email and 'Unknown User'
       if (err.response && err.response.status === 404) {
         setUserNameCache(prev => ({ ...prev, [email]: 'Unknown User' }));
         return 'Unknown User';
       }
-      // ignore other errors
     }
     return '';
   };
 
-  // --- FIX: Define fetchOrders ---
   const fetchOrders = () => {
     setLoading(true);
     setApiError('');
@@ -585,7 +830,6 @@ const Orders = ({ token, setToken }) => {
   useEffect(() => {
     console.log('Orders component mounted');
     fetchOrders();
-    // eslint-disable-next-line
   }, [token]);
 
   const handleAuthError = () => {
@@ -630,7 +874,7 @@ const Orders = ({ token, setToken }) => {
 
   const updateStatus = async (orderId, status) => {
     try {
-      console.log("Sending token for status update:", token);
+      console.log("Updating order status:", orderId, "to", status);
       const response = await axios.post(
         `${backendUrl}/api/orders/status`,
         { orderId, status },
@@ -643,10 +887,9 @@ const Orders = ({ token, setToken }) => {
       console.log('Status update response:', response.data);
       if (response.data.success) {
         fetchOrders();
-        toast.success('Order status updated');
+        toast.success(`Order status updated to ${status}`);
         return;
       } else {
-        // If the UI updates, still show success
         fetchOrders();
         toast.error('Backend error: ' + (response.data.message || 'Unknown error'));
         return;
@@ -666,37 +909,7 @@ const Orders = ({ token, setToken }) => {
   };
 
   const canCancelOrder = (status) => {
-    return ['Order Placed', 'Packing'].includes(status);
-  };
-
-  const getOrderStatusStyles = (status) => {
-    switch (status) {
-      case 'Cancelled':
-        return 'border-red-200 bg-red-50';
-      case 'Delivered':
-        return 'border-green-200';
-      case 'Shipped':
-        return 'border-blue-200';
-      default:
-        return 'border-gray-200';
-    }
-  };
-
-  const getStatusBadgeStyles = (status) => {
-    switch (status) {
-      case 'Cancelled':
-        return 'bg-red-100 text-red-700 border-red-200';
-      case 'Delivered':
-        return 'bg-green-100 text-green-700 border-green-200';
-      case 'Shipped':
-        return 'bg-blue-100 text-blue-700 border-blue-200';
-      case 'Out for delivery':
-        return 'bg-purple-100 text-purple-700 border-purple-200';
-      case 'Packing':
-        return 'bg-yellow-100 text-yellow-700 border-yellow-200';
-      default:
-        return 'bg-gray-100 text-gray-700 border-gray-200';
-    }
+    return ['Pending', 'Processing'].includes(status);
   };
 
   // Enhanced search filter
@@ -704,19 +917,17 @@ const Orders = ({ token, setToken }) => {
     // Search logic
     let matchesSearch = true;
     if (search) {
-    const s = search.trim();
-    if (s.startsWith('#')) {
-      // Search by order ID (partial, case-insensitive)
-      const idQuery = s.slice(1).toLowerCase();
+      const s = search.trim();
+      if (s.startsWith('#')) {
+        const idQuery = s.slice(1).toLowerCase();
         matchesSearch =
           (order.orderId && order.orderId.toLowerCase().includes(idQuery)) ||
           (order._id && order._id.toLowerCase().includes(idQuery));
-    } else {
-      // Search by name or phone
-      const name = (order.userInfo?.name || order.customerName || '').toLowerCase();
-      const phone = (order.userInfo?.phone || order.phone || '').toLowerCase();
+      } else {
+        const name = (order.userInfo?.name || order.customerName || '').toLowerCase();
+        const phone = (order.userInfo?.phone || order.phone || '').toLowerCase();
         matchesSearch =
-        name.includes(s.toLowerCase()) ||
+          name.includes(s.toLowerCase()) ||
           phone.includes(s.toLowerCase());
       }
     }
@@ -742,7 +953,7 @@ const Orders = ({ token, setToken }) => {
       {/* Page Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Orders Management</h1>
-        <p className="text-gray-600">Manage and track all customer orders</p>
+        <p className="text-gray-600">Manage and track all customer orders with full lifecycle status support</p>
       </div>
 
       {/* Dashboard Summary Cards */}
@@ -765,7 +976,7 @@ const Orders = ({ token, setToken }) => {
       {/* Status Filter Toggles */}
       <div className="overflow-x-auto w-full">
         <div className="flex gap-2 min-w-max pb-2" style={{ WebkitOverflowScrolling: 'touch' }}>
-      <StatusToggleGroup value={statusFilter} onChange={setStatusFilter} />
+          <StatusToggleGroup value={statusFilter} onChange={setStatusFilter} />
         </div>
       </div>
 
@@ -808,7 +1019,7 @@ const Orders = ({ token, setToken }) => {
           <div className="text-gray-400 text-6xl mb-4">🔍</div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">No Orders Match Your Filters</h3>
           <p className="text-gray-500">Try adjusting your search or filter criteria.</p>
-      </div>
+        </div>
       )}
 
       {/* Orders List */}

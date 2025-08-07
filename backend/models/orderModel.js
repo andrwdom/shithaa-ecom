@@ -97,6 +97,13 @@ const orderSchema = new mongoose.Schema({
     }],
     // Legacy payment field
     payment: { type: Boolean, default: false },
+    // Shipping tracking information
+    shippingTracking: {
+        partner: { type: String, enum: ['DTDC', 'ST Courier', 'XpressBees', 'India Post'] },
+        trackingId: { type: String },
+        shippedAt: { type: Date },
+        trackingUrl: { type: String }
+    },
     // Legacy fields for backward compatibility
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'user' },
     amount: { type: Number },

@@ -64,7 +64,7 @@ function PhonePeCallbackInner() {
                   orderSummary: { total: recentOrderData.order.amount },
                   paymentMethod: 'PhonePe'
                 }))
-                setTimeout(() => { router.push('/order-success') }, 3000)
+                setTimeout(() => { router.push('/account') }, 3000)
                 return
               }
             }
@@ -107,14 +107,14 @@ function PhonePeCallbackInner() {
             if (order.paymentStatus === 'paid' || order.payment === true) {
               setStatus('success')
               setMessage('Payment successful! Your order has been confirmed.')
-              setOrderId(transactionId)
+              setOrderId(transactionId || '')
               setOrderDetails(order)
               localStorage.setItem('lastOrder', JSON.stringify({
                 id: transactionId,
                 orderSummary: { total: order.amount },
                 paymentMethod: 'PhonePe'
               }))
-              setTimeout(() => { router.push('/order-success') }, 3000)
+              setTimeout(() => { router.push('/account') }, 3000)
               if (interval) clearInterval(interval)
               stopped = true
               return
@@ -181,10 +181,10 @@ function PhonePeCallbackInner() {
               
               localStorage.setItem('lastOrder', JSON.stringify({
                 id: paymentData.merchantTransactionId || transactionId,
-                orderSummary: { total: amount ? amount / 100 : 0 },
+                orderSummary: { total: amount ? parseFloat(amount) / 100 : 0 },
                 paymentMethod: 'PhonePe'
               }))
-              setTimeout(() => { router.push('/order-success') }, 3000)
+              setTimeout(() => { router.push('/account') }, 3000)
               if (interval) clearInterval(interval)
               stopped = true
             } else if (isPending) {

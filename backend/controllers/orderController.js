@@ -419,9 +419,11 @@ const userOrders = async (req,res) => {
 }
 
 // Update order status (Admin)
+import { sendShippingNotification, sendOrderStatusUpdate } from '../utils/emailService.js';
+
 const updateStatus = async (req,res) => {
     try {
-        const { orderId, status, cancelledBy } = req.body;
+        const { orderId, status, cancelledBy, shippingPartner, trackingId } = req.body;
 
         if (!orderId || !status) {
             return res.json({ success: false, message: "Order ID and status are required" });
@@ -437,6 +439,34 @@ const updateStatus = async (req,res) => {
         updateData.orderStatus = status;
         // Optionally update paymentStatus if delivered
         if (status === 'Delivered') updateData.paymentStatus = 'paid';
+
+        // Handle shipping tracking data when status is 'Shipped'
+        if (status === 'Shipped') {
+            if (!shippingPartner || !trackingId) {
+                return res.json({ 
+                    success: false, 
+                    message: "Shipping partner and tracking ID are required when marking order as shipped" 
+                });
+            }
+
+            // Generate tracking URL
+            const courierTrackingUrls = {
+                'DTDC': 'https://www.dtdc.in/trace.asp',
+                'ST Courier': 'https://stcourier.com/track/shipment',
+                'XpressBees': 'https://www.xpressbees.com/shipment/tracking',
+                'India Post': 'https://www.indiapost.gov.in/_layouts/15/dop.portal.tracking/trackconsignment.aspx'
+            };
+
+            const baseUrl = courierTrackingUrls[shippingPartner];
+            const trackingUrl = baseUrl ? `${baseUrl}?tracking_id=${trackingId}` : null;
+
+            updateData.shippingTracking = {
+                partner: shippingPartner,
+                trackingId: trackingId,
+                shippedAt: new Date(),
+                trackingUrl: trackingUrl
+            };
+        }
 
         // If cancelling, add cancellation details
         if (status === 'Cancelled' && cancelledBy) {
@@ -460,6 +490,21 @@ const updateStatus = async (req,res) => {
         }
 
         await orderModel.findByIdAndUpdate(orderId, updateData);
+
+        // Send email notifications
+        try {
+            if (status === 'Shipped' && shippingPartner && trackingId) {
+                // Send shipping notification email
+                await sendShippingNotification(order, { partner: shippingPartner, trackingId });
+            } else if (status !== 'Shipped') {
+                // Send general status update email for other statuses
+                await sendOrderStatusUpdate(order, status);
+            }
+        } catch (emailError) {
+            console.error('Error sending email notification:', emailError);
+            // Don't fail the request if email fails
+        }
+
         res.json({ success: true, message: "Order status updated successfully" });
 
     } catch (error) {

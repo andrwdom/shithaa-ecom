@@ -209,6 +209,8 @@ export default function AccountPageClient() {
         return "text-green-700 bg-green-100 border border-green-200"
       case "shipped":
       case "out for delivery":
+        return "text-purple-700 bg-purple-100 border border-purple-200"
+      case "processing":
         return "text-blue-700 bg-blue-100 border border-blue-200"
       case "packing":
         return "text-purple-700 bg-purple-100 border border-purple-200"
