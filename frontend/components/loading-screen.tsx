@@ -8,7 +8,7 @@ interface LoadingScreenProps {
 
 export default function LoadingScreen({ message = "Loading..." }: LoadingScreenProps) {
   return (
-    <div className="fixed inset-0 bg-white z-100 flex flex-col items-center justify-center">
+    <div className="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center">
       {/* Logo with fade animation */}
       <div className="mb-8">
         <Image

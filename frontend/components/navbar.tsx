@@ -1,10 +1,10 @@
 "use client"
 
 import { useState } from "react"
-import { Menu, ShoppingBag, X, User, Mail, Info, Home, LogOut } from "lucide-react"
+import { Menu, ShoppingBag, X, User, Mail, Info, Home, LogOut, Heart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useCart } from "@/components/cart-context"
-
+import { useWishlist } from "@/components/wishlist-context"
 import { useAuth } from "@/components/auth/useAuth"
 import LoginModal from "@/components/auth/LoginModal"
 
@@ -16,14 +16,16 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
   const { cartItems, openCartSidebar } = useCart()
+  const { wishlistItems } = useWishlist()
   const { user, logout } = useAuth()
 
   const cartCount = cartItems.reduce((total, item) => total + item.quantity, 0)
+  const wishlistCount = wishlistItems.length
 
   const handleAccountClick = () => {
     if (user) {
-      // Navigate to account page when user is logged in
-      window.location.href = "/account"
+      // Show account menu or navigate to account page
+      console.log("User is logged in:", user)
     } else {
       setIsLoginModalOpen(true)
     }
@@ -43,15 +45,15 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
         FREE DELIVERY WITHIN TAMIL NADU.
           </div>
           <div className="banner-message">
-            🔥 Buy 3 Lounge wear @1299rs 🔥
+            🔥 BUY 3 LOUNGE WEAR @1299RS 🔥
           </div>
         </div>
       </div>
 
       {/* Main Navbar */}
-      <nav className="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-sm">
+      <nav className="bg-white border-b border-gray-200 sticky top-0 z-[60] shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="navbar-container flex items-center justify-between h-16 lg:h-18 relative">
+          <div className="navbar-container flex items-center justify-between h-16 lg:h-18">
             
             {/* Left Section */}
             <div className="navbar-left">
@@ -59,9 +61,8 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
               <Button
                 variant="ghost"
                 size="sm"
-                className="md:hidden text-gray-600 hover:text-[rgb(71,60,102)] p-2 z-10 cursor-pointer"
+                className="md:hidden text-gray-600 hover:text-[rgb(71,60,102)] p-2"
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
-                type="button"
               >
                 {isMenuOpen ? <X className="navbar-icon" /> : <Menu className="navbar-icon" />}
               </Button>
@@ -107,9 +108,8 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
                 {/* Cart Icon */}
                 <button
                   onClick={openCartSidebar}
-                  className="relative p-2 text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200 z-10 cursor-pointer"
+                  className="relative p-2 text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200"
                   aria-label="Shopping cart"
-                  type="button"
                 >
                   <ShoppingBag className="navbar-icon" />
                   {cartCount > 0 && (
@@ -122,9 +122,8 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
                 {/* User Icon */}
                 <button
                   onClick={handleAccountClick}
-                  className="p-2 text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200 relative z-10 cursor-pointer"
+                  className="p-2 text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200"
                   aria-label="Account"
-                  type="button"
                 >
                   <User className="navbar-icon" />
                 </button>

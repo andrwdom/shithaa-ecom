@@ -180,12 +180,8 @@
 .navbar-logo {
   position: absolute;
   left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
+  transform: translateX(-50%);
   z-index: 10;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .navbar-left, .navbar-right {
@@ -233,12 +229,10 @@
   .navbar-logo {
     position: relative;
     left: auto;
-    top: auto;
     transform: none;
     flex: 1;
     display: flex;
     justify-content: center;
-    align-items: center;
   }
   
   .navbar-left {
@@ -254,11 +248,7 @@
   .navbar-logo {
     position: absolute;
     left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    transform: translateX(-50%);
   }
 }
 
