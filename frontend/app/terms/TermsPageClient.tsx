@@ -64,8 +64,7 @@ export default function TermsPageClient() {
               <b>Contact Information</b><br />
               For questions about these Terms and Conditions, please contact us at:<br />
               Email: <a href="mailto:info.shitha@gmail.com" className="underline">info.shitha@gmail.com</a><br />
-              Phone: <a href="tel:8148480720" className="underline">8148480720</a><br />
-              Address: 118/1 Mahalingapuram, Vellalore, Coimbatore 641111
+              Phone: <a href="tel:8148480720" className="underline">8148480720</a>
             </li>
           </ol>
         </div>

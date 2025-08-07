@@ -248,7 +248,7 @@ node scripts/migrate-orders.js
 For technical support or questions:
 - **Email**: info.shitha@gmail.com
 - **Phone**: 8148480720
-- **Address**: 118/1 Mahalingapuram, Vellalore, Coimbatore 641111
+
 
 ## 📄 License
 

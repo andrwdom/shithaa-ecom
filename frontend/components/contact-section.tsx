@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent } from "@/components/ui/card"
-import { Phone, Instagram, Mail, MapPin, Clock, Send, MessageCircle, Heart, Star } from "lucide-react"
+import { Phone, Instagram, Mail, Clock, Send, MessageCircle, Heart, Star } from "lucide-react"
 
 export default function ContactSection() {
   const [formData, setFormData] = useState({
@@ -94,18 +94,7 @@ Looking forward to hearing from you!`
       iconColor: "text-purple-600",
       hoverColor: "hover:bg-purple-100",
     },
-    {
-      icon: MapPin,
-      title: "Visit Our Store",
-      subtitle: "Come see our collection",
-      value: "118/a, Mahalingapuram, Vellalore",
-      subValue: "Coimbatore 641111",
-      action: () =>
-        window.open("https://maps.google.com/?q=118/a,+Mahalingapuram,+Vellalore,+Coimbatore+641111", "_blank"),
-      bgColor: "bg-green-50",
-      iconColor: "text-green-600",
-      hoverColor: "hover:bg-green-100",
-    },
+
   ]
 
   return (
@@ -165,29 +154,7 @@ Looking forward to hearing from you!`
               })}
             </div>
 
-            {/* Store Hours */}
-            <Card className="border-0 shadow-md bg-gradient-to-r from-purple-50 to-pink-50">
-              <CardContent className="p-6">
-                <div className="flex items-start space-x-4">
-                  <div className="p-3 rounded-xl bg-white shadow-sm">
-                    <Clock className="h-6 w-6 text-gray-600" />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-gray-900 mb-3">Store Hours</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Monday - Saturday</span>
-                        <span className="font-medium text-gray-900">9:00 AM - 7:00 PM</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Sunday</span>
-                        <span className="font-medium text-gray-900">10:00 AM - 6:00 PM</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+
 
             {/* Quick Stats */}
             <div className="grid grid-cols-2 gap-4">
@@ -323,40 +290,7 @@ Looking forward to hearing from you!`
           </div>
         </div>
 
-        {/* Bottom CTA */}
-        <div className="text-center mt-16 lg:mt-20">
-          <div className="bg-white rounded-2xl shadow-lg p-8 lg:p-12 max-w-4xl mx-auto">
-            <h3 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-4 font-serif">
-              Ready to Experience Shitha Quality?
-            </h3>
-            <p className="text-gray-600 mb-6 lg:mb-8 max-w-2xl mx-auto">
-              Visit our store to feel the premium fabrics, try on our designs, and get personalized styling advice from
-              our expert team.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button
-                onClick={() =>
-                  window.open(
-                    "https://maps.google.com/?q=118/a,+Mahalingapuram,+Vellalore,+Coimbatore+641111",
-                    "_blank",
-                  )
-                }
-                className="bg-[rgb(71,60,102)] hover:bg-[rgb(71,60,102)]/90 text-white px-8 py-3 rounded-xl font-semibold"
-              >
-                <MapPin className="h-5 w-5 mr-2" />
-                Get Directions
-              </Button>
-              <Button
-                onClick={() => window.open("tel:+918148480720")}
-                variant="outline"
-                className="border-2 border-[rgb(71,60,102)] text-[rgb(71,60,102)] hover:bg-[rgb(71,60,102)] hover:text-white px-8 py-3 rounded-xl font-semibold bg-transparent"
-              >
-                <Phone className="h-5 w-5 mr-2" />
-                Call to Visit
-              </Button>
-            </div>
-          </div>
-        </div>
+
       </div>
     </section>
   )

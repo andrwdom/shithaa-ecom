@@ -34,8 +34,8 @@ const HeroSection = () => {
       title: "Zipless Feeding Dupatta Lounge Wear",
       slug: "zipless-feeding-dupatta-lounge-wear",
       image: "/placeholder.svg?height=400&width=300",
-      ctaText: "Coming Soon",
-      isComingSoon: true,
+      ctaText: "Check Out",
+      isComingSoon: false,
     },
   ]
 

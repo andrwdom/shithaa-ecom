@@ -400,7 +400,7 @@ PUT    /api/cart/:id              # Update cart item
 - **Technical Issues**: Check GitHub issues
 - **Business Inquiries**: info.shitha@gmail.com
 - **Phone**: 8148480720
-- **Address**: 118/1 Mahalingapuram, Vellalore, Coimbatore 641111
+
 
 ---
 

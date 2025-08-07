@@ -1,6 +1,6 @@
 "use client"
 
-import { Facebook, Instagram, Twitter, Mail, Shield, RotateCcw, Truck, Phone, MapPin } from "lucide-react"
+import { Facebook, Instagram, Twitter, Mail, Shield, RotateCcw, Truck, Phone } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 export default function Footer() {
@@ -146,15 +146,7 @@ export default function Footer() {
                 </div>
                 <span className="text-gray-400">+91 8148480720</span>
               </div>
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-gray-800 rounded-lg flex items-center justify-center">
-                  <MapPin className="h-4 w-4 text-white" />
-                </div>
-                <div className="text-gray-400 text-sm">
-                  <div>118/a, Mahalingapuram</div>
-                  <div>Vellalore, Coimbatore 641111</div>
-                </div>
-              </div>
+
               <p className="text-gray-400 text-sm">Customer support available 9 AM - 7 PM</p>
               <a
                 href="/contact"
