@@ -22,10 +22,14 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
   const cartCount = cartItems.reduce((total, item) => total + item.quantity, 0)
   const wishlistCount = wishlistItems.length
 
+  // Debug logging for user state
+  console.log("Navbar - User state:", user)
+  console.log("Navbar - Is menu open:", isMenuOpen)
+
   const handleAccountClick = () => {
     if (user) {
-      // Show account menu or navigate to account page
-      console.log("User is logged in:", user)
+      // Navigate to account page when logged in
+      window.location.href = "/account"
     } else {
       setIsLoginModalOpen(true)
     }
@@ -51,7 +55,7 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
       </div>
 
       {/* Main Navbar */}
-      <nav className="bg-white border-b border-gray-200 sticky top-0 z-[60] shadow-sm">
+      <nav className="bg-white border-b border-gray-200 sticky top-0 z-[9999] shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="navbar-container flex items-center justify-between h-16 lg:h-18">
             
@@ -98,9 +102,12 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
             <div className="navbar-right">
               {/* Desktop Navigation Links - Right */}
               <div className="hidden md:flex items-center space-x-8 mr-6">
-                <a href="/contact" className="navbar-link-effect text-gray-600 font-medium transition-all duration-200">
+                <button
+                  onClick={() => window.location.href = "/contact"}
+                  className="navbar-link-effect text-gray-600 font-medium transition-all duration-200"
+                >
                   contact us
-                </a>
+                </button>
               </div>
 
               {/* Icons Section */}
@@ -147,20 +154,26 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
                 >
                   new arrivals
                 </a>
-                <a
-                  href="/contact"
-                  className="text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200"
+                <button
+                  onClick={() => {
+                    window.location.href = "/contact"
+                    setIsMenuOpen(false)
+                  }}
+                  className="text-left text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200"
                 >
                   contact us
-                </a>
+                </button>
                 {user ? (
-                <div className="border-t border-gray-200 pt-4">
+                  <div className="border-t border-gray-200 pt-4">
                     <div className="flex items-center space-x-2 mb-4">
                       <User className="h-5 w-5 text-gray-600" />
                       <span className="text-gray-900 font-medium">{user.email}</span>
                     </div>
                     <button
-                      onClick={handleLogout}
+                      onClick={() => {
+                        handleLogout()
+                        setIsMenuOpen(false)
+                      }}
                       className="flex items-center space-x-2 text-red-600 hover:text-red-700 transition-colors duration-200"
                     >
                       <LogOut className="h-5 w-5" />
@@ -169,12 +182,15 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
                   </div>
                 ) : (
                   <button
-                    onClick={() => setIsLoginModalOpen(true)}
+                    onClick={() => {
+                      setIsLoginModalOpen(true)
+                      setIsMenuOpen(false)
+                    }}
                     className="text-left text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200"
                   >
                     Login
-                    </button>
-                  )}
+                  </button>
+                )}
               </div>
             </div>
           )}

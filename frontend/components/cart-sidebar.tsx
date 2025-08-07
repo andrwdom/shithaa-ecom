@@ -52,9 +52,9 @@ export default function CartSidebar() {
   return (
     <React.Fragment>
       {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/50 z-40" onClick={closeCartSidebar} />
+      <div className="fixed inset-0 bg-black/50 z-[9998]" onClick={closeCartSidebar} />
       {/* Sidebar */}
-      <div className="fixed right-0 top-0 h-full w-96 bg-white shadow-2xl z-50 transform transition-transform duration-300 flex flex-col">
+      <div className="fixed right-0 top-0 h-full w-96 bg-white shadow-2xl z-[9999] transform transition-transform duration-300 flex flex-col">
         {/* Header */}
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
