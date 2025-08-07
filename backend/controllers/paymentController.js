@@ -196,6 +196,10 @@ export const phonePeCallback = async (req, res) => {
           merchantOrderId = rawBody.merchantOrderId;
           state = rawBody.state || 'COMPLETED'; // Assume success if no state
           console.log('Extracted from raw body (alt format) - orderId:', merchantOrderId, 'state:', state);
+        } else if (rawBody && rawBody.merchantTransactionId) {
+          merchantOrderId = rawBody.merchantTransactionId;
+          state = rawBody.state || 'COMPLETED'; // Assume success if no state
+          console.log('Extracted from raw body (transaction format) - orderId:', merchantOrderId, 'state:', state);
         }
       } catch (fallbackErr) {
         console.error('Fallback extraction failed:', fallbackErr);
@@ -233,7 +237,10 @@ export const phonePeCallback = async (req, res) => {
     const isSuccess = (
       state === 'checkout.order.completed' ||
       state === 'COMPLETED' ||
-      state === 'SUCCESS'
+      state === 'SUCCESS' ||
+      state === 'PAYMENT_SUCCESS' ||
+      state === 'SUCCESSFUL' ||
+      state === 'PAID'
     );
 
     if (isSuccess) {
@@ -302,6 +309,8 @@ export const phonePeCallback = async (req, res) => {
 export const verifyPhonePePayment = async (req, res) => {
   try {
     const { merchantTransactionId } = req.params;
+    console.log('Verification request for transaction:', merchantTransactionId);
+    
     if (!merchantTransactionId) {
       return res.status(400).json({
         success: false,
@@ -311,22 +320,33 @@ export const verifyPhonePePayment = async (req, res) => {
 
     // First check if we have the order in our database
     const order = await orderModel.findOne({ phonepeTransactionId: merchantTransactionId });
+    console.log('Order found:', order ? order._id : 'Not found');
+    
     if (!order) {
+      console.log('Order not found for transaction:', merchantTransactionId);
       return res.status(404).json({
         success: false,
         message: 'Order not found for this transaction'
       });
     }
 
+    console.log('Order payment status:', order.paymentStatus);
+    console.log('Order order status:', order.orderStatus);
+
     // Try to get status from PhonePe SDK
     let phonepeResponse;
     try {
+      console.log('Attempting PhonePe SDK verification...');
       phonepeResponse = await phonepeClient.getOrderStatus(merchantTransactionId);
+      console.log('PhonePe SDK response:', phonepeResponse);
     } catch (sdkError) {
       console.error('PhonePe SDK Error:', sdkError);
       
       // If SDK fails, check our database status
+      console.log('Using database fallback for transaction:', merchantTransactionId);
+      
       if (order.paymentStatus === 'paid' && order.orderStatus === 'Confirmed') {
+        console.log('Database shows payment successful');
         return res.json({
           success: true,
           data: {
@@ -337,6 +357,7 @@ export const verifyPhonePePayment = async (req, res) => {
           }
         });
       } else if (order.paymentStatus === 'failed') {
+        console.log('Database shows payment failed');
         return res.json({
           success: true,
           data: {
@@ -347,6 +368,7 @@ export const verifyPhonePePayment = async (req, res) => {
           }
         });
       } else {
+        console.log('Database shows payment pending');
         return res.json({
           success: true,
           data: {
@@ -361,6 +383,7 @@ export const verifyPhonePePayment = async (req, res) => {
 
     // If we got response from PhonePe, use it
     if (phonepeResponse) {
+      console.log('Using PhonePe SDK response');
       return res.json({
         success: true,
         data: phonepeResponse
@@ -368,6 +391,7 @@ export const verifyPhonePePayment = async (req, res) => {
     }
 
     // Fallback to database status
+    console.log('Using database fallback');
     return res.json({
       success: true,
       data: {

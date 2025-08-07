@@ -108,4 +108,77 @@ paymentRouter.post('/phonepe/test-success/:merchantTransactionId', async (req, r
   }
 });
 
+// Manual callback simulation endpoint
+paymentRouter.post('/phonepe/simulate-callback/:merchantTransactionId', async (req, res) => {
+  try {
+    const { merchantTransactionId } = req.params;
+    const { state = 'COMPLETED' } = req.body;
+    
+    console.log('Simulating callback for transaction:', merchantTransactionId, 'with state:', state);
+    
+    // Find the order
+    const order = await (await import('../models/orderModel.js')).default.findOne({
+      phonepeTransactionId: merchantTransactionId
+    });
+    
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found',
+        merchantTransactionId
+      });
+    }
+    
+    // Simulate callback processing
+    const isSuccess = (
+      state === 'checkout.order.completed' ||
+      state === 'COMPLETED' ||
+      state === 'SUCCESS' ||
+      state === 'PAYMENT_SUCCESS' ||
+      state === 'SUCCESSFUL' ||
+      state === 'PAID'
+    );
+    
+    let update = {
+      paymentLog: { simulated: true, state },
+      phonepeTransactionId: merchantTransactionId,
+      updatedAt: new Date()
+    };
+    
+    if (isSuccess) {
+      update = {
+        ...update,
+        payment: true,
+        paymentStatus: 'paid',
+        orderStatus: 'Confirmed',
+        status: 'Order Placed',
+      };
+    } else {
+      update = {
+        ...update,
+        paymentStatus: 'failed',
+        orderStatus: 'Failed',
+        status: 'Payment Failed',
+      };
+    }
+    
+    await (await import('../models/orderModel.js')).default.findByIdAndUpdate(order._id, update);
+    
+    return res.json({
+      success: true,
+      message: `Order ${isSuccess ? 'marked as paid' : 'marked as failed'} successfully`,
+      orderId: order._id,
+      state: state,
+      isSuccess: isSuccess
+    });
+  } catch (error) {
+    console.error('Simulate callback error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Simulate callback failed',
+      error: error.message
+    });
+  }
+});
+
 export default paymentRouter; 
