@@ -6,12 +6,23 @@ export default function TestCallbackPage() {
   const [urlParams, setUrlParams] = useState<any>({})
   const [headers, setHeaders] = useState<any>({})
   const [body, setBody] = useState<any>({})
+  const [currentUrl, setCurrentUrl] = useState('')
+  const [pathname, setPathname] = useState('')
+  const [searchString, setSearchString] = useState('')
+  const [isClient, setIsClient] = useState(false)
 
   useEffect(() => {
+    setIsClient(true)
+    
     // Get all URL parameters
     const params = new URLSearchParams(window.location.search)
     const allParams = Object.fromEntries(params.entries())
     setUrlParams(allParams)
+    
+    // Set URL information
+    setCurrentUrl(window.location.href)
+    setPathname(window.location.pathname)
+    setSearchString(window.location.search)
     
     // Log everything for debugging
     console.log('Current URL:', window.location.href)
@@ -25,6 +36,20 @@ export default function TestCallbackPage() {
     })
   }, [])
 
+  if (!isClient) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-8">
+        <div className="max-w-4xl mx-auto">
+          <h1 className="text-3xl font-bold mb-8">PhonePe Callback Test</h1>
+          <div className="bg-white rounded-lg p-6">
+            <div className="loading loading-spinner loading-lg text-blue-600 mb-4"></div>
+            <p>Loading...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-4xl mx-auto">
@@ -35,7 +60,7 @@ export default function TestCallbackPage() {
           <div className="space-y-4">
             <div>
               <h3 className="font-medium mb-2">Full URL:</h3>
-              <p className="text-sm bg-gray-100 p-2 rounded break-all">{window.location.href}</p>
+              <p className="text-sm bg-gray-100 p-2 rounded break-all">{currentUrl}</p>
             </div>
             
             <div>
@@ -47,12 +72,12 @@ export default function TestCallbackPage() {
             
             <div>
               <h3 className="font-medium mb-2">Pathname:</h3>
-              <p className="text-sm bg-gray-100 p-2 rounded">{window.location.pathname}</p>
+              <p className="text-sm bg-gray-100 p-2 rounded">{pathname}</p>
             </div>
             
             <div>
               <h3 className="font-medium mb-2">Search String:</h3>
-              <p className="text-sm bg-gray-100 p-2 rounded">{window.location.search}</p>
+              <p className="text-sm bg-gray-100 p-2 rounded">{searchString}</p>
             </div>
           </div>
         </div>
