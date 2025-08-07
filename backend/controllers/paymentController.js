@@ -112,7 +112,7 @@ export const createPhonePeSession = async (req, res) => {
 
     // Use SDK to create payment session
     const merchantOrderId = randomUUID();
-    const redirectUrl = `${process.env.PHONEPE_REDIRECT_URL || process.env.BASE_URL || 'https://shithaa.in'}/payment/phonepe/callback`;
+    const redirectUrl = `${process.env.PHONEPE_REDIRECT_URL || process.env.BASE_URL || 'https://shithaa.in'}/payment/phonepe/callback?merchantTransactionId=${merchantOrderId}`;
     const request = StandardCheckoutPayRequest.builder()
       .merchantOrderId(merchantOrderId)
       .amount(amount * 100) // paise

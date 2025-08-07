@@ -111,4 +111,41 @@ orderRouter.get('/phonepe/:merchantTransactionId', async (req, res) => {
   }
 });
 
+// Emergency fallback - get most recent pending order
+orderRouter.get('/recent-pending', async (req, res) => {
+  try {
+    const order = await (await import('../models/orderModel.js')).default.findOne({
+      paymentStatus: { $in: ['pending', 'paid'] }
+    }).sort({ createdAt: -1 }).limit(1);
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'No recent orders found'
+      });
+    }
+
+    res.json({
+      success: true,
+      order: {
+        id: order._id,
+        phonepeTransactionId: order.phonepeTransactionId,
+        paymentStatus: order.paymentStatus,
+        orderStatus: order.orderStatus,
+        status: order.status,
+        amount: order.amount,
+        payment: order.payment,
+        createdAt: order.createdAt
+      }
+    });
+  } catch (error) {
+    console.error('Recent pending order lookup error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to lookup recent order',
+      error: error.message
+    });
+  }
+});
+
 export default orderRouter

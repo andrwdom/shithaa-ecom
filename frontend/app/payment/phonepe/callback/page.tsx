@@ -12,19 +12,68 @@ function PhonePeCallbackInner() {
   const [orderDetails, setOrderDetails] = useState<any>(null)
   const [tries, setTries] = useState(0)
   const [merchantTransactionId, setMerchantTransactionId] = useState('')
+  const [debugInfo, setDebugInfo] = useState('')
   const router = useRouter()
   const searchParams = useSearchParams()
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     let stopped = false;
+    
+    // Get all URL parameters for debugging
     const urlParams = new URLSearchParams(window.location.search)
-    const transactionId = urlParams.get('merchantTransactionId')
+    const allParams = Object.fromEntries(urlParams.entries())
+    console.log('All URL parameters:', allParams)
+    setDebugInfo(JSON.stringify(allParams, null, 2))
+    
+    const transactionId = urlParams.get('merchantTransactionId') || 
+                        urlParams.get('transactionId') || 
+                        urlParams.get('orderId') ||
+                        urlParams.get('id')
     const amount = urlParams.get('amount')
     
+    console.log('Extracted transaction ID:', transactionId)
+    console.log('Amount:', amount)
+    
     if (!transactionId) {
+      console.error('No transaction ID found in URL parameters')
+      
+      // Emergency fallback: Try to find the most recent pending order
+      try {
+        console.log('Trying emergency fallback - checking recent orders...')
+        const recentOrderRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/orders/recent-pending`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        })
+        
+        if (recentOrderRes.ok) {
+          const recentOrderData = await recentOrderRes.json()
+          if (recentOrderData.success && recentOrderData.order) {
+            console.log('Found recent pending order:', recentOrderData.order)
+            setMerchantTransactionId(recentOrderData.order.phonepeTransactionId)
+            
+            // Check if this order is actually paid
+            if (recentOrderData.order.paymentStatus === 'paid' || recentOrderData.order.payment === true) {
+              setStatus('success')
+              setMessage('Payment successful! Your order has been confirmed.')
+              setOrderId(recentOrderData.order.phonepeTransactionId)
+              setOrderDetails(recentOrderData.order)
+              localStorage.setItem('lastOrder', JSON.stringify({
+                id: recentOrderData.order.phonepeTransactionId,
+                orderSummary: { total: recentOrderData.order.amount },
+                paymentMethod: 'PhonePe'
+              }))
+              setTimeout(() => { router.push('/order-success') }, 3000)
+              return
+            }
+          }
+        }
+      } catch (fallbackError) {
+        console.error('Emergency fallback failed:', fallbackError)
+      }
+      
       setStatus('failed')
-      setMessage('Invalid payment response')
+      setMessage('Invalid payment response - No transaction ID found')
       return
     }
     
@@ -272,6 +321,15 @@ function PhonePeCallbackInner() {
             </div>
             <h1 className="text-2xl font-bold text-red-700 mb-2">Payment Failed</h1>
             <p className="text-gray-600 mb-4">{message}</p>
+            
+            {/* Debug info for development */}
+            {process.env.NODE_ENV === 'development' && debugInfo && (
+              <div className="bg-gray-100 p-4 rounded mb-4 text-left">
+                <p className="text-xs text-gray-600 mb-2">Debug Info (URL Parameters):</p>
+                <pre className="text-xs text-gray-800 overflow-auto">{debugInfo}</pre>
+              </div>
+            )}
+            
             <div className="space-y-3">
               <Link 
                 href="/checkout" 
@@ -285,12 +343,20 @@ function PhonePeCallbackInner() {
               >
                 Back to Home
               </Link>
-              <button
-                onClick={handleManualFix}
-                className="btn btn-warning w-full text-sm"
+              {merchantTransactionId && (
+                <button
+                  onClick={handleManualFix}
+                  className="btn btn-warning w-full text-sm"
+                >
+                  Manual Fix (If Payment Actually Succeeded)
+                </button>
+              )}
+              <Link 
+                href="/payment/phonepe/debug" 
+                className="btn btn-info w-full text-sm"
               >
-                Manual Fix (If Payment Actually Succeeded)
-              </button>
+                Debug Payment
+              </Link>
             </div>
           </>
         )}
