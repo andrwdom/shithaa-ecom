@@ -548,6 +548,10 @@ function ShippingTrackingModal({ order, onClose, onStatusChange }) {
 
 function OrderDetailsModal({ order, onClose, onStatusChange }) {
   if (!order) return null;
+  
+  const [activeTab, setActiveTab] = useState('details');
+  const [showPaymentLog, setShowPaymentLog] = useState(false);
+  
   const userInfo = order.userInfo || { name: order.customerName, email: order.email };
   const displayName = userInfo.name && userInfo.name.trim() ? userInfo.name : (order.customerName && order.customerName.trim() ? order.customerName : 'Unknown User');
   const displayEmail = userInfo.email || order.email || '';
@@ -623,141 +627,303 @@ function OrderDetailsModal({ order, onClose, onStatusChange }) {
     return () => window.removeEventListener('keydown', handleEsc);
   }, [onClose]);
 
+  const tabs = [
+    { id: 'details', label: 'Order Details', icon: FaBox },
+    { id: 'status', label: 'Update Status', icon: FaCog },
+    { id: 'payment', label: 'Payment Info', icon: FaMoneyBill }
+  ];
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 px-2 py-4 overflow-y-auto" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-lg w-full max-w-md mx-auto p-4 sm:p-6 relative animate-fadeIn" onClick={e => e.stopPropagation()}>
-        {/* Modal Header */}
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold font-heading">Order Details</h2>
-          <button
-            className="rounded-full p-2 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#4D1E64]"
-            onClick={onClose}
-            aria-label="Close order details"
-            type="button"
-          >
-            <span className="sr-only">Close</span>
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-          </button>
-        </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" onClick={onClose}>
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
         
-        {/* Current Status Display */}
-        <div className="mb-4">
-          <div className="flex items-center gap-2 mb-2">
-            <StatusBadge status={status} />
-            <span className="text-xs text-gray-500">
-              {STATUS_CONFIG[status]?.description || 'Status updated'}
-            </span>
-          </div>
-        </div>
-        
-        {/* User Info Box */}
-        <div className="bg-gray-100 p-3 rounded-md flex flex-col gap-1 text-sm mb-4">
-          <p className="flex items-center gap-2">
-            <FaUser className="w-4 h-4" /> <span className="font-medium">{displayName}</span>
-          </p>
-          <p className="flex items-center gap-2">
-            <FaEnvelope className="w-4 h-4" /> {displayEmail}
-          </p>
-        </div>
-        
-        {/* Shipping + Payment Details */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm mt-4 mb-4">
-          <div><span className="font-semibold">🪪 Shipping Name:</span> {shippingDisplay.name}</div>
-          <div><span className="font-semibold">📞 Phone:</span> {shippingDisplay.phone}</div>
-          {/* Shipping Address Block */}
-          <div className="col-span-2">
-            <span className="font-semibold">📦 Shipping Address:</span>
-            <div className="pl-2 mt-1">
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 flex flex-col gap-1 shadow-sm max-w-md">
-                {shippingDisplay.addressFields.map((field, index) => (
-                  <div key={index}>
-                    <b>{field.label}:</b> {field.value}
-                  </div>
-                ))}
+        {/* Enhanced Modal Header */}
+        <div className="bg-gradient-to-r from-[#4D1E64] to-[#6B2C7A] text-white p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={onClose}
+                className="p-2 rounded-full hover:bg-white/10 transition-colors"
+                aria-label="Go back"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              <div>
+                <h2 className="text-xl font-bold">Order #{order.orderId || 'N/A'}</h2>
+                <p className="text-white/80 text-sm">{displayName} • {formatDate(placedAt)}</p>
               </div>
             </div>
+            <div className="flex items-center gap-3">
+              <StatusBadge status={status} />
+              {isTestOrder && (
+                <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
+                  Test Order
+                </span>
+              )}
+              <button
+                onClick={onClose}
+                className="p-2 rounded-full hover:bg-white/10 transition-colors"
+                aria-label="Close"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
           </div>
-          <div><span className="font-semibold">💳 Payment Mode:</span> {payment || 'N/A'}</div>
-          <div><span className="font-semibold">🧾 Order ID:</span> #{order.orderId || 'N/A'}</div>
-          <div><span className="font-semibold">📅 Date:</span> {formatDate(placedAt)}</div>
         </div>
-        
-        <div className="mb-2 text-sm"><b>🛍️ Products:</b></div>
-        <ul className="mb-2 divide-y">
-          {items.map((item, idx) => (
-            <li key={idx} className="flex items-center gap-2 py-2">
-              {item.image && <img src={item.image} alt={item.name} className="w-12 h-12 object-cover rounded" />}
-              <div>
-                <div className="font-semibold">{item.name}</div>
-                <div className="text-xs text-gray-500">Qty: {item.quantity}{item.size && <> | Size: {item.size}</>}</div>
-                <div className="text-xs">Price: {currency}{item.price}</div>
-                <div className="text-xs">Subtotal: {currency}{item.price * item.quantity}</div>
-              </div>
-            </li>
-          ))}
-        </ul>
-        
-        {isTestOrder && (
-          <span className="inline-block px-2 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">Test Order</span>
-        )}
-        
-        {/* Status Update Section */}
-        <div className="mb-4">
-          <label className="block mb-2 font-medium">Update Order Status</label>
-          <div className="grid grid-cols-1 gap-2">
-            {ORDER_STATUSES.map(statusOption => {
-              const config = STATUS_CONFIG[statusOption];
-              const IconComponent = config.icon;
-              const isCurrentStatus = status === statusOption;
-              
+
+        {/* Tab Navigation */}
+        <div className="border-b border-gray-200">
+          <nav className="flex space-x-8 px-6" aria-label="Tabs">
+            {tabs.map((tab) => {
+              const IconComponent = tab.icon;
               return (
                 <button
-                  key={statusOption}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg border transition-all ${
-                    isCurrentStatus 
-                      ? 'bg-[#4D1E64] text-white border-[#4D1E64]' 
-                      : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                    activeTab === tab.id
+                      ? 'border-[#4D1E64] text-[#4D1E64]'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
-                  onClick={() => onStatusChange(order._id, statusOption)}
-                  disabled={isCurrentStatus}
                 >
-                  <IconComponent className={`w-4 h-4 ${isCurrentStatus ? 'text-white' : config.iconColor}`} />
-                  <div className="text-left">
-                    <div className="font-medium">{statusOption}</div>
-                    <div className={`text-xs ${isCurrentStatus ? 'text-white/80' : 'text-gray-500'}`}>
-                      {config.description}
-                    </div>
-                  </div>
-                  {isCurrentStatus && (
-                    <div className="ml-auto">
-                      <FaCheckCircle className="w-4 h-4 text-white" />
-                    </div>
-                  )}
+                  <IconComponent className="w-4 h-4" />
+                  {tab.label}
                 </button>
               );
             })}
-          </div>
+          </nav>
         </div>
-        
-        {/* Payment Log Section */}
-        <div className="mt-4">
-          <h3 className="text-md font-semibold mb-2">Payment Log</h3>
-          {order.phonepeTransactionId && (
-            <div className="mb-1 text-xs text-gray-700">Transaction ID: <span className="font-mono">{order.phonepeTransactionId}</span></div>
+
+        {/* Modal Content */}
+        <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
+          
+          {/* Order Details Tab */}
+          {activeTab === 'details' && (
+            <div className="space-y-6">
+              
+              {/* Customer Information */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                  <FaUser className="w-4 h-4" />
+                  Customer Information
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Name</label>
+                    <p className="text-gray-900">{displayName}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Email</label>
+                    <p className="text-gray-900">{displayEmail}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Phone</label>
+                    <p className="text-gray-900">{shippingDisplay.phone}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Order Date</label>
+                    <p className="text-gray-900">{formatDate(placedAt)}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Shipping Address */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                  <FaTruck className="w-4 h-4" />
+                  Shipping Address
+                </h3>
+                <div className="bg-white border border-gray-200 rounded-lg p-4">
+                  <p className="font-medium text-gray-900 mb-2">{shippingDisplay.name}</p>
+                  {shippingDisplay.addressFields.map((field, index) => (
+                    <p key={index} className="text-gray-700 text-sm">
+                      <span className="font-medium">{field.label}:</span> {field.value}
+                    </p>
+                  ))}
+                </div>
+              </div>
+
+              {/* Order Items */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                  <FaBox className="w-4 h-4" />
+                  Order Items ({items.length} item{items.length !== 1 ? 's' : ''})
+                </h3>
+                <div className="space-y-3">
+                  {items.map((item, idx) => (
+                    <div key={idx} className="bg-white border border-gray-200 rounded-lg p-4 flex items-center gap-4">
+                      {item.image && (
+                        <img 
+                          src={item.image} 
+                          alt={item.name} 
+                          className="w-16 h-16 object-cover rounded-lg"
+                        />
+                      )}
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-gray-900">{item.name}</h4>
+                        <div className="text-sm text-gray-600 space-y-1">
+                          <p>Quantity: <span className="font-medium">{item.quantity}</span></p>
+                          {item.size && <p>Size: <span className="font-medium">{item.size}</span></p>}
+                          <p>Price: <span className="font-medium">{currency}{item.price}</span></p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-semibold text-gray-900">
+                          {currency}{(item.price * item.quantity).toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                
+                {/* Order Total */}
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <div className="flex justify-between items-center">
+                    <span className="text-lg font-semibold text-gray-900">Total Amount:</span>
+                    <span className="text-xl font-bold text-[#4D1E64]">
+                      {currency}{typeof totalAmount === 'number' ? totalAmount.toFixed(2) : '0.00'}
+                    </span>
+                  </div>
+                  {discount > 0 && (
+                    <div className="text-sm text-green-600 mt-1">
+                      Discount Applied: -{currency}{discount.toFixed(2)}
+                      {coupon && <span className="ml-2">({coupon})</span>}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           )}
-          {order.amountPaid && (
-            <div className="mb-1 text-xs text-gray-700">Amount Paid: <span className="font-mono">₹{order.amountPaid}</span></div>
+
+          {/* Status Update Tab */}
+          {activeTab === 'status' && (
+            <div className="space-y-4">
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                  <FaCog className="w-4 h-4" />
+                  Current Status
+                </h3>
+                <div className="flex items-center gap-3">
+                  <StatusBadge status={status} />
+                  <span className="text-gray-600">
+                    {STATUS_CONFIG[status]?.description || 'Status updated'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="text-lg font-semibold mb-3">Update Order Status</h3>
+                <div className="grid grid-cols-1 gap-3">
+                  {ORDER_STATUSES.map(statusOption => {
+                    const config = STATUS_CONFIG[statusOption];
+                    const IconComponent = config.icon;
+                    const isCurrentStatus = status === statusOption;
+                    
+                    return (
+                      <button
+                        key={statusOption}
+                        className={`w-full flex items-center gap-4 px-4 py-4 rounded-lg border transition-all ${
+                          isCurrentStatus 
+                            ? 'bg-[#4D1E64] text-white border-[#4D1E64] shadow-md' 
+                            : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50 hover:border-gray-300'
+                        }`}
+                        onClick={() => onStatusChange(order._id, statusOption)}
+                        disabled={isCurrentStatus}
+                      >
+                        <IconComponent className={`w-5 h-5 ${isCurrentStatus ? 'text-white' : config.iconColor}`} />
+                        <div className="text-left flex-1">
+                          <div className="font-semibold">{statusOption}</div>
+                          <div className={`text-sm ${isCurrentStatus ? 'text-white/80' : 'text-gray-500'}`}>
+                            {config.description}
+                          </div>
+                        </div>
+                        {isCurrentStatus && (
+                          <FaCheckCircle className="w-5 h-5 text-white" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
           )}
-          {order.paymentStatus && (
-            <div className="mb-1 text-xs text-gray-700">Status: <span className="font-mono">{order.paymentStatus}</span></div>
+
+          {/* Payment Info Tab */}
+          {activeTab === 'payment' && (
+            <div className="space-y-4">
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                  <FaMoneyBill className="w-4 h-4" />
+                  Payment Information
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Payment Method</label>
+                    <p className="text-gray-900">{payment || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Total Amount</label>
+                    <p className="text-gray-900 font-semibold">
+                      {currency}{typeof totalAmount === 'number' ? totalAmount.toFixed(2) : '0.00'}
+                    </p>
+                  </div>
+                  {order.phonepeTransactionId && (
+                    <div className="md:col-span-2">
+                      <label className="text-sm font-medium text-gray-500">Transaction ID</label>
+                      <p className="text-gray-900 font-mono text-sm">{order.phonepeTransactionId}</p>
+                    </div>
+                  )}
+                  {order.amountPaid && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Amount Paid</label>
+                      <p className="text-gray-900">{currency}{order.amountPaid}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Payment Log */}
+              {order.paymentLog && (
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-lg font-semibold">Payment Log</h3>
+                    <button
+                      onClick={() => setShowPaymentLog(!showPaymentLog)}
+                      className="text-[#4D1E64] hover:text-[#3a164d] text-sm font-medium"
+                    >
+                      {showPaymentLog ? 'Hide' : 'Show'} Details
+                    </button>
+                  </div>
+                  {showPaymentLog && (
+                    <div className="bg-white border border-gray-200 rounded-lg p-4">
+                      <pre className="text-xs text-gray-700 overflow-auto max-h-48">
+                        {JSON.stringify(order.paymentLog, null, 2)}
+                      </pre>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           )}
-          {order.paymentLog ? (
-            <pre className="bg-gray-100 rounded p-2 text-xs max-h-48 overflow-auto border mt-2">
-              {JSON.stringify(order.paymentLog, null, 2)}
-            </pre>
-          ) : (
-            <div className="text-xs text-gray-500">No payment log available.</div>
-          )}
+        </div>
+
+        {/* Modal Footer */}
+        <div className="border-t border-gray-200 p-6 bg-gray-50">
+          <div className="flex justify-between items-center">
+            <button
+              onClick={onClose}
+              className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Close
+            </button>
+            <div className="text-sm text-gray-500">
+              Order placed on {formatDate(placedAt)}
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -190,6 +190,16 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
                 </a>
                 <button
                   onClick={() => {
+                    window.location.href = "/about"
+                    setIsMenuOpen(false)
+                  }}
+                  className="text-left text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200 flex items-center gap-2"
+                >
+                  <Info className="h-4 w-4" />
+                  about us
+                </button>
+                <button
+                  onClick={() => {
                     window.location.href = "/contact"
                     setIsMenuOpen(false)
                   }}
