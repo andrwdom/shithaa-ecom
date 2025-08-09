@@ -67,10 +67,10 @@ export default function ReturnPolicyPage() {
               <a href="mailto:info.shitha@gmail.com" className="text-[#473C66] hover:underline">
                 info.shitha@gmail.com
               </a>{" "}
-              or call{" "}
-              <a href="tel:8148480720" className="text-[#473C66] hover:underline">
-                8148480720
-              </a>{" "}
+              or DM us on Instagram{" "}
+                              <a href="https://www.instagram.com/shitha_clothing" className="text-[#473C66] hover:underline" target="_blank" rel="noopener noreferrer">
+                @shitha_clothing
+                </a>{" "}
               to initiate your return.
             </p>
           </div>

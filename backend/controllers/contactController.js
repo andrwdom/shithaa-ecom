@@ -18,7 +18,7 @@ export const submitContact = async (req, res) => {
         const contact = new Contact({
             name,
             email,
-            phone,
+            phone: phone || '', // Make phone optional
             subject,
             message
         });

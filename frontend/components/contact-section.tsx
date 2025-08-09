@@ -7,13 +7,12 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent } from "@/components/ui/card"
-import { Phone, Instagram, Mail, Clock, Send, MessageCircle, Heart, Star } from "lucide-react"
+import { Instagram, Mail, Clock, Send, MessageCircle, Heart, Star } from "lucide-react"
 
 export default function ContactSection() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    phone: "",
     subject: "",
     message: "",
   })
@@ -32,58 +31,37 @@ export default function ContactSection() {
     e.preventDefault()
     setIsSubmitting(true)
 
-    // Simulate form submission
-    await new Promise((resolve) => setTimeout(resolve, 2000))
+    try {
+      // Submit to backend API
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/contact`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      })
 
-    // Create WhatsApp message
-    const message = `Hi Shitha Team!
-
-Name: ${formData.name}
-Email: ${formData.email}
-Phone: ${formData.phone}
-Subject: ${formData.subject}
-
-Message: ${formData.message}
-
-Looking forward to hearing from you!`
-
-    const whatsappUrl = `https://wa.me/918148480720?text=${encodeURIComponent(message)}`
-    window.open(whatsappUrl, "_blank")
-
-    // Reset form
-    setFormData({
-      name: "",
-      email: "",
-      phone: "",
-      subject: "",
-      message: "",
-    })
-
-    setIsSubmitting(false)
-    alert("Thank you for your message! We'll get back to you soon.")
+      if (response.ok) {
+        // Reset form
+        setFormData({
+          name: "",
+          email: "",
+          subject: "",
+          message: "",
+        })
+        alert("Thank you for your message! We'll get back to you via email within 24 hours.")
+      } else {
+        throw new Error('Failed to submit contact form')
+      }
+    } catch (error) {
+      console.error('Contact form submission error:', error)
+      alert("Sorry, there was an error submitting your message. Please try again or contact us directly via Instagram.")
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const contactMethods = [
-    {
-      icon: Phone,
-      title: "Call Us",
-      subtitle: "Mon-Sat, 9 AM - 7 PM",
-      value: "+91 8148480720",
-      action: () => window.open("tel:+918148480720"),
-      bgColor: "bg-blue-50",
-      iconColor: "text-blue-600",
-      hoverColor: "hover:bg-blue-100",
-    },
-    {
-      icon: Instagram,
-      title: "Follow Us",
-      subtitle: "Latest updates & styles",
-      value: "@shitha_clothing",
-      action: () => window.open("https://www.instagram.com/shitha_clothing?igsh=NHF6YjEyYjUyMzJj", "_blank"),
-      bgColor: "bg-pink-50",
-      iconColor: "text-pink-600",
-      hoverColor: "hover:bg-pink-100",
-    },
     {
       icon: Mail,
       title: "Email Us",
@@ -93,6 +71,16 @@ Looking forward to hearing from you!`
       bgColor: "bg-purple-50",
       iconColor: "text-purple-600",
       hoverColor: "hover:bg-purple-100",
+    },
+    {
+      icon: Instagram,
+      title: "Instagram DM",
+      subtitle: "Best for refunds & quick support",
+      value: "@shitha_clothing",
+      action: () => window.open("https://www.instagram.com/shitha_clothing?igsh=NHF6YjEyYjUyMzJj", "_blank"),
+      bgColor: "bg-pink-50",
+      iconColor: "text-pink-600",
+      hoverColor: "hover:bg-pink-100",
     },
 
   ]
@@ -121,9 +109,22 @@ Looking forward to hearing from you!`
           <div className="space-y-8">
             <div>
               <h3 className="text-2xl font-bold text-gray-900 mb-6 font-serif">Let's Connect</h3>
-              <p className="text-gray-600 mb-8">
+              <p className="text-gray-600 mb-6">
                 Choose the way that works best for you. We're here to support you every step of your journey.
               </p>
+              
+              {/* Quick Guide */}
+              <div className="bg-white rounded-xl p-4 border border-gray-100 mb-8">
+                <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <Star className="h-4 w-4 text-yellow-500" />
+                  Quick Guide
+                </h4>
+                <div className="space-y-2 text-sm text-gray-600">
+                  <p><span className="font-medium">🔄 Refunds & Exchanges:</span> Instagram DM (fastest response)</p>
+                  <p><span className="font-medium">❓ Product Questions:</span> Instagram DM or form below</p>
+                  <p><span className="font-medium">📝 General Inquiries:</span> Contact form below</p>
+                </div>
+              </div>
             </div>
 
             {/* Contact Cards */}
@@ -210,29 +211,16 @@ Looking forward to hearing from you!`
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
-                      <Input
-                        name="phone"
-                        type="tel"
-                        value={formData.phone}
-                        onChange={handleInputChange}
-                        placeholder="+91 XXXXX XXXXX"
-                        className="h-12 border-2 border-gray-200 focus:border-[rgb(71,60,102)] rounded-xl"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Subject *</label>
-                      <Input
-                        name="subject"
-                        value={formData.subject}
-                        onChange={handleInputChange}
-                        placeholder="What's this about?"
-                        required
-                        className="h-12 border-2 border-gray-200 focus:border-[rgb(71,60,102)] rounded-xl"
-                      />
-                    </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Subject *</label>
+                    <Input
+                      name="subject"
+                      value={formData.subject}
+                      onChange={handleInputChange}
+                      placeholder="What's this about?"
+                      required
+                      className="h-12 border-2 border-gray-200 focus:border-[rgb(71,60,102)] rounded-xl"
+                    />
                   </div>
 
                   <div>
@@ -267,22 +255,29 @@ Looking forward to hearing from you!`
                   </Button>
                 </form>
 
-                {/* WhatsApp CTA */}
-                <div className="mt-6 p-4 bg-green-50 rounded-xl border border-green-200">
-                  <div className="flex items-center gap-3">
-                    <MessageCircle className="h-5 w-5 text-green-600" />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-green-800">Prefer WhatsApp?</p>
-                      <p className="text-xs text-green-600">Get instant responses on WhatsApp</p>
+                {/* Refund & Support CTA */}
+                <div className="mt-6 space-y-4">
+                  <div className="p-4 bg-gradient-to-r from-pink-50 to-purple-50 rounded-xl border border-pink-200">
+                    <div className="flex items-center gap-3">
+                      <Instagram className="h-5 w-5 text-pink-600" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-pink-800">Need a Refund or Have Questions?</p>
+                        <p className="text-xs text-pink-600">Instagram DM is the fastest way to reach us!</p>
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white rounded-lg"
+                        onClick={() => window.open("https://www.instagram.com/shitha_clothing?igsh=NHF6YjEyYjUyMzJj", "_blank")}
+                      >
+                        DM Us Now
+                      </Button>
                     </div>
-                    <Button
-                      type="button"
-                      size="sm"
-                      className="bg-green-600 hover:bg-green-700 text-white rounded-lg"
-                      onClick={() => window.open("https://wa.me/918148480720", "_blank")}
-                    >
-                      Chat Now
-                    </Button>
+                  </div>
+                  
+                  <div className="text-center text-sm text-gray-600">
+                    <p>💝 For refunds, exchanges, or urgent queries - Instagram DM gets the fastest response!</p>
+                    <p className="text-xs mt-1">📧 For general inquiries, use the form above and we'll email you back within 24 hours.</p>
                   </div>
                 </div>
               </CardContent>

@@ -1,6 +1,6 @@
 "use client"
 
-import { Facebook, Instagram, Twitter, Mail, Shield, RotateCcw, Truck, Phone } from "lucide-react"
+import { Facebook, Instagram, Twitter, Mail, Shield, RotateCcw, Truck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 export default function Footer() {
@@ -147,12 +147,12 @@ export default function Footer() {
               </div>
               <div className="flex items-center space-x-3">
                 <div className="w-8 h-8 bg-gray-800 rounded-lg flex items-center justify-center">
-                  <Phone className="h-4 w-4 text-white" />
+                  <Instagram className="h-4 w-4 text-white" />
                 </div>
-                <span className="text-gray-400">+91 8148480720</span>
+                <span className="text-gray-400">@shitha_clothing</span>
               </div>
 
-              <p className="text-gray-400 text-sm">Customer support available 9 AM - 7 PM</p>
+              <p className="text-gray-400 text-sm">DM us on Instagram for fastest support!</p>
               <a
                 href="/contact"
                 className="inline-block bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
