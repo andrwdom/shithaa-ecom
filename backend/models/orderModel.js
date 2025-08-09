@@ -99,7 +99,7 @@ const orderSchema = new mongoose.Schema({
     payment: { type: Boolean, default: false },
     // Shipping tracking information
     shippingTracking: {
-        partner: { type: String, enum: ['DTDC', 'ST Courier', 'XpressBees', 'India Post'] },
+        partner: { type: String, enum: ['DTDC', 'ST Courier', 'XpressBees', 'India Post', 'Delhivery', 'Blue Dart', 'Ecom Express', 'Other'] },
         trackingId: { type: String },
         shippedAt: { type: Date },
         trackingUrl: { type: String }

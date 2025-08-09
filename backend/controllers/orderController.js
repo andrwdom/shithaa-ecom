@@ -454,7 +454,10 @@ const updateStatus = async (req,res) => {
                 'DTDC': 'https://www.dtdc.in/trace.asp',
                 'ST Courier': 'https://stcourier.com/track/shipment',
                 'XpressBees': 'https://www.xpressbees.com/shipment/tracking',
-                'India Post': 'https://www.indiapost.gov.in/_layouts/15/dop.portal.tracking/trackconsignment.aspx'
+                'India Post': 'https://www.indiapost.gov.in/_layouts/15/dop.portal.tracking/trackconsignment.aspx',
+                'Delhivery': 'https://www.delhivery.com/track/package',
+                'Blue Dart': 'https://www.bluedart.com/tracking',
+                'Ecom Express': 'https://ecomexpress.in/tracking/'
             };
 
             const baseUrl = courierTrackingUrls[shippingPartner];

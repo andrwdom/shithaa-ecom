@@ -414,7 +414,11 @@ function ShippingTrackingModal({ order, onClose, onStatusChange }) {
     { value: 'DTDC', label: 'DTDC' },
     { value: 'ST Courier', label: 'ST Courier' },
     { value: 'XpressBees', label: 'XpressBees' },
-    { value: 'India Post', label: 'India Post' }
+    { value: 'India Post', label: 'India Post' },
+    { value: 'Delhivery', label: 'Delhivery' },
+    { value: 'Blue Dart', label: 'Blue Dart' },
+    { value: 'Ecom Express', label: 'Ecom Express' },
+    { value: 'Other', label: 'Other' }
   ];
 
   const handleSubmit = async (e) => {

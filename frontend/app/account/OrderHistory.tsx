@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Clock, Cog, Truck, CheckCircle, Ban, ExternalLink, Calendar, Package, Phone, Mail } from "lucide-react";
+import { Clock, Cog, Truck, CheckCircle, Ban, ExternalLink, Package, Phone, Mail } from "lucide-react";
 
 // Complete status configuration with icons and descriptions
 const STATUS_CONFIG = {
@@ -74,31 +74,7 @@ function formatDateTime(date: string | number) {
     ' • ' + d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
 }
 
-function calculateExpectedDelivery(orderDate: string | number, status: string) {
-  const d = new Date(orderDate);
-  let deliveryDays = 7; // Default 7 days
-  
-  switch (status.toLowerCase()) {
-    case 'delivered':
-      return 'Delivered';
-    case 'shipped':
-      deliveryDays = 3; // 3 days from shipping
-      break;
-    case 'processing':
-      deliveryDays = 5; // 5 days from processing
-      break;
-    default:
-      deliveryDays = 7; // 7 days from order
-  }
-  
-  const expectedDate = new Date(d.getTime() + deliveryDays * 24 * 60 * 60 * 1000);
-  return expectedDate.toLocaleDateString("en-US", { 
-    weekday: 'short',
-    year: "numeric", 
-    month: "short", 
-    day: "numeric" 
-  });
-}
+
 
 // Progress Tracker Component
 function OrderProgressTracker({ status }: { status: string }) {
@@ -296,7 +272,7 @@ export default function OrderHistory({ orders }: { orders: any[] }) {
                 </button>
               </div>
               
-              {/* Order ID and Expected Delivery */}
+              {/* Order ID and Status Message */}
               <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4 mb-6">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <div>
@@ -304,14 +280,61 @@ export default function OrderHistory({ orders }: { orders: any[] }) {
                     <p className="font-mono text-xl font-bold text-gray-900">{selectedOrder.orderId || selectedOrder._id}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm text-gray-500 font-medium">Expected Delivery</p>
-                    <p className="text-lg font-semibold text-purple-600 flex items-center gap-1">
-                      <Calendar className="w-4 h-4" />
-                      {calculateExpectedDelivery(
-                        selectedOrder.createdAt || selectedOrder.date, 
-                        selectedOrder.status || selectedOrder.orderStatus || selectedOrder.paymentStatus
-                      )}
-                    </p>
+                    {(() => {
+                      const status = (selectedOrder.status || selectedOrder.orderStatus || selectedOrder.paymentStatus).toLowerCase();
+                      
+                      if (status === 'delivered') {
+                        return (
+                          <>
+                            <p className="text-sm text-gray-500 font-medium">Status</p>
+                            <p className="text-lg font-semibold text-green-600 flex items-center gap-1">
+                              <CheckCircle className="w-4 h-4" />
+                              Successfully Delivered
+                            </p>
+                          </>
+                        );
+                      } else if (status === 'shipped') {
+                        return (
+                          <>
+                            <p className="text-sm text-gray-500 font-medium">Tracking</p>
+                            <p className="text-lg font-semibold text-purple-600 flex items-center gap-1">
+                              <Truck className="w-4 h-4" />
+                              Track Your Package
+                            </p>
+                          </>
+                        );
+                      } else if (status === 'processing') {
+                        return (
+                          <>
+                            <p className="text-sm text-gray-500 font-medium">Status</p>
+                            <p className="text-lg font-semibold text-blue-600 flex items-center gap-1">
+                              <Cog className="w-4 h-4" />
+                              Being Prepared
+                            </p>
+                          </>
+                        );
+                      } else if (status === 'cancelled') {
+                        return (
+                          <>
+                            <p className="text-sm text-gray-500 font-medium">Status</p>
+                            <p className="text-lg font-semibold text-red-600 flex items-center gap-1">
+                              <Ban className="w-4 h-4" />
+                              Order Cancelled
+                            </p>
+                          </>
+                        );
+                      } else {
+                        return (
+                          <>
+                            <p className="text-sm text-gray-500 font-medium">Status</p>
+                            <p className="text-lg font-semibold text-yellow-600 flex items-center gap-1">
+                              <Clock className="w-4 h-4" />
+                              Order Confirmed
+                            </p>
+                          </>
+                        );
+                      }
+                    })()}
                   </div>
                 </div>
               </div>
