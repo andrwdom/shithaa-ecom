@@ -654,12 +654,13 @@ const generateInvoice = async (req, res) => {
     const shipping = order.shippingInfo || order.address;
     const billing = order.billingInfo;
     const items = order.cartItems?.length ? order.cartItems : order.items;
-    const subtotal = order.subtotal || order.totalPrice;
-    const discount = order.discount?.value || 0;
-    const discountType = order.discount?.type;
-    const coupon = order.discount?.appliedCouponCode;
-    const shippingCost = order.shippingCost || 0;
-    const total = order.total || order.totalPrice;
+    const safeSubtotal = (items || []).reduce((sum, it) => sum + (Number(it?.price) || 0) * (Number(it?.quantity) || 0), 0);
+    const couponPct = (order.couponUsed?.discount || (order.discount?.type === 'percentage' ? (order.discount?.value || 0) : 0));
+    const fixedDiscount = order.discount?.type && order.discount?.type !== 'percentage' ? (Number(order.discount?.value) || 0) : 0;
+    const discountAmt = Math.round((safeSubtotal * (couponPct || 0)) / 100) + (fixedDiscount || 0);
+    const coupon = order.couponUsed?.code || order.discount?.appliedCouponCode;
+    const shippingCost = Number(order.shippingCost) || 0;
+    const total = order.totalAmount || order.total || order.totalPrice || order.amount || (safeSubtotal - discountAmt + shippingCost);
 
     // PDF generation
     const doc = new PDFDocument({ size: "A4", margin: 40 });
@@ -746,21 +747,26 @@ const generateInvoice = async (req, res) => {
     doc.font('Helvetica-Bold').fontSize(13).fillColor('#473C66').text('Order Summary');
     doc.moveDown(0.3);
     doc.font('Helvetica').fontSize(11).fillColor('#333');
-    doc.text(`Subtotal: `, { continued: true }).font('Helvetica-Bold').text(`INR ${subtotal}`);
-    if (discount && discount > 0) {
-      doc.font('Helvetica').text(`Discount: `, { continued: true }).font('Helvetica-Bold').text(`-INR ${Math.round((subtotal * discount) / 100)} (${discountType === 'percentage' ? discount + '%' : ''}${coupon ? ', Coupon: ' + coupon : ''})`);
+    doc.text(`Subtotal: `, { continued: true }).font('Helvetica-Bold').text(`INR ${safeSubtotal}`);
+    if (discountAmt > 0) {
+      doc.moveDown(0.2);
+      doc.font('Helvetica').text(`Discount: `, { continued: true }).font('Helvetica-Bold').text(`-INR ${discountAmt}${coupon ? ` (Coupon: ${coupon})` : ''}`);
     }
+    doc.moveDown(0.2);
     doc.font('Helvetica').text(`Shipping: `, { continued: true }).font('Helvetica-Bold').text(`INR ${shippingCost}`);
+    doc.moveDown(0.2);
     doc.font('Helvetica').text(`Total: `, { continued: true }).font('Helvetica-Bold').text(`INR ${total}`);
-    doc.font('Helvetica').text(`Payment Method: `, { continued: true }).font('Helvetica-Bold').text(order.paymentMethod);
-    doc.font('Helvetica').text(`Order Status: `, { continued: true }).font('Helvetica-Bold').text(order.status || order.orderStatus);
+    doc.moveDown(0.2);
+    doc.font('Helvetica').text(`Payment Method: `, { continued: true }).font('Helvetica-Bold').text(order.paymentMethod || '-');
+    doc.moveDown(0.2);
+    doc.font('Helvetica').text(`Order Status: `, { continued: true }).font('Helvetica-Bold').text(order.status || order.orderStatus || '-');
     doc.moveDown(1);
     doc.moveTo(40, doc.y).lineTo(555, doc.y).strokeColor('#E1D5F6').lineWidth(1.2).stroke();
     doc.moveDown(1);
 
     // --- FOOTER ---
-    doc.font('Helvetica-Bold').fontSize(11).fillColor('#473C66').text('Thank you for shopping with Shitha Clothings!', { align: 'center' });
-    doc.font('Helvetica').fontSize(10).fillColor('#888').text(`${process.env.BASE_URL?.replace('https://', 'www.').replace('http://', 'www.') || 'www.shithaa.in'} | Info.shitha@gmail.com`, { align: 'center' });
+    doc.font('Helvetica-Bold').fontSize(11).fillColor('#473C66').text('Thank you for shopping with SHITHAA!', { align: 'center' });
+    doc.font('Helvetica').fontSize(10).fillColor('#888').text(`${process.env.BASE_URL?.replace('https://', 'www.').replace('http://', 'www.') || 'www.shithaa.in'} | info.shithaa@gmail.com`, { align: 'center' });
     doc.end();
 
   } catch (error) {
