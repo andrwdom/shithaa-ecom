@@ -1,7 +1,6 @@
 "use client"
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react"
-import OptimizedImage from "./optimized-image"
 
 interface HeroCategoryCardProps {
   categoryId: string
@@ -16,12 +15,12 @@ interface HeroCategoryCardProps {
 interface HeroImage {
   productId: string
   productName: string
+  productSlug: string
   originalUrl: string
   thumbUrl: string
   lqip: string
   width: number
   height: number
-  trackingKey: string
 }
 
 export default function HeroCategoryCard({
@@ -45,6 +44,7 @@ export default function HeroCategoryCard({
   const isMobile = useRef(false)
   const isIntersecting = useRef(true)
   const intersectionObserver = useRef<IntersectionObserver | null>(null)
+  const cardRef = useRef<HTMLDivElement>(null)
 
   // Detect mobile on mount
   useEffect(() => {
@@ -58,8 +58,7 @@ export default function HeroCategoryCard({
 
   // Setup intersection observer for performance optimization
   useEffect(() => {
-    const cardElement = document.querySelector(`[data-category="${categorySlug}"]`)
-    if (cardElement) {
+    if (cardRef.current) {
       intersectionObserver.current = new IntersectionObserver(
         (entries) => {
           entries.forEach((entry) => {
@@ -76,7 +75,7 @@ export default function HeroCategoryCard({
         { threshold: 0.1 }
       )
       
-      intersectionObserver.current.observe(cardElement)
+      intersectionObserver.current.observe(cardRef.current)
     }
 
     return () => {
@@ -84,7 +83,7 @@ export default function HeroCategoryCard({
         intersectionObserver.current.disconnect()
       }
     }
-  }, [categorySlug])
+  }, [])
 
   // Fetch hero images from the new endpoint
   const fetchHeroImages = useCallback(async () => {
@@ -95,7 +94,7 @@ export default function HeroCategoryCard({
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
       const url = new URL(`${baseUrl}/api/hero-images`)
       url.searchParams.append('categoryId', categorySlug)
-      url.searchParams.append('limit', isMobile.current ? '4' : '6')
+      url.searchParams.append('device', isMobile.current ? 'mobile' : 'desktop')
       
       console.log(`Fetching hero images from: ${url.toString()}`)
       
@@ -161,8 +160,8 @@ export default function HeroCategoryCard({
       })
     }
 
-    // Stagger transitions randomly between 4-8 seconds
-    const delay = 4000 + Math.random() * 4000
+    // Stagger transitions randomly between 3-6 seconds
+    const delay = 3000 + Math.random() * 3000
     intervalRef.current = setInterval(startTransition, delay)
 
     return () => {
@@ -203,11 +202,15 @@ export default function HeroCategoryCard({
         lqip: '',
         productId: '',
         productName: title,
-        thumbUrl: getPlaceholderImage()
+        productSlug: categorySlug,
+        thumbUrl: getPlaceholderImage(),
+        originalUrl: getPlaceholderImage(),
+        width: 400,
+        height: 600
       }
     }
     return images[currentImageIndex]
-  }, [images, currentImageIndex, title])
+  }, [images, currentImageIndex, title, categorySlug])
 
   const nextImage = useMemo(() => {
     if (images.length <= 1) return currentImage
@@ -235,11 +238,7 @@ export default function HeroCategoryCard({
   }
 
   const handleImageError = () => {
-    console.error(`Image failed to load for category ${categorySlug}:`, {
-      currentImage: currentImage.thumbUrl,
-      productId: currentImage.productId,
-      productName: currentImage.productName
-    })
+    console.error(`hero-image-error category=${categorySlug} productId=${currentImage.productId} url=${currentImage.thumbUrl}`)
     setError('Image failed to load')
     setIsLoading(false)
   }
@@ -278,6 +277,7 @@ export default function HeroCategoryCard({
 
   return (
     <div
+      ref={cardRef}
       data-category={categorySlug}
       className="relative h-80 lg:h-96 xl:h-[420px] rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 cursor-pointer group"
       onClick={handleCardClick}
@@ -288,43 +288,44 @@ export default function HeroCategoryCard({
       <div className="absolute inset-0">
         {/* Current Image */}
         <div 
-          className={`absolute inset-0 transition-opacity duration-600 ease-in-out ${
+          className={`absolute inset-0 transition-opacity duration-800 ease-in-out ${
             isLoading || isTransitioning ? 'opacity-0' : 'opacity-100'
           }`}
-          style={{ willChange: 'opacity' }}
+          style={{ willChange: 'opacity, transform' }}
         >
-          <OptimizedImage
+          <img
             src={currentImage.thumbUrl}
             alt={`${title} - ${currentImage.productName}`}
-            fill
-            priority={true}
-            className="object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
-            sizes={getImageSizes()}
-            quality={85}
+            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
             onLoad={handleImageLoad}
             onError={handleImageError}
-            placeholder="blur"
-            blurDataURL={currentImage.lqip || "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="}
+            loading="eager"
+            style={{
+              backgroundImage: currentImage.lqip ? `url(${currentImage.lqip})` : undefined,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center'
+            }}
           />
         </div>
 
         {/* Next Image (for smooth transitions) */}
         {images.length > 1 && (
           <div 
-            className={`absolute inset-0 transition-opacity duration-600 ease-in-out ${
+            className={`absolute inset-0 transition-opacity duration-800 ease-in-out ${
               isTransitioning ? 'opacity-100' : 'opacity-0'
             }`}
-            style={{ willChange: 'opacity' }}
+            style={{ willChange: 'opacity, transform' }}
           >
-            <OptimizedImage
+            <img
               src={nextImage.thumbUrl}
               alt={`${title} - Next Product`}
-              fill
-              className="object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
-              sizes={getImageSizes()}
-              quality={85}
-              placeholder="blur"
-              blurDataURL={nextImage.lqip || "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="}
+              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
+              loading="lazy"
+              style={{
+                backgroundImage: nextImage.lqip ? `url(${nextImage.lqip})` : undefined,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center'
+              }}
             />
           </div>
         )}
@@ -382,5 +383,5 @@ export default function HeroCategoryCard({
 
 // Helper functions
 function getPlaceholderImage(): string {
-  return '/placeholder.jpg'
+  return '/images/placeholder.webp'
 } 

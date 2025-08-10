@@ -8,62 +8,71 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
 
 async function testHeroImages() {
-  console.log('🧪 Testing Hero Images Endpoint...\n')
+  console.log('Testing Hero Images Endpoint...')
+  console.log('API Base:', API_BASE)
   
-  try {
-    // Test health endpoint
-    console.log('1. Testing health endpoint...')
-    const healthResponse = await fetch(`${API_BASE}/api/hero-images/health`)
-    const healthData = await healthResponse.json()
+  const testCategories = [
+    'maternity-feeding-wear',
+    'zipless-feeding-lounge-wear', 
+    'non-feeding-lounge-wear',
+    'zipless-feeding-dupatta-lounge-wear'
+  ]
+  
+  for (const categorySlug of testCategories) {
+    console.log(`\n--- Testing Category: ${categorySlug} ---`)
     
-    if (healthResponse.ok) {
-      console.log('✅ Health check passed:', healthData.message)
-    } else {
-      console.log('❌ Health check failed:', healthData.message)
-    }
-    
-    // Test hero images endpoint with a valid category
-    console.log('\n2. Testing hero images endpoint...')
-    const testCategories = [
-      'maternity-feeding-wear',
-      'zipless-feeding-lounge-wear',
-      'non-feeding-lounge-wear',
-      'zipless-feeding-dupatta-lounge-wear'
-    ]
-    
-    for (const category of testCategories) {
-      console.log(`\n   Testing category: ${category}`)
+    try {
+      // Test desktop endpoint
+      const desktopUrl = `${API_BASE}/api/hero-images?categoryId=${categorySlug}&device=desktop`
+      console.log('Desktop URL:', desktopUrl)
       
-      const response = await fetch(`${API_BASE}/api/hero-images?categoryId=${category}&limit=3`)
-      const data = await response.json()
+      const desktopResponse = await fetch(desktopUrl)
+      console.log('Desktop Status:', desktopResponse.status)
       
-      if (response.ok && data.success) {
-        console.log(`   ✅ Success: ${data.images.length} images loaded`)
-        if (data.images.length > 0) {
-          const firstImage = data.images[0]
-          console.log(`   📸 First image: ${firstImage.thumbUrl}`)
-          console.log(`   📏 Dimensions: ${firstImage.width}x${firstImage.height}`)
-        }
+      if (desktopResponse.ok) {
+        const desktopData = await desktopResponse.json()
+        console.log('Desktop Response:', {
+          success: desktopData.success,
+          imageCount: desktopData.images?.length || 0,
+          images: desktopData.images?.map(img => ({
+            productId: img.productId,
+            productName: img.productName,
+            thumbUrl: img.thumbUrl,
+            hasLqip: !!img.lqip
+          }))
+        })
       } else {
-        console.log(`   ❌ Failed: ${data.message || 'Unknown error'}`)
+        console.error('Desktop Error:', desktopResponse.statusText)
       }
+      
+      // Test mobile endpoint
+      const mobileUrl = `${API_BASE}/api/hero-images?categoryId=${categorySlug}&device=mobile`
+      console.log('Mobile URL:', mobileUrl)
+      
+      const mobileResponse = await fetch(mobileUrl)
+      console.log('Mobile Status:', mobileResponse.status)
+      
+      if (mobileResponse.ok) {
+        const mobileData = await mobileResponse.json()
+        console.log('Mobile Response:', {
+          success: mobileData.success,
+          imageCount: mobileData.images?.length || 0,
+          images: mobileData.images?.map(img => ({
+            productId: img.productId,
+            productName: img.productName,
+            thumbUrl: img.thumbUrl,
+            hasLqip: !!img.lqip
+          }))
+        })
+      } else {
+        console.error('Mobile Error:', mobileResponse.statusText)
+      }
+      
+    } catch (error) {
+      console.error(`Error testing ${categorySlug}:`, error.message)
     }
-    
-    // Test with invalid category
-    console.log('\n3. Testing with invalid category...')
-    const invalidResponse = await fetch(`${API_BASE}/api/hero-images?categoryId=invalid-category`)
-    const invalidData = await invalidResponse.json()
-    
-    if (invalidResponse.ok && invalidData.success && invalidData.images.length === 0) {
-      console.log('✅ Invalid category handled correctly (empty result)')
-    } else {
-      console.log('❌ Invalid category not handled correctly')
-    }
-    
-  } catch (error) {
-    console.error('❌ Test failed with error:', error.message)
   }
 }
 
 // Run the test
-testHeroImages() 
+testHeroImages().catch(console.error) 

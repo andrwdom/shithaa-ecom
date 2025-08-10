@@ -3,6 +3,7 @@ import cors from 'cors'
 import 'dotenv/config'
 import rateLimit from 'express-rate-limit'
 import connectDB from './config/mongodb.js'
+import { config } from './config.js'
 import userRouter from './routes/userRoute.js'
 import productRouter from './routes/productRoute.js'
 import cartRouter from './routes/cartRoute.js'
@@ -22,7 +23,7 @@ import productModel from './models/productModel.js'
 
 // App Config
 const app = express()
-const PORT = process.env.PORT || 4000
+const PORT = config.port
 
 // Trust proxy - required for rate limiting behind reverse proxy
 app.set('trust proxy', 1)

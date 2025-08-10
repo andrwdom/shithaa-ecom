@@ -4,6 +4,7 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import axios from 'axios'
 import productModel from '../models/productModel.js'
+import { config } from '../config.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -16,9 +17,16 @@ const MAX_CACHE_SIZE = 100
 const THUMBNAIL_DIR = path.join(__dirname, '../uploads/hero-thumbs')
 await fs.mkdir(THUMBNAIL_DIR, { recursive: true }).catch(() => {})
 
+// Configuration constants
+const MAX_DESKTOP = config.heroImages.maxDesktop
+const MAX_MOBILE = config.heroImages.maxMobile
+const MOBILE_THUMB_SIZE = config.heroImages.mobileThumbSize
+const DESKTOP_THUMB_SIZE = config.heroImages.desktopThumbSize
+const LQIP_SIZE = config.heroImages.lqipSize
+
 export const getHeroImages = async (req, res) => {
   try {
-    const { categoryId, limit = 6 } = req.query
+    const { categoryId, limit, device = 'desktop' } = req.query
     
     if (!categoryId) {
       return res.status(400).json({
@@ -27,7 +35,13 @@ export const getHeroImages = async (req, res) => {
       })
     }
 
-    const limitNum = Math.min(parseInt(limit) || 6, 10) // Cap at 10 for performance
+    // Determine limit based on device
+    let limitNum = device === 'mobile' ? MAX_MOBILE : MAX_DESKTOP
+    if (limit) {
+      limitNum = Math.min(parseInt(limit) || limitNum, limitNum)
+    }
+    
+    console.log(`Fetching hero images for category: ${categoryId}, device: ${device}, limit: ${limitNum}`)
     
     // Fetch products for the category
     const products = await productModel.find({
@@ -56,12 +70,12 @@ export const getHeroImages = async (req, res) => {
       if (validatedImages.length >= limitNum) break
       
       try {
-        const imageData = await processProductImage(product)
+        const imageData = await processProductImage(product, device)
         if (imageData) {
           validatedImages.push(imageData)
         }
       } catch (error) {
-        console.warn(`Failed to process image for product ${product._id}:`, error.message)
+        console.warn(`hero-image-skip productId=${product._id} reason=processing_error: ${error.message}`)
         continue
       }
     }
@@ -82,7 +96,8 @@ export const getHeroImages = async (req, res) => {
       success: true,
       images: validatedImages,
       total: validatedImages.length,
-      categoryId
+      categoryId,
+      device
     })
 
   } catch (error) {
@@ -103,7 +118,14 @@ export const heroImagesHealth = async (req, res) => {
       message: 'Hero images service is healthy',
       timestamp: new Date().toISOString(),
       thumbnailDir: THUMBNAIL_DIR,
-      cacheSize: thumbnailCache.size
+      cacheSize: thumbnailCache.size,
+      config: {
+        maxDesktop: MAX_DESKTOP,
+        maxMobile: MAX_MOBILE,
+        mobileThumbSize: MOBILE_THUMB_SIZE,
+        desktopThumbSize: DESKTOP_THUMB_SIZE,
+        lqipSize: LQIP_SIZE
+      }
     })
   } catch (error) {
     res.status(500).json({
@@ -114,7 +136,7 @@ export const heroImagesHealth = async (req, res) => {
   }
 }
 
-async function processProductImage(product) {
+async function processProductImage(product, device) {
   try {
     // Get the first image from the product
     const imagePath = Array.isArray(product.images) && product.images.length > 0 
@@ -130,31 +152,32 @@ async function processProductImage(product) {
     const normalizedPath = normalizeImagePath(imagePath)
     
     // Build the full URL for validation
-    const baseUrl = process.env.VPS_BASE_URL || 'http://localhost:4000'
+    const baseUrl = config.vpsBaseUrl
     const fullImageUrl = imagePath.startsWith('http') ? imagePath : `${baseUrl}${imagePath}`
     
     // Validate the image exists and is actually an image
-    const isValidImage = await validateImageUrl(fullImageUrl)
-    if (!isValidImage) {
-      console.warn(`Invalid image URL for product ${product._id}: ${fullImageUrl}`)
+    const validationResult = await validateImageUrl(fullImageUrl)
+    if (!validationResult.isValid) {
+      console.warn(`hero-image-skip productId=${product._id} url=${fullImageUrl} reason=${validationResult.reason}`)
       return null
     }
 
     // Generate or get cached thumbnail
-    const thumbnailData = await generateThumbnail(fullImageUrl, product._id.toString())
+    const thumbnailData = await generateThumbnail(fullImageUrl, product._id.toString(), device)
     if (!thumbnailData) {
+      console.warn(`hero-image-skip productId=${product._id} url=${fullImageUrl} reason=thumbnail_generation_failed`)
       return null
     }
 
     return {
       productId: product._id.toString(),
       productName: product.name,
+      productSlug: product.categorySlug || product.category,
       originalUrl: fullImageUrl,
       thumbUrl: thumbnailData.thumbUrl,
       lqip: thumbnailData.lqip,
       width: thumbnailData.width,
-      height: thumbnailData.height,
-      trackingKey: `${product._id}-${Date.now()}`
+      height: thumbnailData.height
     }
 
   } catch (error) {
@@ -176,35 +199,53 @@ async function validateImageUrl(url) {
     
     // Check if it's an image
     if (!contentType || !contentType.startsWith('image/')) {
-      console.warn(`Invalid content type for ${url}: ${contentType}`)
-      return false
+      return {
+        isValid: false,
+        reason: `invalid_content_type: ${contentType}`
+      }
+    }
+    
+    // Check if content type is HTML (likely 404 page)
+    if (contentType.includes('text/html')) {
+      return {
+        isValid: false,
+        reason: 'html_response'
+      }
     }
     
     // Check if image is too small (likely corrupted)
     if (contentLength && parseInt(contentLength) < 1000) {
-      console.warn(`Image too small for ${url}: ${contentLength} bytes`)
-      return false
+      return {
+        isValid: false,
+        reason: `too_small: ${contentLength} bytes`
+      }
     }
     
-    return true
+    return { isValid: true }
   } catch (error) {
+    let reason = 'unknown_error'
+    
     if (error.code === 'ECONNREFUSED') {
-      console.warn(`Connection refused for ${url}`)
+      reason = 'connection_refused'
     } else if (error.code === 'ENOTFOUND') {
-      console.warn(`Image not found for ${url}`)
+      reason = 'not_found'
     } else if (error.code === 'ETIMEDOUT') {
-      console.warn(`Timeout for ${url}`)
-    } else {
-      console.warn(`Image validation failed for ${url}:`, error.message)
+      reason = 'timeout'
+    } else if (error.response) {
+      reason = `http_${error.response.status}`
     }
-    return false
+    
+    return {
+      isValid: false,
+      reason
+    }
   }
 }
 
-async function generateThumbnail(imageUrl, productId) {
+async function generateThumbnail(imageUrl, productId, device) {
   try {
     // Check cache first
-    const cacheKey = `${productId}-${imageUrl}`
+    const cacheKey = `${productId}-${device}-${imageUrl}`
     if (thumbnailCache.has(cacheKey)) {
       return thumbnailCache.get(cacheKey)
     }
@@ -217,15 +258,18 @@ async function generateThumbnail(imageUrl, productId) {
 
     const imageBuffer = Buffer.from(imageResponse.data)
     
-    // Generate thumbnail (300px wide, maintain aspect ratio)
+    // Determine thumbnail size based on device
+    const thumbSize = device === 'mobile' ? MOBILE_THUMB_SIZE : DESKTOP_THUMB_SIZE
+    
+    // Generate thumbnail (maintain aspect ratio)
     const thumbnailBuffer = await sharp(imageBuffer)
-      .resize(300, null, { withoutEnlargement: true })
-      .webp({ quality: 70 })
+      .resize(thumbSize, null, { withoutEnlargement: true })
+      .webp({ quality: 80 })
       .toBuffer()
     
     // Generate LQIP (20px blur placeholder)
     const lqipBuffer = await sharp(imageBuffer)
-      .resize(20, null, { withoutEnlargement: true })
+      .resize(LQIP_SIZE, null, { withoutEnlargement: true })
       .blur(1)
       .webp({ quality: 30 })
       .toBuffer()
@@ -233,8 +277,8 @@ async function generateThumbnail(imageUrl, productId) {
     // Convert LQIP to base64
     const lqipBase64 = `data:image/webp;base64,${lqipBuffer.toString('base64')}`
     
-    // Save thumbnail to disk
-    const thumbnailFilename = `${productId}-thumb.webp`
+    // Save thumbnail to disk with device-specific naming
+    const thumbnailFilename = `${productId}-${device}-thumb.webp`
     const thumbnailPath = path.join(THUMBNAIL_DIR, thumbnailFilename)
     await fs.writeFile(thumbnailPath, thumbnailBuffer)
     
@@ -296,19 +340,19 @@ function shuffleArray(array) {
 async function generateFallbackImages(categoryId, limit) {
   try {
     const fallbackImages = []
-    const baseUrl = process.env.VPS_BASE_URL || 'http://localhost:4000'
+    const baseUrl = config.vpsBaseUrl
     
     // Create placeholder images for the category
     for (let i = 0; i < limit; i++) {
       const fallbackImage = {
         productId: `fallback-${categoryId}-${i}`,
         productName: `Category ${categoryId}`,
+        productSlug: categoryId,
         originalUrl: `${baseUrl}/placeholder.jpg`,
         thumbUrl: `${baseUrl}/placeholder.jpg`,
         lqip: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k=",
         width: 300,
-        height: 400,
-        trackingKey: `fallback-${categoryId}-${i}-${Date.now()}`
+        height: 400
       }
       fallbackImages.push(fallbackImage)
     }
