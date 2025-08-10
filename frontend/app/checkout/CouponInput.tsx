@@ -44,7 +44,7 @@ export default function CouponInput({ value, onApply }: any) {
       <div className="flex gap-2">
         <input type="text" className="flex-1 border rounded px-3 py-2" placeholder="Enter coupon code" value={input} onChange={e => setInput(e.target.value.toUpperCase())} disabled={!!value || loading} />
         {!value ? (
-          <button type="button" className="bg-purple-600 text-white px-4 py-2 rounded" onClick={handleApply} disabled={loading || !input}>
+          <button type="button" className="bg-[rgb(71,60,102)] hover:bg-[rgb(71,60,102)]/90 text-white px-4 py-2 rounded" onClick={handleApply} disabled={loading || !input}>
             {loading ? <span className="loading loading-spinner loading-xs"></span> : 'Apply'}
           </button>
         ) : (

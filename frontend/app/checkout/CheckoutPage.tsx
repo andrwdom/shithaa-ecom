@@ -49,7 +49,7 @@ export default function CheckoutPage() {
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const { user } = useAuth();
 
-  const { cartItems: contextCartItems, cartTotal, offerDetails } = useCart()
+  const { cartItems: contextCartItems, cartTotal, cartSubtotal, offerDetails } = useCart()
   const { buyNowItem } = useBuyNow()
 
   useEffect(() => {
@@ -62,26 +62,34 @@ export default function CheckoutPage() {
   }, [buyNowItem, contextCartItems])
 
   useEffect(() => {
-    // Use cartTotal from context if available, otherwise calculate manually
-    const subtotal = cartTotal || cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-    // Calculate discount
-    const discount = coupon ? Math.round((subtotal * coupon.discountPercentage) / 100) : 0;
-    
+    // Subtotal should be the original sum before offers
+    const rawSubtotal = (typeof cartSubtotal === 'number' && cartSubtotal > 0)
+      ? cartSubtotal
+      : cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+    // Offer discount from backend calculation
+    const offerDiscount = offerDetails?.offerDiscount || 0;
+
+    // Apply coupon on the amount after offer discount
+    const amountAfterOffer = rawSubtotal - offerDiscount;
+    const couponDiscount = coupon ? Math.round((amountAfterOffer * coupon.discountPercentage) / 100) : 0;
+
     // Calculate shipping using new shipping logic
     const shippingCalculation = calculateShippingCost(cartItems, shipping as ShippingInfo);
     const shippingCost = shippingCalculation.shippingCost;
-    
-    // Calculate total
-    const total = subtotal - discount + shippingCost;
+
+    // Final total: use computed values to avoid drift
+    const total = amountAfterOffer - couponDiscount + shippingCost;
+
     setOrderSummary({ 
-      subtotal, 
-      discount, 
+      subtotal: rawSubtotal, 
+      discount: couponDiscount, 
       shipping: shippingCost, 
       total,
       shippingMessage: shippingCalculation.shippingMessage,
       isFreeShipping: shippingCalculation.isFreeShipping
     });
-  }, [cartItems, coupon, shipping, cartTotal]);
+  }, [cartItems, coupon, shipping, cartSubtotal, offerDetails]);
 
   // PhonePe payment handler
   async function handlePhonePePayment() {
@@ -160,13 +168,13 @@ export default function CheckoutPage() {
         <div className="max-w-5xl mx-auto mb-8 px-4">
           <ol className="flex items-center w-full text-sm font-medium text-gray-500">
             <li className="flex-1 flex items-center gap-2">
-              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-purple-700 text-white font-bold">1</span>
+              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-[rgb(71,60,102)] text-white font-bold">1</span>
               <span className="hidden sm:inline">Cart</span>
-              <span className="flex-1 h-1 bg-purple-700 mx-2 rounded sm:block hidden"></span>
+              <span className="flex-1 h-1 bg-[rgb(71,60,102)] mx-2 rounded sm:block hidden"></span>
             </li>
             <li className="flex-1 flex items-center gap-2">
-              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-purple-700 text-white font-bold ring-2 ring-purple-400">2</span>
-              <span className="text-purple-700 font-semibold hidden sm:inline">Checkout</span>
+              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-[rgb(71,60,102)] text-white font-bold ring-2 ring-[rgb(71,60,102)]/40">2</span>
+              <span className="text-[rgb(71,60,102)] font-semibold hidden sm:inline">Checkout</span>
               <span className="flex-1 h-1 bg-gray-200 mx-2 rounded sm:block hidden"></span>
             </li>
             <li className="flex-1 flex items-center gap-2">
@@ -213,7 +221,7 @@ export default function CheckoutPage() {
             {/* Payment Buttons */}
             <button
               type="button"
-              className="w-full bg-purple-700 hover:bg-purple-800 text-white text-lg font-semibold rounded-xl py-3 mt-4 transition disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full bg-[rgb(71,60,102)] hover:bg-[rgb(71,60,102)]/90 text-white text-lg font-semibold rounded-xl py-3 mt-4 transition disabled:opacity-60 disabled:cursor-not-allowed"
               onClick={handlePhonePePayment}
               disabled={processing}
             >

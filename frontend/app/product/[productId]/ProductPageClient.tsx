@@ -368,10 +368,9 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
 
               <p className="text-gray-600 leading-relaxed mb-6">{product.description}</p>
 
-              {/* Loungewear Offer Banner */}
+              {/* Loungewear Offer Banner (exclude Dupatta category) */}
               {(product.category === "Zipless Feeding Lounge Wear" || 
-                product.category === "Non-Feeding Lounge Wear" || 
-                product.category === "Zipless Feeding Dupatta Lounge Wear") && (
+                product.category === "Non-Feeding Lounge Wear") && (
                 <div className="mb-6 p-4 bg-gradient-to-r from-pink-50 to-purple-50 border border-pink-200 rounded-lg">
                   <div className="flex items-center gap-3">
                     <div className="flex-shrink-0">

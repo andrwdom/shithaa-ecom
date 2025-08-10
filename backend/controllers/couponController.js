@@ -31,11 +31,24 @@ export const createCoupon = async (req, res) => {
       }
     }
 
+    // Normalize date range: if validUntil is provided without time (00:00:00),
+    // treat it as end-of-day to avoid premature expiry due to timezone.
+    const validFromDate = new Date(validFrom)
+    const validUntilDate = new Date(validUntil)
+    if (
+      validUntilDate.getHours() === 0 &&
+      validUntilDate.getMinutes() === 0 &&
+      validUntilDate.getSeconds() === 0 &&
+      validUntilDate.getMilliseconds() === 0
+    ) {
+      validUntilDate.setHours(23, 59, 59, 999)
+    }
+
     const coupon = new Coupon({
       code: couponCode,
       discountPercentage,
-      validFrom: new Date(validFrom),
-      validUntil: new Date(validUntil),
+      validFrom: validFromDate,
+      validUntil: validUntilDate,
       usageLimit: usageLimit || null
     });
 
@@ -115,7 +128,17 @@ export const validateCoupon = async (req, res) => {
     }
 
     const now = new Date();
-    if (now < coupon.validFrom || now > coupon.validUntil) {
+    // Treat same-day 'validUntil' without time as end-of-day
+    const validUntil = new Date(coupon.validUntil)
+    if (
+      validUntil.getHours() === 0 &&
+      validUntil.getMinutes() === 0 &&
+      validUntil.getSeconds() === 0 &&
+      validUntil.getMilliseconds() === 0
+    ) {
+      validUntil.setHours(23, 59, 59, 999)
+    }
+    if (now < coupon.validFrom || now > validUntil) {
       return res.status(400).json({ message: 'Coupon is expired' });
     }
 

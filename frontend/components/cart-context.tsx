@@ -38,6 +38,7 @@ interface CartContextType {
   closeCartSidebar: () => void
   clearCart: () => void
   cartTotal: number
+  cartSubtotal: number
   offerDetails: OfferDetails | null
   isLoadingOffer: boolean
 }
@@ -48,6 +49,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cartItems, setCartItems] = useState<CartItem[]>([])
   const [isCartSidebarOpen, setIsCartSidebarOpen] = useState(false)
   const [cartTotal, setCartTotal] = useState(0)
+  const [cartSubtotal, setCartSubtotal] = useState(0)
   const [offerDetails, setOfferDetails] = useState<OfferDetails | null>(null)
   const [isLoadingOffer, setIsLoadingOffer] = useState(false)
 
@@ -90,6 +92,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         const data = await response.json()
         if (data.success) {
           setCartTotal(data.data.total)
+          setCartSubtotal(data.data.subtotal)
           setOfferDetails({
             offerApplied: data.data.offerApplied,
             offerDetails: data.data.offerDetails,
@@ -102,6 +105,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         // Fallback to simple calculation if API fails
         const fallbackTotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
         setCartTotal(fallbackTotal)
+        setCartSubtotal(fallbackTotal)
         setOfferDetails(null)
       }
     } catch (error) {
@@ -109,6 +113,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       // Fallback to simple calculation
       const fallbackTotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
       setCartTotal(fallbackTotal)
+      setCartSubtotal(fallbackTotal)
       setOfferDetails(null)
     } finally {
       setIsLoadingOffer(false)
@@ -177,6 +182,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         closeCartSidebar, 
         clearCart,
         cartTotal,
+        cartSubtotal,
         offerDetails,
         isLoadingOffer
       }}
