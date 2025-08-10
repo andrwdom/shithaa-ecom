@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react"
-import { OptimizedImage } from "./optimized-image"
+import OptimizedImage from "./optimized-image"
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer"
 import { useIsMobile } from "@/hooks/use-mobile"
 

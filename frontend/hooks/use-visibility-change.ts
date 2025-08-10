@@ -1,5 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react'
-import { useState } from 'react'
+import { useEffect, useRef, useCallback, useState } from 'react'
 
 interface VisibilityChangeCallbacks {
   onHidden?: () => void
