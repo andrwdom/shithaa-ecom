@@ -35,12 +35,12 @@ const getStockStatus = (stock) => {
 
 // Loading Skeleton Component
 const ProductSkeleton = () => (
-  <div className="bg-white rounded-lg border border-gray-200 overflow-hidden animate-pulse">
-    <div className="aspect-[4/5] bg-gray-200"></div>
-    <div className="p-4 space-y-3">
+  <div className="bg-white rounded-xl border border-gray-200 overflow-hidden animate-pulse shadow-sm">
+    <div className="aspect-[4/5] bg-gray-100"></div>
+    <div className="p-5 space-y-4">
       <div className="h-4 bg-gray-200 rounded w-3/4"></div>
       <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-      <div className="flex gap-2">
+      <div className="flex gap-3">
         <div className="h-6 bg-gray-200 rounded-full w-12"></div>
         <div className="h-6 bg-gray-200 rounded-full w-12"></div>
       </div>
@@ -49,8 +49,8 @@ const ProductSkeleton = () => (
         <div className="h-8 bg-gray-200 rounded w-16"></div>
         <div className="h-8 bg-gray-200 rounded w-16"></div>
       </div>
-        </div>
-      </div>
+    </div>
+  </div>
 )
 
 // Stock Badge Component
@@ -77,7 +77,7 @@ const ProductCard = ({ product, onEdit, onDelete, isDragging, onDragStart, onDra
 
   return (
     <div 
-      className={`bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-all duration-200 overflow-hidden group ${
+      className={`bg-white rounded-xl border border-gray-200 hover:border-gray-300 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden group ${
         isDragging ? 'opacity-50' : ''
       }`}
       draggable
@@ -130,19 +130,19 @@ const ProductCard = ({ product, onEdit, onDelete, isDragging, onDragStart, onDra
       </div>
 
       {/* Product Info */}
-      <div className="p-4">
+      <div className="p-5">
         {/* Product Name */}
         <h3 className="font-medium text-gray-900 text-sm line-clamp-2 mb-2 min-h-[2.5rem]">
           {product.name}
         </h3>
 
         {/* Category */}
-        <p className="text-xs text-gray-500 mb-3 bg-gray-50 px-2 py-1 rounded-md inline-block">
+        <p className="text-xs text-gray-600 mb-4 bg-gray-50 px-3 py-1 rounded-md inline-block">
           {product.category || 'Uncategorized'}
         </p>
 
         {/* Size & Stock Info */}
-        <div className="flex flex-wrap gap-1 mb-3">
+        <div className="flex flex-wrap gap-2 mb-4">
           {product.sizes?.slice(0, 3).map((sizeObj, index) => {
             const size = typeof sizeObj === 'object' ? sizeObj.size : sizeObj
             const stock = typeof sizeObj === 'object' ? sizeObj.stock || 0 : 0
@@ -156,7 +156,7 @@ const ProductCard = ({ product, onEdit, onDelete, isDragging, onDragStart, onDra
         </div>
 
         {/* Price */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2">
             <span className="text-lg font-semibold text-gray-900">
               {currency}{product.price}
@@ -178,17 +178,17 @@ const ProductCard = ({ product, onEdit, onDelete, isDragging, onDragStart, onDra
 
         {/* Action Buttons */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             <button
               onClick={() => onEdit(product)}
-              className="flex items-center gap-1 px-3 py-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors text-sm font-medium"
+              className="flex items-center gap-2 px-3 py-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors text-sm font-medium"
             >
               <Edit className="h-3 w-3" />
               Edit
             </button>
             <button
               onClick={() => onDelete(product._id)}
-              className="flex items-center gap-1 px-3 py-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors text-sm font-medium"
+              className="flex items-center gap-2 px-3 py-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors text-sm font-medium"
             >
               <Trash2 className="h-3 w-3" />
               Delete
@@ -196,7 +196,7 @@ const ProductCard = ({ product, onEdit, onDelete, isDragging, onDragStart, onDra
           </div>
           
           {/* Move Buttons */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             <button
               onClick={() => onMoveTop(product._id)}
               className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors"
@@ -1089,7 +1089,7 @@ const List = ({ token }) => {
           {loading ? (
           /* Loading State */
           <div className={viewMode === 'card' 
-            ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6"
+            ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 xl:gap-8"
             : "space-y-4"
           }>
             {Array.from({ length: PRODUCTS_PER_PAGE }).map((_, index) => (
@@ -1109,7 +1109,7 @@ const List = ({ token }) => {
           /* Products Display */
             <>
               {viewMode === 'card' ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 xl:gap-8">
                 {products.map((product) => (
                     <ProductCard
                     key={product._id}
@@ -1127,26 +1127,26 @@ const List = ({ token }) => {
                   ))}
                 </div>
               ) : (
-              <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                         <tr>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-8">
                             {/* Drag handle column */}
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Product
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Category
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Price
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Stock by Size
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Actions
                           </th>
                         </tr>
