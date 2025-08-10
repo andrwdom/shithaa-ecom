@@ -637,7 +637,6 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
                     <Filter className="h-5 w-5 text-gray-600" />
-                    <span className="text-gray-700 font-medium">Filter and sort</span>
                   </div>
                   <div className="text-sm text-gray-600">
                     {filteredProducts.length} of {products.length} products

@@ -388,7 +388,7 @@ const TestimonialsSection = () => {
           transition={{ delay: 0.6, duration: 0.8 }}
         >
           <a
-            href="https://www.instagram.com/shithaa.in/"
+            href="https://www.instagram.com/stories/highlights/18004012679767223/"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center justify-center bg-gradient-to-r from-[#473C66] to-purple-500 hover:from-purple-600 hover:to-purple-700 text-white px-10 py-6 text-lg rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 font-medium"
