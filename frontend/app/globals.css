@@ -276,46 +276,113 @@ html, body {
 @keyframes fade-in {
   from {
     opacity: 0;
+    transform: translateY(20px) translateZ(0);
   }
   to {
     opacity: 1;
+    transform: translateY(0) translateZ(0);
   }
 }
 
 @keyframes fade-out {
   from {
     opacity: 1;
+    transform: translateY(0) translateZ(0);
   }
   to {
     opacity: 0;
+    transform: translateY(-20px) translateZ(0);
   }
 }
 
 .hero-fade-in {
-  animation: fade-in 1s ease-in-out;
+  animation: fade-in 1s ease-out forwards;
+  will-change: opacity, transform;
 }
 
 .hero-fade-out {
-  animation: fade-out 1s ease-in-out;
+  animation: fade-out 1s ease-in forwards;
+  will-change: opacity, transform;
 }
 
-/* Smooth image transitions */
+/* Optimized image transitions with GPU acceleration */
 .image-fade-transition {
-  transition: opacity 1s ease-in-out;
+  transition: opacity 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: opacity;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 .image-fade-enter {
   opacity: 0;
+  transform: translateZ(0);
 }
 
 .image-fade-enter-active {
   opacity: 1;
+  transform: translateZ(0);
 }
 
 .image-fade-exit {
   opacity: 1;
+  transform: translateZ(0);
 }
 
 .image-fade-exit-active {
   opacity: 0;
+  transform: translateZ(0);
+}
+
+/* Staggered animation delays for category cards */
+.hero-card-stagger-0 { animation-delay: 0s; }
+.hero-card-stagger-1 { animation-delay: 0.2s; }
+.hero-card-stagger-2 { animation-delay: 0.4s; }
+.hero-card-stagger-3 { animation-delay: 0.6s; }
+
+/* Mobile-optimized animations */
+@media (max-width: 768px) {
+  .image-fade-transition {
+    transition-duration: 0.8s; /* Slightly slower on mobile for better perception */
+  }
+  
+  .hero-fade-in,
+  .hero-fade-out {
+    animation-duration: 1.2s; /* Slower on mobile */
+  }
+}
+
+/* Performance optimizations */
+.hero-card-optimized {
+  will-change: transform, opacity;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* Smooth hover effects */
+.hero-card-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform, box-shadow;
+}
+
+.hero-card-hover:hover {
+  transform: translateY(-8px) translateZ(0);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+/* Loading states */
+.hero-card-loading {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: loading-shimmer 1.5s infinite;
+  will-change: background-position;
+}
+
+@keyframes loading-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
 }

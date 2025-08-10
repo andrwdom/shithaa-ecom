@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Metadata } from "next"
-import HeroSection from "@/components/hero-section"
+import HeroSectionOptimized from "@/components/hero-section-optimized"
 import ProductSlider from "@/components/product-slider"
 import CategoryStrip from "@/components/category-strip"
 import TestimonialCarousel from "@/components/testimonial-carousel"
@@ -122,7 +122,7 @@ export default function Home() {
       <main>
         <PerformanceMonitor />
         <div className="min-h-screen bg-white">
-          <HeroSection />
+          <HeroSectionOptimized />
           
           <CategoryStrip onCategoryClick={handleCategorySelect} currentCategory={undefined} />
           <TestimonialsSection />
