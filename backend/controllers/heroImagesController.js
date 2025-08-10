@@ -14,7 +14,32 @@ const thumbnailCache = new Map()
 const MAX_CACHE_SIZE = 100
 
 // Ensure thumbnail directory exists
-const THUMBNAIL_DIR = path.join(__dirname, '../uploads/hero-thumbs')
+// Resolve uploads base directory preferring the server's shared path used by Nginx
+async function resolveUploadsBasePath() {
+  const candidates = [
+    // Prefer the production path used by Nginx alias
+    '/var/www/shithaa-ecom/uploads',
+    // Then explicit env/config
+    config.uploadPath,
+    // Finally fallback to project-local uploads for dev
+    path.resolve(process.cwd(), 'uploads')
+  ].filter(Boolean)
+
+  for (const candidate of candidates) {
+    try {
+      const absolute = path.isAbsolute(candidate) ? candidate : path.resolve(process.cwd(), candidate)
+      await fs.mkdir(absolute, { recursive: true })
+      return absolute
+    } catch {
+      // try next candidate
+    }
+  }
+  // Last resort
+  return path.resolve(process.cwd(), 'uploads')
+}
+
+const uploadsBasePath = await resolveUploadsBasePath()
+const THUMBNAIL_DIR = path.join(uploadsBasePath, 'hero-thumbs')
 await fs.mkdir(THUMBNAIL_DIR, { recursive: true }).catch(() => {})
 
 // Configuration constants
@@ -286,7 +311,8 @@ async function generateThumbnail(imageUrl, productId, device) {
     const metadata = await sharp(imageBuffer).metadata()
     
     const result = {
-      thumbUrl: `/uploads/hero-thumbs/${thumbnailFilename}`,
+      // Important: use /images to match Nginx alias -> /var/www/shithaa-ecom/uploads
+      thumbUrl: `/images/hero-thumbs/${thumbnailFilename}`,
       lqip: lqipBase64,
       width: metadata.width,
       height: metadata.height
