@@ -32,7 +32,7 @@ export const getAllProducts = async (req, res) => {
         console.log('GET /api/products category query:', category);
         const {
             page = 1,
-            limit = 20,
+            limit = 1000,
             search,
             isNewArrival,
             isBestSeller,

@@ -47,7 +47,7 @@ export const getCategoryBySlug = async (req, res) => {
 
 export const getProductsByCategory = async (req, res) => {
     try {
-        const { page = 1, limit = 20, sortBy = 'createdAt', search, minPrice, maxPrice } = req.query;
+        const { page = 1, limit = 1000, sortBy = 'createdAt', search, minPrice, maxPrice } = req.query;
         
         const category = await Category.findOne({ slug: req.params.slug });
         if (!category) {

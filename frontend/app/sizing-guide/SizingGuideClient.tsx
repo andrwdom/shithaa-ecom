@@ -71,7 +71,7 @@ export default function SizingGuideClient() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-purple-50">
+    <div className="min-h-screen bg-gradient-to-br from-[#473c66]/5 via-white to-[#473c66]/10">
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -127,15 +127,15 @@ export default function SizingGuideClient() {
           className="bg-white rounded-2xl shadow-lg p-6 md:p-8 mb-8"
         >
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-pink-100 rounded-full flex items-center justify-center">
-              <Ruler className="h-5 w-5 text-pink-600" />
+            <div className="w-10 h-10 bg-[#473c66]/10 rounded-full flex items-center justify-center">
+              <Ruler className="h-5 w-5 text-[#473c66]" />
             </div>
             <h2 className="text-2xl font-bold text-gray-900">How to Measure</h2>
           </div>
           
           <div className="grid md:grid-cols-3 gap-6">
             <div className="text-center">
-              <div className="w-16 h-16 bg-pink-100 rounded-full flex items-center justify-center mx-auto mb-3">
+              <div className="w-16 h-16 bg-[#473c66]/10 rounded-full flex items-center justify-center mx-auto mb-3">
                 <span className="text-2xl">👗</span>
               </div>
               <h3 className="font-semibold text-gray-900 mb-2">Bust</h3>
@@ -143,7 +143,7 @@ export default function SizingGuideClient() {
             </div>
             
             <div className="text-center">
-              <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
+              <div className="w-16 h-16 bg-[#473c66]/15 rounded-full flex items-center justify-center mx-auto mb-3">
                 <span className="text-2xl">📏</span>
               </div>
               <h3 className="font-semibold text-gray-900 mb-2">Waist</h3>
@@ -151,7 +151,7 @@ export default function SizingGuideClient() {
             </div>
             
             <div className="text-center">
-              <div className="w-16 h-16 bg-cyan-100 rounded-full flex items-center justify-center mx-auto mb-3">
+              <div className="w-16 h-16 bg-[#473c66]/20 rounded-full flex items-center justify-center mx-auto mb-3">
                 <span className="text-2xl">🔄</span>
               </div>
               <h3 className="font-semibold text-gray-900 mb-2">Hips</h3>
@@ -176,7 +176,7 @@ export default function SizingGuideClient() {
                   onClick={() => setActiveTab(chart.id)}
                   className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${
                     activeTab === chart.id
-                      ? "text-pink-600 border-b-2 border-pink-600 bg-pink-50"
+                      ? "text-[#473c66] border-b-2 border-[#473c66] bg-[#473c66]/5"
                       : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
                   }`}
                 >
@@ -222,7 +222,7 @@ export default function SizingGuideClient() {
                       <div className="mt-4 flex justify-center">
                         <button
                           onClick={() => handleDownload(chart.image, chart.title)}
-                          className="flex items-center gap-2 px-6 py-3 bg-pink-600 text-white font-medium rounded-lg hover:bg-pink-700 transition-colors"
+                          className="flex items-center gap-2 px-6 py-3 bg-[#473c66] text-white font-medium rounded-lg hover:bg-[#473c66]/80 transition-colors"
                         >
                           <Download className="h-4 w-4" />
                           Download Size Chart
@@ -231,15 +231,15 @@ export default function SizingGuideClient() {
                     </div>
 
                     {/* Tips Section */}
-                    <div className="bg-pink-50 rounded-lg p-6">
+                    <div className="bg-[#473c66]/5 rounded-lg p-6">
                       <div className="flex items-center gap-3 mb-4">
-                        <Info className="h-5 w-5 text-pink-600" />
+                        <Info className="h-5 w-5 text-[#473c66]" />
                         <h4 className="font-semibold text-gray-900">Pro Tips</h4>
                       </div>
                       <ul className="space-y-2">
                         {chart.tips.map((tip, index) => (
                           <li key={index} className="flex items-start gap-2 text-sm text-gray-700">
-                            <span className="w-2 h-2 bg-pink-400 rounded-full mt-2 flex-shrink-0"></span>
+                            <span className="w-2 h-2 bg-[#473c66] rounded-full mt-2 flex-shrink-0"></span>
                             {tip}
                           </li>
                         ))}
@@ -267,7 +267,7 @@ export default function SizingGuideClient() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
                 href="/contact"
-                className="px-6 py-3 bg-pink-600 text-white font-medium rounded-lg hover:bg-pink-700 transition-colors"
+                className="px-6 py-3 bg-[#473c66] text-white font-medium rounded-lg hover:bg-[#473c66]/80 transition-colors"
               >
                 Contact Us
               </Link>
