@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Menu, ShoppingBag, X, User, Mail, Info, Home, LogOut, List, Sparkles } from "lucide-react"
+import { Menu, ShoppingBag, X, User, Mail, Info, Home, LogOut, List } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useCart } from "@/components/cart-context"
 import { useWishlist } from "@/components/wishlist-context"
@@ -89,10 +89,10 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
                   categories
                 </button>
                 <a
-                  href="/collections/new-arrivals"
+                  href="/about"
                   className="navbar-link-effect text-gray-600 font-medium transition-all duration-200"
                 >
-                  new arrivals
+                  about us
                 </a>
               </div>
             </div>
@@ -183,13 +183,7 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
                   <List className="h-4 w-4" />
                   categories
                 </button>
-                <a
-                  href="/collections/new-arrivals"
-                  className="text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200 flex items-center gap-2"
-                >
-                  <Sparkles className="h-4 w-4" />
-                  new arrivals
-                </a>
+                
                 <button
                   onClick={() => {
                     window.location.href = "/about"
