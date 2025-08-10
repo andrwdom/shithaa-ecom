@@ -555,6 +555,7 @@ function OrderDetailsModal({ order, onClose, onStatusChange }) {
   
   const [activeTab, setActiveTab] = useState('details');
   const [showPaymentLog, setShowPaymentLog] = useState(false);
+  const [showShippingModal, setShowShippingModal] = useState(false);
   
   const userInfo = order.userInfo || { name: order.customerName, email: order.email };
   const displayName = userInfo.name && userInfo.name.trim() ? userInfo.name : (order.customerName && order.customerName.trim() ? order.customerName : 'Unknown User');
@@ -568,6 +569,13 @@ function OrderDetailsModal({ order, onClose, onStatusChange }) {
   const coupon = order.couponUsed?.code || order.discount?.appliedCouponCode;
   const discount = order.couponUsed?.discount || order.discount?.value || 0;
   const isTestOrder = order.isTestOrder || payment === 'test-paid';
+
+  // Local status state for immediate UI feedback
+  const [currentStatus, setCurrentStatus] = useState(status);
+  const handleStatusChangeLocal = (orderId, nextStatus) => {
+    setCurrentStatus(nextStatus);
+    onStatusChange(orderId, nextStatus);
+  };
   
   // Get shipping information for display
   const getShippingDisplayInfo = () => {
@@ -660,7 +668,7 @@ function OrderDetailsModal({ order, onClose, onStatusChange }) {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <StatusBadge status={status} />
+              <StatusBadge status={currentStatus} />
               {isTestOrder && (
                 <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
                   Test Order
@@ -825,7 +833,7 @@ function OrderDetailsModal({ order, onClose, onStatusChange }) {
                   {ORDER_STATUSES.map(statusOption => {
                     const config = STATUS_CONFIG[statusOption];
                     const IconComponent = config.icon;
-                    const isCurrentStatus = status === statusOption;
+                    const isCurrentStatus = currentStatus === statusOption;
                     
                     return (
                       <button
@@ -835,7 +843,13 @@ function OrderDetailsModal({ order, onClose, onStatusChange }) {
                             ? 'bg-[#4D1E64] text-white border-[#4D1E64] shadow-md' 
                             : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50 hover:border-gray-300'
                         }`}
-                        onClick={() => onStatusChange(order._id, statusOption)}
+                        onClick={() => {
+                          if (statusOption === 'Shipped') {
+                            setShowShippingModal(true);
+                            return;
+                          }
+                          handleStatusChangeLocal(order._id, statusOption);
+                        }}
                         disabled={isCurrentStatus}
                       >
                         <IconComponent className={`w-5 h-5 ${isCurrentStatus ? 'text-white' : config.iconColor}`} />
@@ -930,6 +944,16 @@ function OrderDetailsModal({ order, onClose, onStatusChange }) {
           </div>
         </div>
       </div>
+      {showShippingModal && (
+        <ShippingTrackingModal
+          order={order}
+          onClose={() => setShowShippingModal(false)}
+          onStatusChange={(id, next) => {
+            handleStatusChangeLocal(id, next);
+            setShowShippingModal(false);
+          }}
+        />
+      )}
     </div>
   );
 }
