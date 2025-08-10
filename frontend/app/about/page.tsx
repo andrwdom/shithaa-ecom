@@ -4,6 +4,8 @@ import { Heart, Instagram, Sparkles, Quote, Baby, Users, Smile } from "lucide-re
 import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import { useLoading } from "@/components/loading-context"
+import { useEffect } from "react"
 
 // Animation variants
 const fadeInUp = {
@@ -49,8 +51,17 @@ const HeartDoodle = ({ className = "" }) => (
 )
 
 export default function AboutPage() {
+  const { setIsLoading } = useLoading()
+
+  // Set loading to false when page mounts
+  useEffect(() => {
+    setIsLoading(false)
+  }, [setIsLoading])
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-lavender-50">
+    <>
+      {/* Page Content */}
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-lavender-50">
       {/* Subtle background decorations */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-32 left-16 w-32 h-32 bg-[#473C66] rounded-full opacity-5 blur-3xl"></div>
@@ -364,6 +375,6 @@ export default function AboutPage() {
           </motion.div>
         </section>
       </div>
-    </div>
+    </>
   )
 }
