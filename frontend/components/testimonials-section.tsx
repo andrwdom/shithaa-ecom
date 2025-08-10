@@ -123,7 +123,7 @@ const TestimonialCard = ({ testimonial, index, isActive }: TestimonialCardProps)
         {/* Instagram DM Screenshot */}
         <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100">
           <Image
-            src={`/${testimonial.image}`}
+            src={testimonial.image}
             alt={`Customer testimonial ${index + 1} - Instagram DM screenshot`}
             width={400}
             height={600}
@@ -170,14 +170,14 @@ const TestimonialsSection = () => {
 
   // Sample testimonial data
   const testimonials = [
-    { id: 1, image: "testi1.jpeg" },
-    { id: 2, image: "testi2.jpeg" },
-    { id: 3, image: "testi3.jpeg" },
-    { id: 4, image: "testi4.jpeg" },
-    { id: 5, image: "testi5.jpeg" },
-    { id: 6, image: "testi6.jpeg" },
-    { id: 7, image: "testi7.jpeg" },
-    { id: 8, image: "testi8.jpeg" },
+    { id: 1, image: "/testi1.jpeg" },
+    { id: 2, image: "/testi2.jpeg" },
+    { id: 3, image: "/testi3.jpeg" },
+    { id: 4, image: "/testi4.jpeg" },
+    { id: 5, image: "/testi5.jpeg" },
+    { id: 6, image: "/testi6.jpeg" },
+    { id: 7, image: "/testi7.jpeg" },
+    { id: 8, image: "/testi8.jpeg" },
   ]
   const totalWidth = testimonials.length * (CARD_WIDTH + GAP)
 
