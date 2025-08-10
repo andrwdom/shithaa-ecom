@@ -1,44 +1,10 @@
 "use client"
 
 import React from "react"
-import DynamicHeroCard from "./dynamic-hero-card"
+import OptimizedHeroCard from "./optimized-hero-card"
+import { HERO_SECTION_CATEGORIES } from "@/lib/hero-section-images"
 
 const HeroSection = () => {
-  const categories = [
-    {
-      id: 1,
-      title: "Maternity Feeding Wear",
-      slug: "maternity-feeding-wear",
-      image: "/blue-dress.JPG",
-      ctaText: "See Styles",
-      isComingSoon: false,
-    },
-    {
-      id: 2,
-      title: "Zipless Feeding Lounge Wear",
-      slug: "zipless-feeding-lounge-wear",
-      image: "/prink-dress.JPG",
-      ctaText: "View Drop",
-      isComingSoon: false,
-    },
-    {
-      id: 3,
-      title: "Non-Feeding Lounge Wear",
-      slug: "non-feeding-lounge-wear",
-      image: "/leopard-dress.jpg",
-      ctaText: "Unveil Now",
-      isComingSoon: false,
-    },
-    {
-      id: 4,
-      title: "Zipless Feeding Dupatta Lounge Wear",
-      slug: "zipless-feeding-dupatta-lounge-wear",
-      image: "/placeholder.svg?height=400&width=300",
-      ctaText: "Check Out",
-      isComingSoon: false,
-    },
-  ]
-
   const handleCategoryClick = (slug: string) => {
     window.location.href = `/collections/${slug}`
   }
@@ -57,14 +23,13 @@ const HeroSection = () => {
 
         {/* Category Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 max-w-7xl mx-auto">
-          {categories.map((category, index) => (
-            <DynamicHeroCard
+          {HERO_SECTION_CATEGORIES.map((category) => (
+            <OptimizedHeroCard
               key={category.id}
               categorySlug={category.slug}
               title={category.title}
               ctaText={category.ctaText}
               isComingSoon={category.isComingSoon}
-              fallbackImage={category.image}
               onClick={() => !category.isComingSoon && handleCategoryClick(category.slug)}
             />
           ))}
