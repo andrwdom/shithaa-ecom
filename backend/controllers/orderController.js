@@ -631,12 +631,23 @@ const generateInvoice = async (req, res) => {
 
     // Access control: only owner or admin, or allow if test order
     if (!order.isTestOrder) {
-    const user = req.user;
-    const isAdmin = user && user.role === "admin";
-    const isOwner = user && (order.email === user.email);
-    if (!isAdmin && !isOwner) {
-      return res.status(403).json({ message: "Unauthorized to access this invoice" });
-    }
+      // Determine admin access from either attached user (optionalVerifyToken)
+      // or directly from the JWT (admin panel tokens may not map to userModel).
+      let isAdmin = false;
+      const user = req.user;
+      if (user && (user.role === 'admin' || user.isAdmin === true)) {
+        isAdmin = true;
+      } else if (req.headers.token) {
+        try {
+          const jwt = (await import('jsonwebtoken')).default;
+          const decoded = jwt.verify(req.headers.token, process.env.JWT_SECRET);
+          if (decoded && decoded.role === 'admin') isAdmin = true;
+        } catch (_) {}
+      }
+      const isOwner = user && (order.email === user.email || order.userInfo?.email === user.email);
+      if (!isAdmin && !isOwner) {
+        return res.status(403).json({ message: 'Unauthorized to access this invoice' });
+      }
     }
 
     // Use new structured fields if present

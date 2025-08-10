@@ -672,13 +672,13 @@ function OrderDetailsModal({ order, onClose, onStatusChange }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-2 sm:p-4" onClick={onClose}>
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[92vh] overflow-hidden" onClick={e => e.stopPropagation()}>
         
         {/* Enhanced Modal Header */}
-        <div className="bg-gradient-to-r from-[#4D1E64] to-[#6B2C7A] text-white p-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+        <div className="bg-gradient-to-r from-[#4D1E64] to-[#6B2C7A] text-white p-4 md:p-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div className="flex items-center gap-3 md:gap-4">
               <button
                 onClick={onClose}
                 className="p-2 rounded-full hover:bg-white/10 transition-colors"
@@ -689,11 +689,11 @@ function OrderDetailsModal({ order, onClose, onStatusChange }) {
                 </svg>
               </button>
               <div>
-                <h2 className="text-xl font-bold">Order #{order.orderId || 'N/A'}</h2>
-                <p className="text-white/80 text-sm">{displayName} • {formatDate(placedAt)}</p>
+                <h2 className="text-lg md:text-xl font-bold">Order #{order.orderId || 'N/A'}</h2>
+                <p className="text-white/80 text-xs md:text-sm">{displayName} • {formatDate(placedAt)}</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 md:gap-3 flex-wrap">
               <StatusBadge status={currentStatus} />
               {isTestOrder && (
                 <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
@@ -702,11 +702,19 @@ function OrderDetailsModal({ order, onClose, onStatusChange }) {
               )}
               <button
                 onClick={handleDownloadInvoice}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm"
+                className="hidden md:flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm"
                 title="Download Invoice (PDF)"
               >
                 <FaDownload className="w-4 h-4" />
                 Invoice
+              </button>
+              <button
+                onClick={handleDownloadInvoice}
+                className="md:hidden p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white"
+                title="Download Invoice"
+                aria-label="Download Invoice"
+              >
+                <FaDownload className="w-4 h-4" />
               </button>
               <button
                 onClick={onClose}
@@ -723,14 +731,14 @@ function OrderDetailsModal({ order, onClose, onStatusChange }) {
 
         {/* Tab Navigation */}
         <div className="border-b border-gray-200">
-          <nav className="flex space-x-8 px-6" aria-label="Tabs">
+          <nav className="flex space-x-3 md:space-x-8 px-4 md:px-6" aria-label="Tabs">
             {tabs.map((tab) => {
               const IconComponent = tab.icon;
               return (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  className={`flex items-center gap-2 py-3 md:py-4 px-1 border-b-2 font-medium text-xs md:text-sm transition-colors ${
                     activeTab === tab.id
                       ? 'border-[#4D1E64] text-[#4D1E64]'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -745,19 +753,19 @@ function OrderDetailsModal({ order, onClose, onStatusChange }) {
         </div>
 
         {/* Modal Content */}
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
+        <div className="p-4 md:p-6 overflow-y-auto max-h=[calc(92vh-180px)] md:max-h-[calc(92vh-200px)]">
           
           {/* Order Details Tab */}
           {activeTab === 'details' && (
             <div className="space-y-6">
               
               {/* Customer Information */}
-              <div className="bg-gray-50 rounded-lg p-4">
+              <div className="bg-gray-50 rounded-lg p-3 md:p-4">
                 <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
                   <FaUser className="w-4 h-4" />
                   Customer Information
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                   <div>
                     <label className="text-sm font-medium text-gray-500">Name</label>
                     <p className="text-gray-900">{displayName}</p>
@@ -778,12 +786,12 @@ function OrderDetailsModal({ order, onClose, onStatusChange }) {
               </div>
 
               {/* Shipping Address */}
-              <div className="bg-gray-50 rounded-lg p-4">
+              <div className="bg-gray-50 rounded-lg p-3 md:p-4">
                 <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
                   <FaTruck className="w-4 h-4" />
                   Shipping Address
                 </h3>
-                <div className="bg-white border border-gray-200 rounded-lg p-4">
+                <div className="bg-white border border-gray-200 rounded-lg p-3 md:p-4">
                   <p className="font-medium text-gray-900 mb-2">{shippingDisplay.name}</p>
                   {shippingDisplay.addressFields.map((field, index) => (
                     <p key={index} className="text-gray-700 text-sm">
@@ -794,31 +802,31 @@ function OrderDetailsModal({ order, onClose, onStatusChange }) {
               </div>
 
               {/* Order Items */}
-              <div className="bg-gray-50 rounded-lg p-4">
+              <div className="bg-gray-50 rounded-lg p-3 md:p-4">
                 <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
                   <FaBox className="w-4 h-4" />
                   Order Items ({items.length} item{items.length !== 1 ? 's' : ''})
                 </h3>
                 <div className="space-y-3">
                   {items.map((item, idx) => (
-                    <div key={idx} className="bg-white border border-gray-200 rounded-lg p-4 flex items-center gap-4">
+                    <div key={idx} className="bg-white border border-gray-200 rounded-lg p-3 md:p-4 flex items-center gap-3 md:gap-4">
                       {item.image && (
                         <img 
                           src={item.image} 
                           alt={item.name} 
-                          className="w-16 h-16 object-cover rounded-lg"
+                          className="w-14 h-14 md:w-16 md:h-16 object-cover rounded-lg"
                         />
                       )}
                       <div className="flex-1">
-                        <h4 className="font-semibold text-gray-900">{item.name}</h4>
-                        <div className="text-sm text-gray-600 space-y-1">
+                        <h4 className="font-semibold text-gray-900 text-sm md:text-base">{item.name}</h4>
+                        <div className="text-xs md:text-sm text-gray-600 space-y-1">
                           <p>Quantity: <span className="font-medium">{item.quantity}</span></p>
                           {item.size && <p>Size: <span className="font-medium">{item.size}</span></p>}
                           <p>Price: <span className="font-medium">{currency}{item.price}</span></p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-lg font-semibold text-gray-900">
+                        <p className="text-base md:text-lg font-semibold text-gray-900">
                           {currency}{(item.price * item.quantity).toFixed(2)}
                         </p>
                       </div>
@@ -827,15 +835,15 @@ function OrderDetailsModal({ order, onClose, onStatusChange }) {
                 </div>
                 
                 {/* Order Total */}
-                <div className="mt-4 pt-4 border-t border-gray-200">
+                <div className="mt-3 md:mt-4 pt-3 md:pt-4 border-t border-gray-200">
                   <div className="flex justify-between items-center">
-                    <span className="text-lg font-semibold text-gray-900">Total Amount:</span>
-                    <span className="text-xl font-bold text-[#4D1E64]">
+                    <span className="text-base md:text-lg font-semibold text-gray-900">Total Amount:</span>
+                    <span className="text-lg md:text-xl font-bold text-[#4D1E64]">
                       {currency}{typeof totalAmount === 'number' ? totalAmount.toFixed(2) : '0.00'}
                     </span>
                   </div>
                   {discount > 0 && (
-                    <div className="text-sm text-green-600 mt-1">
+                    <div className="text-xs md:text-sm text-green-600 mt-1">
                       Discount Applied: -{currency}{discount.toFixed(2)}
                       {coupon && <span className="ml-2">({coupon})</span>}
                     </div>
@@ -848,20 +856,20 @@ function OrderDetailsModal({ order, onClose, onStatusChange }) {
           {/* Status Update Tab */}
           {activeTab === 'status' && (
             <div className="space-y-4">
-              <div className="bg-gray-50 rounded-lg p-4">
+              <div className="bg-gray-50 rounded-lg p-3 md:p-4">
                 <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
                   <FaCog className="w-4 h-4" />
                   Current Status
                 </h3>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 md:gap-3">
                   <StatusBadge status={status} />
-                  <span className="text-gray-600">
+                  <span className="text-gray-600 text-sm md:text-base">
                     {STATUS_CONFIG[status]?.description || 'Status updated'}
                   </span>
                 </div>
               </div>
 
-              <div className="bg-gray-50 rounded-lg p-4">
+              <div className="bg-gray-50 rounded-lg p-3 md:p-4">
                 <h3 className="text-lg font-semibold mb-3">Update Order Status</h3>
                 <div className="grid grid-cols-1 gap-3">
                   {ORDER_STATUSES.map(statusOption => {
