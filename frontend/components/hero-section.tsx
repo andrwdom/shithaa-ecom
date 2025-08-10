@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import OptimizedHeroCard from "./optimized-hero-card"
+import HeroCategoryCard from "./HeroCategoryCard"
 import { HERO_SECTION_CATEGORIES } from "@/lib/hero-section-images"
 
 const HeroSection = () => {
@@ -24,12 +24,14 @@ const HeroSection = () => {
         {/* Category Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 max-w-7xl mx-auto">
           {HERO_SECTION_CATEGORIES.map((category) => (
-            <OptimizedHeroCard
+            <HeroCategoryCard
               key={category.id}
+              categoryId={category.id.toString()}
               categorySlug={category.slug}
               title={category.title}
               ctaText={category.ctaText}
               isComingSoon={category.isComingSoon}
+              maxImages={6} // Allow up to 6 images per category
               onClick={() => !category.isComingSoon && handleCategoryClick(category.slug)}
             />
           ))}
