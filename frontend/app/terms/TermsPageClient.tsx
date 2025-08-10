@@ -43,10 +43,9 @@ export default function TermsPageClient() {
             </li>
             <li>
               <b>Returns & Refunds</b><br />
-              We offer return and refund only if the delivered product is damaged or defective.<br />
+              We offer refunds only if the delivered product is damaged or defective.<br />
               Items must be unused and in original packaging.<br />
-              You can return the item within 7 days from the date of delivery.<br />
-              If approved for a refund, the amount will be processed and credited within 7-10 business days.
+              We only accept refund requests within 2 days of receiving your order. To request a refund, please contact us via Instagram direct message (preferred) or email us at <a href="mailto:info.shitha@gmail.com" className="underline">info.shitha@gmail.com</a>. Refund requests made after 2 days from the date you receive your order will not be eligible.
             </li>
             <li>
               <b>Intellectual Property</b><br />

@@ -17,7 +17,7 @@ export default function FAQ() {
     {
       question: "What is your return policy?",
       answer:
-        "We offer a 7-day return policy from the date of delivery. Items must be in original condition with tags attached. We provide free returns for defective items and easy exchanges for size issues.",
+        "We only accept refund requests within 2 days of receiving your order. To request a refund, please contact us via Instagram direct message (preferred) or email us at info.shitha@gmail.com. Refund requests made after 2 days from the date you receive your order will not be eligible.",
     },
     {
       question: "How long does delivery take?",

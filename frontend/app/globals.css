@@ -310,6 +310,26 @@ html, body {
   transition: opacity 0.6s ease-in-out;
 }
 
+/* Softer, longer fade used by hero category cards */
+.image-fade-soft {
+  transition: opacity 1.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Gentle Ken Burns effect for subtle zoom */
+@keyframes kenburns-slow {
+  0% {
+    transform: scale(1) translateZ(0);
+  }
+  100% {
+    transform: scale(1.06) translateZ(0);
+  }
+}
+
+.kenburns-slow {
+  animation: kenburns-slow 12s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
 /* Smooth transitions for hero cards */
 .transition-opacity {
   transition-property: opacity;
@@ -392,10 +412,23 @@ html, body {
   .image-fade-transition {
     transition-duration: 0.8s; /* Slightly slower on mobile for better perception */
   }
+  .image-fade-soft {
+    transition-duration: 1.6s;
+  }
   
   .hero-fade-in,
   .hero-fade-out {
     animation-duration: 1.2s; /* Slower on mobile */
+  }
+}
+
+/* Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .kenburns-slow {
+    animation: none !important;
+  }
+  .image-fade-soft {
+    transition-duration: 0.01ms !important;
   }
 }
 

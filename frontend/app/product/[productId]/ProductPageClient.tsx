@@ -504,7 +504,7 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
                   </div>
                   <div className="flex items-center gap-3">
                     <RotateCcw className="h-5 w-5 text-gray-600" />
-                    <span className="text-sm font-medium">7-Day Easy Returns</span>
+                    <span className="text-sm font-medium">Refunds accepted within 2 days of receiving your order</span>
                   </div>
                 </div>
               </CardContent>

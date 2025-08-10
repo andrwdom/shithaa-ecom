@@ -20,9 +20,9 @@ export default function Footer() {
             <div className="w-16 h-16 mx-auto mb-6 bg-gray-800 rounded-lg flex items-center justify-center group-hover:bg-gray-700 transition-colors duration-300">
               <RotateCcw className="h-8 w-8 text-white" />
             </div>
-            <h3 className="font-bold mb-3 text-lg font-serif">Easy Returns</h3>
+            <h3 className="font-bold mb-3 text-lg font-serif">Refund Policy</h3>
             <p className="text-gray-400 text-sm lg:text-base">
-              Returns/refunds are only for damaged or defective products, within 7 days of delivery. Refunds are processed within 7-10 business days after approval.
+              We only accept refund requests within 2 days of receiving your order. To request a refund, please contact us via Instagram direct message (preferred) or email us at info.shitha@gmail.com. Refund requests made after 2 days from the date you receive your order will not be eligible.
             </p>
           </div>
           <div className="text-center group">

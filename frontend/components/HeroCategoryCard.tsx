@@ -150,18 +150,17 @@ export default function HeroCategoryCard({
 
     const startTransition = () => {
       setIsTransitioning(true)
-      
-      // Use requestAnimationFrame for smooth transitions
+      // Allow a longer, softer crossfade before switching the index
       requestAnimationFrame(() => {
         setTimeout(() => {
           setCurrentImageIndex(prev => (prev + 1) % images.length)
           setIsTransitioning(false)
-        }, 300) // Half of transition duration
+        }, 700) // match ~half of 1.4s fade
       })
     }
 
     // Stagger transitions randomly between 3-6 seconds
-    const delay = 3000 + Math.random() * 3000
+    const delay = 4000 + Math.random() * 3000 // 4-7s holds to feel calmer
     intervalRef.current = setInterval(startTransition, delay)
 
     return () => {
@@ -287,8 +286,8 @@ export default function HeroCategoryCard({
       {/* Background Images with Smooth Transitions */}
       <div className="absolute inset-0">
         {/* Current Image */}
-        <div 
-          className={`absolute inset-0 transition-opacity duration-800 ease-in-out ${
+          <div 
+            className={`absolute inset-0 image-fade-soft ${
             isLoading || isTransitioning ? 'opacity-0' : 'opacity-100'
           }`}
           style={{ willChange: 'opacity, transform' }}
@@ -296,7 +295,7 @@ export default function HeroCategoryCard({
           <img
             src={currentImage.thumbUrl}
             alt={`${title} - ${currentImage.productName}`}
-            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
+            className="w-full h-full object-cover kenburns-slow"
             onLoad={handleImageLoad}
             onError={handleImageError}
             loading="eager"
@@ -311,7 +310,7 @@ export default function HeroCategoryCard({
         {/* Next Image (for smooth transitions) */}
         {images.length > 1 && (
           <div 
-            className={`absolute inset-0 transition-opacity duration-800 ease-in-out ${
+            className={`absolute inset-0 image-fade-soft ${
               isTransitioning ? 'opacity-100' : 'opacity-0'
             }`}
             style={{ willChange: 'opacity, transform' }}
@@ -319,7 +318,7 @@ export default function HeroCategoryCard({
             <img
               src={nextImage.thumbUrl}
               alt={`${title} - Next Product`}
-              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
+              className="w-full h-full object-cover kenburns-slow"
               loading="lazy"
               style={{
                 backgroundImage: nextImage.lqip ? `url(${nextImage.lqip})` : undefined,
