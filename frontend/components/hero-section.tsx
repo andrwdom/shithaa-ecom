@@ -3,6 +3,7 @@
 import React from "react"
 import HeroCategoryCard from "./HeroCategoryCard"
 import { HERO_SECTION_CATEGORIES } from "@/lib/hero-section-images"
+import DebugHeroImages from "./debug-hero-images"
 
 const HeroSection = () => {
   const handleCategoryClick = (slug: string) => {
@@ -37,6 +38,11 @@ const HeroSection = () => {
           ))}
         </div>
       </div>
+      
+      {/* Debug component for development */}
+      {process.env.NODE_ENV === 'development' && (
+        <DebugHeroImages categorySlug="maternity-feeding-wear" />
+      )}
     </section>
   )
 }

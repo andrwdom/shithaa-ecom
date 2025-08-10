@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react"
-import Image from "next/image"
+import OptimizedImage from "./optimized-image"
 
 interface HeroCategoryCardProps {
   categoryId: string
@@ -97,10 +97,12 @@ export default function HeroCategoryCard({
       url.searchParams.append('categoryId', categorySlug)
       url.searchParams.append('limit', isMobile.current ? '4' : '6')
       
+      console.log(`Fetching hero images from: ${url.toString()}`)
+      
       const response = await fetch(url.toString())
       
       if (!response.ok) {
-        throw new Error(`Failed to fetch hero images: ${response.status}`)
+        throw new Error(`Failed to fetch hero images: ${response.status} ${response.statusText}`)
       }
       
       const data = await response.json()
@@ -117,14 +119,18 @@ export default function HeroCategoryCard({
         return
       }
       
+      console.log(`Loaded ${heroImages.length} hero images for category: ${categorySlug}:`, heroImages.map(img => ({
+        productId: img.productId,
+        thumbUrl: img.thumbUrl,
+        originalUrl: img.originalUrl
+      })))
+      
       setImages(heroImages)
       
       // Preload first image for instant display
       if (heroImages.length > 0) {
         preloadImage(heroImages[0].thumbUrl)
       }
-      
-      console.log(`Loaded ${heroImages.length} hero images for category: ${categorySlug}`)
       
     } catch (err) {
       console.error(`Error fetching hero images for ${categorySlug}:`, err)
@@ -229,11 +235,20 @@ export default function HeroCategoryCard({
   }
 
   const handleImageError = () => {
+    console.error(`Image failed to load for category ${categorySlug}:`, {
+      currentImage: currentImage.thumbUrl,
+      productId: currentImage.productId,
+      productName: currentImage.productName
+    })
     setError('Image failed to load')
     setIsLoading(false)
   }
 
   const handleImageLoad = () => {
+    console.log(`Image loaded successfully for category ${categorySlug}:`, {
+      productId: currentImage.productId,
+      productName: currentImage.productName
+    })
     setIsLoading(false)
     setError(null)
   }
@@ -278,7 +293,7 @@ export default function HeroCategoryCard({
           }`}
           style={{ willChange: 'opacity' }}
         >
-          <Image
+          <OptimizedImage
             src={currentImage.thumbUrl}
             alt={`${title} - ${currentImage.productName}`}
             fill
@@ -301,7 +316,7 @@ export default function HeroCategoryCard({
             }`}
             style={{ willChange: 'opacity' }}
           >
-            <Image
+            <OptimizedImage
               src={nextImage.thumbUrl}
               alt={`${title} - Next Product`}
               fill
@@ -309,7 +324,7 @@ export default function HeroCategoryCard({
               sizes={getImageSizes()}
               quality={85}
               placeholder="blur"
-              blurDataURL={nextImage.lqip || "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="}
+              blurDataURL={nextImage.lqip || "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="}
             />
           </div>
         )}

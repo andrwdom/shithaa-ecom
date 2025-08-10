@@ -66,6 +66,15 @@ export const getHeroImages = async (req, res) => {
       }
     }
 
+    // If no images were processed successfully, try to return fallback images
+    if (validatedImages.length === 0) {
+      console.log(`No valid images found for category: ${categoryId}, returning fallback`)
+      const fallbackImages = await generateFallbackImages(categoryId, limitNum)
+      if (fallbackImages.length > 0) {
+        validatedImages.push(...fallbackImages)
+      }
+    }
+
     // Set cache headers for CDN/SSR caching
     res.set('Cache-Control', 's-maxage=300, stale-while-revalidate=600')
     
@@ -82,6 +91,25 @@ export const getHeroImages = async (req, res) => {
       success: false,
       message: 'Failed to fetch hero images',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    })
+  }
+}
+
+// Health check endpoint for hero images
+export const heroImagesHealth = async (req, res) => {
+  try {
+    res.json({
+      success: true,
+      message: 'Hero images service is healthy',
+      timestamp: new Date().toISOString(),
+      thumbnailDir: THUMBNAIL_DIR,
+      cacheSize: thumbnailCache.size
+    })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Hero images service is unhealthy',
+      error: error.message
     })
   }
 }
@@ -139,13 +167,36 @@ async function validateImageUrl(url) {
   try {
     const response = await axios.head(url, {
       timeout: 5000,
-      validateStatus: (status) => status < 400
+      validateStatus: (status) => status < 400,
+      maxRedirects: 3
     })
     
     const contentType = response.headers['content-type']
-    return contentType && contentType.startsWith('image/')
+    const contentLength = response.headers['content-length']
+    
+    // Check if it's an image
+    if (!contentType || !contentType.startsWith('image/')) {
+      console.warn(`Invalid content type for ${url}: ${contentType}`)
+      return false
+    }
+    
+    // Check if image is too small (likely corrupted)
+    if (contentLength && parseInt(contentLength) < 1000) {
+      console.warn(`Image too small for ${url}: ${contentLength} bytes`)
+      return false
+    }
+    
+    return true
   } catch (error) {
-    console.warn(`Image validation failed for ${url}:`, error.message)
+    if (error.code === 'ECONNREFUSED') {
+      console.warn(`Connection refused for ${url}`)
+    } else if (error.code === 'ENOTFOUND') {
+      console.warn(`Image not found for ${url}`)
+    } else if (error.code === 'ETIMEDOUT') {
+      console.warn(`Timeout for ${url}`)
+    } else {
+      console.warn(`Image validation failed for ${url}:`, error.message)
+    }
     return false
   }
 }
@@ -239,4 +290,32 @@ function shuffleArray(array) {
     ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
   }
   return shuffled
+}
+
+// Generate fallback images when hero images fail to load
+async function generateFallbackImages(categoryId, limit) {
+  try {
+    const fallbackImages = []
+    const baseUrl = process.env.VPS_BASE_URL || 'http://localhost:4000'
+    
+    // Create placeholder images for the category
+    for (let i = 0; i < limit; i++) {
+      const fallbackImage = {
+        productId: `fallback-${categoryId}-${i}`,
+        productName: `Category ${categoryId}`,
+        originalUrl: `${baseUrl}/placeholder.jpg`,
+        thumbUrl: `${baseUrl}/placeholder.jpg`,
+        lqip: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k=",
+        width: 300,
+        height: 400,
+        trackingKey: `fallback-${categoryId}-${i}-${Date.now()}`
+      }
+      fallbackImages.push(fallbackImage)
+    }
+    
+    return fallbackImages
+  } catch (error) {
+    console.error('Error generating fallback images:', error)
+    return []
+  }
 } 

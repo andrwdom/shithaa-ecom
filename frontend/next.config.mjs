@@ -16,10 +16,22 @@ const nextConfig = {
         pathname: '/images/**',
       },
       {
+        protocol: 'https',
+        hostname: 'shithaa.in',
+        port: '',
+        pathname: '/uploads/**',
+      },
+      {
         protocol: 'http',
         hostname: 'localhost',
         port: '',
         pathname: '/images/**',
+      },
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+        port: '',
+        pathname: '/uploads/**',
       },
     ],
     formats: ['image/webp', 'image/avif'],
