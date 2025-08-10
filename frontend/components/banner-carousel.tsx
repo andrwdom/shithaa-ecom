@@ -227,12 +227,7 @@ export default function BannerCarousel({
           </div>
         )}
 
-        {/* Image Counter */}
-        {carouselImages.length > 1 && (
-          <div className="absolute top-4 right-4 z-20 bg-black/50 text-white px-3 py-1 rounded-full text-sm">
-            {currentIndex + 1} / {carouselImages.length}
-          </div>
-        )}
+
 
         {/* Clickable overlay for image links */}
         {carouselImages[currentIndex]?.link && (

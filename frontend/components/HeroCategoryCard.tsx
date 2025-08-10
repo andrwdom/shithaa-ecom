@@ -13,11 +13,15 @@ interface HeroCategoryCardProps {
   onClick?: () => void
 }
 
-interface ProductImage {
-  src: string
-  alt: string
+interface HeroImage {
   productId: string
   productName: string
+  originalUrl: string
+  thumbUrl: string
+  lqip: string
+  width: number
+  height: number
+  trackingKey: string
 }
 
 export default function HeroCategoryCard({
@@ -29,7 +33,7 @@ export default function HeroCategoryCard({
   maxImages = 4,
   onClick
 }: HeroCategoryCardProps) {
-  const [images, setImages] = useState<ProductImage[]>([])
+  const [images, setImages] = useState<HeroImage[]>([])
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -39,6 +43,8 @@ export default function HeroCategoryCard({
   
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
   const isMobile = useRef(false)
+  const isIntersecting = useRef(true)
+  const intersectionObserver = useRef<IntersectionObserver | null>(null)
 
   // Detect mobile on mount
   useEffect(() => {
@@ -50,75 +56,92 @@ export default function HeroCategoryCard({
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
-  // Fetch and randomize product images
-  const fetchProductImages = useCallback(async () => {
+  // Setup intersection observer for performance optimization
+  useEffect(() => {
+    const cardElement = document.querySelector(`[data-category="${categorySlug}"]`)
+    if (cardElement) {
+      intersectionObserver.current = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            isIntersecting.current = entry.isIntersecting
+            if (!entry.isIntersecting) {
+              // Pause animation when off-screen
+              setIsPaused(true)
+            } else {
+              // Resume animation when visible
+              setIsPaused(false)
+            }
+          })
+        },
+        { threshold: 0.1 }
+      )
+      
+      intersectionObserver.current.observe(cardElement)
+    }
+
+    return () => {
+      if (intersectionObserver.current) {
+        intersectionObserver.current.disconnect()
+      }
+    }
+  }, [categorySlug])
+
+  // Fetch hero images from the new endpoint
+  const fetchHeroImages = useCallback(async () => {
     try {
       setIsLoading(true)
       setError(null)
       
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
-      const url = new URL(`${baseUrl}/api/products`)
-      url.searchParams.append('categorySlug', categorySlug)
-      url.searchParams.append('limit', '20') // Fetch more for variety
+      const url = new URL(`${baseUrl}/api/hero-images`)
+      url.searchParams.append('categoryId', categorySlug)
+      url.searchParams.append('limit', isMobile.current ? '4' : '6')
       
       const response = await fetch(url.toString())
       
       if (!response.ok) {
-        throw new Error(`Failed to fetch products: ${response.status}`)
+        throw new Error(`Failed to fetch hero images: ${response.status}`)
       }
       
       const data = await response.json()
-      const products = data.products || data.data || []
       
-      if (products.length === 0) {
-        console.warn(`No products found for category: ${categorySlug}`)
+      if (!data.success || !data.images) {
+        throw new Error('Invalid response format')
+      }
+      
+      const heroImages: HeroImage[] = data.images
+      
+      if (heroImages.length === 0) {
+        console.warn(`No hero images found for category: ${categorySlug}`)
         setImages([])
         return
       }
       
-      // Extract first image from each product and randomize
-      const allImages: ProductImage[] = products
-        .map((product: any) => {
-          if (Array.isArray(product.images) && product.images.length > 0) {
-            const imageUrl = normalizeImageUrl(product.images[0])
-            return {
-              src: imageUrl,
-              alt: `${product.name} - ${title}`,
-              productId: product._id || product.customId || product.id,
-              productName: product.name
-            }
-          }
-          return null
-        })
-        .filter((image): image is ProductImage => image !== null)
-      
-      // Randomize and limit to maxImages
-      const randomizedImages = shuffleArray(allImages).slice(0, maxImages)
-      setImages(randomizedImages)
+      setImages(heroImages)
       
       // Preload first image for instant display
-      if (randomizedImages.length > 0) {
-        preloadImage(randomizedImages[0].src)
+      if (heroImages.length > 0) {
+        preloadImage(heroImages[0].thumbUrl)
       }
       
-      console.log(`Loaded ${randomizedImages.length} images for category: ${categorySlug}`)
+      console.log(`Loaded ${heroImages.length} hero images for category: ${categorySlug}`)
       
     } catch (err) {
-      console.error(`Error fetching images for ${categorySlug}:`, err)
+      console.error(`Error fetching hero images for ${categorySlug}:`, err)
       setError('Failed to load images')
     } finally {
       setIsLoading(false)
     }
-  }, [categorySlug, title, maxImages])
+  }, [categorySlug, isMobile])
 
   // Fetch images on mount
   useEffect(() => {
-    fetchProductImages()
-  }, [fetchProductImages])
+    fetchHeroImages()
+  }, [fetchHeroImages])
 
-  // Auto-rotate images with staggered transitions
+  // Auto-rotate images with staggered transitions (only when visible and not paused)
   useEffect(() => {
-    if (images.length <= 1 || isPaused) return
+    if (images.length <= 1 || isPaused || !isIntersecting.current) return
 
     const startTransition = () => {
       setIsTransitioning(true)
@@ -145,17 +168,17 @@ export default function HeroCategoryCard({
 
   // Preload next image for smooth transitions
   useEffect(() => {
-    if (images.length > 1) {
+    if (images.length > 1 && isIntersecting.current) {
       const nextImage = images[(currentImageIndex + 1) % images.length]
-      if (nextImage?.src && !loadedImages.has(nextImage.src)) {
-        preloadImage(nextImage.src)
+      if (nextImage?.thumbUrl && !loadedImages.has(nextImage.thumbUrl)) {
+        preloadImage(nextImage.thumbUrl)
       }
     }
   }, [currentImageIndex, images, loadedImages])
 
   // Preload image function
   const preloadImage = useCallback((src: string) => {
-    const img = new Image()
+    const img = new (window.Image as any)()
     img.onload = () => {
       setLoadedImages(prev => new Set(prev).add(src))
     }
@@ -171,8 +194,10 @@ export default function HeroCategoryCard({
       return {
         src: getPlaceholderImage(),
         alt: `${title} - Coming Soon`,
+        lqip: '',
         productId: '',
-        productName: title
+        productName: title,
+        thumbUrl: getPlaceholderImage()
       }
     }
     return images[currentImageIndex]
@@ -198,7 +223,9 @@ export default function HeroCategoryCard({
   }
 
   const handleMouseLeave = () => {
-    setIsPaused(false)
+    if (isIntersecting.current) {
+      setIsPaused(false)
+    }
   }
 
   const handleImageError = () => {
@@ -236,6 +263,7 @@ export default function HeroCategoryCard({
 
   return (
     <div
+      data-category={categorySlug}
       className="relative h-80 lg:h-96 xl:h-[420px] rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 cursor-pointer group"
       onClick={handleCardClick}
       onMouseEnter={handleMouseEnter}
@@ -251,8 +279,8 @@ export default function HeroCategoryCard({
           style={{ willChange: 'opacity' }}
         >
           <Image
-            src={currentImage.src}
-            alt={currentImage.alt}
+            src={currentImage.thumbUrl}
+            alt={`${title} - ${currentImage.productName}`}
             fill
             priority={true}
             className="object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
@@ -261,7 +289,7 @@ export default function HeroCategoryCard({
             onLoad={handleImageLoad}
             onError={handleImageError}
             placeholder="blur"
-            blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
+            blurDataURL={currentImage.lqip || "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="}
           />
         </div>
 
@@ -274,14 +302,14 @@ export default function HeroCategoryCard({
             style={{ willChange: 'opacity' }}
           >
             <Image
-              src={nextImage.src}
-              alt={nextImage.alt}
+              src={nextImage.thumbUrl}
+              alt={`${title} - Next Product`}
               fill
               className="object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
               sizes={getImageSizes()}
               quality={85}
               placeholder="blur"
-              blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
+              blurDataURL={nextImage.lqip || "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="}
             />
           </div>
         )}
@@ -338,34 +366,6 @@ export default function HeroCategoryCard({
 }
 
 // Helper functions
-function shuffleArray<T>(array: T[]): T[] {
-  const shuffled = [...array]
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
-  }
-  return shuffled
-}
-
-function normalizeImageUrl(url: string): string {
-  if (!url) return ''
-  
-  // Handle relative URLs
-  if (url.startsWith('/')) {
-    return url
-  }
-  
-  // Handle absolute URLs
-  if (url.startsWith('http')) {
-    return url
-  }
-  
-  // Normalize file extensions to lowercase
-  const normalized = url.replace(/\.(JPG|JPEG|PNG|WEBP)$/i, (match) => match.toLowerCase())
-  
-  return normalized
-}
-
 function getPlaceholderImage(): string {
   return '/placeholder.jpg'
 } 
