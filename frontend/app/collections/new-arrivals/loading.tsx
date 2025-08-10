@@ -11,6 +11,7 @@ export default function Loading() {
           height={120}
           className="animate-fade-pulse"
           priority
+          unoptimized
         />
       </div>
       <div className="flex items-center justify-center space-x-2">
