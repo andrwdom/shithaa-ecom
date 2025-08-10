@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { useLoading } from "@/components/loading-context"
 import { useEffect } from "react"
 
+
 // Animation variants
 const fadeInUp = {
   initial: { opacity: 0, y: 30 },
@@ -246,7 +247,7 @@ export default function AboutPage() {
               </motion.div>
 
               {/* Stats Grid */}
-              <motion.div variants={fadeInUp} className="grid md:grid-cols-3 gap-8 mb-16">
+              <motion.div variants={fadeInUp} className="grid md:grid-cols-3 gap-8">
                 {[
                   { icon: Users, number: "27k+", label: "Happy Followers", color: "from-blue-400 to-cyan-500" },
                   { icon: Heart, number: "1000+", label: "Mothers Served", color: "from-pink-400 to-rose-500" },
@@ -271,20 +272,57 @@ export default function AboutPage() {
               </motion.div>
 
               {/* Testimonial */}
-              <motion.div variants={fadeInUp} className="bg-white rounded-3xl p-12 shadow-lg relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-24 h-24 bg-gradient-to-br from-pink-100 to-transparent rounded-br-full"></div>
-                <div className="absolute bottom-0 right-0 w-20 h-20 bg-gradient-to-bl from-purple-100 to-transparent rounded-bl-full"></div>
-                <HeartDoodle className="top-6 left-6" />
-                <BabyDoodle className="bottom-6 right-6" />
-
-                <div className="text-center max-w-4xl mx-auto">
-                  <Quote className="w-12 h-12 text-pink-400 mx-auto mb-6" />
-                  <blockquote className="text-xl text-gray-700 leading-relaxed mb-6 italic">
-                    "Shithaa has been a game-changer for my pregnancy journey. The comfort and elegance of their designs
-                    made me feel beautiful and confident throughout my pregnancy. It's not just clothing—it's a celebration
-                    of motherhood."
-                  </blockquote>
-                  <div className="text-[#473C66] font-semibold">— Priya, Expecting Mother</div>
+              <motion.div variants={fadeInUp} className="mb-16">
+                <div className="text-center mb-12">
+                  <div className="relative inline-block">
+                    <WashiTape className="-top-2 -right-4" rotation={8} />
+                    <BabyDoodle className="-top-4 left-4" />
+                    <h3 className="text-3xl md:text-4xl font-light text-[#473C66] relative">
+                      What <span className="font-semibold">Moms Say</span>
+                    </h3>
+                    <PaperPin className="top-2 left-0" />
+                    <HeartDoodle className="bottom-2 right-4" />
+                  </div>
+                  <p className="text-lg text-gray-600 mt-4 italic">
+                    Here's what our community shares on Instagram
+                  </p>
+                </div>
+                
+                {/* Testimonials Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+                  {[
+                    { id: 1, image: "/testi1.jpeg" },
+                    { id: 2, image: "/testi2.jpeg" },
+                    { id: 3, image: "/testi3.jpeg" },
+                    { id: 4, image: "/testi4.jpeg" },
+                    { id: 5, image: "/testi5.jpeg" },
+                    { id: 6, image: "/testi6.jpeg" },
+                    { id: 7, image: "/testi7.jpeg" },
+                    { id: 8, image: "/testi8.jpeg" },
+                  ].map((testimonial, index) => (
+                    <motion.div
+                      key={testimonial.id}
+                      variants={fadeInUp}
+                      className="group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                      whileHover={{ y: -5 }}
+                    >
+                      <div className="aspect-square relative">
+                        <Image
+                          src={testimonial.image}
+                          alt={`Testimonial ${testimonial.id}`}
+                          fill
+                          className="object-cover transition-transform duration-300 group-hover:scale-110"
+                          sizes="(max-width: 768px) 50vw, 25vw"
+                        />
+                        {/* Instagram overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                          <div className="absolute bottom-3 right-3 bg-white/90 backdrop-blur-sm rounded-full p-2">
+                            <Instagram className="w-4 h-4 text-pink-500" />
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
                 </div>
               </motion.div>
             </motion.div>
