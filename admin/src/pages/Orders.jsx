@@ -4,7 +4,7 @@ import { backendUrl, currency } from '../App'
 import { toast } from 'react-toastify'
 import { assets } from '../assets/assets'
 import { useNavigate } from 'react-router-dom'
-import { FaUser, FaEnvelope, FaTruck, FaPhone, FaMapMarkerAlt, FaMoneyBill, FaCalendarAlt, FaBox, FaTag, FaSearch, FaFilter, FaClock, FaCheckCircle, FaTimesCircle, FaShippingFast, FaDollarSign, FaSpinner, FaCog, FaBan } from 'react-icons/fa';
+import { FaUser, FaEnvelope, FaTruck, FaPhone, FaMapMarkerAlt, FaMoneyBill, FaCalendarAlt, FaBox, FaTag, FaSearch, FaFilter, FaClock, FaCheckCircle, FaTimesCircle, FaShippingFast, FaDollarSign, FaSpinner, FaCog, FaBan, FaDownload } from 'react-icons/fa';
 
 // Updated status colors and icons
 const STATUS_CONFIG = {
@@ -645,6 +645,32 @@ function OrderDetailsModal({ order, onClose, onStatusChange }) {
     { id: 'payment', label: 'Payment Info', icon: FaMoneyBill }
   ];
 
+  async function handleDownloadInvoice() {
+    try {
+      const res = await fetch(`${backendUrl}/api/orders/${order._id}/invoice`, {
+        headers: {
+          ...(localStorage.getItem('token') ? { token: localStorage.getItem('token') } : {})
+        }
+      });
+      if (!res.ok) {
+        toast.error('Failed to download invoice');
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Invoice_${order.orderId || order._id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Invoice download error:', err);
+      toast.error('Invoice download failed');
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" onClick={onClose}>
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
@@ -674,6 +700,14 @@ function OrderDetailsModal({ order, onClose, onStatusChange }) {
                   Test Order
                 </span>
               )}
+              <button
+                onClick={handleDownloadInvoice}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm"
+                title="Download Invoice (PDF)"
+              >
+                <FaDownload className="w-4 h-4" />
+                Invoice
+              </button>
               <button
                 onClick={onClose}
                 className="p-2 rounded-full hover:bg-white/10 transition-colors"
