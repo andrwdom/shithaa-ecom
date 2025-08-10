@@ -141,12 +141,11 @@ export default function HeroCategoryCard({
       
       setImages(heroImages)
       
-      // Preload first image for instant display
+      // Preload images for smooth transitions
       if (heroImages.length > 0) {
-        preloadImage(heroImages[0].thumbUrl)
-        // Preload next few images for smooth transitions
-        const nextImages = heroImages.slice(1, Math.min(4, heroImages.length))
-        nextImages.forEach(img => preloadImage(img.thumbUrl))
+        // Preload first few images for instant display and smooth transitions
+        const imagesToPreload = heroImages.slice(0, Math.min(4, heroImages.length))
+        imagesToPreload.forEach(img => preloadImage(img.thumbUrl))
       }
       
     } catch (err) {
@@ -173,11 +172,14 @@ export default function HeroCategoryCard({
       
       setIsTransitioning(true)
       
-      // Use a smoother transition timing
+      // Complete the fade out before changing the image
       setTimeout(() => {
         setCurrentImageIndex(prev => (prev + 1) % images.length)
-        setIsTransitioning(false)
-      }, 500) // Half of the 1s transition duration
+        // Wait for the new image to be set, then fade in
+        setTimeout(() => {
+          setIsTransitioning(false)
+        }, 100) // Small delay to ensure state update
+      }, 1000) // Full transition duration
     }
 
     // Stagger transitions between 4-6 seconds for a calmer feel
@@ -192,15 +194,7 @@ export default function HeroCategoryCard({
     }
   }, [images.length, isPaused])
 
-  // Preload next image for smooth transitions
-  useEffect(() => {
-    if (images.length > 1 && isIntersecting.current) {
-      const nextImage = images[(currentImageIndex + 1) % images.length]
-      if (nextImage?.thumbUrl && !preloadedImages.has(nextImage.thumbUrl)) {
-        preloadImage(nextImage.thumbUrl)
-      }
-    }
-  }, [currentImageIndex, images, preloadedImages])
+
 
   // Preload image function with better error handling
   const preloadImage = useCallback((src: string) => {
@@ -217,7 +211,7 @@ export default function HeroCategoryCard({
     img.src = src
   }, [preloadedImages])
 
-  // Get current and next images
+  // Get current image
   const currentImage = useMemo(() => {
     if (images.length === 0) {
       return {
@@ -236,10 +230,7 @@ export default function HeroCategoryCard({
     return images[currentImageIndex]
   }, [images, currentImageIndex, title, categorySlug])
 
-  const nextImage = useMemo(() => {
-    if (images.length <= 1) return currentImage
-    return images[(currentImageIndex + 1) % images.length]
-  }, [images, currentImageIndex, currentImage])
+
 
   // Event handlers
   const handleCardClick = () => {
@@ -339,38 +330,7 @@ export default function HeroCategoryCard({
           </div>
         </ImageErrorBoundary>
 
-        {/* Next Image (for smooth transitions) */}
-        {images.length > 1 && (
-          <ImageErrorBoundary
-            fallback={
-              <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                <div className="text-center">
-                  <div className="w-16 h-16 bg-gray-300 rounded-full mx-auto mb-4"></div>
-                  <p className="text-gray-500 text-sm">Image unavailable</p>
-                </div>
-              </div>
-            }
-          >
-            <div 
-              className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
-                isTransitioning ? 'opacity-100' : 'opacity-0'
-              }`}
-              style={{ willChange: 'opacity' }}
-            >
-              <img
-                src={nextImage.thumbUrl}
-                alt={`${title} - Next Product`}
-                className="w-full h-full object-cover"
-                loading="lazy"
-                style={{
-                  backgroundImage: nextImage.lqip ? `url(${nextImage.lqip})` : undefined,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center'
-                }}
-              />
-            </div>
-          </ImageErrorBoundary>
-        )}
+
 
         {/* Loading Overlay with Skeleton */}
         {isLoading && (
@@ -420,14 +380,7 @@ export default function HeroCategoryCard({
       {/* Hover Effect Border */}
       <div className="absolute inset-0 rounded-3xl border-2 border-transparent group-hover:border-white/30 transition-all duration-300" />
 
-      {/* Image Counter Indicator */}
-      {images.length > 1 && (
-        <div className="absolute top-4 right-4 bg-black/20 backdrop-blur-sm rounded-full px-3 py-1">
-          <span className="text-white text-xs font-medium">
-            {currentImageIndex + 1} / {images.length}
-          </span>
-        </div>
-      )}
+
     </div>
   )
 }
