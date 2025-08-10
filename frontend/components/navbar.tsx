@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Menu, ShoppingBag, X, User, Mail, Info, Home, LogOut, Heart } from "lucide-react"
+import { Menu, ShoppingBag, X, User, Mail, Info, Home, LogOut, List, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useCart } from "@/components/cart-context"
 import { useWishlist } from "@/components/wishlist-context"
@@ -178,14 +178,16 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
                 </button>
                 <button
                   onClick={onCategoriesClick}
-                  className="text-left text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200"
+                  className="text-left text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200 flex items-center gap-2"
                 >
+                  <List className="h-4 w-4" />
                   categories
                 </button>
                 <a
                   href="/collections/new-arrivals"
-                  className="text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200"
+                  className="text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200 flex items-center gap-2"
                 >
+                  <Sparkles className="h-4 w-4" />
                   new arrivals
                 </a>
                 <button
@@ -203,8 +205,9 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
                     window.location.href = "/contact"
                     setIsMenuOpen(false)
                   }}
-                  className="text-left text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200"
+                  className="text-left text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200 flex items-center gap-2"
                 >
+                  <Mail className="h-4 w-4" />
                   contact us
                 </button>
                 {user ? (
@@ -233,10 +236,11 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
                       setIsLoginModalOpen(true)
                       setIsMenuOpen(false)
                     }}
-                    className="text-left text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200 cursor-pointer relative z-10"
+                    className="text-left text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200 cursor-pointer relative z-10 flex items-center gap-2"
                     type="button"
                     style={{ pointerEvents: 'auto' }}
                   >
+                    <User className="h-4 w-4" />
                     Login
                   </button>
                 )}
