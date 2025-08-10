@@ -68,8 +68,8 @@ export default function ReturnPolicyPage() {
                 info.shitha@gmail.com
               </a>{" "}
               or DM us on Instagram{" "}
-                              <a href="https://www.instagram.com/shitha_clothing" className="text-[#473C66] hover:underline" target="_blank" rel="noopener noreferrer">
-                @shitha_clothing
+                              <a href="https://www.instagram.com/shithaa.in" className="text-[#473C66] hover:underline" target="_blank" rel="noopener noreferrer">
+                @shithaa.in
                 </a>{" "}
               Refund requests made after 2 days from the date you receive your order will not be eligible.
             </p>

@@ -22,7 +22,7 @@ export default function Footer() {
             </div>
             <h3 className="font-bold mb-3 text-lg font-serif">Refund Policy</h3>
             <p className="text-gray-400 text-sm lg:text-base">
-              We only accept refund requests within 2 days of receiving your order. To request a refund, please contact us via Instagram direct message (preferred) or email us at info.shitha@gmail.com. Refund requests made after 2 days from the date you receive your order will not be eligible.
+              Refunds accepted within 2 days of receiving your order. DM us on Instagram or email info.shitha@gmail.com.
             </p>
           </div>
           <div className="text-center group">
@@ -87,6 +87,14 @@ export default function Footer() {
                   Zipless Feeding Lounge Wear
                 </a>
               </li>
+                <li>
+                  <a
+                    href="/collections/zipless-feeding-dupatta-lounge-wear"
+                    className="text-gray-400 hover:text-white transition-colors"
+                  >
+                    Zipless Feeding Dupatta Lounge Wear
+                  </a>
+                </li>
               <li>
                 <a
                   href="/collections/non-feeding-lounge-wear"
@@ -149,7 +157,7 @@ export default function Footer() {
                 <div className="w-8 h-8 bg-gray-800 rounded-lg flex items-center justify-center">
                   <Instagram className="h-4 w-4 text-white" />
                 </div>
-                <span className="text-gray-400">@shitha_clothing</span>
+                <span className="text-gray-400">@shithaa.in</span>
               </div>
 
               <p className="text-gray-400 text-sm">DM us on Instagram for fastest support!</p>

@@ -124,22 +124,34 @@ export async function generateInvoiceBuffer(order) {
 }
 
 export async function sendInvoiceEmail(order, pdfBuffer) {
-  // Configure your transporter (reuse your existing config if available)
-  const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: process.env.SMTP_PORT,
-    secure: process.env.SMTP_SECURE === 'true',
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-  });
+  // Configure transporter: prefer explicit SMTP_*, otherwise fall back to Gmail via EMAIL_*
+  const hasSmtpConfig = Boolean(
+    process.env.SMTP_HOST && process.env.SMTP_PORT && process.env.SMTP_USER && process.env.SMTP_PASS
+  );
+
+  const transporter = hasSmtpConfig
+    ? nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: Number(process.env.SMTP_PORT),
+        secure: String(process.env.SMTP_SECURE).toLowerCase() === 'true',
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
+        },
+      })
+    : nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASS,
+        },
+      });
 
   const toEmail = order.email || order.shippingInfo?.email;
   if (!toEmail) throw new Error('No recipient email found for invoice');
 
   await transporter.sendMail({
-    from: process.env.SMTP_FROM || process.env.SMTP_USER,
+    from: process.env.SMTP_FROM || process.env.SMTP_USER || process.env.EMAIL_USER,
     to: toEmail,
     subject: `Your Invoice for Order #${order.orderId || order._id}`,
     text: `Thank you for your order! Please find your invoice attached.\nOrder ID: ${order.orderId || order._id}`,

@@ -76,8 +76,8 @@ export default function ContactSection() {
       icon: Instagram,
       title: "Instagram DM",
       subtitle: "Best for refunds & quick support",
-      value: "@shitha_clothing",
-      action: () => window.open("https://www.instagram.com/shitha_clothing?igsh=NHF6YjEyYjUyMzJj", "_blank"),
+      value: "@shithaa.in",
+      action: () => window.open("https://www.instagram.com/shithaa.in", "_blank"),
       bgColor: "bg-pink-50",
       iconColor: "text-pink-600",
       hoverColor: "hover:bg-pink-100",
@@ -268,7 +268,7 @@ export default function ContactSection() {
                         type="button"
                         size="sm"
                         className="bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white rounded-lg"
-                        onClick={() => window.open("https://www.instagram.com/shitha_clothing?igsh=NHF6YjEyYjUyMzJj", "_blank")}
+                        onClick={() => window.open("https://www.instagram.com/shithaa.in", "_blank")}
                       >
                         DM Us Now
                       </Button>

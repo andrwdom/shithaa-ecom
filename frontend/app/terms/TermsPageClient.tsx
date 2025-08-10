@@ -63,7 +63,7 @@ export default function TermsPageClient() {
               <b>Contact Information</b><br />
               For questions about these Terms and Conditions, please contact us at:<br />
               Email: <a href="mailto:info.shitha@gmail.com" className="underline">info.shitha@gmail.com</a><br />
-              Instagram: <a href="https://www.instagram.com/shitha_clothing" className="underline">@shitha_clothing</a>
+              Instagram: <a href="https://www.instagram.com/shithaa.in" className="underline">@shithaa.in</a>
             </li>
           </ol>
         </div>
