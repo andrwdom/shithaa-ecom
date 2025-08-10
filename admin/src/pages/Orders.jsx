@@ -431,7 +431,7 @@ function ShippingTrackingModal({ order, onClose, onStatusChange }) {
 
     setLoading(true);
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL || 'http://localhost:4000'}/api/orders/status`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://shithaa.in'}/api/orders/status`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
