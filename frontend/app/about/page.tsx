@@ -2,6 +2,7 @@
 import { motion } from "framer-motion"
 import { Heart, Instagram, Sparkles, Quote, Baby, Users, Smile } from "lucide-react"
 import Image from "next/image"
+
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { useLoading } from "@/components/loading-context"
@@ -307,12 +308,17 @@ export default function AboutPage() {
                       whileHover={{ y: -5 }}
                     >
                       <div className="aspect-square relative">
-                        <Image
+                        <img
                           src={testimonial.image}
                           alt={`Testimonial ${testimonial.id}`}
-                          fill
-                          className="object-cover transition-transform duration-300 group-hover:scale-110"
-                          sizes="(max-width: 768px) 50vw, 25vw"
+                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                          onLoad={() => console.log(`Image loaded: ${testimonial.image}`)}
+                          onError={(e) => {
+                            console.error(`Failed to load image: ${testimonial.image}`, e);
+                            // Fallback to a placeholder
+                            const target = e.target as HTMLImageElement;
+                            target.src = "/placeholder.svg?height=300&width=300";
+                          }}
                         />
                         {/* Instagram overlay */}
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
