@@ -196,8 +196,8 @@ const EnhancedSearchAndFilters = ({
   onSortOrderChange,
 }) => {
   return (
-    <div className="sticky top-0 z-20 bg-white border-b border-gray-100 mb-8">
-      <div className="flex flex-col md:flex-row items-start md:items-center gap-6 px-2 py-4">
+    <div className="sticky top-0 z-20 bg-transparent mb-6">
+      <div className="mx-[-0.5rem] md:mx-0 px-3 py-3 md:px-4 md:py-4 bg-white/90 backdrop-blur border border-gray-100 rounded-xl shadow-sm flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-6">
         {/* Search Input */}
         <div className="w-full md:w-[260px]">
           <div className="relative">
@@ -672,8 +672,10 @@ function OrderDetailsModal({ order, onClose, onStatusChange }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-2 sm:p-4" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[92vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-2 sm:p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[92vh] overflow-hidden" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true">
+        {/* Close layer for mobile: tap outside header/content to close */}
+        <button className="sr-only" onClick={onClose}>Close</button>
         
         {/* Enhanced Modal Header */}
         <div className="bg-gradient-to-r from-[#4D1E64] to-[#6B2C7A] text-white p-4 md:p-6">
@@ -753,7 +755,7 @@ function OrderDetailsModal({ order, onClose, onStatusChange }) {
         </div>
 
         {/* Modal Content */}
-        <div className="p-4 md:p-6 overflow-y-auto max-h=[calc(92vh-180px)] md:max-h-[calc(92vh-200px)]">
+        <div className="p-4 md:p-6 overflow-y-auto max-h-[calc(92vh-180px)] md:max-h-[calc(92vh-200px)] overscroll-contain touch-pan-y">
           
           {/* Order Details Tab */}
           {activeTab === 'details' && (
@@ -1187,9 +1189,14 @@ const Orders = ({ token, setToken }) => {
   return (
     <div className="max-w-7xl mx-auto px-4 py-6">
       {/* Page Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Orders Management</h1>
-        <p className="text-gray-600">Manage and track all customer orders with full lifecycle status support</p>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Orders Management</h1>
+          <p className="text-gray-600">Manage and track all customer orders with full lifecycle status support</p>
+        </div>
+        <div className="hidden md:flex gap-2">
+          <a href={`${backendUrl}/api/orders`} target="_blank" rel="noreferrer" className="px-3 py-2 border rounded-lg text-sm text-gray-700 hover:bg-gray-50">Refresh</a>
+        </div>
       </div>
 
       {/* Dashboard Summary Cards */}
@@ -1260,7 +1267,7 @@ const Orders = ({ token, setToken }) => {
 
       {/* Orders List */}
       {!loading && !apiError && filteredOrders.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
           {filteredOrders.map(order => (
             <ModernOrderCard
               key={order._id}
