@@ -197,7 +197,7 @@ const EnhancedSearchAndFilters = ({
 }) => {
   return (
     <div className="sticky top-0 z-20 bg-transparent mb-6">
-      <div className="mx-[-0.5rem] md:mx-0 px-3 py-3 md:px-4 md:py-4 bg-white/90 backdrop-blur border border-gray-100 rounded-xl shadow-sm flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-6">
+      <div className="px-3 py-3 md:px-4 md:py-4 bg-white/90 backdrop-blur border border-gray-100 rounded-xl shadow-sm flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-6">
         {/* Search Input */}
         <div className="w-full md:w-[260px]">
           <div className="relative">
@@ -1187,7 +1187,7 @@ const Orders = ({ token, setToken }) => {
   });
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6">
+    <div className="max-w-7xl mx-auto px-4 py-6 overflow-x-hidden">
       {/* Page Header */}
       <div className="mb-6 flex items-center justify-between">
         <div>
@@ -1267,7 +1267,7 @@ const Orders = ({ token, setToken }) => {
 
       {/* Orders List */}
       {!loading && !apiError && filteredOrders.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6 content-start items-stretch">
           {filteredOrders.map(order => (
             <ModernOrderCard
               key={order._id}

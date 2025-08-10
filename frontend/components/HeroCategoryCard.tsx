@@ -1,6 +1,8 @@
 "use client"
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react"
+import ImageErrorBoundary from "./image-error-boundary"
+import { useImageErrorHandler } from "./image-error-boundary"
 
 interface HeroCategoryCardProps {
   categoryId: string
@@ -29,7 +31,7 @@ export default function HeroCategoryCard({
   title,
   ctaText,
   isComingSoon = false,
-  maxImages = 4,
+  maxImages = 6,
   onClick
 }: HeroCategoryCardProps) {
   const [images, setImages] = useState<HeroImage[]>([])
@@ -39,12 +41,14 @@ export default function HeroCategoryCard({
   const [isTransitioning, setIsTransitioning] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
   const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set())
+  const [preloadedImages, setPreloadedImages] = useState<Set<string>>(new Set())
   
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
   const isMobile = useRef(false)
   const isIntersecting = useRef(true)
   const intersectionObserver = useRef<IntersectionObserver | null>(null)
   const cardRef = useRef<HTMLDivElement>(null)
+  const imageRefs = useRef<Map<string, HTMLImageElement>>(new Map())
 
   // Detect mobile on mount
   useEffect(() => {
@@ -66,6 +70,10 @@ export default function HeroCategoryCard({
             if (!entry.isIntersecting) {
               // Pause animation when off-screen
               setIsPaused(true)
+              if (intervalRef.current) {
+                clearInterval(intervalRef.current)
+                intervalRef.current = null
+              }
             } else {
               // Resume animation when visible
               setIsPaused(false)
@@ -85,7 +93,7 @@ export default function HeroCategoryCard({
     }
   }, [])
 
-  // Fetch hero images from the new endpoint
+  // Fetch hero images from the API with retry logic
   const fetchHeroImages = useCallback(async () => {
     try {
       setIsLoading(true)
@@ -95,10 +103,17 @@ export default function HeroCategoryCard({
       const url = new URL(`${baseUrl}/api/hero-images`)
       url.searchParams.append('categoryId', categorySlug)
       url.searchParams.append('device', isMobile.current ? 'mobile' : 'desktop')
+      url.searchParams.append('limit', maxImages.toString())
       
       console.log(`Fetching hero images from: ${url.toString()}`)
       
-      const response = await fetch(url.toString())
+      const response = await fetch(url.toString(), {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Cache-Control': 'no-cache'
+        }
+      })
       
       if (!response.ok) {
         throw new Error(`Failed to fetch hero images: ${response.status} ${response.statusText}`)
@@ -129,43 +144,50 @@ export default function HeroCategoryCard({
       // Preload first image for instant display
       if (heroImages.length > 0) {
         preloadImage(heroImages[0].thumbUrl)
+        // Preload next few images for smooth transitions
+        const nextImages = heroImages.slice(1, Math.min(4, heroImages.length))
+        nextImages.forEach(img => preloadImage(img.thumbUrl))
       }
       
     } catch (err) {
       console.error(`Error fetching hero images for ${categorySlug}:`, err)
       setError('Failed to load images')
+      // Try to use fallback images
+      setImages([])
     } finally {
       setIsLoading(false)
     }
-  }, [categorySlug, isMobile])
+  }, [categorySlug, maxImages, isMobile])
 
   // Fetch images on mount
   useEffect(() => {
     fetchHeroImages()
   }, [fetchHeroImages])
 
-  // Auto-rotate images with staggered transitions (only when visible and not paused)
+  // Auto-rotate images with smooth transitions (only when visible and not paused)
   useEffect(() => {
     if (images.length <= 1 || isPaused || !isIntersecting.current) return
 
     const startTransition = () => {
+      if (images.length <= 1) return
+      
       setIsTransitioning(true)
-      // Allow a longer, softer crossfade before switching the index
-      requestAnimationFrame(() => {
-        setTimeout(() => {
-          setCurrentImageIndex(prev => (prev + 1) % images.length)
-          setIsTransitioning(false)
-        }, 700) // match ~half of 1.4s fade
-      })
+      
+      // Use a smoother transition timing
+      setTimeout(() => {
+        setCurrentImageIndex(prev => (prev + 1) % images.length)
+        setIsTransitioning(false)
+      }, 500) // Half of the 1s transition duration
     }
 
-    // Stagger transitions randomly between 3-6 seconds
-    const delay = 4000 + Math.random() * 3000 // 4-7s holds to feel calmer
+    // Stagger transitions between 4-6 seconds for a calmer feel
+    const delay = 4000 + Math.random() * 2000
     intervalRef.current = setInterval(startTransition, delay)
 
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current)
+        intervalRef.current = null
       }
     }
   }, [images.length, isPaused])
@@ -174,23 +196,26 @@ export default function HeroCategoryCard({
   useEffect(() => {
     if (images.length > 1 && isIntersecting.current) {
       const nextImage = images[(currentImageIndex + 1) % images.length]
-      if (nextImage?.thumbUrl && !loadedImages.has(nextImage.thumbUrl)) {
+      if (nextImage?.thumbUrl && !preloadedImages.has(nextImage.thumbUrl)) {
         preloadImage(nextImage.thumbUrl)
       }
     }
-  }, [currentImageIndex, images, loadedImages])
+  }, [currentImageIndex, images, preloadedImages])
 
-  // Preload image function
+  // Preload image function with better error handling
   const preloadImage = useCallback((src: string) => {
-    const img = new (window.Image as any)()
+    if (!src || preloadedImages.has(src)) return
+    
+    const img = new Image()
     img.onload = () => {
+      setPreloadedImages(prev => new Set(prev).add(src))
       setLoadedImages(prev => new Set(prev).add(src))
     }
     img.onerror = () => {
       console.warn(`Failed to preload image: ${src}`)
     }
     img.src = src
-  }, [])
+  }, [preloadedImages])
 
   // Get current and next images
   const currentImage = useMemo(() => {
@@ -227,6 +252,7 @@ export default function HeroCategoryCard({
     setIsPaused(true)
     if (intervalRef.current) {
       clearInterval(intervalRef.current)
+      intervalRef.current = null
     }
   }
 
@@ -269,11 +295,6 @@ export default function HeroCategoryCard({
     }
   }
 
-  // Get responsive image sizes
-  const getImageSizes = () => {
-    return '(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw'
-  }
-
   return (
     <div
       ref={cardRef}
@@ -283,50 +304,72 @@ export default function HeroCategoryCard({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      {/* Background Images with Smooth Transitions */}
+      {/* Background Images with Optimized Transitions */}
       <div className="absolute inset-0">
         {/* Current Image */}
-          <div 
-            className={`absolute inset-0 image-fade-soft ${
-            isLoading || isTransitioning ? 'opacity-0' : 'opacity-100'
-          }`}
-          style={{ willChange: 'opacity, transform' }}
+        <ImageErrorBoundary
+          fallback={
+            <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-gray-300 rounded-full mx-auto mb-4"></div>
+                <p className="text-gray-500 text-sm">Image unavailable</p>
+              </div>
+            </div>
+          }
         >
-          <img
-            src={currentImage.thumbUrl}
-            alt={`${title} - ${currentImage.productName}`}
-            className="w-full h-full object-cover kenburns-slow"
-            onLoad={handleImageLoad}
-            onError={handleImageError}
-            loading="eager"
-            style={{
-              backgroundImage: currentImage.lqip ? `url(${currentImage.lqip})` : undefined,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center'
-            }}
-          />
-        </div>
-
-        {/* Next Image (for smooth transitions) */}
-        {images.length > 1 && (
           <div 
-            className={`absolute inset-0 image-fade-soft ${
-              isTransitioning ? 'opacity-100' : 'opacity-0'
+            className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
+              isLoading || isTransitioning ? 'opacity-0' : 'opacity-100'
             }`}
-            style={{ willChange: 'opacity, transform' }}
+            style={{ willChange: 'opacity' }}
           >
             <img
-              src={nextImage.thumbUrl}
-              alt={`${title} - Next Product`}
-              className="w-full h-full object-cover kenburns-slow"
-              loading="lazy"
+              src={currentImage.thumbUrl}
+              alt={`${title} - ${currentImage.productName}`}
+              className="w-full h-full object-cover"
+              onLoad={handleImageLoad}
+              onError={handleImageError}
+              loading="eager"
               style={{
-                backgroundImage: nextImage.lqip ? `url(${nextImage.lqip})` : undefined,
+                backgroundImage: currentImage.lqip ? `url(${currentImage.lqip})` : undefined,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center'
               }}
             />
           </div>
+        </ImageErrorBoundary>
+
+        {/* Next Image (for smooth transitions) */}
+        {images.length > 1 && (
+          <ImageErrorBoundary
+            fallback={
+              <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-gray-300 rounded-full mx-auto mb-4"></div>
+                  <p className="text-gray-500 text-sm">Image unavailable</p>
+                </div>
+              </div>
+            }
+          >
+            <div 
+              className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
+                isTransitioning ? 'opacity-100' : 'opacity-0'
+              }`}
+              style={{ willChange: 'opacity' }}
+            >
+              <img
+                src={nextImage.thumbUrl}
+                alt={`${title} - Next Product`}
+                className="w-full h-full object-cover"
+                loading="lazy"
+                style={{
+                  backgroundImage: nextImage.lqip ? `url(${nextImage.lqip})` : undefined,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center'
+                }}
+              />
+            </div>
+          </ImageErrorBoundary>
         )}
 
         {/* Loading Overlay with Skeleton */}
@@ -376,6 +419,15 @@ export default function HeroCategoryCard({
 
       {/* Hover Effect Border */}
       <div className="absolute inset-0 rounded-3xl border-2 border-transparent group-hover:border-white/30 transition-all duration-300" />
+
+      {/* Image Counter Indicator */}
+      {images.length > 1 && (
+        <div className="absolute top-4 right-4 bg-black/20 backdrop-blur-sm rounded-full px-3 py-1">
+          <span className="text-white text-xs font-medium">
+            {currentImageIndex + 1} / {images.length}
+          </span>
+        </div>
+      )}
     </div>
   )
 }
