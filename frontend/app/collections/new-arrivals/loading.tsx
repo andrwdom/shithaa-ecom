@@ -1,17 +1,17 @@
 import Image from "next/image";
+import logo from "@/public/shithaa-logo.jpg";
 
 export default function Loading() {
   return (
     <div className="fixed inset-0 flex flex-col items-center justify-center bg-white z-50">
       <div className="mb-8">
         <Image
-          src="/shithaa-logo.jpg"
+          src={logo}
           alt="Shithaa - Elegant Maternity Wear"
           width={120}
           height={120}
           className="animate-fade-pulse"
           priority
-          unoptimized
         />
       </div>
       <div className="flex items-center justify-center space-x-2">
