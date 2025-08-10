@@ -90,7 +90,7 @@ const DashboardSummary = ({ orders }) => {
       return orderDate === today && status !== 'Cancelled';
     })
     .reduce((sum, order) => {
-      const total = order.totalAmount || order.total || order.totalPrice || 0;
+      const total = order.totalAmount || order.total || order.totalPrice || order.amount || 0;
       return sum + total;
     }, 0);
 
@@ -276,7 +276,7 @@ const ModernOrderCard = ({ order, onView, onStatusChange }) => {
   const name = shipping?.fullName || shipping?.name || order.customerName;
   const email = shipping?.email || order.shippingInfo?.email || order.email;
   const phone = shipping?.phone || order.shippingInfo?.phone || order.phone;
-  const total = order.totalAmount || order.total || order.totalPrice;
+  const total = order.totalAmount || order.total || order.totalPrice || order.amount;
   const payment = order.paymentStatus || order.paymentMethod;
   const status = order.orderStatus || order.status || order.paymentStatus;
   const placedAt = order.createdAt || order.placedAt;
@@ -620,7 +620,7 @@ function OrderDetailsModal({ order, onClose, onStatusChange }) {
   };
   
   const shippingDisplay = getShippingDisplayInfo();
-  const totalAmount = order.totalAmount || order.totalPrice || order.total || order.orderSummary?.total || 0;
+  const totalAmount = order.totalAmount || order.totalPrice || order.total || order.amount || order.orderSummary?.total || 0;
 
   // Esc key to close
   React.useEffect(() => {
