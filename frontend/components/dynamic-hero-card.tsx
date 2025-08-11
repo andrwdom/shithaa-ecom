@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect, useCallback } from "react"
-import OptimizedImage from "./optimized-image"
+import ResponsiveImage from "./responsive-image"
 
 interface Product {
   _id: string
@@ -148,13 +148,13 @@ export default function DynamicHeroCard({
         <div className={`absolute inset-0 image-fade-transition ${
           isLoading || isTransitioning ? 'opacity-0' : 'opacity-100'
         }`}>
-          <OptimizedImage
-            src={currentImage}
+          <ResponsiveImage
+            imageUrls={currentImage}
             alt={`${title} - Product ${currentImageIndex + 1}`}
             fill
             priority={true}
+            componentType="hero"
             className="object-cover group-hover:scale-110 transition-transform duration-700"
-            sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
             onLoad={() => setIsLoading(false)}
             onError={() => {
               setIsLoading(false)
@@ -168,12 +168,12 @@ export default function DynamicHeroCard({
           <div className={`absolute inset-0 image-fade-transition ${
             isTransitioning ? 'opacity-100' : 'opacity-0'
           }`}>
-            <OptimizedImage
-              src={nextImage}
+            <ResponsiveImage
+              imageUrls={nextImage}
               alt={`${title} - Next Product`}
               fill
+              componentType="hero"
               className="object-cover group-hover:scale-110 transition-transform duration-700"
-              sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
             />
           </div>
         )}

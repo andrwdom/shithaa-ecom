@@ -234,9 +234,12 @@ export const addProduct = async (req, res) => {
         console.log(`   Average compression: ${stats.avgCompressionRatio}%`);
         console.log(`   Total processing time: ${stats.totalProcessingTime}ms`);
 
-        // Build image URLs for VPS using optimized filenames
+        // Build responsive image URLs for VPS using optimized filenames
         const baseUrl = process.env.BASE_URL || 'https://shithaa.in';
-        const imagesUrl = optimizedFiles.map(img => `${baseUrl}/images/products/${img.filename}`);
+        const imagesUrl = optimizedFiles.map(img => {
+            const baseFilename = path.parse(img.filename).name;
+            return imageOptimizer.generateResponsiveUrls(baseFilename, baseUrl);
+        });
 
         // Parse features if provided
         let parsedFeatures = [];
@@ -504,9 +507,12 @@ export const updateProduct = async (req, res) => {
                     console.log(`   Average compression: ${stats.avgCompressionRatio}%`);
                     console.log(`   Total processing time: ${stats.totalProcessingTime}ms`);
 
-                    // Build image URLs using optimized filenames
+                    // Build responsive image URLs using optimized filenames
                     const baseUrl = process.env.BASE_URL || 'https://shithaa.in';
-                    const uploadedImages = optimizedFiles.map(img => `${baseUrl}/images/products/${img.filename}`);
+                    const uploadedImages = optimizedFiles.map(img => {
+                        const baseFilename = path.parse(img.filename).name;
+                        return imageOptimizer.generateResponsiveUrls(baseFilename, baseUrl);
+                    });
                     imagesUrl = uploadedImages;
                     
                     // Store optimization stats for response

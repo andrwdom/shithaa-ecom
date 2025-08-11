@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ShoppingBag } from "lucide-react"
 import Image from "next/image"
-import OptimizedImage from "./optimized-image"
+import ResponsiveImage from "./responsive-image"
 import WishlistButton from "./WishlistButton"
 
 interface Product {
@@ -40,13 +40,12 @@ export default function ProductCard({ product, onClick }: ProductCardProps) {
     >
       <CardContent className="p-0">
         <div className="relative h-64 bg-gradient-to-br from-pink-50 to-purple-50 rounded-t-lg overflow-hidden">
-          <OptimizedImage
-            src={product.image || "/placeholder.svg"}
+          <ResponsiveImage
+            imageUrls={product.image || "/placeholder.svg"}
             alt={`${product.name} - ${product.category}`}
             fill
-            loading="lazy"
+            componentType="product-card"
             className="object-cover group-hover:scale-105 transition-transform duration-300"
-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
           />
 
           {/* Always visible wishlist button */}

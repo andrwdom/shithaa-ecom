@@ -20,9 +20,9 @@ export default function Footer() {
             <div className="w-16 h-16 mx-auto mb-6 bg-gray-800 rounded-lg flex items-center justify-center group-hover:bg-gray-700 transition-colors duration-300">
               <RotateCcw className="h-8 w-8 text-white" />
             </div>
-            <h3 className="font-bold mb-3 text-lg font-serif">Refund Policy</h3>
+            <h3 className="font-bold mb-3 text-lg font-serif">Refund & Exchange</h3>
             <p className="text-gray-400 text-sm lg:text-base">
-              Refunds accepted within 2 days of receiving your order. DM us on Instagram or email info.shitha@gmail.com.
+              Damaged products only. Submit within 2 days with video proof. DM us on Instagram or email info.shithaa@gmail.com.
             </p>
           </div>
           <div className="text-center group">
@@ -151,7 +151,7 @@ export default function Footer() {
                 <div className="w-8 h-8 bg-gray-800 rounded-lg flex items-center justify-center">
                   <Mail className="h-4 w-4 text-white" />
                 </div>
-                <span className="text-gray-400">info.shitha@gmail.com</span>
+                <span className="text-gray-400">info.shithaa@gmail.com</span>
               </div>
               <div className="flex items-center space-x-3">
                 <div className="w-8 h-8 bg-gray-800 rounded-lg flex items-center justify-center">

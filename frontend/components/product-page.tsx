@@ -195,7 +195,7 @@ export default function ProductPage({ product, onBack }: ProductPageProps) {
                   </div>
                   <div className="flex items-center gap-3">
                     <RotateCcw className="h-5 w-5 text-blue-400" />
-                    <span className="text-sm font-medium">Refunds accepted within 2 days of receiving your order</span>
+                    <span className="text-sm font-medium">Refunds & exchanges for damaged products only</span>
                   </div>
                 </div>
               </CardContent>

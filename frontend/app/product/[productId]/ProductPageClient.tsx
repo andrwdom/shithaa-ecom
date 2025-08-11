@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Share2, Truck, Shield, RotateCcw, Plus, Minus, Star, ChevronRight } from "lucide-react"
 import Image from "next/image"
 import Script from "next/script"
+import ResponsiveImage from "@/components/responsive-image"
 import PageLoading from "@/components/page-loading"
 import { useCart } from "@/components/cart-context"
 import CheckoutPromptModal from "@/components/checkout-prompt-modal"
@@ -74,7 +75,7 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
             features: p.features || [],
             rating: p.rating,
             reviews: p.reviews,
-            stock: (p.sizes || []).reduce((sum, s) => sum + (s.stock || 0), 0),
+            stock: (p.sizes || []).reduce((sum: number, s: any) => sum + (s.stock || 0), 0),
             availableSizes: p.availableSizes || [],
           });
         }
@@ -112,7 +113,7 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
     // Set buy now item with fresh data
     setBuyNowItem({
       id: product.id,
-      _id: product.id,
+      _id: product.id.toString(),
       name: product.name,
       price: product.price,
       quantity,
@@ -125,7 +126,9 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
   }
 
   if (loading) {
-    return <PageLoading loadingMessage="Loading Product Details..." />
+    return <PageLoading loadingMessage="Loading Product Details...">
+      <div>Loading...</div>
+    </PageLoading>
   }
 
   if (!product) {
@@ -313,10 +316,11 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
           {/* Product Images */}
           <div className="space-y-4">
             <div className="relative aspect-[2/3] w-full max-w-md bg-white rounded-2xl overflow-hidden shadow-lg mx-auto">
-              <Image
-                src={product.images[selectedImage] || "/placeholder.svg"}
+              <ResponsiveImage
+                imageUrls={product.images[selectedImage] || "/placeholder.svg"}
                 alt={product.name}
                 fill
+                componentType="product-detail"
                 className="object-cover"
               />
               <button
@@ -343,11 +347,12 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
                       selectedImage === index ? "border-gray-900" : "border-gray-200"
                     }`}
                   >
-                    <Image
-                      src={image || "/placeholder.svg"}
+                    <ResponsiveImage
+                      imageUrls={image || "/placeholder.svg"}
                       alt={`${product.name} ${index + 1}`}
                       width={60}
                       height={90}
+                      componentType="product-detail"
                       className="object-cover w-full h-full"
                     />
                   </button>
@@ -458,15 +463,15 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
                     onClick={() => {
                       if (!product) return;
                       addToCart({
-                        id: product._id,
-                        _id: product._id,
+                        id: product.id.toString(),
+                        _id: product.id.toString(),
                         name: product.name,
                         price: product.price,
                         quantity,
                         size: selectedSize,
                         image: product.images[0] || "/placeholder.svg",
                         category: product.category,
-                        categorySlug: product.categorySlug,
+                        categorySlug: product.category.toLowerCase().replace(/ /g, '-'),
                       }, false);
                       setAddedProduct({
                         name: product.name,
@@ -506,8 +511,8 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
                     <span className="text-sm font-medium">Secure Checkout</span>
                   </div>
                   <div className="flex items-center gap-3">
-                    <RotateCcw className="h-5 w-5 text-gray-600" />
-                    <span className="text-sm font-medium">Refunds accepted within 2 days of receiving your order</span>
+                    <RotateCcw className="h-5 w-6 text-gray-600" />
+                    <span className="text-sm font-medium">Refunds & exchanges for damaged products only</span>
                   </div>
                 </div>
               </CardContent>

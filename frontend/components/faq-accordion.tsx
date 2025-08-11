@@ -18,7 +18,7 @@ export default function FAQAccordion() {
     {
       question: "What is your return policy?",
       answer:
-        "We only accept refund requests within 2 days of receiving your order. To request a refund, please contact us via Instagram direct message (preferred) or email us at info.shitha@gmail.com. Refund requests made after 2 days from the date you receive your order will not be eligible.",
+        "We accept refunds and exchanges only for damaged products. Requests must be submitted within 2 days of receiving your order and must include an uninterrupted open-box video showing the damage. For fastest response, DM us on Instagram (preferred). Alternatively, email: info.shithaa@gmail.com.",
     },
     {
       question: "How long does delivery take?",

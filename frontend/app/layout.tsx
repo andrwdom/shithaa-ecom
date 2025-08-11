@@ -150,7 +150,7 @@ export default function RootLayout({
               "contactPoint": {
                 "@type": "ContactPoint",
                 "contactType": "customer service",
-                "email": "info.shitha@gmail.com"
+                "email": "info.shithaa@gmail.com"
               },
               "sameAs": [
                 "https://instagram.com/shithaa.in"
