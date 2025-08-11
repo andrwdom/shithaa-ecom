@@ -5,8 +5,11 @@ import { Input } from '@/components/ui/input'
 const countries = ["India", "United States", "United Kingdom", "Canada", "Australia"]
 
 export default function ShippingForm({ value, onChange, errors }: any) {
+  // Ensure value has default values to prevent undefined errors
+  const safeValue = value || {};
+  
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
-    onChange({ ...value, [e.target.name]: e.target.value });
+    onChange({ ...safeValue, [e.target.name]: e.target.value });
   }
 
   return (
@@ -25,7 +28,7 @@ export default function ShippingForm({ value, onChange, errors }: any) {
               autoComplete="name"
               required
               placeholder="e.g. Andrew Dominic"
-              value={value.fullName || ""}
+              value={safeValue.fullName || ""}
               onChange={handleChange}
               className={`w-full border rounded-lg px-3 py-2 text-sm ${errors?.fullName ? "border-red-500" : ""}`}
             />
@@ -43,7 +46,7 @@ export default function ShippingForm({ value, onChange, errors }: any) {
               autoComplete="email"
               required
               placeholder="e.g. andrew@email.com"
-              value={value.email || ""}
+              value={safeValue.email || ""}
               onChange={handleChange}
               className={`w-full border rounded-lg px-3 py-2 text-sm ${errors?.email ? "border-red-500" : ""}`}
             />
@@ -62,7 +65,7 @@ export default function ShippingForm({ value, onChange, errors }: any) {
               inputMode="numeric"
               required
               placeholder="e.g. 9876543210"
-              value={value.phone || ""}
+              value={safeValue.phone || ""}
               onChange={handleChange}
               className={`w-full border rounded-lg px-3 py-2 text-sm ${errors?.phone ? "border-red-500" : ""}`}
             />
@@ -79,7 +82,7 @@ export default function ShippingForm({ value, onChange, errors }: any) {
               autoComplete="address-line1"
               required
               placeholder="e.g. 123/4A, Nakeerer Street"
-              value={value.addressLine1 || ""}
+              value={safeValue.addressLine1 || ""}
               onChange={handleChange}
               className={`w-full border rounded-lg px-3 py-2 text-sm ${errors?.addressLine1 ? "border-red-500" : ""}`}
             />
@@ -95,7 +98,7 @@ export default function ShippingForm({ value, onChange, errors }: any) {
               name="addressLine2"
               autoComplete="address-line2"
               placeholder="Apartment, suite, etc. (optional)"
-              value={value.addressLine2 || ""}
+              value={safeValue.addressLine2 || ""}
               onChange={handleChange}
               className="w-full border rounded-lg px-3 py-2 text-sm"
             />
@@ -111,7 +114,7 @@ export default function ShippingForm({ value, onChange, errors }: any) {
               autoComplete="address-level2"
               required
               placeholder="e.g. Chennai"
-              value={value.city || ""}
+              value={safeValue.city || ""}
               onChange={handleChange}
               className={`w-full border rounded-lg px-3 py-2 text-sm ${errors?.city ? "border-red-500" : ""}`}
             />
@@ -128,7 +131,7 @@ export default function ShippingForm({ value, onChange, errors }: any) {
               autoComplete="address-level1"
               required
               placeholder="e.g. Tamil Nadu"
-              value={value.state || ""}
+              value={safeValue.state || ""}
               onChange={handleChange}
               className={`w-full border rounded-lg px-3 py-2 text-sm ${errors?.state ? "border-red-500" : ""}`}
             />
@@ -146,7 +149,7 @@ export default function ShippingForm({ value, onChange, errors }: any) {
               inputMode="numeric"
               required
               placeholder="e.g. 600001"
-              value={value.postalCode || ""}
+              value={safeValue.postalCode || ""}
               onChange={handleChange}
               className={`w-full border rounded-lg px-3 py-2 text-sm ${errors?.postalCode ? "border-red-500" : ""}`}
             />

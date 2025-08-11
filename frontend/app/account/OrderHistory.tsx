@@ -426,11 +426,11 @@ export default function OrderHistory({ orders }: { orders: any[] }) {
                 <div className="bg-gray-50 rounded-xl p-4">
                   {(() => {
                     const getShippingDisplayInfo = () => {
-                      if (selectedOrder.shippingInfo) {
+                      if (selectedOrder?.shippingInfo) {
                         return {
-                          name: selectedOrder.shippingInfo.fullName,
-                          email: selectedOrder.shippingInfo.email,
-                          phone: selectedOrder.shippingInfo.phone,
+                          name: selectedOrder.shippingInfo.fullName || selectedOrder.shippingInfo.name || '',
+                          email: selectedOrder.shippingInfo.email || '',
+                          phone: selectedOrder.shippingInfo.phone || '',
                           address: [
                             selectedOrder.shippingInfo.addressLine1,
                             selectedOrder.shippingInfo.addressLine2,
@@ -440,11 +440,11 @@ export default function OrderHistory({ orders }: { orders: any[] }) {
                             selectedOrder.shippingInfo.country
                           ].filter(Boolean).join(', ')
                         };
-                      } else if (selectedOrder.shippingAddress) {
+                      } else if (selectedOrder?.shippingAddress) {
                         return {
-                          name: selectedOrder.shippingAddress.fullName,
-                          email: selectedOrder.shippingAddress.email,
-                          phone: selectedOrder.shippingAddress.phone,
+                          name: selectedOrder.shippingAddress.fullName || selectedOrder.shippingAddress.name || '',
+                          email: selectedOrder.shippingAddress.email || '',
+                          phone: selectedOrder.shippingAddress.phone || '',
                           address: [
                             selectedOrder.shippingAddress.flatHouseNo,
                             selectedOrder.shippingAddress.areaLocality,
@@ -456,11 +456,11 @@ export default function OrderHistory({ orders }: { orders: any[] }) {
                             selectedOrder.shippingAddress.country
                           ].filter(Boolean).join(', ')
                         };
-                      } else if (selectedOrder.address) {
+                      } else if (selectedOrder?.address) {
                         return {
-                          name: selectedOrder.customerName,
-                          email: selectedOrder.email,
-                          phone: selectedOrder.phone,
+                          name: selectedOrder.customerName || '',
+                          email: selectedOrder.email || '',
+                          phone: selectedOrder.phone || '',
                           address: [
                             selectedOrder.address.line1,
                             selectedOrder.address.line2,
