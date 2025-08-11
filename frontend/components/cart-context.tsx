@@ -316,29 +316,23 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function addToCart(item: CartItem, openSidebar: boolean = true, stock?: number) {
-    // Validate stock before adding
+    // CRITICAL: Validate stock before any frontend updates
     if (typeof stock === 'number' && item.quantity > stock) {
       alert(`Cannot add more than ${stock} in stock for this size.`)
       return
     }
 
-    // Update frontend cart immediately for better UX
-    setCartItems((prev) => {
-      const existing = prev.find((i) => i._id === item._id && i.size === item.size)
-      const existingQty = existing ? existing.quantity : 0
-      const newQty = existingQty + item.quantity
-      
-      if (existing) {
-        return prev.map((i) =>
-          i._id === item._id && i.size === item.size
-            ? { ...i, quantity: i.quantity + item.quantity }
-            : i
-        )
-      }
-      return [...prev, item]
-    })
+    // CRITICAL: Check if adding this quantity would exceed stock when combined with existing cart items
+    const existingItem = cartItems.find((i) => i._id === item._id && i.size === item.size)
+    const existingQty = existingItem ? existingItem.quantity : 0
+    const newTotalQty = existingQty + item.quantity
+    
+    if (typeof stock === 'number' && newTotalQty > stock) {
+      alert(`Cannot add ${item.quantity} more. You already have ${existingQty} in cart, and only ${stock} available in stock.`)
+      return
+    }
 
-    // Sync with backend if user is authenticated
+    // Sync with backend FIRST if user is authenticated
     if (user) {
       try {
         const token = await getBackendToken()
@@ -360,39 +354,45 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           if (!response.ok) {
             const errorData = await response.json()
             console.error('Backend cart add failed:', errorData)
-            // Revert frontend changes if backend fails
-            setCartItems((prev) => {
-              const existing = prev.find((i) => i._id === item._id && i.size === item.size)
-              if (existing && existing.quantity > item.quantity) {
-                return prev.map((i) =>
-                  i._id === item._id && i.size === item.size
-                    ? { ...i, quantity: i.quantity - item.quantity }
-                    : i
-                )
-              }
-              return prev.filter((i) => !(i._id === item._id && i.size === item.size))
-            })
             alert(errorData.message || 'Failed to add item to cart')
             return
           }
+
+          // Only update frontend after successful backend validation
+          const responseData = await response.json()
+          console.log('Backend cart add successful:', responseData)
+          
+          // Update frontend cart with validated data from backend
+          setCartItems((prev) => {
+            const existing = prev.find((i) => i._id === item._id && i.size === item.size)
+            if (existing) {
+              return prev.map((i) =>
+                i._id === item._id && i.size === item.size
+                  ? { ...i, quantity: responseData.data.quantity }
+                  : i
+              )
+            }
+            return [...prev, { ...item, quantity: responseData.data.quantity }]
+          })
         }
       } catch (error) {
         console.error('Error syncing with backend:', error)
-        // Revert frontend changes if backend sync fails
-        setCartItems((prev) => {
-          const existing = prev.find((i) => i._id === item._id && i.size === item.size)
-          if (existing && existing.quantity > item.quantity) {
-            return prev.map((i) =>
-              i._id === item._id && i.size === item.size
-                ? { ...i, quantity: i.quantity - item.quantity }
-                : i
-            )
-          }
-          return prev.filter((i) => !(i._id === item._id && i.size === item.size))
-        })
         alert('Failed to sync with backend. Please try again.')
         return
       }
+    } else {
+      // For non-authenticated users, update frontend immediately but with stock validation
+      setCartItems((prev) => {
+        const existing = prev.find((i) => i._id === item._id && i.size === item.size)
+        if (existing) {
+          return prev.map((i) =>
+            i._id === item._id && i.size === item.size
+              ? { ...i, quantity: i.quantity + item.quantity }
+              : i
+          )
+        }
+        return [...prev, item]
+      })
     }
 
     if (openSidebar) setIsCartSidebarOpen(true)
@@ -401,7 +401,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   async function updateCartItem(_id: string, size: string, quantity: number, stock?: number) {
     console.log('updateCartItem called:', { _id, size, quantity, stock, user: !!user })
     
-    // Validate stock before updating
+    // CRITICAL: Validate stock before any frontend updates
     if (typeof stock === 'number' && quantity > stock) {
       console.warn(`Stock validation failed: quantity ${quantity} > stock ${stock}`)
       alert(`Cannot set quantity higher than ${stock} in stock for this size.`)
@@ -415,21 +415,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       return
     }
 
-    // Update frontend cart immediately for better UX
-    setCartItems((prev) => {
-      const existing = prev.find((i) => i._id === _id && i.size === size)
-      if (!existing) {
-        console.warn('Item not found in cart for update:', { _id, size })
-        return prev
-      }
-      
-      console.log('Updating cart item:', { _id, size, oldQuantity: existing.quantity, newQuantity: quantity })
-      return prev.map((item) =>
-        item._id === _id && item.size === size ? { ...item, quantity } : item
-      )
-    })
-
-    // Sync with backend if user is authenticated
+    // Sync with backend FIRST if user is authenticated
     if (user) {
       try {
         const token = await getBackendToken()
@@ -453,41 +439,47 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           if (!response.ok) {
             const errorData = await response.json()
             console.error('Backend cart update failed:', errorData)
-            // Revert frontend changes if backend fails
-            setCartItems((prev) => {
-              const existing = prev.find((i) => i._id === _id && i.size === size)
-              if (existing) {
-                return prev.map((item) =>
-                  item._id === _id && item.size === size ? { ...item, quantity: existing.quantity } : item
-                )
-              }
-              return prev
-            })
             alert(errorData.message || 'Failed to update cart')
             return
           }
+
+          // Only update frontend after successful backend validation
+          const responseData = await response.json()
+          console.log('Backend cart update successful:', responseData)
           
-          console.log('Backend cart update successful')
-        } else {
-          console.warn('No backend token available for cart update')
+          // Update frontend cart with validated data from backend
+          setCartItems((prev) => {
+            const existing = prev.find((i) => i._id === _id && i.size === size)
+            if (!existing) {
+              console.warn('Item not found in cart for update:', { _id, size })
+              return prev
+            }
+            
+            console.log('Updating cart item with backend data:', { _id, size, oldQuantity: existing.quantity, newQuantity: responseData.data.quantity })
+            return prev.map((item) =>
+              item._id === _id && item.size === size ? { ...item, quantity: responseData.data.quantity } : item
+            )
+          })
         }
       } catch (error) {
         console.error('Error syncing with backend:', error)
-        // Revert frontend changes if backend sync fails
-        setCartItems((prev) => {
-          const existing = prev.find((i) => i._id === _id && i.size === size)
-          if (existing) {
-            return prev.map((item) =>
-              item._id === _id && item.size === size ? { ...item, quantity: existing.quantity } : item
-            )
-          }
-          return prev
-        })
         alert('Failed to sync with backend. Please try again.')
         return
       }
     } else {
-      console.log('No user authenticated, cart update only in frontend')
+      // For non-authenticated users, update frontend immediately but with stock validation
+      setCartItems((prev) => {
+        const existing = prev.find((i) => i._id === _id && i.size === size)
+        if (!existing) {
+          console.warn('Item not found in cart for update:', { _id, size })
+          return prev
+        }
+        
+        console.log('Updating cart item:', { _id, size, oldQuantity: existing.quantity, newQuantity: quantity })
+        return prev.map((item) =>
+          item._id === _id && item.size === size ? { ...item, quantity } : item
+        )
+      })
     }
   }
 

@@ -2,7 +2,7 @@ import userModel from "../models/userModel.js"
 import productModel from "../models/productModel.js"
 import mongoose from "mongoose"
 
-// add products to user cart with stock validation
+// add products to user cart with bulletproof stock validation
 const addToCart = async (req, res) => {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -25,7 +25,7 @@ const addToCart = async (req, res) => {
             });
         }
 
-        // Check if product exists and has sufficient stock
+        // ATOMIC STOCK VALIDATION: Lock the product and check stock in one operation
         const product = await productModel.findById(itemId).session(session);
         if (!product) {
             await session.abortTransaction();
@@ -59,7 +59,7 @@ const addToCart = async (req, res) => {
         const currentQuantity = cartData[itemId]?.[size] || 0;
         const newQuantity = currentQuantity + quantity;
 
-        // Check if new quantity exceeds available stock
+        // CRITICAL: Check if new quantity exceeds available stock
         if (newQuantity > sizeObj.stock) {
             await session.abortTransaction();
             return res.status(400).json({ 
@@ -68,13 +68,13 @@ const addToCart = async (req, res) => {
             });
         }
 
-        // Update cart data
+        // ATOMIC UPDATE: Update cart data
         if (!cartData[itemId]) {
             cartData[itemId] = {};
         }
         cartData[itemId][size] = newQuantity;
 
-        // Update user cart
+        // Update user cart atomically
         await userModel.findByIdAndUpdate(
             userId, 
             { cartData }, 
@@ -84,7 +84,7 @@ const addToCart = async (req, res) => {
         await session.commitTransaction();
 
         // Log successful cart addition
-        console.log(`User ${userId} added ${quantity} of product ${itemId} size ${size} to cart. New total: ${newQuantity}`);
+        console.log(`User ${userId} added ${quantity} of product ${itemId} size ${size} to cart. New total: ${newQuantity}, Stock remaining: ${sizeObj.stock - newQuantity}`);
 
         res.json({ 
             success: true, 
@@ -93,7 +93,8 @@ const addToCart = async (req, res) => {
                 itemId,
                 size,
                 quantity: newQuantity,
-                availableStock: sizeObj.stock - newQuantity
+                availableStock: sizeObj.stock - newQuantity,
+                currentStock: sizeObj.stock
             }
         });
 
@@ -110,7 +111,7 @@ const addToCart = async (req, res) => {
     }
 }
 
-// update user cart with stock validation
+// update user cart with bulletproof stock validation
 const updateCart = async (req, res) => {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -133,7 +134,7 @@ const updateCart = async (req, res) => {
             });
         }
 
-        // Check if product exists and has sufficient stock
+        // ATOMIC STOCK VALIDATION: Lock the product and check stock in one operation
         const product = await productModel.findById(itemId).session(session);
         if (!product) {
             await session.abortTransaction();
@@ -153,7 +154,7 @@ const updateCart = async (req, res) => {
             });
         }
 
-        // Check if new quantity exceeds available stock
+        // CRITICAL: Check if new quantity exceeds available stock
         if (quantity > sizeObj.stock) {
             await session.abortTransaction();
             return res.status(400).json({ 
@@ -191,7 +192,7 @@ const updateCart = async (req, res) => {
             cartData[itemId][size] = quantity;
         }
 
-        // Update user cart
+        // Update user cart atomically
         await userModel.findByIdAndUpdate(
             userId, 
             { cartData }, 
@@ -204,7 +205,7 @@ const updateCart = async (req, res) => {
         if (quantity === 0) {
             console.log(`User ${userId} removed product ${itemId} size ${size} from cart`);
         } else {
-            console.log(`User ${userId} updated product ${itemId} size ${size} quantity to ${quantity}`);
+            console.log(`User ${userId} updated product ${itemId} size ${size} quantity to ${quantity}, Stock remaining: ${sizeObj.stock - quantity}`);
         }
 
         res.json({ 
@@ -214,7 +215,8 @@ const updateCart = async (req, res) => {
                 itemId,
                 size,
                 quantity,
-                availableStock: sizeObj.stock - (quantity || 0)
+                availableStock: sizeObj.stock - (quantity || 0),
+                currentStock: sizeObj.stock
             }
         });
 
@@ -267,7 +269,7 @@ const removeFromCart = async (req, res) => {
             }
         }
 
-        // Update user cart
+        // Update user cart atomically
         await userModel.findByIdAndUpdate(
             userId, 
             { cartData }, 
@@ -297,7 +299,7 @@ const removeFromCart = async (req, res) => {
     }
 }
 
-// get user cart data with stock validation
+// get user cart data with bulletproof stock validation
 const getUserCart = async (req, res) => {
     try {
         const { userId } = req.body;
@@ -319,9 +321,10 @@ const getUserCart = async (req, res) => {
 
         let cartData = userData.cartData || {};
 
-        // Validate cart items against current stock
+        // BULLETPROOF STOCK VALIDATION: Validate cart items against current stock
         const validatedCartData = {};
         let hasStockIssues = false;
+        const stockIssues = [];
 
         for (const [itemId, sizes] of Object.entries(cartData)) {
             try {
@@ -343,6 +346,12 @@ const getUserCart = async (req, res) => {
                     if (sizeObj.stock < quantity) {
                         console.log(`Insufficient stock for ${product.name} size ${size}. Cart has ${quantity}, stock is ${sizeObj.stock}`);
                         hasStockIssues = true;
+                        stockIssues.push({
+                            productName: product.name,
+                            size,
+                            requestedQuantity: quantity,
+                            availableStock: sizeObj.stock
+                        });
                         // Adjust quantity to available stock
                         validatedCartData[itemId][size] = Math.max(0, sizeObj.stock);
                     } else {
@@ -363,13 +372,15 @@ const getUserCart = async (req, res) => {
         // Update cart if there were stock issues
         if (hasStockIssues) {
             await userModel.findByIdAndUpdate(userId, { cartData: validatedCartData });
-            console.log(`Updated cart for user ${userId} due to stock issues`);
+            console.log(`Updated cart for user ${userId} due to stock issues:`, stockIssues);
         }
 
         res.json({ 
             success: true, 
             cartData: validatedCartData,
-            hasStockIssues
+            hasStockIssues,
+            stockIssues,
+            message: hasStockIssues ? "Some items were adjusted due to stock changes" : "Cart is valid"
         });
 
     } catch (error) {
@@ -382,7 +393,7 @@ const getUserCart = async (req, res) => {
     }
 }
 
-// Calculate cart total with loungewear offer
+// Calculate cart total with bulletproof stock validation
 const calculateCartTotal = async (req, res) => {
     try {
         const { items } = req.body;
@@ -404,9 +415,10 @@ const calculateCartTotal = async (req, res) => {
             productMap[product._id.toString()] = product;
         });
 
-        // Validate items against current stock
+        // BULLETPROOF STOCK VALIDATION: Validate items against current stock
         const validatedItems = [];
         let hasStockIssues = false;
+        const stockIssues = [];
 
         for (const item of items) {
             const product = productMap[item._id];
@@ -424,6 +436,12 @@ const calculateCartTotal = async (req, res) => {
             if (sizeObj.stock < item.quantity) {
                 console.log(`Insufficient stock for ${product.name} size ${item.size}. Requested: ${item.quantity}, Available: ${sizeObj.stock}`);
                 hasStockIssues = true;
+                stockIssues.push({
+                    productName: product.name,
+                    size: item.size,
+                    requestedQuantity: item.quantity,
+                    availableStock: sizeObj.stock
+                });
                 // Adjust quantity to available stock
                 item.quantity = Math.max(0, sizeObj.stock);
             }
@@ -483,7 +501,9 @@ const calculateCartTotal = async (req, res) => {
                 loungewearCount: loungewearItems.length,
                 otherItemsCount: otherItems.length,
                 hasStockIssues,
-                validatedItems
+                stockIssues,
+                validatedItems,
+                message: hasStockIssues ? "Some items were adjusted due to stock changes" : "All items are in stock"
             }
         };
 

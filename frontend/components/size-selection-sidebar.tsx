@@ -59,12 +59,16 @@ export default function SizeSelectionSidebar({
 
   const handleAddToCart = () => {
     if (!selectedSize) {
-      alert("Please select a size first!")
+      alert('Please select a size first')
       return
     }
-    if (selectedSizeStock === 0) {
-      alert("Selected size is out of stock!");
-      return;
+    if (!selectedSizeStock || selectedSizeStock === 0) {
+      alert('This size is out of stock')
+      return
+    }
+    if (quantity > selectedSizeStock) {
+      alert(`Cannot add more than ${selectedSizeStock} in stock for this size.`)
+      return
     }
     onAddToCart(product, selectedSize, quantity, selectedSizeStock)
     onClose()
@@ -72,12 +76,16 @@ export default function SizeSelectionSidebar({
 
   const handleBuyNow = () => {
     if (!selectedSize) {
-      alert("Please select a size first!")
+      alert('Please select a size first')
       return
     }
-    if (selectedSizeStock === 0) {
-      alert("Selected size is out of stock!");
-      return;
+    if (!selectedSizeStock || selectedSizeStock === 0) {
+      alert('This size is out of stock')
+      return
+    }
+    if (quantity > selectedSizeStock) {
+      alert(`Cannot add more than ${selectedSizeStock} in stock for this size.`)
+      return
     }
     onBuyNow(product, selectedSize, quantity)
     onClose()
@@ -91,6 +99,9 @@ export default function SizeSelectionSidebar({
   const increaseQuantity = () => {
     if (selectedSizeStock && quantity < selectedSizeStock) {
       setQuantity((prev) => prev + 1)
+    } else if (selectedSizeStock && quantity >= selectedSizeStock) {
+      // Show alert when trying to exceed stock
+      alert(`Cannot add more than ${selectedSizeStock} in stock for this size.`)
     }
   }
 

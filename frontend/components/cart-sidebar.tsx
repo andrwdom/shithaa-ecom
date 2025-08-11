@@ -1,67 +1,68 @@
 "use client"
 
-import React from "react"
-import { X, Plus, Minus, ShoppingBag, Gift } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import Image from "next/image"
-import { useCart, CartItem } from "@/components/cart-context"
-import { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useCart } from "./cart-context";
+import { useAuth } from "./auth/AuthContext";
+import { Button } from "./ui/button";
+import { ShoppingBag, X, Minus, Plus, Trash2, Gift } from "lucide-react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { getShippingDisplayMessage } from "@/lib/shipping-calculator"
 
 export default function CartSidebar() {
   const {
-    cartItems, 
-    updateCartItem, 
-    removeFromCart, 
-    isCartSidebarOpen, 
+    cartItems,
+    removeFromCart,
+    updateCartItem,
+    isCartSidebarOpen,
     closeCartSidebar,
+    refreshCartData,
     cartTotal,
+    cartSubtotal,
     offerDetails,
-    isLoadingOffer,
-    refreshCartData
+    isLoadingOffer
   } = useCart();
-  const [productStocks, setProductStocks] = useState<Record<string, Record<string, number>>>({});
-  const [isUpdating, setIsUpdating] = useState<Record<string, boolean>>({});
+
+  const { user } = useAuth();
   const router = useRouter();
+  const [isUpdating, setIsUpdating] = useState<Record<string, boolean>>({});
+  const [productStocks, setProductStocks] = useState<Record<string, Record<string, number>>>({});
 
   // Fetch stock info for all cart items on open
   useEffect(() => {
-    async function fetchStocks() {
-      console.log('Fetching stocks for cart items:', cartItems.map(item => ({ id: item._id, size: item.size })));
-      const stocks: Record<string, Record<string, number>> = {};
-      for (const item of cartItems) {
-        if (!stocks[item._id]) {
-          try {
-            const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/products/${item._id}`;
-            console.log('Fetching stock from:', url);
-            const res = await fetch(url);
-            if (res.ok) {
-              const data = await res.json();
-              if (data.data && Array.isArray(data.data.sizes)) {
-                stocks[item._id] = {};
-                for (const s of data.data.sizes) {
-                  stocks[item._id][s.size] = s.stock;
-                }
-                console.log(`Stock data for product ${item._id}:`, stocks[item._id]);
-              } else {
-                console.warn(`No sizes data for product ${item._id}:`, data);
-              }
-            } else {
-              console.warn(`Failed to fetch stock for product ${item._id}:`, res.status, res.statusText);
-            }
-          } catch (error) {
-            console.error(`Error fetching stock for product ${item._id}:`, error);
-          }
-        }
-      }
-      console.log('Final stocks object:', stocks);
-      setProductStocks(stocks);
-    }
-    if (isCartSidebarOpen && cartItems.length > 0) fetchStocks();
-  }, [isCartSidebarOpen, cartItems]);
+    const fetchStocks = async () => {
+      if (!user || cartItems.length === 0) return;
+      
+      try {
+        const token = await user.getIdToken();
+        if (!token) return;
 
-  const handleQuantityUpdate = async (item: CartItem, newQuantity: number) => {
+        const productIds = [...new Set(cartItems.map(item => item._id))];
+        
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/cart/get-stock`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'token': token
+          },
+          body: JSON.stringify({ productIds })
+        });
+
+        if (response.ok) {
+          const stockData = await response.json();
+          setProductStocks(stockData);
+          console.log('Stock data fetched:', stockData);
+        } else {
+          console.error('Failed to fetch stock data');
+        }
+      } catch (error) {
+        console.error('Error fetching stock data:', error);
+      }
+    };
+    if (isCartSidebarOpen && cartItems.length > 0) fetchStocks();
+  }, [isCartSidebarOpen, cartItems, user]);
+
+  const handleQuantityUpdate = async (item: any, newQuantity: number) => {
     console.log('handleQuantityUpdate called:', { item: item._id, size: item.size, newQuantity, currentStock: productStocks[item._id]?.[item.size] });
     
     if (newQuantity < 1) return;
@@ -69,6 +70,7 @@ export default function CartSidebar() {
     const currentStock = productStocks[item._id]?.[item.size] || 0;
     console.log('Stock check:', { itemId: item._id, size: item.size, currentStock, newQuantity });
     
+    // CRITICAL: Validate stock before any updates
     if (newQuantity > currentStock) {
       console.warn(`Stock validation failed in sidebar: quantity ${newQuantity} > stock ${currentStock}`);
       alert(`Cannot set quantity higher than ${currentStock} in stock for this size.`);
@@ -87,7 +89,7 @@ export default function CartSidebar() {
     }
   };
 
-  const handleRemoveItem = async (item: CartItem) => {
+  const handleRemoveItem = async (item: any) => {
     const itemKey = `${item._id}-${item.size}`;
     setIsUpdating(prev => ({ ...prev, [itemKey]: true }));
     

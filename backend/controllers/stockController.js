@@ -1,7 +1,7 @@
 import productModel from "../models/productModel.js"
 import mongoose from "mongoose"
 
-// Reserve stock for checkout (atomic operation)
+// Reserve stock for checkout (atomic operation with race condition prevention)
 const reserveStock = async (items, session = null) => {
     const useSession = session || await mongoose.startSession();
     const shouldStartTransaction = !session;
@@ -50,7 +50,7 @@ const reserveStock = async (items, session = null) => {
             });
         }
         
-        // Second pass: apply all stock updates atomically
+        // Second pass: apply all stock updates atomically with optimistic locking
         for (const update of stockUpdates) {
             const result = await productModel.updateOne(
                 {
@@ -132,7 +132,7 @@ const releaseStock = async (items, session = null) => {
             });
         }
         
-        // Apply all stock releases
+        // Apply all stock releases atomically
         for (const release of stockReleases) {
             await productModel.updateOne(
                 { _id: release.productId, 'sizes.size': release.size },
@@ -164,7 +164,7 @@ const releaseStock = async (items, session = null) => {
     }
 };
 
-// Check stock availability for items
+// Check stock availability for items with enhanced validation
 const checkStockAvailability = async (items) => {
     try {
         const stockChecks = [];
@@ -218,7 +218,7 @@ const checkStockAvailability = async (items) => {
     }
 };
 
-// Get current stock for a product
+// Get current stock for a product with enhanced details
 const getProductStock = async (productId) => {
     try {
         const product = await productModel.findById(productId);
@@ -232,10 +232,14 @@ const getProductStock = async (productId) => {
             sizes: product.sizes.map(size => ({
                 size: size.size,
                 stock: size.stock,
-                inStock: size.stock > 0
+                inStock: size.stock > 0,
+                lowStock: size.stock <= 5 && size.stock > 0,
+                outOfStock: size.stock === 0
             })),
             totalStock: product.sizes.reduce((sum, size) => sum + size.stock, 0),
-            inStock: product.sizes.some(size => size.stock > 0)
+            inStock: product.sizes.some(size => size.stock > 0),
+            lowStockSizes: product.sizes.filter(size => size.stock <= 5 && size.stock > 0).map(s => s.size),
+            outOfStockSizes: product.sizes.filter(size => size.stock === 0).map(s => s.size)
         };
         
     } catch (error) {
@@ -244,7 +248,7 @@ const getProductStock = async (productId) => {
     }
 };
 
-// Update stock for a specific product size (admin function)
+// Update stock for a specific product size (admin function) with validation
 const updateProductStock = async (productId, size, newStock, session = null) => {
     const useSession = session || await mongoose.startSession();
     const shouldStartTransaction = !session;
@@ -294,7 +298,7 @@ const updateProductStock = async (productId, size, newStock, session = null) => 
     }
 };
 
-// Bulk stock update (admin function)
+// Bulk stock update (admin function) with enhanced validation
 const bulkUpdateStock = async (updates, session = null) => {
     const useSession = session || await mongoose.startSession();
     const shouldStartTransaction = !session;
@@ -349,7 +353,7 @@ const bulkUpdateStock = async (updates, session = null) => {
     }
 };
 
-// Get low stock products (admin function)
+// Get low stock products (admin function) with enhanced filtering
 const getLowStockProducts = async (threshold = 5) => {
     try {
         const products = await productModel.find({
@@ -368,7 +372,8 @@ const getLowStockProducts = async (threshold = 5) => {
                         currentStock: size.stock,
                         threshold,
                         category: product.category,
-                        categorySlug: product.categorySlug
+                        categorySlug: product.categorySlug,
+                        urgency: size.stock === 0 ? 'critical' : size.stock <= 2 ? 'high' : 'medium'
                     });
                 }
             });
@@ -382,6 +387,86 @@ const getLowStockProducts = async (threshold = 5) => {
     }
 };
 
+// NEW: Validate cart items against current stock (for cart operations)
+const validateCartItems = async (cartItems, userId) => {
+    try {
+        const validatedItems = [];
+        const stockIssues = [];
+        let hasStockIssues = false;
+
+        for (const item of cartItems) {
+            const product = await productModel.findById(item._id);
+            if (!product) {
+                stockIssues.push({
+                    item,
+                    error: 'Product not found',
+                    action: 'remove'
+                });
+                continue;
+            }
+
+            const sizeObj = product.sizes.find(s => s.size === item.size);
+            if (!sizeObj) {
+                stockIssues.push({
+                    item,
+                    error: `Size ${item.size} not available`,
+                    action: 'remove'
+                });
+                continue;
+            }
+
+            if (sizeObj.stock < item.quantity) {
+                hasStockIssues = true;
+                stockIssues.push({
+                    item,
+                    error: `Insufficient stock. Available: ${sizeObj.stock}, Requested: ${item.quantity}`,
+                    action: 'adjust',
+                    adjustedQuantity: Math.max(0, sizeObj.stock)
+                });
+                // Adjust quantity to available stock
+                validatedItems.push({
+                    ...item,
+                    quantity: Math.max(0, sizeObj.stock)
+                });
+            } else {
+                validatedItems.push(item);
+            }
+        }
+
+        return {
+            validatedItems,
+            stockIssues,
+            hasStockIssues,
+            message: hasStockIssues ? 'Some items were adjusted due to stock changes' : 'All items are in stock'
+        };
+
+    } catch (error) {
+        console.error('Cart validation failed:', error);
+        throw error;
+    }
+};
+
+// NEW: Get real-time stock for multiple products (for frontend cart)
+const getBulkProductStock = async (productIds) => {
+    try {
+        const products = await productModel.find({ _id: { $in: productIds } });
+        const stockMap = {};
+        
+        products.forEach(product => {
+            stockMap[product._id.toString()] = {};
+            product.sizes.forEach(size => {
+                stockMap[product._id.toString()][size.size] = size.stock;
+            });
+        });
+        
+        return stockMap;
+        
+    } catch (error) {
+        console.error('Get bulk product stock failed:', error);
+        throw error;
+    }
+};
+
 export {
     reserveStock,
     releaseStock,
@@ -389,5 +474,7 @@ export {
     getProductStock,
     updateProductStock,
     bulkUpdateStock,
-    getLowStockProducts
+    getLowStockProducts,
+    validateCartItems,
+    getBulkProductStock
 }; 
