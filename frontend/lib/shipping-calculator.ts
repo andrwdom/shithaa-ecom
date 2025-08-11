@@ -70,19 +70,46 @@ export function calculateShippingCost(
   let shippingMessage = ""
 
   if (hasMaternityFeedingWear) {
-    // Special case: Maternity Feeding Wear - always charge shipping regardless of state
-    if (totalDresses === 1) {
-      shippingCost = 39
-      shippingMessage = "₹39 shipping for 1 item"
-    } else if (totalDresses === 2) {
-      shippingCost = 59
-      shippingMessage = "₹59 shipping for 2 items"
-    } else if (totalDresses === 3) {
-      shippingCost = 89
-      shippingMessage = "₹89 shipping for 3 items"
-    } else if (totalDresses > 3) {
-      shippingCost = 105
-      shippingMessage = "₹105 shipping for 4+ items"
+    // New shipping rules for Maternity Feeding Wear
+    if (isTamilNadu) {
+      // Tamil Nadu rules
+      if (totalDresses === 1) {
+        shippingCost = 39
+        shippingMessage = "₹39 shipping for 1 item"
+      } else if (totalDresses === 2) {
+        shippingCost = 49
+        shippingMessage = "₹49 shipping for 2 items"
+      } else if (totalDresses === 3) {
+        shippingCost = 59
+        shippingMessage = "₹59 shipping for 3 items"
+      } else if (totalDresses === 4) {
+        shippingCost = 69
+        shippingMessage = "₹69 shipping for 4 items"
+      } else if (totalDresses === 5) {
+        shippingCost = 79
+        shippingMessage = "₹79 shipping for 5 items"
+      } else if (totalDresses === 6) {
+        shippingCost = 89
+        shippingMessage = "₹89 shipping for 6 items"
+      } else {
+        shippingCost = 99
+        shippingMessage = "₹99 shipping for 7+ items"
+      }
+    } else {
+      // Other states rules
+      if (totalDresses === 1) {
+        shippingCost = 49
+        shippingMessage = "₹49 shipping for 1 item"
+      } else if (totalDresses === 2) {
+        shippingCost = 69
+        shippingMessage = "₹69 shipping for 2 items"
+      } else if (totalDresses === 3) {
+        shippingCost = 89
+        shippingMessage = "₹89 shipping for 3 items"
+      } else {
+        shippingCost = 109
+        shippingMessage = "₹109 shipping for 4+ items"
+      }
     }
   } else {
     // Regular categories

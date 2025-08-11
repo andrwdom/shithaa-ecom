@@ -12,6 +12,7 @@ import { Toaster } from 'react-hot-toast';
 import 'react-toastify/dist/ReactToastify.css';
 import LoadingScreen from './components/LoadingScreen';
 import CarouselManagement from './pages/CarouselManagement';
+import ShippingRules from './pages/ShippingRules';
 import ProtectedRoute from './components/ProtectedRoute';
 import WithClickSpark from './components/WithClickSpark';
 
@@ -78,6 +79,11 @@ const App = () => {
                     <Route path="/carousel" element={
                       <ProtectedRoute>
                         <CarouselManagement token={token} />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/shipping-rules" element={
+                      <ProtectedRoute>
+                        <ShippingRules token={token} />
                       </ProtectedRoute>
                     } />
                     <Route path="*" element={<Navigate to="/orders" replace />} />

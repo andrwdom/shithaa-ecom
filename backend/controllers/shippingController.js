@@ -1,4 +1,5 @@
 import productModel from "../models/productModel.js"
+import ShippingRules from "../models/ShippingRules.js"
 
 /**
  * Calculate shipping cost based on cart items and shipping location
@@ -68,19 +69,60 @@ export const calculateShipping = async (req, res) => {
         let shippingMessage = "";
 
         if (hasMaternityFeedingWear) {
-            // Special case: Maternity Feeding Wear - always charge shipping regardless of state
-            if (totalDresses === 1) {
-                shippingCost = 39;
-                shippingMessage = "₹39 shipping for 1 item";
-            } else if (totalDresses === 2) {
-                shippingCost = 59;
-                shippingMessage = "₹59 shipping for 2 items";
-            } else if (totalDresses === 3) {
-                shippingCost = 89;
-                shippingMessage = "₹89 shipping for 3 items";
-            } else if (totalDresses > 3) {
-                shippingCost = 105;
-                shippingMessage = "₹105 shipping for 4+ items";
+            // Use new shipping rules for Maternity Feeding Wear
+            try {
+                const shippingRule = await ShippingRules.findOne({ 
+                    category: 'maternity-feeding-wear', 
+                    isActive: true 
+                });
+                
+                if (shippingRule) {
+                    const isTamilNadu = shippingInfo.state.trim().toLowerCase() === 'tamil nadu';
+                    const rules = isTamilNadu ? shippingRule.rules.tamilNadu : shippingRule.rules.otherStates;
+                    
+                    // Calculate shipping based on quantity
+                    if (totalDresses >= 7) {
+                        shippingCost = rules.get('7+') || 99;
+                        shippingMessage = `₹${shippingCost} shipping for ${totalDresses} items`;
+                    } else if (totalDresses >= 4) {
+                        shippingCost = rules.get('4+') || (isTamilNadu ? 99 : 109);
+                        shippingMessage = `₹${shippingCost} shipping for ${totalDresses} items`;
+                    } else {
+                        shippingCost = rules.get(totalDresses.toString()) || 0;
+                        shippingMessage = `₹${shippingCost} shipping for ${totalDresses} item${totalDresses > 1 ? 's' : ''}`;
+                    }
+                } else {
+                    // Fallback to old logic if no rule found
+                    if (totalDresses === 1) {
+                        shippingCost = 39;
+                        shippingMessage = "₹39 shipping for 1 item";
+                    } else if (totalDresses === 2) {
+                        shippingCost = 59;
+                        shippingMessage = "₹59 shipping for 2 items";
+                    } else if (totalDresses === 3) {
+                        shippingCost = 89;
+                        shippingMessage = "₹89 shipping for 3 items";
+                    } else if (totalDresses > 3) {
+                        shippingCost = 105;
+                        shippingMessage = "₹105 shipping for 4+ items";
+                    }
+                }
+            } catch (error) {
+                console.error('Error calculating shipping with rules:', error);
+                // Fallback to old logic
+                if (totalDresses === 1) {
+                    shippingCost = 39;
+                    shippingMessage = "₹39 shipping for 1 item";
+                } else if (totalDresses === 2) {
+                    shippingCost = 59;
+                    shippingMessage = "₹59 shipping for 2 items";
+                } else if (totalDresses === 3) {
+                    shippingCost = 89;
+                    shippingMessage = "₹89 shipping for 3 items";
+                } else if (totalDresses > 3) {
+                    shippingCost = 105;
+                    shippingMessage = "₹105 shipping for 4+ items";
+                }
             }
         } else {
             // Regular categories
