@@ -8,12 +8,14 @@ const addToCart = async (req, res) => {
     session.startTransaction();
     
     try {
-        const { userId, itemId, size, quantity = 1 } = req.body;
+        const { itemId, size, quantity = 1 } = req.body;
+        // Get userId from authenticated user (set by auth middleware)
+        const userId = req.user?.id;
 
         if (!userId || !itemId || !size) {
             return res.status(400).json({ 
                 success: false, 
-                message: "userId, itemId, and size are required" 
+                message: "User not authenticated or missing itemId/size" 
             });
         }
 
@@ -117,12 +119,14 @@ const updateCart = async (req, res) => {
     session.startTransaction();
     
     try {
-        const { userId, itemId, size, quantity } = req.body;
+        const { itemId, size, quantity } = req.body;
+        // Get userId from authenticated user (set by auth middleware)
+        const userId = req.user?.id;
 
         if (!userId || !itemId || !size || quantity === undefined) {
             return res.status(400).json({ 
                 success: false, 
-                message: "userId, itemId, size, and quantity are required" 
+                message: "User not authenticated or missing itemId/size/quantity" 
             });
         }
 
@@ -239,12 +243,14 @@ const removeFromCart = async (req, res) => {
     session.startTransaction();
     
     try {
-        const { userId, itemId, size } = req.body;
+        const { itemId, size } = req.body;
+        // Get userId from authenticated user (set by auth middleware)
+        const userId = req.user?.id;
 
         if (!userId || !itemId || !size) {
             return res.status(400).json({ 
                 success: false, 
-                message: "userId, itemId, and size are required" 
+                message: "User not authenticated or missing itemId/size" 
             });
         }
 
@@ -302,12 +308,13 @@ const removeFromCart = async (req, res) => {
 // get user cart data with bulletproof stock validation
 const getUserCart = async (req, res) => {
     try {
-        const { userId } = req.body;
+        // Get userId from authenticated user (set by auth middleware)
+        const userId = req.user?.id;
         
         if (!userId) {
             return res.status(400).json({ 
                 success: false, 
-                message: "userId is required" 
+                message: "User not authenticated" 
             });
         }
 

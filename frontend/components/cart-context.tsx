@@ -126,7 +126,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           'Content-Type': 'application/json',
           'token': token
         },
-        body: JSON.stringify({ userId: user.mongoId || user.uid })
+        body: JSON.stringify({})
       })
 
       if (response.ok) {
@@ -344,7 +344,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
               'token': token
             },
             body: JSON.stringify({
-              userId: user.mongoId || user.uid,
               itemId: item._id,
               size: item.size,
               quantity: item.quantity
@@ -429,7 +428,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
               'token': token
             },
             body: JSON.stringify({
-              userId: user.mongoId || user.uid,
               itemId: _id,
               size: size,
               quantity: quantity
@@ -499,7 +497,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
               'token': token
             },
             body: JSON.stringify({
-              userId: user.mongoId || user.uid,
               itemId: _id,
               size: size
             })
