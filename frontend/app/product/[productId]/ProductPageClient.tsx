@@ -14,6 +14,7 @@ import CheckoutPromptModal from "@/components/checkout-prompt-modal"
 import { useBuyNow } from "@/components/buy-now-context"
 import { safeFetch } from "@/lib/api-health"
 import WishlistButton from "@/components/WishlistButton"
+import { useRouter } from "next/navigation"
 
 interface Product {
   id: number
@@ -46,6 +47,7 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
   const [isCheckoutPromptOpen, setIsCheckoutPromptOpen] = useState(false)
   const [addedProduct, setAddedProduct] = useState<any>(null)
   const { setBuyNowItem } = useBuyNow()
+  const router = useRouter()
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -119,10 +121,12 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
       quantity,
       size: selectedSize,
       image: product.images[0] || "/placeholder.svg",
+      category: product.category,
+      categorySlug: product.category.toLowerCase().replace(/ /g, '-'),
     });
     
-    // Navigate to checkout - the checkout page will refresh the data
-    window.location.href = "/checkout?mode=buynow";
+    // Navigate to checkout using router.push to avoid stale data
+    router.push("/checkout");
   }
 
   if (loading) {
@@ -460,27 +464,35 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
                     type="button"
                     className="flex-1 border border-gray-400 rounded-md h-10 text-gray-900 font-semibold bg-white hover:bg-gray-100 transition text-sm"
                     disabled={!selectedSize || selectedSizeStock === 0}
-                    onClick={() => {
+                    onClick={async () => {
                       if (!product) return;
-                      addToCart({
-                        id: product.id.toString(),
-                        _id: product.id.toString(),
-                        name: product.name,
-                        price: product.price,
-                        quantity,
-                        size: selectedSize,
-                        image: product.images[0] || "/placeholder.svg",
-                        category: product.category,
-                        categorySlug: product.category.toLowerCase().replace(/ /g, '-'),
-                      }, false);
-                      setAddedProduct({
-                        name: product.name,
-                        price: product.price,
-                        image: product.images[0] || "/placeholder.svg",
-                        size: selectedSize,
-                        quantity,
-                      });
-                      setIsCheckoutPromptOpen(true);
+                      try {
+                        const selectedSizeData = product.sizes.find(s => s.size === selectedSize);
+                        const stock = selectedSizeData?.stock || 0;
+                        
+                        await addToCart({
+                          id: product.id.toString(),
+                          _id: product.id.toString(),
+                          name: product.name,
+                          price: product.price,
+                          quantity,
+                          size: selectedSize,
+                          image: product.images[0] || "/placeholder.svg",
+                          category: product.category,
+                          categorySlug: product.category.toLowerCase().replace(/ /g, '-'),
+                        }, false, stock);
+                        
+                        setAddedProduct({
+                          name: product.name,
+                          price: product.price,
+                          image: product.images[0] || "/placeholder.svg",
+                          size: selectedSize,
+                          quantity,
+                        });
+                        setIsCheckoutPromptOpen(true);
+                      } catch (error) {
+                        console.error('Error adding to cart:', error);
+                      }
                     }}
                   >
                     ADD TO CART

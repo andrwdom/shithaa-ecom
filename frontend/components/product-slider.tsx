@@ -2,6 +2,7 @@
 
 import type React from "react"
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -41,8 +42,10 @@ export default function ProductSlider({
   showBestsellerBadge,
   onAddToCart,
 }: ProductSliderProps) {
+  const router = useRouter()
+  
   const handleProductClick = (productId: string) => {
-    window.location.href = `/product/${productId}`
+    router.push(`/product/${productId}`)
   }
 
   const [sizeSelectionProduct, setSizeSelectionProduct] = useState<Product | null>(null)
@@ -84,8 +87,8 @@ export default function ProductSlider({
   }
 
   const handleCheckout = () => {
-    // Navigate to checkout - the checkout page will refresh cart data
-    window.location.href = "/checkout";
+    // Navigate to checkout using router.push to avoid stale data
+    router.push("/checkout");
   }
 
   if (loading) {

@@ -7,6 +7,7 @@ import Image from "next/image"
 import { useCart, CartItem } from "@/components/cart-context"
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { getShippingDisplayMessage } from "@/lib/shipping-calculator"
 
 export default function CartSidebar() {
   const {
@@ -21,16 +22,20 @@ export default function CartSidebar() {
     refreshCartData
   } = useCart();
   const [productStocks, setProductStocks] = useState<Record<string, Record<string, number>>>({});
+  const [isUpdating, setIsUpdating] = useState<Record<string, boolean>>({});
   const router = useRouter();
 
   // Fetch stock info for all cart items on open
   useEffect(() => {
     async function fetchStocks() {
+      console.log('Fetching stocks for cart items:', cartItems.map(item => ({ id: item._id, size: item.size })));
       const stocks: Record<string, Record<string, number>> = {};
       for (const item of cartItems) {
         if (!stocks[item._id]) {
           try {
-            const res = await fetch(`/api/products/${item._id}`);
+            const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/products/${item._id}`;
+            console.log('Fetching stock from:', url);
+            const res = await fetch(url);
             if (res.ok) {
               const data = await res.json();
               if (data.data && Array.isArray(data.data.sizes)) {
@@ -38,29 +43,71 @@ export default function CartSidebar() {
                 for (const s of data.data.sizes) {
                   stocks[item._id][s.size] = s.stock;
                 }
+                console.log(`Stock data for product ${item._id}:`, stocks[item._id]);
+              } else {
+                console.warn(`No sizes data for product ${item._id}:`, data);
               }
+            } else {
+              console.warn(`Failed to fetch stock for product ${item._id}:`, res.status, res.statusText);
             }
-          } catch {}
+          } catch (error) {
+            console.error(`Error fetching stock for product ${item._id}:`, error);
+          }
         }
       }
+      console.log('Final stocks object:', stocks);
       setProductStocks(stocks);
     }
     if (isCartSidebarOpen && cartItems.length > 0) fetchStocks();
   }, [isCartSidebarOpen, cartItems]);
 
-  // Handle proceed to checkout with data refresh
+  const handleQuantityUpdate = async (item: CartItem, newQuantity: number) => {
+    console.log('handleQuantityUpdate called:', { item: item._id, size: item.size, newQuantity, currentStock: productStocks[item._id]?.[item.size] });
+    
+    if (newQuantity < 1) return;
+    
+    const currentStock = productStocks[item._id]?.[item.size] || 0;
+    console.log('Stock check:', { itemId: item._id, size: item.size, currentStock, newQuantity });
+    
+    if (newQuantity > currentStock) {
+      console.warn(`Stock validation failed in sidebar: quantity ${newQuantity} > stock ${currentStock}`);
+      alert(`Cannot set quantity higher than ${currentStock} in stock for this size.`);
+      return;
+    }
+
+    const itemKey = `${item._id}-${item.size}`;
+    setIsUpdating(prev => ({ ...prev, [itemKey]: true }));
+    
+    try {
+      await updateCartItem(item._id, item.size, newQuantity, currentStock);
+    } catch (error) {
+      console.error('Error updating cart item:', error);
+    } finally {
+      setIsUpdating(prev => ({ ...prev, [itemKey]: false }));
+    }
+  };
+
+  const handleRemoveItem = async (item: CartItem) => {
+    const itemKey = `${item._id}-${item.size}`;
+    setIsUpdating(prev => ({ ...prev, [itemKey]: true }));
+    
+    try {
+      await removeFromCart(item._id, item.size);
+    } catch (error) {
+      console.error('Error removing cart item:', error);
+    } finally {
+      setIsUpdating(prev => ({ ...prev, [itemKey]: false }));
+    }
+  };
+
   const handleProceedToCheckout = async () => {
     try {
-      // Refresh cart data before navigating to checkout
+      // Refresh cart data before checkout to ensure accuracy
       await refreshCartData();
-      // Close sidebar and navigate to checkout
       closeCartSidebar();
-      window.location.href = "/checkout";
+      router.push('/checkout');
     } catch (error) {
-      console.error("Error refreshing cart data:", error);
-      // Still navigate to checkout even if refresh fails
-      closeCartSidebar();
-      window.location.href = "/checkout";
+      console.error('Error proceeding to checkout:', error);
     }
   };
 
@@ -68,91 +115,98 @@ export default function CartSidebar() {
 
   return (
     <React.Fragment>
-      {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/50 z-[9998]" onClick={closeCartSidebar} />
+      {/* Overlay */}
+      <div 
+        className="fixed inset-0 bg-black bg-opacity-50 z-40"
+        onClick={closeCartSidebar}
+      />
+      
       {/* Sidebar */}
-      <div className="fixed right-0 top-0 h-full w-96 bg-white shadow-2xl z-[9999] transform transition-transform duration-300 flex flex-col">
+      <div className="fixed right-0 top-0 h-full w-full sm:w-96 bg-white shadow-xl z-50 transform transition-transform duration-300 ease-in-out">
         {/* Header */}
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-[rgb(71,60,102)] font-serif flex items-center gap-2">
-              <ShoppingBag className="h-6 w-6" />
-              Shopping Cart
-            </h2>
-            <Button variant="ghost" size="sm" onClick={closeCartSidebar}>
-              <X className="h-5 w-5" />
-            </Button>
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <div className="flex items-center gap-3">
+            <ShoppingBag className="h-6 w-6 text-[rgb(71,60,102)]" />
+            <h2 className="text-xl font-semibold text-gray-900">Shopping Cart</h2>
           </div>
-          <p className="text-sm text-gray-600 mt-1">
-            {cartItems.length} item{cartItems.length !== 1 ? "s" : ""} in cart
-          </p>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={closeCartSidebar}
+            className="text-gray-500 hover:text-gray-700"
+          >
+            <X className="h-5 w-5" />
+          </Button>
         </div>
+
         {/* Cart Items */}
         <div className="flex-1 overflow-y-auto p-6">
           {cartItems.length === 0 ? (
-            <div className="text-center py-8">
-              <ShoppingBag className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500 mb-4">Your cart is empty</p>
-              <Button onClick={closeCartSidebar} className="bg-[rgb(71,60,102)] hover:bg-[rgb(71,60,102)]/90">
-                Continue Shopping
-              </Button>
+            <div className="text-center py-12">
+              <ShoppingBag className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Your cart is empty</h3>
+              <p className="text-gray-500">Add some items to get started!</p>
             </div>
           ) : (
             <div className="space-y-4">
-              {cartItems.map((item) => (
-                <div key={item._id + item.size} className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
-                  <Image
-                    src={item.image}
-                    alt={item.name}
-                    width={64}
-                    height={64}
-                    className="rounded object-cover"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-medium text-gray-900 truncate">{item.name}</h4>
-                    <p className="text-sm text-gray-500">Size: {item.size}</p>
-                    <p className="text-sm font-semibold text-[rgb(71,60,102)]">₹{item.price}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
+              <p className="text-sm text-gray-600 mb-4">{cartItems.length} item{cartItems.length !== 1 ? 's' : ''} in cart</p>
+              
+              {cartItems.map((item) => {
+                const itemKey = `${item._id}-${item.size}`;
+                const isItemUpdating = isUpdating[itemKey];
+                const currentStock = productStocks[item._id]?.[item.size] || 0;
+                
+                return (
+                  <div key={item._id + item.size} className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
+                    <Image
+                      src={item.image}
+                      alt={item.name}
+                      width={64}
+                      height={64}
+                      className="rounded object-cover"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-medium text-gray-900 truncate">{item.name}</h4>
+                      <p className="text-sm text-gray-500">Size: {item.size}</p>
+                      <p className="text-sm font-semibold text-[rgb(71,60,102)]">₹{item.price}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleQuantityUpdate(item, item.quantity - 1)}
+                        disabled={item.quantity <= 1 || isItemUpdating}
+                        className="min-w-[40px]"
+                      >
+                        <Minus className="h-4 w-4" />
+                      </Button>
+                      <span className="w-8 text-center font-medium">{item.quantity}</span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleQuantityUpdate(item, item.quantity + 1)}
+                        disabled={item.quantity >= currentStock || isItemUpdating}
+                        className="min-w-[40px]"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
-                      onClick={() => {
-                        const currentStock = productStocks[item._id]?.[item.size] || 0;
-                        if (item.quantity > 1) {
-                          updateCartItem(item._id, item.size, item.quantity - 1, currentStock);
-                        }
-                      }}
-                      disabled={item.quantity <= 1}
+                      onClick={() => handleRemoveItem(item)}
+                      disabled={isItemUpdating}
+                      className="text-red-500 hover:text-red-700 hover:bg-red-50 min-w-[40px]"
                     >
-                      <Minus className="h-4 w-4" />
-                    </Button>
-                    <span className="w-8 text-center font-medium">{item.quantity}</span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const currentStock = productStocks[item._id]?.[item.size] || 0;
-                        updateCartItem(item._id, item.size, item.quantity + 1, currentStock);
-                      }}
-                      disabled={item.quantity >= (productStocks[item._id]?.[item.size] || 999)}
-                    >
-                      <Plus className="h-4 w-4" />
+                      <X className="h-4 w-4" />
                     </Button>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeFromCart(item._id, item.size)}
-                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
+        
         {/* Footer */}
         {cartItems.length > 0 && (
           <div className="p-6 border-t border-gray-200 bg-white">
@@ -180,9 +234,12 @@ export default function CartSidebar() {
               </div>
             </div>
             <div className="text-xs text-gray-500 text-center mb-4">
-              Shipping calculated based on your location and items
+              {getShippingDisplayMessage(cartItems, null)}
             </div>
-            <Button className="w-full bg-[rgb(71,60,102)] hover:bg-[rgb(71,60,102)]/90 text-white py-3 rounded-xl font-semibold" onClick={handleProceedToCheckout}>
+            <Button 
+              className="w-full bg-[rgb(71,60,102)] hover:bg-[rgb(71,60,102)]/90 text-white py-3 rounded-xl font-semibold" 
+              onClick={handleProceedToCheckout}
+            >
               Proceed to Checkout
             </Button>
             <Button

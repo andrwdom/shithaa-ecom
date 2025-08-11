@@ -261,11 +261,11 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
   }, [products, searchQuery, sortBy, sleeveTypeFilter])
 
   const handleProductClick = (productId: string) => {
-    window.location.href = `/product/${productId}`
+    router.push(`/product/${productId}`)
   }
 
   const handleCategorySelect = (slug: string) => {
-    window.location.href = `/collections/${slug}`
+    router.push(`/collections/${slug}`)
   }
 
   const handleAddToCart = (product: Product) => {
@@ -317,13 +317,13 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
       category: product.category,
       categorySlug: product.categorySlug,
     });
-    // Navigate to checkout - the checkout page will refresh the buy-now data
-    window.location.href = "/checkout?mode=buynow";
+    // Navigate to checkout using router.push to avoid stale data
+    router.push("/checkout");
   };
 
   const handleCheckout = () => {
-    // Navigate to checkout - the checkout page will refresh cart data
-    window.location.href = "/checkout";
+    // Navigate to checkout using router.push to avoid stale data
+    router.push("/checkout");
   }
 
   // Check if any filters are active
@@ -434,12 +434,12 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
             {/* Breadcrumb */}
             <div className="px-4 sm:px-6 lg:px-8 py-6 w-full">
               <div className="flex items-center space-x-2 text-sm text-gray-600">
-                <Button variant="ghost" size="sm" onClick={() => (window.location.href = "/")}>
+                <Button variant="ghost" size="sm" onClick={() => router.push("/")}>
                   <Home className="h-4 w-4 mr-1" />
                   Home
                 </Button>
                 <ChevronRight className="h-4 w-4" />
-                <Button variant="ghost" size="sm" onClick={() => (window.location.href = "/collections")}>
+                <Button variant="ghost" size="sm" onClick={() => router.push("/collections")}>
                   Collections
                 </Button>
                 <ChevronRight className="h-4 w-4" />

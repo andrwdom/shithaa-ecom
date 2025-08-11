@@ -1,6 +1,7 @@
 "use client"
 
 import React, { createContext, useContext, useState, useEffect } from "react"
+import { useAuth } from "./auth/useAuth"
 
 export interface CartItem {
   id: string; // for frontend logic
@@ -30,18 +31,19 @@ export interface OfferDetails {
 
 interface CartContextType {
   cartItems: CartItem[]
-  addToCart: (item: CartItem, openSidebar?: boolean, stock?: number) => void
-  updateCartItem: (id: string, size: string, quantity: number, stock?: number) => void
-  removeFromCart: (id: string, size: string) => void
+  addToCart: (item: CartItem, openSidebar?: boolean, stock?: number) => Promise<void>
+  updateCartItem: (id: string, size: string, quantity: number, stock?: number) => Promise<void>
+  removeFromCart: (id: string, size: string) => Promise<void>
   isCartSidebarOpen: boolean
   openCartSidebar: () => void
   closeCartSidebar: () => void
-  clearCart: () => void
+  clearCart: () => Promise<void>
   cartTotal: number
   cartSubtotal: number
   offerDetails: OfferDetails | null
   isLoadingOffer: boolean
-  refreshCartData: () => Promise<void> // Add this function
+  refreshCartData: () => Promise<void>
+  syncCartWithBackend: () => Promise<void>
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined)
@@ -53,6 +55,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cartSubtotal, setCartSubtotal] = useState(0)
   const [offerDetails, setOfferDetails] = useState<OfferDetails | null>(null)
   const [isLoadingOffer, setIsLoadingOffer] = useState(false)
+  const { user } = useAuth()
 
   // Load cart from localStorage on mount
   useEffect(() => {
@@ -74,6 +77,105 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       setOfferDetails(null)
     }
   }, [cartItems])
+
+  // Sync cart with backend when user changes
+  useEffect(() => {
+    if (user) {
+      syncCartWithBackend()
+    }
+  }, [user])
+
+  // Function to get backend token
+  const getBackendToken = async (): Promise<string | null> => {
+    if (!user) return null
+    
+    let token = localStorage.getItem("token")
+    if (token) return token
+    
+    // Try to get a new backend token using Firebase ID token
+    try {
+      const { getIdToken } = await import("firebase/auth")
+      const idToken = await getIdToken(user)
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/user/firebase-login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken }),
+      })
+      const data = await res.json()
+      if (data.success && data.data.token) {
+        localStorage.setItem("token", data.data.token)
+        return data.data.token
+      }
+    } catch (err) {
+      console.error("Error getting backend token:", err)
+    }
+    return null
+  }
+
+  // Function to sync cart with backend
+  const syncCartWithBackend = async () => {
+    if (!user) return
+    
+    try {
+      const token = await getBackendToken()
+      if (!token) return
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/cart/get`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'token': token
+        },
+        body: JSON.stringify({ userId: user.mongoId || user.uid })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success && data.cartData) {
+          // Convert backend cart format to frontend format
+          const backendCartItems: CartItem[] = []
+          
+          for (const [productId, sizes] of Object.entries(data.cartData)) {
+            for (const [size, quantity] of Object.entries(sizes as Record<string, number>)) {
+              // Fetch product details to get name, price, image, etc.
+              try {
+                const productResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/products/${productId}`)
+                if (productResponse.ok) {
+                  const productData = await productResponse.json()
+                  if (productData.success && productData.data) {
+                    const product = productData.data
+                    const sizeData = product.sizes?.find((s: any) => s.size === size)
+                    
+                    if (sizeData && sizeData.stock > 0) {
+                      backendCartItems.push({
+                        id: product._id,
+                        _id: product._id,
+                        name: product.name,
+                        price: product.price,
+                        quantity: quantity as number,
+                        size: size,
+                        image: Array.isArray(product.images) && product.images.length > 0 ? product.images[0] : product.image,
+                        categorySlug: product.categorySlug,
+                        category: product.category,
+                      })
+                    }
+                  }
+                }
+              } catch (error) {
+                console.error(`Error fetching product ${productId}:`, error)
+              }
+            }
+          }
+          
+          // Update frontend cart with backend data
+          setCartItems(backendCartItems)
+          localStorage.setItem("cartItems", JSON.stringify(backendCartItems))
+        }
+      }
+    } catch (error) {
+      console.error("Error syncing cart with backend:", error)
+    }
+  }
 
   // Function to refresh cart data from backend to ensure fresh data
   const refreshCartData = async () => {
@@ -167,13 +269,24 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ items: cartItems }),
+        body: JSON.stringify({
+          items: cartItems.map(item => ({
+            _id: item._id,
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity,
+            size: item.size,
+            image: item.image,
+            category: item.category,
+            categorySlug: item.categorySlug
+          }))
+        })
       })
 
       if (response.ok) {
         const data = await response.json()
-        if (data.success) {
-          setCartTotal(data.data.total)
+        if (data.success && data.data) {
+          setCartTotal(data.data.totalAmount)
           setCartSubtotal(data.data.subtotal)
           setOfferDetails({
             offerApplied: data.data.offerApplied,
@@ -202,15 +315,19 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  function addToCart(item: CartItem, openSidebar: boolean = true, stock?: number) {
+  async function addToCart(item: CartItem, openSidebar: boolean = true, stock?: number) {
+    // Validate stock before adding
+    if (typeof stock === 'number' && item.quantity > stock) {
+      alert(`Cannot add more than ${stock} in stock for this size.`)
+      return
+    }
+
+    // Update frontend cart immediately for better UX
     setCartItems((prev) => {
       const existing = prev.find((i) => i._id === item._id && i.size === item.size)
       const existingQty = existing ? existing.quantity : 0
       const newQty = existingQty + item.quantity
-      if (typeof stock === 'number' && newQty > stock) {
-        alert(`Cannot add more than ${stock} in stock for this size.`)
-        return prev
-      }
+      
       if (existing) {
         return prev.map((i) =>
           i._id === item._id && i.size === item.size
@@ -220,36 +337,251 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
       return [...prev, item]
     })
+
+    // Sync with backend if user is authenticated
+    if (user) {
+      try {
+        const token = await getBackendToken()
+        if (token) {
+          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/cart/add`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'token': token
+            },
+            body: JSON.stringify({
+              userId: user.mongoId || user.uid,
+              itemId: item._id,
+              size: item.size,
+              quantity: item.quantity
+            })
+          })
+
+          if (!response.ok) {
+            const errorData = await response.json()
+            console.error('Backend cart add failed:', errorData)
+            // Revert frontend changes if backend fails
+            setCartItems((prev) => {
+              const existing = prev.find((i) => i._id === item._id && i.size === item.size)
+              if (existing && existing.quantity > item.quantity) {
+                return prev.map((i) =>
+                  i._id === item._id && i.size === item.size
+                    ? { ...i, quantity: i.quantity - item.quantity }
+                    : i
+                )
+              }
+              return prev.filter((i) => !(i._id === item._id && i.size === item.size))
+            })
+            alert(errorData.message || 'Failed to add item to cart')
+            return
+          }
+        }
+      } catch (error) {
+        console.error('Error syncing with backend:', error)
+        // Revert frontend changes if backend sync fails
+        setCartItems((prev) => {
+          const existing = prev.find((i) => i._id === item._id && i.size === item.size)
+          if (existing && existing.quantity > item.quantity) {
+            return prev.map((i) =>
+              i._id === item._id && i.size === item.size
+                ? { ...i, quantity: i.quantity - item.quantity }
+                : i
+            )
+          }
+          return prev.filter((i) => !(i._id === item._id && i.size === item.size))
+        })
+        alert('Failed to sync with backend. Please try again.')
+        return
+      }
+    }
+
     if (openSidebar) setIsCartSidebarOpen(true)
   }
 
-  function updateCartItem(_id: string, size: string, quantity: number, stock?: number) {
+  async function updateCartItem(_id: string, size: string, quantity: number, stock?: number) {
+    console.log('updateCartItem called:', { _id, size, quantity, stock, user: !!user })
+    
+    // Validate stock before updating
+    if (typeof stock === 'number' && quantity > stock) {
+      console.warn(`Stock validation failed: quantity ${quantity} > stock ${stock}`)
+      alert(`Cannot set quantity higher than ${stock} in stock for this size.`)
+      return
+    }
+
+    // Don't allow quantity less than 1
+    if (quantity < 1) {
+      console.warn('Quantity validation failed: quantity < 1')
+      alert('Quantity cannot be less than 1')
+      return
+    }
+
+    // Update frontend cart immediately for better UX
     setCartItems((prev) => {
       const existing = prev.find((i) => i._id === _id && i.size === size)
-      if (typeof stock === 'number' && quantity > stock) {
-        alert(`Cannot set quantity higher than ${stock} in stock for this size.`)
+      if (!existing) {
+        console.warn('Item not found in cart for update:', { _id, size })
         return prev
       }
+      
+      console.log('Updating cart item:', { _id, size, oldQuantity: existing.quantity, newQuantity: quantity })
       return prev.map((item) =>
         item._id === _id && item.size === size ? { ...item, quantity } : item
       )
     })
+
+    // Sync with backend if user is authenticated
+    if (user) {
+      try {
+        const token = await getBackendToken()
+        if (token) {
+          console.log('Sending update to backend:', { userId: user.mongoId || user.uid, itemId: _id, size, quantity })
+          
+          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/cart/update`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'token': token
+            },
+            body: JSON.stringify({
+              userId: user.mongoId || user.uid,
+              itemId: _id,
+              size: size,
+              quantity: quantity
+            })
+          })
+
+          if (!response.ok) {
+            const errorData = await response.json()
+            console.error('Backend cart update failed:', errorData)
+            // Revert frontend changes if backend fails
+            setCartItems((prev) => {
+              const existing = prev.find((i) => i._id === _id && i.size === size)
+              if (existing) {
+                return prev.map((item) =>
+                  item._id === _id && item.size === size ? { ...item, quantity: existing.quantity } : item
+                )
+              }
+              return prev
+            })
+            alert(errorData.message || 'Failed to update cart')
+            return
+          }
+          
+          console.log('Backend cart update successful')
+        } else {
+          console.warn('No backend token available for cart update')
+        }
+      } catch (error) {
+        console.error('Error syncing with backend:', error)
+        // Revert frontend changes if backend sync fails
+        setCartItems((prev) => {
+          const existing = prev.find((i) => i._id === _id && i.size === size)
+          if (existing) {
+            return prev.map((item) =>
+              item._id === _id && item.size === size ? { ...item, quantity: existing.quantity } : item
+            )
+          }
+          return prev
+        })
+        alert('Failed to sync with backend. Please try again.')
+        return
+      }
+    } else {
+      console.log('No user authenticated, cart update only in frontend')
+    }
   }
 
-  function removeFromCart(_id: string, size: string) {
+  async function removeFromCart(_id: string, size: string) {
+    // Remove from frontend cart immediately for better UX
     setCartItems((prev) => prev.filter((item) => !(item._id === _id && item.size === size)))
+
+    // Sync with backend if user is authenticated
+    if (user) {
+      try {
+        const token = await getBackendToken()
+        if (token) {
+          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/cart/remove`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'token': token
+            },
+            body: JSON.stringify({
+              userId: user.mongoId || user.uid,
+              itemId: _id,
+              size: size
+            })
+          })
+
+          if (!response.ok) {
+            const errorData = await response.json()
+            console.error('Backend cart remove failed:', errorData)
+            // Revert frontend changes if backend fails
+            setCartItems((prev) => {
+              const existing = prev.find((i) => i._id === _id && i.size === size)
+              if (existing) {
+                return [...prev, existing]
+              }
+              return prev
+            })
+            alert(errorData.message || 'Failed to remove item from cart')
+            return
+          }
+        }
+      } catch (error) {
+        console.error('Error syncing with backend:', error)
+        // Revert frontend changes if backend sync fails
+        setCartItems((prev) => {
+          const existing = prev.find((i) => i._id === _id && i.size === size)
+          if (existing) {
+            return [...prev, existing]
+          }
+          return prev
+        })
+        alert('Failed to sync with backend. Please try again.')
+        return
+      }
+    }
+  }
+
+  async function clearCart() {
+    // Clear frontend cart immediately for better UX
+    setCartItems([])
+    localStorage.removeItem("cartItems")
+
+    // Sync with backend if user is authenticated
+    if (user) {
+      try {
+        const token = await getBackendToken()
+        if (token) {
+          // Remove all items one by one from backend
+          for (const item of cartItems) {
+            await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/cart/remove`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'token': token
+              },
+              body: JSON.stringify({
+                userId: user.mongoId || user.uid,
+                itemId: item._id,
+                size: item.size
+              })
+            })
+          }
+        }
+      } catch (error) {
+        console.error('Error clearing backend cart:', error)
+      }
+    }
   }
 
   function openCartSidebar() {
     setIsCartSidebarOpen(true)
   }
+  
   function closeCartSidebar() {
     setIsCartSidebarOpen(false)
-  }
-
-  function clearCart() {
-    setCartItems([])
-    localStorage.removeItem("cartItems")
   }
 
   return (
@@ -267,7 +599,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         cartSubtotal,
         offerDetails,
         isLoadingOffer,
-        refreshCartData
+        refreshCartData,
+        syncCartWithBackend
       }}
     >
       {children}

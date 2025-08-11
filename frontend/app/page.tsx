@@ -13,25 +13,17 @@ import CartSidebar from "@/components/cart-sidebar"
 import PageLoading from "@/components/page-loading"
 import TestimonialsSection from "@/components/testimonials-section"
 import PerformanceMonitor from "@/components/performance-monitor"
-
-interface CartItem {
-  id: number
-  _id: number
-  name: string
-  price: number
-  quantity: number
-  size: string
-  image: string
-}
+import { useCart } from "@/components/cart-context"
 
 interface Product {
-  id: number
-  _id: number
+  id: string
+  _id: string
   name: string
   price: number
   originalPrice?: number
   image: string
   category: string
+  categorySlug?: string
   isNewArrival?: boolean
   isBestSeller?: boolean
   sizes: { stock?: number }[]
@@ -41,9 +33,7 @@ interface Product {
 export default function Home() {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
-  const [isCartSidebarOpen, setIsCartSidebarOpen] = useState(false)
-  const [isCategorySidebarOpen, setIsCategorySidebarOpen] = useState(false)
-  const [cartItems, setCartItems] = useState<CartItem[]>([])
+  const { addToCart, openCartSidebar } = useCart()
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -60,6 +50,7 @@ export default function Home() {
           originalPrice: p.originalPrice,
           image: (Array.isArray(p.images) && p.images.length > 0) ? p.images[0] : '/placeholder.svg',
           category: p.category,
+          categorySlug: p.categorySlug,
           isNewArrival: p.isNewArrival,
           isBestSeller: p.isBestSeller,
           sizes: p.sizes,
@@ -76,38 +67,29 @@ export default function Home() {
     fetchProducts()
   }, [])
 
-  const handleAddToCart = (product: Product) => {
-    const cartItem: CartItem = {
-      id: product.id,
-      _id: product._id,
-      name: product.name,
-      price: product.price,
-      quantity: 1,
-      size: "M", // Default size
-      image: product.image,
-      category: product.category,
-      categorySlug: product.categorySlug,
+  const handleAddToCart = async (product: Product) => {
+    try {
+      // Find the first available size with stock
+      const availableSize = product.sizes?.find(s => s.stock && s.stock > 0)
+      const size = availableSize ? availableSize.size : "M"
+      const stock = availableSize?.stock || 0
+
+      await addToCart({
+        id: product.id,
+        _id: product._id,
+        name: product.name,
+        price: product.price,
+        quantity: 1,
+        size: size,
+        image: product.image,
+        category: product.category,
+        categorySlug: product.categorySlug,
+      }, true, stock)
+
+      openCartSidebar()
+    } catch (error) {
+      console.error("Error adding to cart:", error)
     }
-
-    setCartItems((prev) => {
-      const existingItem = prev.find((item) => item.id === product.id && item.size === "M")
-      if (existingItem) {
-        return prev.map((item) =>
-          item.id === product.id && item.size === "M" ? { ...item, quantity: item.quantity + 1 } : item,
-        )
-      }
-      return [...prev, cartItem]
-    })
-
-    setIsCartSidebarOpen(true)
-  }
-
-  const handleUpdateQuantity = (id: number, quantity: number) => {
-    setCartItems((prev) => prev.map((item) => (item.id === id ? { ...item, quantity } : item)))
-  }
-
-  const handleRemoveItem = (id: number) => {
-    setCartItems((prev) => prev.filter((item) => item.id !== id))
   }
 
   const handleCategorySelect = (slug: string) => {

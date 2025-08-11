@@ -10,24 +10,34 @@ export interface BuyNowItem {
   quantity: number;
   size: string;
   image: string;
+  category?: string;
+  categorySlug?: string;
 }
+
+export type CheckoutMode = 'cart' | 'buyNow';
 
 interface BuyNowContextType {
   buyNowItem: BuyNowItem | null;
+  checkoutMode: CheckoutMode;
   setBuyNowItem: (item: BuyNowItem | null) => void;
+  setCheckoutMode: (mode: CheckoutMode) => void;
   clearBuyNowItem: () => void;
-  refreshBuyNowItem: () => Promise<void>; // Add this function
+  refreshBuyNowItem: () => Promise<void>;
+  resetCheckoutMode: () => void;
 }
 
 const BuyNowContext = createContext<BuyNowContextType | undefined>(undefined);
 
 export function BuyNowProvider({ children }: { children: React.ReactNode }) {
   const [buyNowItem, setBuyNowItemState] = useState<BuyNowItem | null>(null);
+  const [checkoutMode, setCheckoutModeState] = useState<CheckoutMode>('cart');
 
   // Persist in sessionStorage for reloads
   useEffect(() => {
     const stored = sessionStorage.getItem("buyNowItem");
+    const storedMode = sessionStorage.getItem("checkoutMode") as CheckoutMode;
     if (stored) setBuyNowItemState(JSON.parse(stored));
+    if (storedMode) setCheckoutModeState(storedMode);
   }, []);
 
   useEffect(() => {
@@ -38,13 +48,31 @@ export function BuyNowProvider({ children }: { children: React.ReactNode }) {
     }
   }, [buyNowItem]);
 
+  useEffect(() => {
+    sessionStorage.setItem("checkoutMode", checkoutMode);
+  }, [checkoutMode]);
+
   function setBuyNowItem(item: BuyNowItem | null) {
     setBuyNowItemState(item);
+    if (item) {
+      setCheckoutModeState('buyNow');
+    }
+  }
+
+  function setCheckoutMode(mode: CheckoutMode) {
+    setCheckoutModeState(mode);
   }
 
   function clearBuyNowItem() {
     setBuyNowItemState(null);
+    setCheckoutModeState('cart');
     sessionStorage.removeItem("buyNowItem");
+    sessionStorage.setItem("checkoutMode", "cart");
+  }
+
+  function resetCheckoutMode() {
+    setCheckoutModeState('cart');
+    sessionStorage.setItem("checkoutMode", "cart");
   }
 
   // Function to refresh buy-now item data from backend to ensure fresh data
@@ -81,6 +109,8 @@ export function BuyNowProvider({ children }: { children: React.ReactNode }) {
             quantity: adjustedQuantity,
             size: buyNowItem.size,
             image: Array.isArray(product.images) && product.images.length > 0 ? product.images[0] : product.image || buyNowItem.image,
+            category: product.category,
+            categorySlug: product.categorySlug,
           };
           
           // Update buy now item with refreshed data
@@ -106,7 +136,15 @@ export function BuyNowProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <BuyNowContext.Provider value={{ buyNowItem, setBuyNowItem, clearBuyNowItem, refreshBuyNowItem }}>
+    <BuyNowContext.Provider value={{ 
+      buyNowItem, 
+      checkoutMode, 
+      setBuyNowItem, 
+      setCheckoutMode, 
+      clearBuyNowItem, 
+      refreshBuyNowItem,
+      resetCheckoutMode
+    }}>
       {children}
     </BuyNowContext.Provider>
   );
