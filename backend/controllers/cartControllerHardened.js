@@ -535,4 +535,4 @@ function calculateLoungewearOffer(loungewearItems) {
     };
 }
 
-export { addToCart, updateCart, removeFromCart, getUserCart, calculateCartTotal }
+export { addToCart, updateCart, removeFromCart, getUserCart, calculateCartTotal } 
