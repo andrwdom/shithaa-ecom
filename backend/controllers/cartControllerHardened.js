@@ -1,12 +1,8 @@
 import userModel from "../models/userModel.js"
 import productModel from "../models/productModel.js"
-import mongoose from "mongoose"
 
-// add products to user cart with bulletproof stock validation
+// add products to user cart with bulletproof stock validation (no transactions for standalone MongoDB)
 const addToCart = async (req, res) => {
-    const session = await mongoose.startSession();
-    session.startTransaction();
-    
     try {
         const { itemId, size, quantity = 1 } = req.body;
         // Get userId from authenticated user (set by auth middleware)
@@ -27,10 +23,9 @@ const addToCart = async (req, res) => {
             });
         }
 
-        // ATOMIC STOCK VALIDATION: Lock the product and check stock in one operation
-        const product = await productModel.findById(itemId).session(session);
+        // STOCK VALIDATION: Check product and stock availability
+        const product = await productModel.findById(itemId);
         if (!product) {
-            await session.abortTransaction();
             return res.status(404).json({ 
                 success: false, 
                 message: "Product not found" 
@@ -40,7 +35,6 @@ const addToCart = async (req, res) => {
         // Find the specific size and check stock
         const sizeObj = product.sizes.find(s => s.size === size);
         if (!sizeObj) {
-            await session.abortTransaction();
             return res.status(400).json({ 
                 success: false, 
                 message: `Size ${size} not available for this product` 
@@ -48,9 +42,8 @@ const addToCart = async (req, res) => {
         }
 
         // Get current cart data
-        const userData = await userModel.findById(userId).session(session);
+        const userData = await userModel.findById(userId);
         if (!userData) {
-            await session.abortTransaction();
             return res.status(404).json({ 
                 success: false, 
                 message: "User not found" 
@@ -63,27 +56,24 @@ const addToCart = async (req, res) => {
 
         // CRITICAL: Check if new quantity exceeds available stock
         if (newQuantity > sizeObj.stock) {
-            await session.abortTransaction();
             return res.status(400).json({ 
                 success: false, 
                 message: `Insufficient stock. Only ${sizeObj.stock} available in size ${size}. You already have ${currentQuantity} in cart.` 
             });
         }
 
-        // ATOMIC UPDATE: Update cart data
+        // Update cart data
         if (!cartData[itemId]) {
             cartData[itemId] = {};
         }
         cartData[itemId][size] = newQuantity;
 
-        // Update user cart atomically
+        // Update user cart
         await userModel.findByIdAndUpdate(
             userId, 
             { cartData }, 
-            { session, new: true }
+            { new: true }
         );
-
-        await session.commitTransaction();
 
         // Log successful cart addition
         console.log(`User ${userId} added ${quantity} of product ${itemId} size ${size} to cart. New total: ${newQuantity}, Stock remaining: ${sizeObj.stock - newQuantity}`);
@@ -101,23 +91,17 @@ const addToCart = async (req, res) => {
         });
 
     } catch (error) {
-        await session.abortTransaction();
         console.error('Add to cart error:', error);
         res.status(500).json({ 
             success: false, 
             message: "Failed to add item to cart",
             error: error.message 
         });
-    } finally {
-        session.endSession();
     }
 }
 
-// update user cart with bulletproof stock validation
+// update user cart with bulletproof stock validation (no transactions for standalone MongoDB)
 const updateCart = async (req, res) => {
-    const session = await mongoose.startSession();
-    session.startTransaction();
-    
     try {
         const { itemId, size, quantity } = req.body;
         // Get userId from authenticated user (set by auth middleware)
@@ -138,10 +122,9 @@ const updateCart = async (req, res) => {
             });
         }
 
-        // ATOMIC STOCK VALIDATION: Lock the product and check stock in one operation
-        const product = await productModel.findById(itemId).session(session);
+        // STOCK VALIDATION: Check product and stock availability
+        const product = await productModel.findById(itemId);
         if (!product) {
-            await session.abortTransaction();
             return res.status(404).json({ 
                 success: false, 
                 message: "Product not found" 
@@ -151,7 +134,6 @@ const updateCart = async (req, res) => {
         // Find the specific size and check stock
         const sizeObj = product.sizes.find(s => s.size === size);
         if (!sizeObj) {
-            await session.abortTransaction();
             return res.status(400).json({ 
                 success: false, 
                 message: `Size ${size} not available for this product` 
@@ -160,7 +142,6 @@ const updateCart = async (req, res) => {
 
         // CRITICAL: Check if new quantity exceeds available stock
         if (quantity > sizeObj.stock) {
-            await session.abortTransaction();
             return res.status(400).json({ 
                 success: false, 
                 message: `Insufficient stock. Only ${sizeObj.stock} available in size ${size}.` 
@@ -168,9 +149,8 @@ const updateCart = async (req, res) => {
         }
 
         // Get current cart data
-        const userData = await userModel.findById(userId).session(session);
+        const userData = await userModel.findById(userId);
         if (!userData) {
-            await session.abortTransaction();
             return res.status(404).json({ 
                 success: false, 
                 message: "User not found" 
@@ -196,14 +176,12 @@ const updateCart = async (req, res) => {
             cartData[itemId][size] = quantity;
         }
 
-        // Update user cart atomically
+        // Update user cart
         await userModel.findByIdAndUpdate(
             userId, 
             { cartData }, 
-            { session, new: true }
+            { new: true }
         );
-
-        await session.commitTransaction();
 
         // Log successful cart update
         if (quantity === 0) {
@@ -225,23 +203,17 @@ const updateCart = async (req, res) => {
         });
 
     } catch (error) {
-        await session.abortTransaction();
         console.error('Update cart error:', error);
         res.status(500).json({ 
             success: false, 
             message: "Failed to update cart",
             error: error.message 
         });
-    } finally {
-        session.endSession();
     }
 }
 
-// remove item from cart
+// remove item from cart (no transactions for standalone MongoDB)
 const removeFromCart = async (req, res) => {
-    const session = await mongoose.startSession();
-    session.startTransaction();
-    
     try {
         const { itemId, size } = req.body;
         // Get userId from authenticated user (set by auth middleware)
@@ -255,9 +227,8 @@ const removeFromCart = async (req, res) => {
         }
 
         // Get current cart data
-        const userData = await userModel.findById(userId).session(session);
+        const userData = await userModel.findById(userId);
         if (!userData) {
-            await session.abortTransaction();
             return res.status(404).json({ 
                 success: false, 
                 message: "User not found" 
@@ -275,14 +246,12 @@ const removeFromCart = async (req, res) => {
             }
         }
 
-        // Update user cart atomically
+        // Update user cart
         await userModel.findByIdAndUpdate(
             userId, 
             { cartData }, 
-            { session, new: true }
+            { new: true }
         );
-
-        await session.commitTransaction();
 
         // Log successful cart removal
         console.log(`User ${userId} removed product ${itemId} size ${size} from cart`);
@@ -293,15 +262,12 @@ const removeFromCart = async (req, res) => {
         });
 
     } catch (error) {
-        await session.abortTransaction();
         console.error('Remove from cart error:', error);
         res.status(500).json({ 
             success: false, 
             message: "Failed to remove item from cart",
             error: error.message 
         });
-    } finally {
-        session.endSession();
     }
 }
 
