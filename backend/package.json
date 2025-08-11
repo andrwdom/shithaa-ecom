@@ -6,10 +6,10 @@
   "scripts": {
     "start": "node server.js",
     "server": "nodemon server.js",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
-    "test:cart-stock": "jest cart-stock.test.js"
+    "test": "node --experimental-vm-modules node_modules/.bin/jest",
+    "test:watch": "node --experimental-vm-modules node_modules/.bin/jest --watch",
+    "test:coverage": "node --experimental-vm-modules node_modules/.bin/jest --coverage",
+    "test:cart-stock": "node --experimental-vm-modules node_modules/.bin/jest cart-stock.test.js"
   },
   "author": "",
   "license": "ISC",
@@ -39,12 +39,15 @@
   },
   "jest": {
     "testEnvironment": "node",
-    "transform": {},
     "extensionsToTreatAsEsm": [".js"],
     "globals": {
       "ts-jest": {
         "useESM": true
       }
+    },
+    "transform": {},
+    "moduleNameMapping": {
+      "^(\\.{1,2}/.*)\\.js$": "$1"
     }
   }
 }
