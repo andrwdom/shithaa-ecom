@@ -84,6 +84,7 @@ export default function ProductSlider({
   }
 
   const handleCheckout = () => {
+    // Navigate to checkout - the checkout page will refresh cart data
     window.location.href = "/checkout";
   }
 

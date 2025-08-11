@@ -41,6 +41,7 @@ interface CartContextType {
   cartSubtotal: number
   offerDetails: OfferDetails | null
   isLoadingOffer: boolean
+  refreshCartData: () => Promise<void> // Add this function
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined)
@@ -73,6 +74,87 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       setOfferDetails(null)
     }
   }, [cartItems])
+
+  // Function to refresh cart data from backend to ensure fresh data
+  const refreshCartData = async () => {
+    try {
+      // Get current cart items from localStorage
+      const stored = localStorage.getItem("cartItems")
+      if (!stored) return
+      
+      const currentCartItems = JSON.parse(stored)
+      if (currentCartItems.length === 0) return
+
+      // Fetch fresh product data for all cart items
+      const refreshedItems: CartItem[] = []
+      
+      for (const item of currentCartItems) {
+        try {
+          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/products/${item._id}`)
+          if (response.ok) {
+            const data = await response.json()
+            if (data.success && data.data) {
+              const product = data.data
+              
+              // Check if the selected size still has stock
+              const sizeData = product.sizes?.find((s: any) => s.size === item.size)
+              const currentStock = sizeData?.stock || 0
+              
+              // If item is out of stock, remove it
+              if (currentStock === 0) {
+                console.log(`Product ${product.name} size ${item.size} is out of stock, removing from cart`)
+                continue
+              }
+              
+              // If quantity exceeds stock, adjust it
+              const adjustedQuantity = Math.min(item.quantity, currentStock)
+              
+              // Create refreshed item with latest data
+              const refreshedItem: CartItem = {
+                id: product._id || product.id,
+                _id: product._id || product.id,
+                name: product.name,
+                price: product.price,
+                quantity: adjustedQuantity,
+                size: item.size,
+                image: Array.isArray(product.images) && product.images.length > 0 ? product.images[0] : product.image || item.image,
+                categorySlug: product.categorySlug,
+                category: product.category,
+              }
+              
+              refreshedItems.push(refreshedItem)
+              
+              // Update localStorage with adjusted quantity if needed
+              if (adjustedQuantity !== item.quantity) {
+                console.log(`Adjusted quantity for ${product.name} size ${item.size} from ${item.quantity} to ${adjustedQuantity}`)
+              }
+            } else {
+              // Product not found, keep original item but mark as potentially invalid
+              refreshedItems.push(item)
+            }
+          } else {
+            // API call failed, keep original item
+            refreshedItems.push(item)
+          }
+        } catch (error) {
+          console.error(`Error refreshing product ${item._id}:`, error)
+          // Keep original item on error
+          refreshedItems.push(item)
+        }
+      }
+      
+      // Update cart with refreshed data
+      if (refreshedItems.length !== currentCartItems.length || 
+          JSON.stringify(refreshedItems) !== JSON.stringify(currentCartItems)) {
+        setCartItems(refreshedItems)
+        localStorage.setItem("cartItems", JSON.stringify(refreshedItems))
+        console.log("Cart data refreshed from backend")
+      }
+      
+    } catch (error) {
+      console.error("Error refreshing cart data:", error)
+    }
+  }
 
   // Function to calculate cart total with offers
   const calculateCartTotalWithOffers = async () => {
@@ -184,7 +266,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         cartTotal,
         cartSubtotal,
         offerDetails,
-        isLoadingOffer
+        isLoadingOffer,
+        refreshCartData
       }}
     >
       {children}

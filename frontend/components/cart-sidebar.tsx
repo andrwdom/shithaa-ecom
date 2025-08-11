@@ -17,7 +17,8 @@ export default function CartSidebar() {
     closeCartSidebar,
     cartTotal,
     offerDetails,
-    isLoadingOffer
+    isLoadingOffer,
+    refreshCartData
   } = useCart();
   const [productStocks, setProductStocks] = useState<Record<string, Record<string, number>>>({});
   const router = useRouter();
@@ -47,6 +48,22 @@ export default function CartSidebar() {
     if (isCartSidebarOpen && cartItems.length > 0) fetchStocks();
   }, [isCartSidebarOpen, cartItems]);
 
+  // Handle proceed to checkout with data refresh
+  const handleProceedToCheckout = async () => {
+    try {
+      // Refresh cart data before navigating to checkout
+      await refreshCartData();
+      // Close sidebar and navigate to checkout
+      closeCartSidebar();
+      window.location.href = "/checkout";
+    } catch (error) {
+      console.error("Error refreshing cart data:", error);
+      // Still navigate to checkout even if refresh fails
+      closeCartSidebar();
+      window.location.href = "/checkout";
+    }
+  };
+
   if (!isCartSidebarOpen) return null;
 
   return (
@@ -73,126 +90,81 @@ export default function CartSidebar() {
         {/* Cart Items */}
         <div className="flex-1 overflow-y-auto p-6">
           {cartItems.length === 0 ? (
-            <div className="text-center py-12">
-              <ShoppingBag className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500">Your cart is empty</p>
+            <div className="text-center py-8">
+              <ShoppingBag className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-500 mb-4">Your cart is empty</p>
+              <Button onClick={closeCartSidebar} className="bg-[rgb(71,60,102)] hover:bg-[rgb(71,60,102)]/90">
+                Continue Shopping
+              </Button>
             </div>
           ) : (
-            <React.Fragment>
-              {/* Discount Banner */}
-              {offerDetails?.offerApplied && (
-                <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-                  <div className="flex items-center gap-2 text-green-700">
-                    <Gift className="h-5 w-5" />
-                    <div className="flex-1">
-                      <p className="font-medium text-sm">🔥 Buy 3 Loungewear for ₹1299!</p>
-                      <p className="text-xs text-green-600">
-                        {offerDetails.offerDetails?.completeSets || 0} set(s) applied • 
-                        Save ₹{offerDetails.offerDiscount?.toLocaleString() || 0}
-                      </p>
-                    </div>
+            <div className="space-y-4">
+              {cartItems.map((item) => (
+                <div key={item._id + item.size} className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
+                  <Image
+                    src={item.image}
+                    alt={item.name}
+                    width={64}
+                    height={64}
+                    className="rounded object-cover"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-medium text-gray-900 truncate">{item.name}</h4>
+                    <p className="text-sm text-gray-500">Size: {item.size}</p>
+                    <p className="text-sm font-semibold text-[rgb(71,60,102)]">₹{item.price}</p>
                   </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const currentStock = productStocks[item._id]?.[item.size] || 0;
+                        if (item.quantity > 1) {
+                          updateCartItem(item._id, item.size, item.quantity - 1, currentStock);
+                        }
+                      }}
+                      disabled={item.quantity <= 1}
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                    <span className="w-8 text-center font-medium">{item.quantity}</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const currentStock = productStocks[item._id]?.[item.size] || 0;
+                        updateCartItem(item._id, item.size, item.quantity + 1, currentStock);
+                      }}
+                      disabled={item.quantity >= (productStocks[item._id]?.[item.size] || 999)}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => removeFromCart(item._id, item.size)}
+                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
                 </div>
-              )}
-              
-              {/* Progress to next offer */}
-              {offerDetails?.loungewearCount > 0 && offerDetails.loungewearCount < 3 && (
-                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <div className="flex items-center gap-2 text-blue-700">
-                    <div className="flex-1">
-                      <p className="font-medium text-sm">Almost there!</p>
-                      <p className="text-xs text-blue-600">
-                        Add {3 - offerDetails.loungewearCount} more loungewear item(s) to get the ₹1299 bundle offer
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              <div className="space-y-4">
-              {cartItems.map((item) => {
-                const stock = productStocks[item._id]?.[item.size];
-                return (
-                  <div key={`${item.id}-${item.size}`} className="flex items-center space-x-4 p-4 border border-gray-200 rounded-xl">
-                    <div className="w-16 h-20 bg-gray-100 rounded-lg overflow-hidden">
-                      <Image
-                        src={item.image || "/placeholder.svg"}
-                        alt={item.name}
-                        width={64}
-                        height={80}
-                        className="object-cover w-full h-full"
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900 text-sm line-clamp-2">{item.name}</h3>
-                      <p className="text-xs text-gray-500 mt-1">Size: {item.size}</p>
-                      <p className="font-bold text-[rgb(71,60,102)] mt-1">₹{item.price.toLocaleString()}</p>
-                      <div className="flex items-center justify-between mt-2">
-                        <div className="flex items-center space-x-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => updateCartItem(item._id, item.size, Math.max(1, item.quantity - 1), stock)}
-                            className="h-8 w-8 p-0"
-                          >
-                            <Minus className="h-3 w-3" />
-                          </Button>
-                          <span className="text-sm font-medium w-8 text-center">{item.quantity}</span>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => updateCartItem(item._id, item.size, item.quantity + 1, stock)}
-                            className="h-8 w-8 p-0"
-                          >
-                            <Plus className="h-3 w-3" />
-                          </Button>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeFromCart(item._id, item.size)}
-                          className="text-red-500 hover:text-red-700 text-xs"
-                        >
-                          Remove
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+              ))}
             </div>
-          </React.Fragment>
-        )}
+          )}
         </div>
         {/* Footer */}
         {cartItems.length > 0 && (
-          <div className="p-6 border-t border-gray-200 bg-gray-50">
+          <div className="p-6 border-t border-gray-200 bg-white">
             {/* Offer Details */}
             {offerDetails?.offerApplied && (
-              <div className="mb-4 bg-green-50 border border-green-200">
-                <div className="flex items-center gap-2 mb-2">
-                  <Gift className="h-4 w-4 text-green-600" />
-                  <span className="text-sm font-semibold text-green-800">Loungewear Offer Applied! 🎉</span>
+              <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-center gap-2 text-green-800">
+                  <Gift className="h-4 w-4" />
+                  <span className="text-sm font-medium">Special Offer Applied!</span>
                 </div>
-                <div className="text-xs text-green-700 space-y-1">
-                  <p>• {offerDetails.offerDetails?.completeSets} set(s) of 3 for ₹1299 each</p>
-                  {offerDetails.offerDetails?.remainingItems > 0 && (
-                    <p>• {offerDetails.offerDetails.remainingItems} item(s) at ₹450 each</p>
-                  )}
-                  <p className="font-semibold">You saved ₹{offerDetails.offerDiscount}!</p>
-                </div>
-              </div>
-            )}
-            
-            {/* Loungewear Offer Hint */}
-            {offerDetails && !offerDetails.offerApplied && offerDetails.loungewearCount > 0 && (
-              <div className="mb-4 p-3 bg-blue-50 border border-blue-200">
-                <div className="flex items-center gap-2 mb-1">
-                  <Gift className="h-4 w-4 text-blue-600" />
-                  <span className="text-sm font-semibold text-blue-800">almost there!</span>
-                </div>
-                <p className="text-xs text-blue-700">
-                  Add {offerDetails.loungewearCount} more loungewear item(s) to get 3 for ₹1299
+                <p className="text-xs text-green-600 mt-1">
+                  {offerDetails.offerDetails?.completeSets || 0} complete sets at special price
                 </p>
               </div>
             )}
@@ -210,7 +182,7 @@ export default function CartSidebar() {
             <div className="text-xs text-gray-500 text-center mb-4">
               Shipping calculated based on your location and items
             </div>
-            <Button className="w-full bg-[rgb(71,60,102)] hover:bg-[rgb(71,60,102)]/90 text-white py-3 rounded-xl font-semibold" onClick={() => { window.location.href = "/checkout"; }}>
+            <Button className="w-full bg-[rgb(71,60,102)] hover:bg-[rgb(71,60,102)]/90 text-white py-3 rounded-xl font-semibold" onClick={handleProceedToCheckout}>
               Proceed to Checkout
             </Button>
             <Button

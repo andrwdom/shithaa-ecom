@@ -317,10 +317,12 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
       category: product.category,
       categorySlug: product.categorySlug,
     });
+    // Navigate to checkout - the checkout page will refresh the buy-now data
     window.location.href = "/checkout?mode=buynow";
   };
 
   const handleCheckout = () => {
+    // Navigate to checkout - the checkout page will refresh cart data
     window.location.href = "/checkout";
   }
 

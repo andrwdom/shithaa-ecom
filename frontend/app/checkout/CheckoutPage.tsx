@@ -47,10 +47,47 @@ export default function CheckoutPage() {
   const router = useRouter()
   const [processing, setProcessing] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [refreshingData, setRefreshingData] = useState(true); // Add this state
   const { user } = useAuth();
 
-  const { cartItems: contextCartItems, cartTotal, cartSubtotal, offerDetails } = useCart()
-  const { buyNowItem } = useBuyNow()
+  const { cartItems: contextCartItems, cartTotal, cartSubtotal, offerDetails, refreshCartData } = useCart()
+  const { buyNowItem, refreshBuyNowItem } = useBuyNow()
+
+  // CRITICAL FIX: Always refresh data from backend when checkout page loads
+  useEffect(() => {
+    const refreshData = async () => {
+      setRefreshingData(true);
+      try {
+        if (buyNowItem) {
+          // Refresh buy-now item data
+          await refreshBuyNowItem();
+        } else if (contextCartItems.length > 0) {
+          // Refresh cart data
+          await refreshCartData();
+        }
+      } catch (error) {
+        console.error("Error refreshing checkout data:", error);
+      } finally {
+        setRefreshingData(false);
+      }
+    };
+
+    // Refresh data immediately when component mounts
+    refreshData();
+
+    // Also refresh data when user becomes visible (e.g., navigating back to tab)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        refreshData();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [buyNowItem, contextCartItems.length, refreshBuyNowItem, refreshCartData]);
 
   useEffect(() => {
     // Detect buy-now or cart
@@ -60,6 +97,15 @@ export default function CheckoutPage() {
       setCartItems(contextCartItems)
     }
   }, [buyNowItem, contextCartItems])
+
+  // Additional safeguard: Check if we have valid items after refresh
+  useEffect(() => {
+    if (cartItems.length === 0 && !buyNowItem && contextCartItems.length === 0) {
+      // No valid items found, redirect back to home
+      console.log("No valid items found in checkout, redirecting to home");
+      router.push("/");
+    }
+  }, [cartItems, buyNowItem, contextCartItems, router]);
 
   useEffect(() => {
     // Subtotal should be the original sum before offers
@@ -164,6 +210,17 @@ export default function CheckoutPage() {
   return (
     <PageLoading loadingMessage="Loading Checkout..." minLoadingTime={1500}>
       <div className="min-h-screen bg-gray-50 py-6 px-2 sm:px-4">
+        {/* Show loading overlay while refreshing data */}
+        {refreshingData && (
+          <div className="fixed inset-0 bg-white/80 z-50 flex items-center justify-center">
+            <div className="text-center">
+              <div className="loading loading-spinner loading-lg text-[rgb(71,60,102)] mb-4"></div>
+              <p className="text-lg font-semibold text-gray-700">Refreshing cart data...</p>
+              <p className="text-sm text-gray-500">Ensuring you have the latest prices and stock information</p>
+            </div>
+          </div>
+        )}
+        
         {/* Stepper/Progress Indicator */}
         <div className="max-w-5xl mx-auto mb-8 px-4">
           <ol className="flex items-center w-full text-sm font-medium text-gray-500">
@@ -223,7 +280,7 @@ export default function CheckoutPage() {
               type="button"
               className="w-full bg-[rgb(71,60,102)] hover:bg-[rgb(71,60,102)]/90 text-white text-lg font-semibold rounded-xl py-3 mt-4 transition disabled:opacity-60 disabled:cursor-not-allowed"
               onClick={handlePhonePePayment}
-              disabled={processing}
+              disabled={processing || refreshingData}
             >
               {processing ? <span className="loading loading-spinner loading-md"></span> : 'Confirm Order (PhonePe)'}
             </button>
@@ -231,7 +288,7 @@ export default function CheckoutPage() {
               type="button"
               className="w-full mt-2 text-sm bg-gray-100 text-gray-600 rounded-lg py-2 disabled:opacity-60 disabled:cursor-not-allowed"
               onClick={handleDummyPayment}
-              disabled={processing}
+              disabled={processing || refreshingData}
             >
               {processing ? <span className="loading loading-spinner loading-md"></span> : 'Dummy Payment (Test)'}
             </button>
