@@ -116,7 +116,7 @@ export default function Footer() {
                 </a>
               </li>
               <li>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors">
+                <a href="/sizing-guide" className="text-gray-400 hover:text-white transition-colors">
                   Size Guide
                 </a>
               </li>
@@ -172,7 +172,7 @@ export default function Footer() {
         </div>
 
         <div className="border-t border-gray-800 mt-16 pt-8 text-center">
-          <p className="text-gray-400">&copy; 2024 Shitha. All rights reserved. Made with 💕 for mothers everywhere.</p>
+          <p className="text-gray-400">&copy; 2024 Shithaa. All rights reserved. Made with 💕 for mothers everywhere.</p>
         </div>
       </div>
     </footer>

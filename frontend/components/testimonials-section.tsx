@@ -82,7 +82,7 @@ const TestimonialCard = ({ testimonial, index, isActive }: TestimonialCardProps)
 
   return (
     <motion.div
-      className="flex-shrink-0 w-80 md:w-96 mx-6 relative"
+      className="flex-shrink-0 w-64 md:w-80 lg:w-96 mx-4 md:mx-6 relative"
       initial={{ opacity: 0, y: 50, rotateY: -15 }}
       animate={{
         opacity: isActive ? 1 : 0.7,
@@ -97,7 +97,7 @@ const TestimonialCard = ({ testimonial, index, isActive }: TestimonialCardProps)
     >
       {/* Glassmorphic container */}
       <motion.div
-        className="relative bg-white/90 backdrop-blur-md rounded-3xl p-6 shadow-2xl border border-white/20"
+        className="relative bg-white/90 backdrop-blur-md rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-xl md:shadow-2xl border border-white/20"
         whileHover={{
           scale: 1.02,
           rotateZ: 0,
@@ -121,13 +121,13 @@ const TestimonialCard = ({ testimonial, index, isActive }: TestimonialCardProps)
         </AnimatePresence>
 
         {/* Instagram DM Screenshot */}
-        <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="relative rounded-xl md:rounded-2xl overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100">
           <Image
             src={testimonial.image}
             alt={`Customer testimonial ${index + 1} - Instagram DM screenshot`}
             width={400}
             height={600}
-            className="w-full h-[500px] object-cover"
+            className="w-full h-[300px] md:h-[400px] lg:h-[500px] object-cover"
             placeholder="blur"
             blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAAcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
           />
@@ -136,14 +136,14 @@ const TestimonialCard = ({ testimonial, index, isActive }: TestimonialCardProps)
           <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-transparent" />
 
           {/* Instagram indicator */}
-          <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm rounded-full p-2 shadow-lg">
-            <Instagram className="w-4 h-4 text-pink-500" />
+          <div className="absolute top-3 md:top-4 right-3 md:right-4 bg-white/90 backdrop-blur-sm rounded-full p-1.5 md:p-2 shadow-lg">
+            <Instagram className="w-3 h-3 md:w-4 md:h-4 text-pink-500" />
           </div>
         </div>
 
         {/* Subtle shimmer effect */}
         <motion.div
-          className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent rounded-3xl"
+          className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent rounded-2xl md:rounded-3xl"
           initial={{ x: "-100%" }}
           animate={{ x: "100%" }}
           transition={{
@@ -221,7 +221,7 @@ const TestimonialsSection = () => {
   return (
     <section
       ref={sectionRef}
-      className="py-24 px-4 relative overflow-hidden"
+      className="py-12 md:py-16 lg:py-24 px-4 relative overflow-hidden"
       style={{
         background: `linear-gradient(135deg, 
           #FFFDF7 0%, 
@@ -246,7 +246,7 @@ const TestimonialsSection = () => {
       {/* Floating background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <motion.div
-          className="absolute top-20 left-20 w-40 h-40 bg-pink-200/20 rounded-full blur-3xl"
+          className="absolute top-20 left-20 w-32 md:w-40 h-32 md:h-40 bg-pink-200/20 rounded-full blur-3xl"
           animate={{
             scale: [1, 1.2, 1],
             opacity: [0.3, 0.5, 0.3],
@@ -254,7 +254,7 @@ const TestimonialsSection = () => {
           transition={{ duration: 8, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
         />
         <motion.div
-          className="absolute bottom-32 right-16 w-56 h-56 bg-purple-200/20 rounded-full blur-3xl"
+          className="absolute bottom-32 right-16 w-40 md:w-56 h-40 md:h-56 bg-purple-200/20 rounded-full blur-3xl"
           animate={{
             scale: [1.2, 1, 1.2],
             opacity: [0.2, 0.4, 0.2],
@@ -262,7 +262,7 @@ const TestimonialsSection = () => {
           transition={{ duration: 10, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
         />
         <motion.div
-          className="absolute top-1/2 left-1/4 w-32 h-32 bg-green-200/20 rounded-full blur-2xl"
+          className="absolute top-1/2 left-1/4 w-24 md:w-32 h-24 md:h-32 bg-green-200/20 rounded-full blur-2xl"
           animate={{
             x: [0, 30, 0],
             y: [0, -20, 0],
@@ -278,16 +278,16 @@ const TestimonialsSection = () => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.8, ease: "easeOut" }}
-          className="text-center mb-20"
+          className="text-center mb-12 md:mb-16 lg:mb-20"
         >
           <div className="relative inline-block">
             <WashiTape className="-top-3 -left-6" rotation={-12} color="pink" />
-            <h2 className="text-5xl md:text-6xl font-serif text-[#473C66] mb-6 relative">Moms Who Chose Shithaa 💕</h2>
-            <div className="absolute -bottom-2 right-8 w-4 h-4 bg-pink-300/60 rounded-full"></div>
-            <div className="absolute -top-4 right-12 w-3 h-3 bg-purple-300/60 rounded-full"></div>
+            <h2 className="text-3xl md:text-5xl lg:text-6xl font-serif text-[#473C66] mb-4 md:mb-6 relative">Moms Who Chose Shithaa 💕</h2>
+            <div className="absolute -bottom-2 right-8 w-3 md:w-4 h-3 md:h-4 bg-pink-300/60 rounded-full"></div>
+            <div className="absolute -top-4 right-12 w-2 md:w-3 h-2 md:h-3 bg-purple-300/60 rounded-full"></div>
           </div>
           <motion.p
-            className="text-xl text-gray-600 font-light italic mt-6 max-w-2xl mx-auto"
+            className="text-lg md:text-xl text-gray-600 font-light italic mt-4 md:mt-6 max-w-2xl mx-auto"
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             transition={{ delay: 0.3, duration: 0.6 }}
@@ -298,7 +298,7 @@ const TestimonialsSection = () => {
 
         {/* Carousel Container */}
         <div
-          className="relative mb-16"
+          className="relative mb-12 md:mb-16"
           onMouseDown={() => setIsPaused(true)}
           onMouseUp={() => setIsPaused(false)}
           onMouseLeave={() => setIsPaused(false)}
@@ -327,7 +327,7 @@ const TestimonialsSection = () => {
 
         {/* Dots Indicator */}
         <motion.div
-          className="flex justify-center mb-12 space-x-3"
+          className="flex justify-center mb-8 md:mb-12 space-x-2 md:space-x-3"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5, duration: 0.6 }}
@@ -362,7 +362,7 @@ const TestimonialsSection = () => {
                 }
                 requestAnimationFrame(step);
               }}
-              className={`w-3 h-3 rounded-full transition-all duration-500 ${
+              className={`w-2.5 h-2.5 md:w-3 md:h-3 rounded-full transition-all duration-500 ${
                 (() => {
                   const container = containerRef.current;
                   if (!container) return false;
@@ -391,17 +391,17 @@ const TestimonialsSection = () => {
             href="https://www.instagram.com/stories/highlights/18004012679767223/"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center justify-center bg-gradient-to-r from-[#473C66] to-purple-500 hover:from-purple-600 hover:to-purple-700 text-white px-10 py-6 text-lg rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 font-medium"
+            className="inline-flex items-center justify-center bg-gradient-to-r from-[#473C66] to-purple-500 hover:from-purple-600 hover:to-purple-700 text-white px-6 md:px-10 py-4 md:py-6 text-base md:text-lg rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 font-medium"
           >
-            <Instagram className="w-5 h-5 mr-3" />
+            <Instagram className="w-4 h-4 md:w-5 md:h-5 mr-2 md:mr-3" />
             View More Stories
           </a>
         </motion.div>
       </div>
 
       {/* Decorative Instagram watermark */}
-      <div className="absolute bottom-8 right-8 opacity-10">
-        <Instagram className="w-16 h-16 text-[#473C66]" />
+      <div className="absolute bottom-6 md:bottom-8 right-6 md:right-8 opacity-10">
+        <Instagram className="w-12 h-12 md:w-16 md:h-16 text-[#473C66]" />
       </div>
     </section>
   )
