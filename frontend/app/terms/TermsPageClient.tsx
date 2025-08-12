@@ -42,10 +42,10 @@ export default function TermsPageClient() {
               Delivery times vary depending on your location.
             </li>
             <li>
-              <b>Refund & Exchange — Damaged Products Only</b><br />
-              We accept refunds and exchanges only for damaged products.<br />
-              Requests must be submitted within 2 days of receiving your order and must include an uninterrupted open-box video showing the damage.<br />
-              For fastest response, DM us on Instagram (preferred). Alternatively, email: <a href="mailto:info.shithaa@gmail.com" className="underline">info.shithaa@gmail.com</a>.
+              <b>Returns & Refunds</b><br />
+              We offer refunds only if the delivered product is damaged or defective.<br />
+              Items must be unused and in original packaging.<br />
+              We only accept refund requests within 2 days of receiving your order. To request a refund, please contact us via Instagram direct message (preferred) or email us at <a href="mailto:info.shitha@gmail.com" className="underline">info.shitha@gmail.com</a>. Refund requests made after 2 days from the date you receive your order will not be eligible.
             </li>
             <li>
               <b>Intellectual Property</b><br />
@@ -61,9 +61,9 @@ export default function TermsPageClient() {
             </li>
             <li>
               <b>Contact Information</b><br />
-              For any questions or concerns, please contact us:<br />
-              Email: <a href="mailto:info.shithaa@gmail.com" className="underline">info.shithaa@gmail.com</a><br />
-              Instagram: <a href="https://www.instagram.com/shithaa.in" className="underline" target="_blank" rel="noopener noreferrer">@shithaa.in</a>
+              For questions about these Terms and Conditions, please contact us at:<br />
+              Email: <a href="mailto:info.shitha@gmail.com" className="underline">info.shitha@gmail.com</a><br />
+              Instagram: <a href="https://www.instagram.com/shithaa.in" className="underline">@shithaa.in</a>
             </li>
           </ol>
         </div>

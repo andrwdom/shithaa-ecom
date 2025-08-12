@@ -64,9 +64,13 @@ export default function ContactSection() {
   const contactMethods = [
     {
       icon: Mail,
-      label: "Email",
-      value: "info.shithaa@gmail.com",
-      action: () => window.open("mailto:info.shithaa@gmail.com"),
+      title: "Email Us",
+      subtitle: "We reply within 24 hours",
+      value: "info.shitha@gmail.com",
+      action: () => window.open("mailto:info.shitha@gmail.com"),
+      bgColor: "bg-purple-50",
+      iconColor: "text-purple-600",
+      hoverColor: "hover:bg-purple-100",
     },
     {
       icon: Instagram,

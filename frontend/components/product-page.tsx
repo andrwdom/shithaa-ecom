@@ -35,12 +35,12 @@ export default function ProductPage({ product, onBack }: ProductPageProps) {
 
   const handleBuyNow = () => {
     // Stub for buy now functionality
-            // Item added to cart silently
+    alert(`Added ${quantity} x ${product.name} (Size: ${selectedSize}) to cart!`)
   }
 
   const handleAddToWishlist = () => {
     // Stub for wishlist functionality
-            // Item added to wishlist silently
+    alert("Added to wishlist!")
   }
 
   return (
@@ -195,7 +195,7 @@ export default function ProductPage({ product, onBack }: ProductPageProps) {
                   </div>
                   <div className="flex items-center gap-3">
                     <RotateCcw className="h-5 w-5 text-blue-400" />
-                    <span className="text-sm font-medium">Refunds & exchanges for damaged products only</span>
+                    <span className="text-sm font-medium">Refunds accepted within 2 days of receiving your order</span>
                   </div>
                 </div>
               </CardContent>

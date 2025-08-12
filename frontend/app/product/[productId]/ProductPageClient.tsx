@@ -102,12 +102,14 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
     };
   }, [productId])
 
-  const handleBuyNow = () => {
+  const handleBuyNow = async () => {
     if (!selectedSize) {
       alert("Please select a size first!")
       return
     }
     if (!product) return;
+    
+    // Set buy now item with fresh data
     setBuyNowItem({
       id: product.id,
       _id: product.id,
@@ -117,6 +119,8 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
       size: selectedSize,
       image: product.images[0] || "/placeholder.svg",
     });
+    
+    // Navigate to checkout - the checkout page will refresh the data
     window.location.href = "/checkout?mode=buynow";
   }
 
@@ -521,7 +525,8 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
         }}
         onCheckout={() => {
           setIsCheckoutPromptOpen(false);
-          window.location.href = "/checkout";
+          // The checkout prompt modal will handle data refresh before navigation
+          // No need to modify this as the modal now handles it internally
         }}
         product={addedProduct}
         images={product.images}

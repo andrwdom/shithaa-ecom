@@ -1,37 +1,26 @@
 import productModel from "../models/productModel.js"
+import ShippingRules from "../models/ShippingRules.js"
 
 /**
- * NEW COMPREHENSIVE SHIPPING RULES:
+ * Calculate shipping cost based on cart items and shipping location
  * 
- * 1. MATERNITY FEEDING WEAR:
- *    - Tamil Nadu:
- *      * 1 dress = ₹39
- *      * 2 dresses = ₹49
- *      * 3 dresses = ₹59
- *      * 4 dresses = ₹69
- *      * 5 dresses = ₹79
- *      * 6 dresses = ₹89
- *      * 7+ dresses = ₹99
- *    - Other States:
- *      * 1 dress = ₹49
- *      * 2 dresses = ₹69
- *      * 3 dresses = ₹89
- *      * 4+ dresses = ₹109
+ * SHIPPING LOGIC IMPLEMENTATION:
  * 
- * 2. LOUNGE WEAR (all categories except maternity feeding):
+ * 1. For all categories EXCEPT "Maternity Feeding Wear":
  *    - Tamil Nadu: FREE shipping
- *    - Other States:
- *      * 1 dress = ₹39
- *      * 2 dresses = ₹49
- *      * 3 dresses = ₹59
- *      * 4 dresses = ₹69
- *      * 5 dresses = ₹79
- *      * 6 dresses = ₹89
- *      * 7+ dresses = ₹99
+ *    - Other states:
+ *       - 1 dress → ₹39
+ *       - 2 dresses → ₹59
+ *       - 3 dresses → ₹89
+ *       - More than 3 dresses → ₹105 (max cap)
  * 
- * 3. MIXED CART (maternity feeding + lounge wear):
- *    - Calculate shipping for each category separately
- *    - Add the costs together
+ * 2. For "Maternity Feeding Wear" category (special case):
+ *    - Tamil Nadu:
+ *       - 1 dress → ₹39
+ *       - 2 dresses → ₹59
+ *       - 3 dresses → ₹89
+ *       - More than 3 dresses → ₹105 (max cap)
+ *    - Other states: Same logic as above
  */
 export const calculateShipping = async (req, res) => {
     try {
@@ -63,78 +52,111 @@ export const calculateShipping = async (req, res) => {
 
         const isTamilNadu = shippingInfo.state.trim().toLowerCase() === 'tamil nadu';
         
-        // Categorize items
-        const maternityFeedingItems = items.filter(item => {
+        // Count total dresses (items) in cart
+        const totalDresses = items.reduce((sum, item) => sum + item.quantity, 0);
+        
+        // Check if any item is from "Maternity Feeding Wear" category
+        const hasMaternityFeedingWear = items.some(item => {
             const product = productMap[item._id];
             return product && (
                 product.category === "Maternity Feeding Wear" || 
                 product.categorySlug === "maternity-feeding-wear"
             );
         });
-        
-        const loungeWearItems = items.filter(item => {
-            const product = productMap[item._id];
-            return product && (
-                (product.category === "Zipless Feeding Lounge Wear" || 
-                 product.category === "Non-Feeding Lounge Wear" ||
-                 product.categorySlug === "zipless-feeding-lounge-wear" ||
-                 product.categorySlug === "non-feeding-lounge-wear") &&
-                !(product.category === "Maternity Feeding Wear" || 
-                  product.categorySlug === "maternity-feeding-wear")
-            );
-        });
-        
-        const otherCategoryItems = items.filter(item => {
-            const product = productMap[item._id];
-            return product && !(
-                product.category === "Maternity Feeding Wear" || 
-                product.categorySlug === "maternity-feeding-wear"
-            ) && !(
-                product.category === "Zipless Feeding Lounge Wear" || 
-                product.category === "Non-Feeding Lounge Wear" ||
-                product.categorySlug === "zipless-feeding-lounge-wear" ||
-                product.categorySlug === "non-feeding-lounge-wear"
-            );
-        });
 
-        // Calculate quantities
-        const maternityFeedingQty = maternityFeedingItems.reduce((sum, item) => sum + item.quantity, 0);
-        const loungeWearQty = loungeWearItems.reduce((sum, item) => sum + item.quantity, 0);
-        const otherCategoriesQty = otherCategoryItems.reduce((sum, item) => sum + item.quantity, 0);
+        let shippingCost = 0;
+        let isFreeShipping = false;
+        let shippingMessage = "";
 
-        // Calculate shipping for each category
-        const maternityFeedingCost = calculateMaternityFeedingShipping(maternityFeedingQty, isTamilNadu);
-        const loungeWearCost = calculateLoungeWearShipping(loungeWearQty, isTamilNadu);
-        const otherCategoriesCost = calculateOtherCategoriesShipping(otherCategoriesQty, isTamilNadu);
-
-        // Total shipping cost
-        const totalShippingCost = maternityFeedingCost + loungeWearCost + otherCategoriesCost;
-        
-        // Determine if any category has free shipping
-        const hasFreeShipping = (loungeWearQty > 0 && isTamilNadu) || 
-                               (otherCategoriesQty > 0 && isTamilNadu);
-
-        // Generate shipping message
-        const shippingMessage = generateShippingMessage({
-            maternityFeeding: { quantity: maternityFeedingQty, cost: maternityFeedingCost },
-            loungeWear: { quantity: loungeWearQty, cost: loungeWearCost },
-            otherCategories: { quantity: otherCategoriesQty, cost: otherCategoriesCost },
-            isTamilNadu,
-            totalShippingCost
-        });
+        if (hasMaternityFeedingWear) {
+            // Use new shipping rules for Maternity Feeding Wear
+            try {
+                const shippingRule = await ShippingRules.findOne({ 
+                    category: 'maternity-feeding-wear', 
+                    isActive: true 
+                });
+                
+                if (shippingRule) {
+                    const isTamilNadu = shippingInfo.state.trim().toLowerCase() === 'tamil nadu';
+                    const rules = isTamilNadu ? shippingRule.rules.tamilNadu : shippingRule.rules.otherStates;
+                    
+                    // Calculate shipping based on quantity
+                    if (totalDresses >= 7) {
+                        shippingCost = rules.get('7+') || 99;
+                        shippingMessage = `₹${shippingCost} shipping for ${totalDresses} items`;
+                    } else if (totalDresses >= 4) {
+                        shippingCost = rules.get('4+') || (isTamilNadu ? 99 : 109);
+                        shippingMessage = `₹${shippingCost} shipping for ${totalDresses} items`;
+                    } else {
+                        shippingCost = rules.get(totalDresses.toString()) || 0;
+                        shippingMessage = `₹${shippingCost} shipping for ${totalDresses} item${totalDresses > 1 ? 's' : ''}`;
+                    }
+                } else {
+                    // Fallback to old logic if no rule found
+                    if (totalDresses === 1) {
+                        shippingCost = 39;
+                        shippingMessage = "₹39 shipping for 1 item";
+                    } else if (totalDresses === 2) {
+                        shippingCost = 59;
+                        shippingMessage = "₹59 shipping for 2 items";
+                    } else if (totalDresses === 3) {
+                        shippingCost = 89;
+                        shippingMessage = "₹89 shipping for 3 items";
+                    } else if (totalDresses > 3) {
+                        shippingCost = 105;
+                        shippingMessage = "₹105 shipping for 4+ items";
+                    }
+                }
+            } catch (error) {
+                console.error('Error calculating shipping with rules:', error);
+                // Fallback to old logic
+                if (totalDresses === 1) {
+                    shippingCost = 39;
+                    shippingMessage = "₹39 shipping for 1 item";
+                } else if (totalDresses === 2) {
+                    shippingCost = 59;
+                    shippingMessage = "₹59 shipping for 2 items";
+                } else if (totalDresses === 3) {
+                    shippingCost = 89;
+                    shippingMessage = "₹89 shipping for 3 items";
+                } else if (totalDresses > 3) {
+                    shippingCost = 105;
+                    shippingMessage = "₹105 shipping for 4+ items";
+                }
+            }
+        } else {
+            // Regular categories
+            if (isTamilNadu) {
+                // Free shipping for Tamil Nadu (except Maternity Feeding Wear)
+                shippingCost = 0;
+                isFreeShipping = true;
+                shippingMessage = "Free shipping within Tamil Nadu!";
+            } else {
+                // Other states - charge shipping
+                if (totalDresses === 1) {
+                    shippingCost = 39;
+                    shippingMessage = "₹39 shipping for 1 item";
+                } else if (totalDresses === 2) {
+                    shippingCost = 59;
+                    shippingMessage = "₹59 shipping for 2 items";
+                } else if (totalDresses === 3) {
+                    shippingCost = 89;
+                    shippingMessage = "₹89 shipping for 3 items";
+                } else if (totalDresses > 3) {
+                    shippingCost = 105;
+                    shippingMessage = "₹105 shipping for 4+ items";
+                }
+            }
+        }
 
         const response = {
             success: true,
             data: {
-                shippingCost: totalShippingCost,
-                isFreeShipping: hasFreeShipping && totalShippingCost === 0,
+                shippingCost,
+                isFreeShipping,
                 shippingMessage,
-                breakdown: {
-                    maternityFeeding: { quantity: maternityFeedingQty, cost: maternityFeedingCost },
-                    loungeWear: { quantity: loungeWearQty, cost: loungeWearCost },
-                    otherCategories: { quantity: otherCategoriesQty, cost: otherCategoriesCost }
-                },
-                totalDresses: maternityFeedingQty + loungeWearQty + otherCategoriesQty,
+                totalDresses,
+                hasMaternityFeedingWear,
                 isTamilNadu
             }
         };
@@ -148,110 +170,4 @@ export const calculateShipping = async (req, res) => {
             message: error.message 
         });
     }
-};
-
-/**
- * Calculate shipping for Maternity Feeding Wear
- */
-function calculateMaternityFeedingShipping(quantity, isTamilNadu) {
-    if (quantity === 0) return 0;
-    
-    if (isTamilNadu) {
-        // Tamil Nadu rules
-        if (quantity === 1) return 39;
-        if (quantity === 2) return 49;
-        if (quantity === 3) return 59;
-        if (quantity === 4) return 69;
-        if (quantity === 5) return 79;
-        if (quantity === 6) return 89;
-        return 99; // 7+ items
-    } else {
-        // Other states rules
-        if (quantity === 1) return 49;
-        if (quantity === 2) return 69;
-        if (quantity === 3) return 89;
-        return 109; // 4+ items
-    }
-}
-
-/**
- * Calculate shipping for Lounge Wear
- */
-function calculateLoungeWearShipping(quantity, isTamilNadu) {
-    if (quantity === 0) return 0;
-    
-    if (isTamilNadu) {
-        // Free shipping for Tamil Nadu
-        return 0;
-    } else {
-        // Other states rules
-        if (quantity === 1) return 39;
-        if (quantity === 2) return 49;
-        if (quantity === 3) return 59;
-        if (quantity === 4) return 69;
-        if (quantity === 5) return 79;
-        if (quantity === 6) return 89;
-        return 99; // 7+ items
-    }
-}
-
-/**
- * Calculate shipping for Other Categories
- */
-function calculateOtherCategoriesShipping(quantity, isTamilNadu) {
-    if (quantity === 0) return 0;
-    
-    if (isTamilNadu) {
-        // Free shipping for Tamil Nadu
-        return 0;
-    } else {
-        // Other states rules
-        if (quantity === 1) return 39;
-        if (quantity === 2) return 59;
-        if (quantity === 3) return 89;
-        return 105; // 4+ items
-    }
-}
-
-/**
- * Generate comprehensive shipping message
- */
-function generateShippingMessage(breakdown) {
-    const { maternityFeeding, loungeWear, otherCategories, isTamilNadu, totalShippingCost } = breakdown;
-    
-    if (totalShippingCost === 0) {
-        return "Free shipping! 🎉";
-    }
-
-    const messages = [];
-    
-    if (maternityFeeding.quantity > 0) {
-        if (maternityFeeding.cost === 0) {
-            messages.push(`Free shipping for ${maternityFeeding.quantity} maternity feeding item${maternityFeeding.quantity > 1 ? 's' : ''}`);
-        } else {
-            messages.push(`₹${maternityFeeding.cost} for ${maternityFeeding.quantity} maternity feeding item${maternityFeeding.quantity > 1 ? 's' : ''}`);
-        }
-    }
-    
-    if (loungeWear.quantity > 0) {
-        if (loungeWear.cost === 0) {
-            messages.push(`Free shipping for ${loungeWear.quantity} lounge wear item${loungeWear.quantity > 1 ? 's' : ''}`);
-        } else {
-            messages.push(`₹${loungeWear.cost} for ${loungeWear.quantity} lounge wear item${loungeWear.quantity > 1 ? 's' : ''}`);
-        }
-    }
-    
-    if (otherCategories.quantity > 0) {
-        if (otherCategories.cost === 0) {
-            messages.push(`Free shipping for ${otherCategories.quantity} other item${otherCategories.quantity > 1 ? 's' : ''}`);
-        } else {
-            messages.push(`₹${otherCategories.cost} for ${otherCategories.quantity} other item${otherCategories.quantity > 1 ? 's' : ''}`);
-        }
-    }
-    
-    if (messages.length === 1) {
-        return `Shipping: ${messages[0]}`;
-    } else {
-        return `Shipping: ${messages.join(', ')}`;
-    }
-} 
+}; 

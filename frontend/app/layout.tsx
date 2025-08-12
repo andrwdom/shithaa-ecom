@@ -150,7 +150,7 @@ export default function RootLayout({
               "contactPoint": {
                 "@type": "ContactPoint",
                 "contactType": "customer service",
-                "email": "info.shithaa@gmail.com"
+                "email": "info.shitha@gmail.com"
               },
               "sameAs": [
                 "https://instagram.com/shithaa.in"
@@ -181,10 +181,8 @@ export default function RootLayout({
         <ServerErrorBoundary>
           <ErrorBoundary>
             <Providers>
-              <LayoutClient>
-                {children}
-                <CartSidebar />
-              </LayoutClient>
+              <LayoutClient>{children}</LayoutClient>
+              <CartSidebar />
             </Providers>
           </ErrorBoundary>
         </ServerErrorBoundary>
