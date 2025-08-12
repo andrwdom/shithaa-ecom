@@ -35,12 +35,12 @@ export default function ProductPage({ product, onBack }: ProductPageProps) {
 
   const handleBuyNow = () => {
     // Stub for buy now functionality
-    alert(`Added ${quantity} x ${product.name} (Size: ${selectedSize}) to cart!`)
+            // Item added to cart silently
   }
 
   const handleAddToWishlist = () => {
     // Stub for wishlist functionality
-    alert("Added to wishlist!")
+            // Item added to wishlist silently
   }
 
   return (

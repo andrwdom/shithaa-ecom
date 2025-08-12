@@ -104,7 +104,6 @@ export default function CartSidebar() {
     // CRITICAL: Validate stock before any updates
     if (newQuantity > currentStock) {
       console.warn(`Stock validation failed in sidebar: quantity ${newQuantity} > stock ${currentStock}`);
-      alert(`Cannot set quantity higher than ${currentStock} in stock for this size.`);
       return;
     }
 
@@ -194,6 +193,19 @@ export default function CartSidebar() {
 
         {/* Cart Items */}
         <div className="flex-1 overflow-y-auto p-6">
+          {/* Debug info - remove in production */}
+          <div className="mb-4 p-2 bg-gray-100 rounded text-xs">
+            <div>Cart Items Count: {cartItems.length}</div>
+            <div>User: {user ? 'Authenticated' : 'Not authenticated'}</div>
+            <div>Cart Items: {JSON.stringify(cartItems.map(item => ({ name: item.name, size: item.size, quantity: item.quantity })))}</div>
+            <button 
+              onClick={debugCart}
+              className="text-blue-600 underline"
+            >
+              Debug Cart
+            </button>
+          </div>
+          
           {cartItems.length === 0 ? (
             <div className="text-center py-12">
               <ShoppingBag className="h-16 w-16 text-gray-300 mx-auto mb-4" />

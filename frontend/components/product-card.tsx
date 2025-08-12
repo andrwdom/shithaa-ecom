@@ -30,7 +30,7 @@ interface ProductCardProps {
 export default function ProductCard({ product, onClick }: ProductCardProps) {
   const handleQuickAdd = (e: React.MouseEvent) => {
     e.stopPropagation()
-    alert("Added to cart!")
+            // Item added to cart silently
   }
 
   return (

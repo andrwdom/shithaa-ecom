@@ -86,11 +86,9 @@ export default function SizeSelectionSidebar({
 
   const handleAddToCart = () => {
     if (!selectedSize) {
-      alert('Please select a size first')
       return
     }
     if (!selectedSizeStock || selectedSizeStock === 0) {
-      alert('This size is out of stock')
       return
     }
     
@@ -98,11 +96,6 @@ export default function SizeSelectionSidebar({
     const availableToAdd = selectedSizeStock - currentCartQty
     
     if (quantity > availableToAdd) {
-      if (currentCartQty > 0) {
-        alert(`You already have ${currentCartQty} in your cart. You can only add ${availableToAdd} more.`)
-      } else {
-        alert(`Cannot add more than ${selectedSizeStock} in stock for this size.`)
-      }
       return
     }
     
@@ -112,11 +105,9 @@ export default function SizeSelectionSidebar({
 
   const handleBuyNow = () => {
     if (!selectedSize) {
-      alert('Please select a size first')
       return
     }
     if (!selectedSizeStock || selectedSizeStock === 0) {
-      alert('This size is out of stock')
       return
     }
     
@@ -124,11 +115,6 @@ export default function SizeSelectionSidebar({
     const availableToAdd = selectedSizeStock - currentCartQty
     
     if (quantity > availableToAdd) {
-      if (currentCartQty > 0) {
-        alert(`You already have ${currentCartQty} in your cart. You can only add ${availableToAdd} more.`)
-      } else {
-        alert(`Cannot add more than ${selectedSizeStock} in stock for this size.`)
-      }
       return
     }
     
@@ -147,12 +133,6 @@ export default function SizeSelectionSidebar({
     
     if (quantity < availableToAdd) {
       setQuantity((prev) => prev + 1)
-    } else {
-      if (currentCartQty > 0) {
-        alert(`You already have ${currentCartQty} in your cart. You can only add ${availableToAdd} more.`)
-      } else {
-        alert(`Cannot add more than ${selectedSizeStock} in stock for this size.`)
-      }
     }
   }
 
