@@ -233,4 +233,46 @@ const getBulkStock = async (req, res) => {
     }
 };
 
-export { addToCart, updateCart, getUserCart, calculateCartTotal, getBulkStock }
+// Remove item from cart
+const removeFromCart = async (req, res) => {
+    try {
+        const { userId, itemId, size } = req.body;
+        
+        const userData = await userModel.findById(userId);
+        let cartData = userData.cartData;
+
+        if (cartData[itemId]) {
+            if (size) {
+                // Remove specific size
+                if (cartData[itemId][size]) {
+                    delete cartData[itemId][size];
+                    
+                    // If no sizes left for this item, remove the entire item
+                    if (Object.keys(cartData[itemId]).length === 0) {
+                        delete cartData[itemId];
+                    }
+                }
+            } else {
+                // Remove entire item
+                delete cartData[itemId];
+            }
+        }
+
+        await userModel.findByIdAndUpdate(userId, { cartData });
+        
+        res.json({ 
+            success: true, 
+            message: "Item removed from cart",
+            cartData 
+        });
+
+    } catch (error) {
+        console.error('Remove from cart error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: error.message 
+        });
+    }
+};
+
+export { addToCart, updateCart, getUserCart, calculateCartTotal, getBulkStock, removeFromCart }
