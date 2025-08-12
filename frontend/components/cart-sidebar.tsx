@@ -53,7 +53,7 @@ export default function CartSidebar() {
   const handleProceedToCheckout = () => {
     // Clear any buy-now state to ensure checkout shows cart contents
     clearBuyNowItem();
-    // Close sidebar and navigate to checkout
+    // Close sidebar and navigate to checkout (cart flow)
     closeCartSidebar();
     router.push('/checkout');
   };

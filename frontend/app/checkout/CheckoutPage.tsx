@@ -7,7 +7,7 @@ import PlaceOrderButton from './PlaceOrderButton'
 import { useCart } from '@/components/cart-context'
 import { useBuyNow } from '@/components/buy-now-context'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import PageLoading from '@/components/page-loading';
 import Script from 'next/script';
 import { useAuth } from '@/components/auth/useAuth'
@@ -45,6 +45,7 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false)
   const [orderSummary, setOrderSummary] = useState<any>({ subtotal: 0, discount: 0, shipping: 0, total: 0 })
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [processing, setProcessing] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const { user } = useAuth();
@@ -52,19 +53,33 @@ export default function CheckoutPage() {
   const { cartItems: contextCartItems, cartTotal, cartSubtotal, offerDetails, notifyCheckoutCartChanged } = useCart()
   const { buyNowItem, clearBuyNowItem } = useBuyNow()
 
-  // Real-time sync between cart and buy-now states
+  // Determine checkout flow from URL parameters
+  const isBuyNowFlow = searchParams.get("mode") === "buynow"
+  const currentFlow = isBuyNowFlow ? "buy-now" : "cart"
+
+  // Real-time sync between cart and buy-now states with proper flow separation
   useEffect(() => {
-    // Determine which items to show based on current state
-    if (buyNowItem) {
-      // Buy Now flow: show only the buy-now item
-      setCartItems([buyNowItem])
-      console.log('Checkout: Using Buy Now item:', buyNowItem)
+    // Clear any previous state when flow changes
+    if (isBuyNowFlow) {
+      // Buy Now flow: show only the buy-now item, ignore cart completely
+      if (buyNowItem) {
+        setCartItems([buyNowItem])
+        console.log('Checkout: Buy Now flow - showing single product:', buyNowItem)
+      } else {
+        // No buy-now item, redirect back to product selection
+        console.log('Checkout: Buy Now flow but no item found, redirecting...')
+        router.push('/')
+        return
+      }
     } else {
-      // Cart flow: show cart items
+      // Cart flow: show cart items, clear any buy-now state
+      if (buyNowItem) {
+        clearBuyNowItem() // Clear buy-now when switching to cart flow
+      }
       setCartItems(contextCartItems)
-      console.log('Checkout: Using Cart items:', contextCartItems)
+      console.log('Checkout: Cart flow - showing cart items:', contextCartItems)
     }
-  }, [buyNowItem, contextCartItems])
+  }, [isBuyNowFlow, buyNowItem, contextCartItems, clearBuyNowItem, router])
 
   // Clear buy-now when user navigates away or completes checkout
   useEffect(() => {
@@ -77,6 +92,15 @@ export default function CheckoutPage() {
     window.addEventListener('beforeunload', handleBeforeUnload)
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload)
+    }
+  }, [buyNowItem, clearBuyNowItem])
+
+  // Clear buy-now when component unmounts (user navigates away)
+  useEffect(() => {
+    return () => {
+      if (buyNowItem) {
+        clearBuyNowItem()
+      }
     }
   }, [buyNowItem, clearBuyNowItem])
 
@@ -192,7 +216,7 @@ export default function CheckoutPage() {
           <ol className="flex items-center w-full text-sm font-medium text-gray-500">
             <li className="flex-1 flex items-center gap-2">
               <span className="flex items-center justify-center w-8 h-8 rounded-full bg-[rgb(71,60,102)] text-white font-bold">1</span>
-              <span className="hidden sm:inline">{buyNowItem ? 'Product' : 'Cart'}</span>
+              <span className="hidden sm:inline">{currentFlow === "buy-now" ? 'Product' : 'Cart'}</span>
               <span className="flex-1 h-1 bg-[rgb(71,60,102)] mx-2 rounded sm:block hidden"></span>
             </li>
             <li className="flex-1 flex items-center gap-2">

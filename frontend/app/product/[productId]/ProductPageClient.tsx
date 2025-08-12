@@ -113,7 +113,7 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
     // Set buy now item with fresh data
     setBuyNowItem({
       id: product.id,
-      _id: product.id,
+      _id: product._id,
       name: product.name,
       price: product.price,
       quantity,
@@ -121,7 +121,7 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
       image: product.images[0] || "/placeholder.svg",
     });
     
-    // Navigate to checkout - the checkout page will refresh the data
+    // Navigate to checkout with buy-now mode
     window.location.href = "/checkout?mode=buynow";
   }
 

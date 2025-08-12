@@ -53,7 +53,7 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
   const [error, setError] = useState<string | null>(null)
   const [sleeveTypeFilter, setSleeveTypeFilter] = useState("all")
   const [availableSleeveTypes, setAvailableSleeveTypes] = useState<string[]>([])
-  const [selectedSize, setSelectedSize] = useState<string>("")
+  const [selectedSize, setSelectedSize] = useState<string>("all")
   const { setBuyNowItem } = useBuyNow()
   const { addToCart } = useCart()
 
@@ -109,7 +109,7 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
   const updateURL = (newSize?: string) => {
     const params = new URLSearchParams(searchParams.toString())
     
-    if (newSize) {
+    if (newSize && newSize !== 'all') {
       params.set('size', newSize)
     } else {
       params.delete('size')
@@ -119,12 +119,17 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
     router.push(newURL, { scroll: false })
   }
 
+  // Update URL when selectedSize changes
+  useEffect(() => {
+    updateURL(selectedSize)
+  }, [selectedSize])
+
   // Handle size filter selection
   const handleSizeFilter = (size: string) => {
     if (selectedSize === size) {
       // Deselect if already selected
-      setSelectedSize("")
-      updateURL("")
+      setSelectedSize("all")
+      updateURL("all")
     } else {
       // Select new size
       setSelectedSize(size)
@@ -134,11 +139,11 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
 
   // Clear all filters
   const clearAllFilters = () => {
-    setSelectedSize("")
+    setSelectedSize("all")
     setSleeveTypeFilter("all")
     setSearchQuery("")
     setSortBy("featured")
-    updateURL("")
+    updateURL("all")
   }
 
   // Compute category name from slug
@@ -234,6 +239,15 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
       )
     }
 
+    // Size filter
+    if (selectedSize && selectedSize !== 'all') {
+      filtered = filtered.filter(product => 
+        product.sizes && product.sizes.some(size => 
+          typeof size === 'string' ? size === selectedSize : size.size === selectedSize
+        )
+      )
+    }
+
     // Sleeve type filter
     if (sleeveTypeFilter && sleeveTypeFilter !== 'all') {
       filtered = filtered.filter(product => product.sleeveType === sleeveTypeFilter)
@@ -255,7 +269,7 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
     }
 
     setFilteredProducts(filtered)
-  }, [products, searchQuery, sortBy, sleeveTypeFilter])
+  }, [products, searchQuery, sortBy, sleeveTypeFilter, selectedSize])
 
   const handleProductClick = (productId: string) => {
     window.location.href = `/product/${productId}`
@@ -295,6 +309,7 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
   };
 
   const handleSizeSelectionBuyNow = (product: any, size: string, quantity: number) => {
+    // Set buy-now item first
     setBuyNowItem({
       id: product._id || product.id,
       _id: product._id || product.id,
@@ -304,6 +319,7 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
       size,
       image: product.image,
     });
+    // Navigate to checkout with buy-now mode
     window.location.href = "/checkout?mode=buynow";
   };
 
@@ -312,7 +328,7 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
   }
 
   // Check if any filters are active
-  const hasActiveFilters = selectedSize || sleeveTypeFilter !== 'all' || searchQuery
+  const hasActiveFilters = (selectedSize && selectedSize !== 'all') || sleeveTypeFilter !== 'all' || searchQuery
 
   return (
     <ErrorBoundary>
@@ -463,7 +479,7 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
                           <SelectValue placeholder="Size" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">All Sizes</SelectItem>
+                          <SelectItem value="all">All Sizes</SelectItem>
                           <SelectItem value="S">S</SelectItem>
                           <SelectItem value="M">M</SelectItem>
                           <SelectItem value="L">L</SelectItem>
