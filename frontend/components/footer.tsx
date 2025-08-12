@@ -116,7 +116,7 @@ export default function Footer() {
                 </a>
               </li>
               <li>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors">
+                <a href="/sizing-guide" className="text-gray-400 hover:text-white transition-colors">
                   Size Guide
                 </a>
               </li>
