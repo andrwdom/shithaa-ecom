@@ -31,17 +31,25 @@ export default function CartSidebar() {
       for (const item of cartItems) {
         if (!stocks[item._id]) {
           try {
-            const res = await fetch(`/api/products/${item._id}`);
+            const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + `/api/products/${item._id}`;
+            const res = await fetch(apiUrl);
             if (res.ok) {
               const data = await res.json();
-              if (data.data && Array.isArray(data.data.sizes)) {
+              if (data.product && Array.isArray(data.product.sizes)) {
+                stocks[item._id] = {};
+                for (const s of data.product.sizes) {
+                  stocks[item._id][s.size] = s.stock;
+                }
+              } else if (data.data && Array.isArray(data.data.sizes)) {
                 stocks[item._id] = {};
                 for (const s of data.data.sizes) {
                   stocks[item._id][s.size] = s.stock;
                 }
               }
             }
-          } catch {}
+          } catch (error) {
+            console.error('Error fetching stock for item:', item._id, error);
+          }
         }
       }
       setProductStocks(stocks);
@@ -145,16 +153,26 @@ export default function CartSidebar() {
                             size="sm"
                             onClick={() => updateCartItem(item._id, item.size, Math.max(1, item.quantity - 1), stock)}
                             className="h-8 w-8 p-0"
+                            disabled={item.quantity <= 1}
                           >
                             <Minus className="h-3 w-3" />
                           </Button>
-                          <span className="text-sm font-medium w-8 text-center">{item.quantity}</span>
+                          <span className={`text-sm font-medium w-8 text-center ${stock !== undefined && item.quantity >= stock ? 'text-red-500' : ''}`}>
+                            {item.quantity}
+                          </span>
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => updateCartItem(item._id, item.size, item.quantity + 1, stock)}
+                            onClick={() => {
+                              if (stock !== undefined && item.quantity >= stock) {
+                                alert(`Cannot add more than ${stock} in stock for this size.`);
+                                return;
+                              }
+                              updateCartItem(item._id, item.size, item.quantity + 1, stock);
+                            }}
                             disabled={stock !== undefined && item.quantity >= stock}
                             className="h-8 w-8 p-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                            title={stock !== undefined && item.quantity >= stock ? `Only ${stock} available in stock` : 'Increase quantity'}
                           >
                             <Plus className="h-3 w-3" />
                           </Button>
@@ -162,8 +180,15 @@ export default function CartSidebar() {
                         
                         {/* Stock warning if quantity reaches limit */}
                         {stock !== undefined && item.quantity >= stock && (
-                          <div className="text-xs text-red-500 font-medium mt-1">
-                            Max quantity reached ({stock} in stock)
+                          <div className="text-xs text-red-500 font-medium mt-1 bg-red-50 px-2 py-1 rounded border border-red-200">
+                            ⚠️ Max quantity reached ({stock} in stock)
+                          </div>
+                        )}
+                        
+                        {/* Stock info display */}
+                        {stock !== undefined && (
+                          <div className="text-xs text-gray-500 mt-1">
+                            {item.quantity >= stock ? '⚠️ ' : ''}{stock} in stock
                           </div>
                         )}
                         <Button

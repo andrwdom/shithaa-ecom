@@ -158,10 +158,21 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   function updateCartItem(_id: string, size: string, quantity: number, stock?: number) {
     setCartItems((prev) => {
       const existing = prev.find((i) => i._id === _id && i.size === size)
-      if (typeof stock === 'number' && quantity > stock) {
-        alert(`Cannot set quantity higher than ${stock} in stock for this size.`)
-        return prev
+      if (!existing) return prev;
+      
+      // Strict stock validation
+      if (typeof stock === 'number' && stock > 0) {
+        if (quantity > stock) {
+          alert(`Cannot set quantity higher than ${stock} in stock for this size.`);
+          return prev;
+        }
       }
+      
+      // Ensure quantity is at least 1
+      if (quantity < 1) {
+        quantity = 1;
+      }
+      
       return prev.map((item) =>
         item._id === _id && item.size === size ? { ...item, quantity } : item
       )
