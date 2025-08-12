@@ -10,7 +10,6 @@ import { ChevronRight, Home, Search, Filter, SlidersHorizontal, Baby, Heart, Shi
 import Image from "next/image"
 import PageLoading from "@/components/page-loading"
 import SizeSelectionSidebar from "@/components/size-selection-sidebar"
-import CheckoutPromptModal from "@/components/checkout-prompt-modal"
 import ErrorBoundary from "@/components/error-boundary"
 import { safeFetch } from "@/lib/api-health"
 import { useBuyNow } from "@/components/buy-now-context"
@@ -51,8 +50,6 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
   const [sortBy, setSortBy] = useState("featured")
   const [sizeSelectionProduct, setSizeSelectionProduct] = useState<Product | null>(null)
   const [isSizeSelectionOpen, setIsSizeSelectionOpen] = useState(false)
-  const [isCheckoutPromptOpen, setIsCheckoutPromptOpen] = useState(false)
-  const [addedProduct, setAddedProduct] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
   const [sleeveTypeFilter, setSleeveTypeFilter] = useState("all")
   const [availableSleeveTypes, setAvailableSleeveTypes] = useState<string[]>([])
@@ -294,9 +291,7 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
       image: product.image,
       category: product.category,
       categorySlug: product.categorySlug,
-    });
-    // Open cart sidebar instead of showing modal
-    // The cart sidebar will show the added item
+    }, true); // Open cart sidebar automatically
   };
 
   const handleSizeSelectionBuyNow = (product: any, size: string, quantity: number) => {
@@ -308,8 +303,6 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
       quantity,
       size,
       image: product.image,
-      category: product.category,
-      categorySlug: product.categorySlug,
     });
     window.location.href = "/checkout?mode=buynow";
   };
@@ -803,11 +796,10 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
         <SizeSelectionSidebar
           isOpen={isSizeSelectionOpen}
           onClose={() => setIsSizeSelectionOpen(false)}
-          product={sizeSelectionProduct as any}
+          product={sizeSelectionProduct}
           onAddToCart={handleSizeSelectionAddToCart}
           onBuyNow={handleSizeSelectionBuyNow}
         />
-        </div>
       </PageLoading>
     </ErrorBoundary>
   )

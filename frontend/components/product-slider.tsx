@@ -19,9 +19,10 @@ interface Product {
   originalPrice: number
   image: string
   category: string
-  categorySlug?: string
-  description: string
-  sizes: { size: string; stock: number }[]
+  sizes?: string[]
+  images?: string[]
+  bestseller?: boolean
+  isBestSeller?: boolean
 }
 
 interface ProductSliderProps {
@@ -52,7 +53,7 @@ export default function ProductSlider({
     // Add sizes to product if not present
     const productWithSizes = {
       ...product,
-      sizes: product.sizes || [{ size: "M", stock: 10 }], // Use existing sizes or default
+      sizes: ["S", "M", "L", "XL", "XXL", "3XL"],
       images: [product.image, product.image], // Add multiple images for the sidebar
     }
 
@@ -60,9 +61,9 @@ export default function ProductSlider({
     setIsSizeSelectionOpen(true)
   }
 
-  const handleSizeSelectionAddToCart = (product: Product, size: string, quantity: number, stock: number) => {
+  const handleSizeSelectionAddToCart = (product: Product, size: string, quantity: number) => {
     onAddToCart?.({ ...product, _id: product._id, id: product._id })
-    // Remove modal popup - cart sidebar will show the added item
+    // Remove popup - just add to cart
   }
 
   const handleSizeSelectionBuyNow = (product: Product, size: string, quantity: number) => {
