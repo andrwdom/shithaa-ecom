@@ -14,14 +14,12 @@ import { safeFetch } from "@/lib/api-health"
 import WishlistButton from "@/components/WishlistButton"
 
 interface Product {
-  id: string
-  _id: string
+  id: number
   name: string
   price: number
   originalPrice: number
   images: string[]
   category: string
-  categorySlug?: string
   description: string
   sizes: { size: string; stock: number }[]
   features: string[]
@@ -42,7 +40,7 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
   const [selectedSize, setSelectedSize] = useState("")
   const [quantity, setQuantity] = useState(1)
   const [isWishlisted, setIsWishlisted] = useState(false)
-  const { addToCart, openCartSidebar } = useCart()
+  const { addToCart, openCartSidebar, clearCart } = useCart()
   const { setBuyNowItem } = useBuyNow()
 
   useEffect(() => {
@@ -63,19 +61,17 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
           const p = data.data || data.product;
           setProduct({
             id: p._id,
-            _id: p._id,
             name: p.name,
             price: p.price,
             originalPrice: p.originalPrice,
             images: p.images || [],
             category: p.category,
-            categorySlug: p.categorySlug,
             description: p.description,
             sizes: p.sizes || [],
             features: p.features || [],
             rating: p.rating,
             reviews: p.reviews,
-            stock: (p.sizes || []).reduce((sum: number, s: { stock?: number }) => sum + (s.stock || 0), 0),
+            stock: (p.sizes || []).reduce((sum, s) => sum + (s.stock || 0), 0),
             availableSizes: p.availableSizes || [],
           });
         }
@@ -110,10 +106,14 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
     }
     if (!product) return;
     
+    // Clear any existing cart context to ensure buy-now works independently
+    // This ensures checkout shows only this product, ignoring cart contents
+    clearCart();
+    
     // Set buy now item with fresh data
     setBuyNowItem({
       id: product.id,
-      _id: product._id,
+      _id: product.id.toString(),
       name: product.name,
       price: product.price,
       quantity,
@@ -121,14 +121,12 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
       image: product.images[0] || "/placeholder.svg",
     });
     
-    // Navigate to checkout with buy-now mode
+    // Navigate to checkout - the checkout page will show only this product
     window.location.href = "/checkout?mode=buynow";
   }
 
   if (loading) {
-    return <PageLoading loadingMessage="Loading Product Details..." minLoadingTime={1000}>
-      <div></div>
-    </PageLoading>
+    return <PageLoading loadingMessage="Loading Product Details..." />
   }
 
   if (!product) {
@@ -194,28 +192,33 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
               </Button>
               <h1 className="text-lg font-semibold text-gray-900 truncate flex-1">{product.name}</h1>
               <div className="flex items-center space-x-2">
-                <WishlistButton productId={product.id} size="sm" />
+                <WishlistButton productId={product.id.toString()} size="sm" />
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={async () => {
                     const shareData = {
                       title: product.name,
-                      text: `Check out this amazing product: ${product.name}`,
-                      url: window.location.href,
+                      text: `Check out this product on Shithaa.in: ${product.name}`,
+                      url: typeof window !== 'undefined' ? window.location.href : ''
                     };
-                    try {
-                      if (navigator.share) {
+                    if (navigator.share) {
+                      try {
                         await navigator.share(shareData);
-                      } else {
-                        await navigator.clipboard.writeText(window.location.href);
-                        alert("Link copied to clipboard!");
+                      } catch (err) {
+                        // User cancelled or error
                       }
-                    } catch (error) {
-                      console.error("Error sharing:", error);
+                    } else if (navigator.clipboard) {
+                      try {
+                        await navigator.clipboard.writeText(shareData.url);
+                        alert('Link copied!');
+                      } catch (err) {
+                        alert('Could not copy link');
+                      }
+                    } else {
+                      alert('Share not supported');
                     }
                   }}
-                  className="text-gray-600 hover:text-gray-900"
                 >
                   <Share2 className="h-5 w-5" />
                 </Button>
@@ -456,16 +459,15 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
                     onClick={() => {
                       if (!product) return;
                       addToCart({
-                        id: product.id,
-                        _id: product._id,
+                        id: product.id.toString(),
+                        _id: product.id.toString(),
                         name: product.name,
                         price: product.price,
                         quantity,
                         size: selectedSize,
                         image: product.images[0] || "/placeholder.svg",
                         category: product.category,
-                        categorySlug: product.categorySlug,
-                      }, true); // Open cart sidebar automatically
+                      }, true);
                     }}
                   >
                     ADD TO CART

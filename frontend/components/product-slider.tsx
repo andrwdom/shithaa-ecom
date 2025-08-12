@@ -10,6 +10,13 @@ import Image from "next/image"
 import SizeSelectionSidebar from "./size-selection-sidebar"
 import OptimizedImage from "./optimized-image"
 import WishlistButton from "./WishlistButton"
+import { useCart } from "@/components/cart-context"
+import { useBuyNow } from "@/components/buy-now-context"
+import { useWishlist } from "@/components/wishlist-context"
+import { useAuth } from "@/components/auth/useAuth"
+import { Badge } from "@/components/ui/badge"
+import { Separator } from "@/components/ui/separator"
+import { ShoppingBag, Heart, Flame, Star, StarHalf, X, Plus, Minus } from "lucide-react"
 
 interface Product {
   id: string
@@ -33,19 +40,22 @@ interface ProductSliderProps {
   onAddToCart?: (product: Product) => void
 }
 
-export default function ProductSlider({
-  title,
-  products,
-  loading,
-  showBestsellerBadge,
+export default function ProductSlider({ 
+  title, 
+  products, 
+  loading = false, 
+  showBestsellerBadge = false,
   onAddToCart,
+  onBuyNow
 }: ProductSliderProps) {
   const handleProductClick = (productId: string) => {
     window.location.href = `/product/${productId}`
   }
 
-  const [sizeSelectionProduct, setSizeSelectionProduct] = useState<Product | null>(null)
   const [isSizeSelectionOpen, setIsSizeSelectionOpen] = useState(false)
+  const [sizeSelectionProduct, setSizeSelectionProduct] = useState<Product | null>(null)
+  const { addToCart, openCartSidebar } = useCart()
+  const { setBuyNowItem } = useBuyNow()
 
   const handleAddToCart = (e: React.MouseEvent, product: Product) => {
     e.stopPropagation()
@@ -63,7 +73,8 @@ export default function ProductSlider({
 
   const handleSizeSelectionAddToCart = (product: Product, size: string, quantity: number) => {
     onAddToCart?.({ ...product, _id: product._id, id: product._id })
-    // Remove popup - just add to cart
+    // Remove popup and just open cart sidebar
+    openCartSidebar();
   }
 
   const handleSizeSelectionBuyNow = (product: Product, size: string, quantity: number) => {
