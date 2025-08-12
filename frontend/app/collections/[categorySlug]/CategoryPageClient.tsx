@@ -295,14 +295,8 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
       category: product.category,
       categorySlug: product.categorySlug,
     });
-    setAddedProduct({
-      name: product.name,
-      price: product.price,
-      image: product.image,
-      size,
-      quantity,
-    });
-    setIsCheckoutPromptOpen(true);
+    // Open cart sidebar instead of showing modal
+    // The cart sidebar will show the added item
   };
 
   const handleSizeSelectionBuyNow = (product: any, size: string, quantity: number) => {
@@ -812,17 +806,6 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
           product={sizeSelectionProduct as any}
           onAddToCart={handleSizeSelectionAddToCart}
           onBuyNow={handleSizeSelectionBuyNow}
-        />
-
-        <CheckoutPromptModal
-          isOpen={isCheckoutPromptOpen}
-          onClose={() => setIsCheckoutPromptOpen(false)}
-          onViewCart={() => {
-            setIsCheckoutPromptOpen(false)
-            // Cart sidebar is handled by the cart context
-          }}
-          onCheckout={handleCheckout}
-          product={addedProduct}
         />
         </div>
       </PageLoading>

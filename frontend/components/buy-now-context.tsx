@@ -11,6 +11,8 @@ export interface BuyNowItem {
   quantity: number;
   size: string;
   image: string;
+  category?: string;
+  categorySlug?: string;
 }
 
 interface BuyNowContextType {

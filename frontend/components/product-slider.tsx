@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button"
 import { Flame, ShoppingBag } from "lucide-react"
 import Image from "next/image"
 import SizeSelectionSidebar from "./size-selection-sidebar"
-import CheckoutPromptModal from "./checkout-prompt-modal"
 import OptimizedImage from "./optimized-image"
 import WishlistButton from "./WishlistButton"
 
@@ -20,10 +19,9 @@ interface Product {
   originalPrice: number
   image: string
   category: string
-  sizes?: string[]
-  images?: string[]
-  bestseller?: boolean
-  isBestSeller?: boolean
+  categorySlug?: string
+  description: string
+  sizes: { size: string; stock: number }[]
 }
 
 interface ProductSliderProps {
@@ -47,8 +45,6 @@ export default function ProductSlider({
 
   const [sizeSelectionProduct, setSizeSelectionProduct] = useState<Product | null>(null)
   const [isSizeSelectionOpen, setIsSizeSelectionOpen] = useState(false)
-  const [isCheckoutPromptOpen, setIsCheckoutPromptOpen] = useState(false)
-  const [addedProduct, setAddedProduct] = useState<any>(null)
 
   const handleAddToCart = (e: React.MouseEvent, product: Product) => {
     e.stopPropagation()
@@ -56,7 +52,7 @@ export default function ProductSlider({
     // Add sizes to product if not present
     const productWithSizes = {
       ...product,
-      sizes: ["S", "M", "L", "XL", "XXL", "3XL"],
+      sizes: product.sizes || [{ size: "M", stock: 10 }], // Use existing sizes or default
       images: [product.image, product.image], // Add multiple images for the sidebar
     }
 
@@ -64,16 +60,9 @@ export default function ProductSlider({
     setIsSizeSelectionOpen(true)
   }
 
-  const handleSizeSelectionAddToCart = (product: Product, size: string, quantity: number) => {
+  const handleSizeSelectionAddToCart = (product: Product, size: string, quantity: number, stock: number) => {
     onAddToCart?.({ ...product, _id: product._id, id: product._id })
-    setAddedProduct({
-      name: product.name,
-      price: product.price,
-      image: product.image,
-      size,
-      quantity,
-    })
-    setIsCheckoutPromptOpen(true)
+    // Remove modal popup - cart sidebar will show the added item
   }
 
   const handleSizeSelectionBuyNow = (product: Product, size: string, quantity: number) => {
@@ -248,17 +237,6 @@ export default function ProductSlider({
         product={sizeSelectionProduct}
         onAddToCart={handleSizeSelectionAddToCart}
         onBuyNow={handleSizeSelectionBuyNow}
-      />
-
-      <CheckoutPromptModal
-        isOpen={isCheckoutPromptOpen}
-        onClose={() => setIsCheckoutPromptOpen(false)}
-        onViewCart={() => {
-          setIsCheckoutPromptOpen(false)
-          // Trigger cart sidebar if available
-        }}
-        onCheckout={handleCheckout}
-        product={addedProduct}
       />
     </section>
   )
