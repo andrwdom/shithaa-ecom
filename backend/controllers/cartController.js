@@ -87,19 +87,21 @@ const calculateCartTotal = async (req, res) => {
             productMap[product._id.toString()] = product;
         });
 
-        // Separate loungewear and non-loungewear items
-        const loungewearItems = [];
+        // Separate all loungewear category items
+        const loungewearCategoryItems = [];
         const otherItems = [];
         
         items.forEach(item => {
             const product = productMap[item._id];
             if (product && (
                 product.categorySlug === 'zipless-feeding-lounge-wear' || 
-                product.categorySlug === 'non-feeding-lounge-wear'
+                product.categorySlug === 'non-feeding-lounge-wear' ||
+                product.categorySlug === 'zipless-feeding-dupatta-lounge-wear' ||
+                product.categorySlug === 'maternity-feeding-wear'
             )) {
                 // Add item multiple times based on quantity for offer calculation
                 for (let i = 0; i < item.quantity; i++) {
-                    loungewearItems.push({
+                    loungewearCategoryItems.push({
                         ...item,
                         quantity: 1,
                         originalPrice: product.price || item.price
@@ -110,8 +112,8 @@ const calculateCartTotal = async (req, res) => {
             }
         });
 
-        // Calculate loungewear offer
-        const loungewearOffer = calculateLoungewearOffer(loungewearItems);
+        // Calculate loungewear category offer
+        const loungewearCategoryOffer = calculateLoungewearCategoryOffer(loungewearCategoryItems);
         
         // Calculate other items total
         const otherItemsTotal = otherItems.reduce((sum, item) => {
@@ -121,19 +123,19 @@ const calculateCartTotal = async (req, res) => {
         }, 0);
 
         // Calculate totals
-        const subtotal = loungewearOffer.originalTotal + otherItemsTotal;
-        const offerDiscount = loungewearOffer.discount;
+        const subtotal = loungewearCategoryOffer.originalTotal + otherItemsTotal;
+        const offerDiscount = loungewearCategoryOffer.discount;
         const finalTotal = subtotal - offerDiscount;
 
         const response = {
             success: true,
             data: {             
                 subtotal: subtotal,
-                offerApplied: loungewearOffer.offerApplied,
-                offerDetails: loungewearOffer.offerDetails,
+                offerApplied: loungewearCategoryOffer.offerApplied,
+                offerDetails: loungewearCategoryOffer.offerDetails,
                 offerDiscount: offerDiscount,
                 total: finalTotal,
-                loungewearCount: loungewearItems.length,
+                loungewearCategoryCount: loungewearCategoryItems.length,
                 otherItemsCount: otherItems.length
             }
         };
@@ -149,10 +151,10 @@ const calculateCartTotal = async (req, res) => {
     }
 };
 
-// Helper function to calculate loungewear offer
-function calculateLoungewearOffer(loungewearItems) {
-    if (loungewearItems.length < 3) {       // No offer applied
-        const originalTotal = loungewearItems.reduce((sum, item) => sum + item.originalPrice, 0);
+// Helper function to calculate loungewear category offer
+function calculateLoungewearCategoryOffer(loungewearCategoryItems) {
+    if (loungewearCategoryItems.length < 3) {       // No offer applied
+        const originalTotal = loungewearCategoryItems.reduce((sum, item) => sum + item.originalPrice, 0);
         return {
             originalTotal,
             discount: 0,
@@ -162,11 +164,11 @@ function calculateLoungewearOffer(loungewearItems) {
     }
 
     // Calculate how many complete sets of 3
-    const completeSets = Math.floor(loungewearItems.length / 3);
-    const remainingItems = loungewearItems.length % 3;
+    const completeSets = Math.floor(loungewearCategoryItems.length / 3);
+    const remainingItems = loungewearCategoryItems.length % 3;
     
     // Calculate totals
-    const originalTotal = loungewearItems.reduce((sum, item) => sum + item.originalPrice, 0);
+    const originalTotal = loungewearCategoryItems.reduce((sum, item) => sum + item.originalPrice, 0);
     const offerTotal = (completeSets * 1299 + (remainingItems * 450));
     const discount = originalTotal - offerTotal;
     

@@ -96,13 +96,13 @@ export default function CartSidebar() {
               )}
               
               {/* Progress to next offer */}
-              {offerDetails?.loungewearCount > 0 && offerDetails.loungewearCount < 3 && (
+              {offerDetails?.loungewearCategoryCount && offerDetails.loungewearCategoryCount > 0 && offerDetails.loungewearCategoryCount < 3 && (
                 <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                   <div className="flex items-center gap-2 text-blue-700">
                     <div className="flex-1">
                       <p className="font-medium text-sm">Almost there!</p>
                       <p className="text-xs text-blue-600">
-                        Add {3 - offerDetails.loungewearCount} more loungewear item(s) to get the ₹1299 bundle offer
+                        Add {3 - (offerDetails.loungewearCategoryCount || 0)} more loungewear item(s) to get the ₹1299 bundle offer
                       </p>
                     </div>
                   </div>
@@ -185,14 +185,14 @@ export default function CartSidebar() {
             )}
             
             {/* Loungewear Offer Hint */}
-            {offerDetails && !offerDetails.offerApplied && offerDetails.loungewearCount > 0 && (
+            {offerDetails && !offerDetails.offerApplied && offerDetails.loungewearCategoryCount && offerDetails.loungewearCategoryCount > 0 && (
               <div className="mb-4 p-3 bg-blue-50 border border-blue-200">
                 <div className="flex items-center gap-2 mb-1">
                   <Gift className="h-4 w-4 text-blue-600" />
                   <span className="text-sm font-semibold text-blue-800">almost there!</span>
                 </div>
                 <p className="text-xs text-blue-700">
-                  Add {offerDetails.loungewearCount} more loungewear item(s) to get 3 for ₹1299
+                  Add {offerDetails.loungewearCategoryCount} more loungewear item(s) to get 3 for ₹1299
                 </p>
               </div>
             )}

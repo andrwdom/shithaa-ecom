@@ -18,7 +18,7 @@ export interface OfferDetails {
   offerApplied: boolean;
   offerDetails: any;
   offerDiscount: number;
-  loungewearCount: number;
+  loungewearCategoryCount: number;
   otherItemsCount: number;
 }
 
@@ -105,7 +105,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             offerApplied: data.data.offerApplied,
             offerDetails: data.data.offerDetails,
             offerDiscount: data.data.offerDiscount,
-            loungewearCount: data.data.loungewearCount,
+            loungewearCategoryCount: data.data.loungewearCategoryCount,
             otherItemsCount: data.data.otherItemsCount,
           })
         }

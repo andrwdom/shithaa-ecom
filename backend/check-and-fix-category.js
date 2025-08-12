@@ -37,7 +37,7 @@ async function checkAndFixCategory() {
       
       // Check if we have products in similar categories that we can duplicate
       const similarProducts = await productModel.find({
-        categorySlug: { $in: ['zipless-feeding-lounge-wear', 'non-feeding-lounge-wear'] }
+        categorySlug: { $in: ['zipless-feeding-lounge-wear', 'non-feeding-lounge-wear', 'maternity-feeding-wear', 'zipless-feeding-dupatta-lounge-wear'] }
       }).lean();
       
       if (similarProducts.length > 0) {
