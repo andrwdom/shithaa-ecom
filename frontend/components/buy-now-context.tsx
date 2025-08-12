@@ -58,7 +58,7 @@ export function BuyNowProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    < BuyNowContext.Provider value={{ buyNowItem, setBuyNowItem, clearBuyNowItem }}>
+    <BuyNowContext.Provider value={{ buyNowItem, setBuyNowItem, clearBuyNowItem }}>
       {children}
     </BuyNowContext.Provider>
   );
