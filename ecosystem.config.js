@@ -3,7 +3,7 @@ module.exports = {
     {
       name: 'shithaa-frontend',
       script: 'npm',
-      args: 'start',
+      args: 'run build && start',
       cwd: './frontend',
       instances: 1,
       exec_mode: 'fork',

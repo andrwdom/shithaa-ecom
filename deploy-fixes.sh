@@ -1,78 +1,87 @@
 #!/bin/bash
 
-echo "🚀 Deploying fixes for Shithaa E-commerce..."
+# Bash Deployment Script for Shithaa E-commerce
+# This script fixes the log issues and redeploys the application
 
-# Set the base directory
-BASE_DIR="/var/www/shithaa-ecom"
-cd $BASE_DIR
+echo "🚀 Starting Shithaa E-commerce deployment fixes..."
 
-echo "📁 Working directory: $(pwd)"
+# Function to check if command exists
+command_exists() {
+    command -v "$1" >/dev/null 2>&1
+}
 
-# 1. Fix Backend Issues
-echo "🔧 Fixing backend issues..."
-
-# Check if cartController has the removeFromCart function
-if grep -q "removeFromCart" "$BASE_DIR/backend/controllers/cartController.js"; then
-    echo "✅ removeFromCart function found in cartController"
+# Check if PM2 is installed
+if ! command_exists pm2; then
+    echo "❌ PM2 is not installed. Installing PM2..."
+    npm install -g pm2
 else
-    echo "❌ removeFromCart function missing - please check the controller file"
+    echo "✅ PM2 is already installed"
 fi
 
-# Check if cartRoute imports removeFromCart
-if grep -q "removeFromCart" "$BASE_DIR/backend/routes/cartRoute.js"; then
-    echo "✅ removeFromCart import found in cartRoute"
-else
-    echo "❌ removeFromCart import missing - please check the route file"
+# Stop all PM2 processes
+echo "🛑 Stopping all PM2 processes..."
+pm2 stop all
+pm2 delete all
+
+# Clean up logs
+echo "🧹 Cleaning up old logs..."
+if [ -d "logs" ]; then
+    rm -rf logs/*
+    echo "✅ Logs cleaned"
 fi
 
-# 2. Build Frontend
-echo "🏗️  Building frontend..."
-
-cd "$BASE_DIR/frontend"
-
-# Check if node_modules exists
-if [ ! -d "node_modules" ]; then
-    echo "📦 Installing dependencies..."
-    npm install
+# Create logs directory if it doesn't exist
+if [ ! -d "logs" ]; then
+    mkdir -p logs
+    echo "✅ Logs directory created"
 fi
 
-# Clean previous build
-echo "🧹 Cleaning previous build..."
-rm -rf .next
-
-# Build the application
-echo "🔨 Building Next.js application..."
+# Fix frontend build
+echo "🔨 Building frontend..."
+cd frontend
+npm install
 npm run build
 
-# Check build status
-if [ $? -eq 0 ]; then
-    echo "✅ Frontend build completed successfully!"
-    
-    # Check if .next directory exists and has content
-    if [ -d ".next" ] && [ "$(ls -A .next)" ]; then
-        echo "✅ .next directory created with build files"
-    else
-        echo "❌ .next directory is empty or missing"
-        exit 1
-    fi
+# Check if build was successful
+if [ -f ".next/BUILD_ID" ]; then
+    echo "✅ Frontend build successful"
 else
     echo "❌ Frontend build failed!"
     exit 1
 fi
 
-# 3. Restart Services
-echo "🔄 Restarting services..."
+# Go back to root
+cd ..
 
-cd "$BASE_DIR"
+# Install backend dependencies
+echo "📦 Installing backend dependencies..."
+cd backend
+npm install
+cd ..
 
-# Restart backend services
-echo "🔄 Restarting backend services..."
-pm2 restart shitha-b
+# Install admin dependencies
+echo "📦 Installing admin dependencies..."
+cd admin
+npm install
+cd ..
 
-# Restart frontend services
-echo "🔄 Restarting frontend services..."
-pm2 restart shithaa-
+# Start PM2 processes
+echo "🚀 Starting PM2 processes..."
+pm2 start ecosystem.config.js
 
-echo "✅ Deployment completed!"
-echo "📊 Check service status with: pm2 status"
-echo "📋 Check logs with: pm2 logs" 
+# Save PM2 configuration
+pm2 save
+
+# Show status
+echo "📊 PM2 Status:"
+pm2 status
+
+echo "✅ Deployment fixes completed!"
+echo "🌐 Frontend: http://localhost:3000"
+echo "🔧 Backend: http://localhost:4000"
+echo "👨‍💼 Admin: http://localhost:4173"
+
+# Monitor logs for any errors
+echo "📝 Monitoring logs for errors..."
+echo "Press Ctrl+C to stop monitoring"
+pm2 logs --lines 50 
