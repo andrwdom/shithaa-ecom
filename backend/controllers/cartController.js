@@ -56,10 +56,18 @@ const addToCart = async (req, res) => {
 
         // CRITICAL: Check if new quantity exceeds available stock
         if (newQuantity > sizeObj.stock) {
-            return res.status(400).json({ 
-                success: false, 
-                message: `Insufficient stock. Only ${sizeObj.stock} available in size ${size}. You already have ${currentQuantity} in cart.` 
-            });
+            const availableToAdd = sizeObj.stock - currentQuantity;
+            if (availableToAdd <= 0) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: `You already have the maximum available quantity (${currentQuantity}) of this item in your cart.` 
+                });
+            } else {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: `You can only add ${availableToAdd} more of this item. You already have ${currentQuantity} in your cart.` 
+                });
+            }
         }
 
         // Update cart data
@@ -144,7 +152,7 @@ const updateCart = async (req, res) => {
         if (quantity > sizeObj.stock) {
             return res.status(400).json({ 
                 success: false, 
-                message: `Insufficient stock. Only ${sizeObj.stock} available in size ${size}.` 
+                message: `Cannot set quantity to ${quantity}. Only ${sizeObj.stock} available in size ${size}.` 
             });
         }
 

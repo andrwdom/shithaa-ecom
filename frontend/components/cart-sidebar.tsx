@@ -20,7 +20,8 @@ export default function CartSidebar() {
     cartTotal,
     cartSubtotal,
     offerDetails,
-    isLoadingOffer
+    isLoadingOffer,
+    debugCart
   } = useCart();
 
   const { user } = useAuth();
@@ -28,12 +29,17 @@ export default function CartSidebar() {
   const [isUpdating, setIsUpdating] = useState<Record<string, boolean>>({});
   const [productStocks, setProductStocks] = useState<Record<string, Record<string, number>>>({});
 
-  // Fetch stock info for all cart items on open
+  // Fetch stock info for all cart items on open and refresh cart data
   useEffect(() => {
-    const fetchStocks = async () => {
-      if (!user || cartItems.length === 0) return;
+    const fetchStocksAndRefreshCart = async () => {
+      if (!user) return;
       
       try {
+        // First refresh cart data to ensure we have the latest
+        await refreshCartData();
+        
+        if (cartItems.length === 0) return;
+        
         const token = await user.getIdToken();
         if (!token) return;
 
@@ -60,7 +66,7 @@ export default function CartSidebar() {
     };
 
     if (isCartSidebarOpen) {
-      fetchStocks();
+      fetchStocksAndRefreshCart();
     }
   }, [isCartSidebarOpen, user, cartItems]);
 
@@ -156,88 +162,124 @@ export default function CartSidebar() {
             <ShoppingBag className="h-6 w-6 text-[rgb(71,60,102)]" />
             <h2 className="text-xl font-semibold text-gray-900">Shopping Cart</h2>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={closeCartSidebar}
-            className="text-gray-500 hover:text-gray-700"
-          >
-            <X className="h-5 w-5" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={refreshCartData}
+              className="text-xs text-gray-500 hover:text-gray-700"
+              title="Refresh Cart"
+            >
+              ↻
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={debugCart}
+              className="text-xs text-gray-500 hover:text-gray-700"
+              title="Debug Cart"
+            >
+              🐛
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={closeCartSidebar}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
 
         {/* Cart Items */}
-        <div className="flex-1 overflow-y-auto space-y-4">
-          {cartItems.map((item, index) => {
-            const stock = getItemStock(item);
-            const stockStatus = getStockStatus(item);
-            const isOutOfStock = isItemOutOfStock(item);
-            const isExceedingStock = isQuantityExceedingStock(item);
-            
-            return (
-              <div key={`${item._id}-${item.size}-${index}`} className="flex gap-3 p-3 bg-gray-50 rounded-lg">
-                <div className="flex-shrink-0">
-                  <Image
-                    src={item.image || "/placeholder.svg"}
-                    alt={item.name}
-                    width={80}
-                    height={80}
-                    className="object-cover rounded-lg"
-                  />
-                </div>
+        <div className="flex-1 overflow-y-auto p-6">
+          {cartItems.length === 0 ? (
+            <div className="text-center py-12">
+              <ShoppingBag className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Your cart is empty</h3>
+              <p className="text-gray-500 mb-6">Add some products to get started!</p>
+              <Button
+                onClick={closeCartSidebar}
+                className="bg-[rgb(71,60,102)] hover:bg-[rgb(71,60,102)]/90 text-white"
+              >
+                Continue Shopping
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {cartItems.map((item, index) => {
+                const stock = getItemStock(item);
+                const stockStatus = getStockStatus(item);
+                const isOutOfStock = isItemOutOfStock(item);
+                const isExceedingStock = isQuantityExceedingStock(item);
                 
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-medium text-gray-900 truncate">{item.name}</h4>
-                  <p className="text-sm text-gray-500">Size: {item.size}</p>
-                  <p className="text-sm font-medium text-gray-900">₹{item.price.toLocaleString()}</p>
-                  
-                  {/* Stock status */}
-                  <div className={`text-xs font-medium ${stockStatus.color} mt-1`}>
-                    {stockStatus.text}
-                  </div>
-                  
-                  {/* Stock warning */}
-                  {isExceedingStock && (
-                    <div className="text-xs text-red-500 font-medium mt-1">
-                      Max quantity: {stock}
+                return (
+                  <div key={`${item._id}-${item.size}-${index}`} className="flex gap-3 p-3 bg-gray-50 rounded-lg">
+                    <div className="flex-shrink-0">
+                      <Image
+                        src={item.image || "/placeholder.svg"}
+                        alt={item.name}
+                        width={80}
+                        height={80}
+                        className="object-cover rounded-lg"
+                      />
                     </div>
-                  )}
-                </div>
-                
-                <div className="flex flex-col items-end gap-2">
-                  {/* Quantity Controls */}
-                  <div className="flex items-center border rounded-md overflow-hidden">
-                    <button
-                      onClick={() => updateCartItem(item._id, item.size, Math.max(1, item.quantity - 1), stock)}
-                      disabled={item.quantity <= 1 || isUpdating[`${item._id}-${item.size}`]}
-                      className="w-8 h-8 flex items-center justify-center text-sm font-bold text-gray-700 disabled:text-gray-300 bg-white hover:bg-gray-100 transition disabled:opacity-50"
-                    >
-                      <Minus className="h-3 w-3" />
-                    </button>
-                    <span className="w-12 text-center text-sm font-medium bg-white px-2 py-1">
-                      {item.quantity}
-                    </span>
-                    <button
-                      onClick={() => updateCartItem(item._id, item.size, item.quantity + 1, stock)}
-                      disabled={isOutOfStock || item.quantity >= stock || isUpdating[`${item._id}-${item.size}`]}
-                      className="w-8 h-8 flex items-center justify-center text-sm font-bold text-gray-700 bg-white hover:bg-gray-100 transition disabled:opacity-50"
-                    >
-                      <Plus className="h-3 w-3" />
-                    </button>
+                    
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-medium text-gray-900 truncate">{item.name}</h4>
+                      <p className="text-sm text-gray-500">Size: {item.size}</p>
+                      <p className="text-sm font-medium text-gray-900">₹{item.price.toLocaleString()}</p>
+                      
+                      {/* Stock status */}
+                      <div className={`text-xs font-medium ${stockStatus.color} mt-1`}>
+                        {stockStatus.text}
+                      </div>
+                      
+                      {/* Stock warning */}
+                      {isExceedingStock && (
+                        <div className="text-xs text-red-500 font-medium mt-1">
+                          Max quantity: {stock}
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="flex flex-col items-end gap-2">
+                      {/* Quantity Controls */}
+                      <div className="flex items-center border rounded-md overflow-hidden">
+                        <button
+                          onClick={() => updateCartItem(item._id, item.size, Math.max(1, item.quantity - 1), stock)}
+                          disabled={item.quantity <= 1 || isUpdating[`${item._id}-${item.size}`]}
+                          className="w-8 h-8 flex items-center justify-center text-sm font-bold text-gray-700 disabled:text-gray-300 bg-white hover:bg-gray-100 transition disabled:opacity-50"
+                        >
+                          <Minus className="h-3 w-3" />
+                        </button>
+                        <span className="w-12 text-center text-sm font-medium bg-white px-2 py-1">
+                          {item.quantity}
+                        </span>
+                        <button
+                          onClick={() => updateCartItem(item._id, item.size, item.quantity + 1, stock)}
+                          disabled={isOutOfStock || item.quantity >= stock || isUpdating[`${item._id}-${item.size}`]}
+                          className="w-8 h-8 flex items-center justify-center text-sm font-bold text-gray-700 bg-white hover:bg-gray-100 transition disabled:opacity-50"
+                        >
+                          <Plus className="h-3 w-3" />
+                        </button>
+                      </div>
+                      
+                      {/* Remove Button */}
+                      <button
+                        onClick={() => removeFromCart(item._id, item.size)}
+                        disabled={isUpdating[`${item._id}-${item.size}`]}
+                        className="text-red-500 hover:text-red-700 transition p-1 disabled:opacity-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
-                  
-                  {/* Remove Button */}
-                  <button
-                    onClick={() => removeFromCart(item._id, item.size)}
-                    disabled={isUpdating[`${item._id}-${item.size}`]}
-                    className="text-red-500 hover:text-red-700 transition p-1 disabled:opacity-50"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-            );
-          })}
+                );
+              })}
+            </div>
+          )}
         </div>
         
         {/* Footer */}

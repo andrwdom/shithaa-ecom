@@ -44,6 +44,7 @@ interface CartContextType {
   isLoadingOffer: boolean
   refreshCartData: () => Promise<void>
   syncCartWithBackend: () => Promise<void>
+  debugCart: () => void
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined)
@@ -114,12 +115,21 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   // Function to sync cart with backend
   const syncCartWithBackend = async () => {
-    if (!user) return
+    if (!user) {
+      console.log('No user, skipping cart sync')
+      return
+    }
+    
+    console.log('Starting cart sync with backend...')
     
     try {
       const token = await getBackendToken()
-      if (!token) return
+      if (!token) {
+        console.log('No backend token available')
+        return
+      }
 
+      console.log('Fetching cart from backend...')
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/cart/get`, {
         method: 'POST',
         headers: {
@@ -129,14 +139,35 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({})
       })
 
+  // Debug function to help troubleshoot cart issues
+  const debugCart = () => {
+    console.log('=== CART DEBUG INFO ===')
+    console.log('Frontend cart items:', cartItems)
+    console.log('LocalStorage cart items:', localStorage.getItem("cartItems"))
+    console.log('User:', user ? { uid: user.uid, mongoId: user.mongoId } : 'No user')
+    console.log('Cart sidebar open:', isCartSidebarOpen)
+    console.log('Cart total:', cartTotal)
+    console.log('Cart subtotal:', cartSubtotal)
+    console.log('Offer details:', offerDetails)
+    console.log('========================')
+  }
+
+  // Function to refresh cart data from backend to ensure fresh data
+
       if (response.ok) {
         const data = await response.json()
+        console.log('Backend cart data received:', data)
+        
         if (data.success && data.cartData) {
           // Convert backend cart format to frontend format
           const backendCartItems: CartItem[] = []
           
+          console.log('Processing cart data:', data.cartData)
+          
           for (const [productId, sizes] of Object.entries(data.cartData)) {
             for (const [size, quantity] of Object.entries(sizes as Record<string, number>)) {
+              console.log(`Processing product ${productId}, size ${size}, quantity ${quantity}`)
+              
               // Fetch product details to get name, price, image, etc.
               try {
                 const productResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/products/${productId}`)
@@ -146,20 +177,25 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                     const product = productData.data
                     const sizeData = product.sizes?.find((s: any) => s.size === size)
                     
-                    if (sizeData && sizeData.stock > 0) {
-                      backendCartItems.push({
-                        id: product._id,
-                        _id: product._id,
-                        name: product.name,
-                        price: product.price,
-                        quantity: quantity as number,
-                        size: size,
-                        image: Array.isArray(product.images) && product.images.length > 0 ? product.images[0] : product.image,
-                        categorySlug: product.categorySlug,
-                        category: product.category,
-                      })
-                    }
+                    console.log(`Product ${product.name} found, size ${size} has stock ${sizeData?.stock || 0}`)
+                    
+                    // Include items even if stock is 0, but mark them appropriately
+                    backendCartItems.push({
+                      id: product._id,
+                      _id: product._id,
+                      name: product.name,
+                      price: product.price,
+                      quantity: quantity as number,
+                      size: size,
+                      image: Array.isArray(product.images) && product.images.length > 0 ? product.images[0] : product.image,
+                      categorySlug: product.categorySlug,
+                      category: product.category,
+                    })
+                  } else {
+                    console.warn(`Product data not found for ${productId}`)
                   }
+                } else {
+                  console.warn(`Failed to fetch product ${productId}:`, productResponse.status)
                 }
               } catch (error) {
                 console.error(`Error fetching product ${productId}:`, error)
@@ -167,10 +203,16 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             }
           }
           
+          console.log(`Final backend cart items:`, backendCartItems)
+          
           // Update frontend cart with backend data
           setCartItems(backendCartItems)
           localStorage.setItem("cartItems", JSON.stringify(backendCartItems))
+        } else {
+          console.warn('Backend cart data not available or invalid:', data)
         }
+      } else {
+        console.error('Failed to fetch cart from backend:', response.status, response.statusText)
       }
     } catch (error) {
       console.error("Error syncing cart with backend:", error)
@@ -581,6 +623,19 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setIsCartSidebarOpen(false)
   }
 
+  // Debug function to help troubleshoot cart issues
+  const debugCart = () => {
+    console.log('=== CART DEBUG INFO ===')
+    console.log('Frontend cart items:', cartItems)
+    console.log('LocalStorage cart items:', localStorage.getItem("cartItems"))
+    console.log('User:', user ? { uid: user.uid, mongoId: user.mongoId } : 'No user')
+    console.log('Cart sidebar open:', isCartSidebarOpen)
+    console.log('Cart total:', cartTotal)
+    console.log('Cart subtotal:', cartSubtotal)
+    console.log('Offer details:', offerDetails)
+    console.log('========================')
+  }
+
   return (
     <CartContext.Provider
       value={{ 
@@ -597,7 +652,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         offerDetails,
         isLoadingOffer,
         refreshCartData,
-        syncCartWithBackend
+        syncCartWithBackend,
+        debugCart
       }}
     >
       {children}

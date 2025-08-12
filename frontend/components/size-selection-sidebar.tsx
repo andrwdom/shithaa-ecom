@@ -35,6 +35,7 @@ export default function SizeSelectionSidebar({
 }: SizeSelectionSidebarProps) {
   const [selectedSize, setSelectedSize] = useState("")
   const [quantity, setQuantity] = useState(1)
+  const { cartItems } = useCart()
 
   // Reset state when sidebar opens
   useState(() => {
@@ -43,6 +44,12 @@ export default function SizeSelectionSidebar({
       setQuantity(1)
     }
   })
+
+  // Get current cart quantity for selected product and size
+  const getCurrentCartQuantity = (productId: string, size: string) => {
+    const existingItem = cartItems.find(item => item._id === productId && item.size === size)
+    return existingItem ? existingItem.quantity : 0
+  }
 
   if (!isOpen || !product) return null
 
@@ -61,12 +68,20 @@ export default function SizeSelectionSidebar({
   } else if (selectedSizeStock === 0) {
     stockStatus = 'Out of Stock';
     stockStatusColor = 'text-red-500';
-  } else if (selectedSizeStock <= 5) {
-    stockStatus = `Only ${selectedSizeStock} left!`;
-    stockStatusColor = 'text-orange-500';
   } else {
-    stockStatus = 'In Stock';
-    stockStatusColor = 'text-green-600';
+    const currentCartQty = getCurrentCartQuantity(product._id, selectedSize)
+    const availableToAdd = selectedSizeStock - currentCartQty
+    
+    if (currentCartQty > 0) {
+      stockStatus = `You have ${currentCartQty} in cart. ${availableToAdd} more available.`;
+      stockStatusColor = 'text-blue-600';
+    } else if (selectedSizeStock <= 5) {
+      stockStatus = `Only ${selectedSizeStock} left!`;
+      stockStatusColor = 'text-orange-500';
+    } else {
+      stockStatus = 'In Stock';
+      stockStatusColor = 'text-green-600';
+    }
   }
 
   const handleAddToCart = () => {
@@ -78,10 +93,19 @@ export default function SizeSelectionSidebar({
       alert('This size is out of stock')
       return
     }
-    if (quantity > selectedSizeStock) {
-      alert(`Cannot add more than ${selectedSizeStock} in stock for this size.`)
+    
+    const currentCartQty = getCurrentCartQuantity(product._id, selectedSize)
+    const availableToAdd = selectedSizeStock - currentCartQty
+    
+    if (quantity > availableToAdd) {
+      if (currentCartQty > 0) {
+        alert(`You already have ${currentCartQty} in your cart. You can only add ${availableToAdd} more.`)
+      } else {
+        alert(`Cannot add more than ${selectedSizeStock} in stock for this size.`)
+      }
       return
     }
+    
     onAddToCart(product, selectedSize, quantity, selectedSizeStock)
     onClose()
   }
@@ -95,10 +119,19 @@ export default function SizeSelectionSidebar({
       alert('This size is out of stock')
       return
     }
-    if (quantity > selectedSizeStock) {
-      alert(`Cannot add more than ${selectedSizeStock} in stock for this size.`)
+    
+    const currentCartQty = getCurrentCartQuantity(product._id, selectedSize)
+    const availableToAdd = selectedSizeStock - currentCartQty
+    
+    if (quantity > availableToAdd) {
+      if (currentCartQty > 0) {
+        alert(`You already have ${currentCartQty} in your cart. You can only add ${availableToAdd} more.`)
+      } else {
+        alert(`Cannot add more than ${selectedSizeStock} in stock for this size.`)
+      }
       return
     }
+    
     onBuyNow(product, selectedSize, quantity)
     onClose()
   }
@@ -109,11 +142,17 @@ export default function SizeSelectionSidebar({
   }
 
   const increaseQuantity = () => {
-    if (selectedSizeStock && quantity < selectedSizeStock) {
+    const currentCartQty = getCurrentCartQuantity(product._id, selectedSize)
+    const availableToAdd = selectedSizeStock - currentCartQty
+    
+    if (quantity < availableToAdd) {
       setQuantity((prev) => prev + 1)
-    } else if (selectedSizeStock && quantity >= selectedSizeStock) {
-      // Show alert when trying to exceed stock
-      alert(`Cannot add more than ${selectedSizeStock} in stock for this size.`)
+    } else {
+      if (currentCartQty > 0) {
+        alert(`You already have ${currentCartQty} in your cart. You can only add ${availableToAdd} more.`)
+      } else {
+        alert(`Cannot add more than ${selectedSizeStock} in stock for this size.`)
+      }
     }
   }
 
@@ -227,7 +266,7 @@ export default function SizeSelectionSidebar({
                 <button
                   onClick={increaseQuantity}
                   className="w-12 h-12 border border-gray-300 rounded-r-lg flex items-center justify-center hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={selectedSizeStock !== undefined && quantity >= selectedSizeStock}
+                  disabled={selectedSizeStock !== undefined && quantity >= (selectedSizeStock - getCurrentCartQuantity(product._id, selectedSize))}
                 >
                   <Plus className="h-4 w-4" />
                 </button>
@@ -240,10 +279,17 @@ export default function SizeSelectionSidebar({
                 </div>
               )}
               
-              {/* Stock warning if quantity exceeds stock */}
-              {selectedSize && selectedSizeStock > 0 && quantity > selectedSizeStock && (
+              {/* Cart quantity info */}
+              {selectedSize && getCurrentCartQuantity(product._id, selectedSize) > 0 && (
+                <div className="text-xs text-blue-600 font-medium">
+                  You already have {getCurrentCartQuantity(product._id, selectedSize)} in your cart
+                </div>
+              )}
+              
+              {/* Stock warning if quantity exceeds available stock */}
+              {selectedSize && selectedSizeStock > 0 && quantity > (selectedSizeStock - getCurrentCartQuantity(product._id, selectedSize)) && (
                 <div className="text-xs text-red-500 font-medium">
-                  Maximum quantity: {selectedSizeStock}
+                  Maximum quantity you can add: {selectedSizeStock - getCurrentCartQuantity(product._id, selectedSize)}
                 </div>
               )}
             </div>
@@ -252,7 +298,7 @@ export default function SizeSelectionSidebar({
             <div className="space-y-3">
               <button
                 onClick={handleAddToCart}
-                disabled={!selectedSize || selectedSizeStock === 0 || (selectedSizeStock > 0 && quantity > selectedSizeStock)}
+                disabled={!selectedSize || selectedSizeStock === 0 || (selectedSizeStock > 0 && quantity > (selectedSizeStock - getCurrentCartQuantity(product._id, selectedSize)))}
                 className="w-full py-4 px-6 bg-white border-2 border-[#473C66] text-[#473C66] font-bold rounded-xl hover:bg-[#473C66] hover:text-white transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 ADD TO CART
@@ -260,7 +306,7 @@ export default function SizeSelectionSidebar({
               
               <button
                 onClick={handleBuyNow}
-                disabled={!selectedSize || selectedSizeStock === 0 || (selectedSizeStock > 0 && quantity > selectedSizeStock)}
+                disabled={!selectedSize || selectedSizeStock === 0 || (selectedSizeStock > 0 && quantity > (selectedSizeStock - getCurrentCartQuantity(product._id, selectedSize)))}
                 className="w-full py-4 px-6 bg-[#473C66] text-white font-bold rounded-xl hover:bg-[#3a3054] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 BUY IT NOW
