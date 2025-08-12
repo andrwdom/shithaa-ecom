@@ -30,6 +30,7 @@ interface Product {
   isBestSeller?: boolean
   sizes: { stock?: number }[]
   stock: number
+  customId?: string // Added customId to the interface
 }
 
 export default function Home() {
@@ -57,6 +58,7 @@ export default function Home() {
           isBestSeller: p.isBestSeller,
           sizes: p.sizes,
           stock: (p.sizes || []).reduce((sum: number, s: { stock?: number }) => sum + (s.stock || 0), 0),
+          customId: p.customId, // Map customId
         }));
         setProducts(products);
         setLoading(false);
@@ -79,6 +81,7 @@ export default function Home() {
       await addToCart({
         id: product.id,
         _id: product._id,
+        id: product.customId || product._id, // Use customId for routing
         name: product.name,
         price: product.price,
         quantity: 1,

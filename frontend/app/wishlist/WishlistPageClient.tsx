@@ -15,6 +15,7 @@ interface WishlistItem {
   _id: string
   product: {
     _id: string
+    customId?: string // Add customId for routing
     name: string
     price: number
     originalPrice?: number
@@ -184,7 +185,7 @@ export default function WishlistPageClient() {
                         className="rounded-full bg-pink-500 hover:bg-pink-600 shadow-lg"
                         onClick={(e) => {
                           e.stopPropagation()
-                          handleViewProduct(item.product._id)
+                          handleViewProduct(item.product.customId || item.product._id)
                         }}
                       >
                         <Eye className="h-4 w-4" />
@@ -246,7 +247,7 @@ export default function WishlistPageClient() {
                         className="flex-1 group-hover:bg-pink-400 group-hover:text-white group-hover:border-pink-400 transition-all duration-300"
                         onClick={(e) => {
                           e.stopPropagation()
-                          handleViewProduct(item.product._id)
+                          handleViewProduct(item.product.customId || item.product._id)
                         }}
                       >
                         View Details

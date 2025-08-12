@@ -78,7 +78,7 @@ export const getWishlist = async (req, res) => {
     console.log('Get wishlist - User object:', req.user);
 
     const wishlistItems = await Wishlist.find({ user: userId })
-      .populate('product')
+      .populate('product', 'name price originalPrice images description category categorySlug sizes customId')
       .sort({ addedAt: -1 });
 
     // Filter out items where product is null (deleted products)

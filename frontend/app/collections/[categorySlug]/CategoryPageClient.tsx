@@ -14,7 +14,7 @@ import CheckoutPromptModal from "@/components/checkout-prompt-modal"
 import ErrorBoundary from "@/components/error-boundary"
 import { safeFetch } from "@/lib/api-health"
 import { useBuyNow } from "@/components/buy-now-context"
-import { useCart } from "@/components/cart-context"
+import { useCart } from "@/components/cart-context"                                                                                                                       
 import { useRouter, useSearchParams } from "next/navigation"
 import WishlistButton from "@/components/WishlistButton"
 
@@ -283,8 +283,8 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
 
   const handleSizeSelectionAddToCart = (product: any, size: string, quantity: number) => {
     addToCart({
-      id: product._id || product.id,
-      _id: product._id || product.id,
+      id: product.customId || product._id, // Use customId for routing
+      _id: product._id, // Keep MongoDB ID for internal operations
       name: product.name,
       price: product.price,
       quantity,
@@ -299,8 +299,8 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
 
   const handleSizeSelectionBuyNow = (product: any, size: string, quantity: number) => {
     setBuyNowItem({
-      id: product._id || product.id,
-      _id: product._id || product.id,
+      id: product.customId || product._id, // Use customId for routing  
+      _id: product._id, // Keep MongoDB ID for internal operations
       name: product.name,
       price: product.price,
       quantity,
