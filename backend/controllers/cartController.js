@@ -1,21 +1,18 @@
 import userModel from "../models/userModel.js"
 import productModel from "../models/productModel.js"
 
-
-// add products to user cart
-const addToCart = async (req,res) => {
+// Add products to user cart
+const addToCart = async (req, res) => {
     try {
-        
         const { userId, itemId, size } = req.body
 
         const userData = await userModel.findById(userId)
-        let cartData = await userData.cartData;
+        let cartData = userData.cartData;
 
         if (cartData[itemId]) {
             if (cartData[itemId][size]) {
                 cartData[itemId][size] += 1
-            }
-            else {
+            } else {
                 cartData[itemId][size] = 1
             }
         } else {
@@ -33,14 +30,13 @@ const addToCart = async (req,res) => {
     }
 }
 
-// update user cart
-const updateCart = async (req,res) => {
+// Update user cart
+const updateCart = async (req, res) => {
     try {
-        
-        const { userId ,itemId, size, quantity } = req.body
+        const { userId, itemId, size, quantity } = req.body
 
         const userData = await userModel.findById(userId)
-        let cartData = await userData.cartData;
+        let cartData = userData.cartData;
 
         cartData[itemId][size] = quantity
 
@@ -53,16 +49,13 @@ const updateCart = async (req,res) => {
     }
 }
 
-
-// get user cart data
-const getUserCart = async (req,res) => {
-
+// Get user cart data
+const getUserCart = async (req, res) => {
     try {
-        
         const { userId } = req.body
         
         const userData = await userModel.findById(userId)
-        let cartData = await userData.cartData;
+        let cartData = userData.cartData;
 
         res.json({ success: true, cartData })
 
@@ -70,7 +63,6 @@ const getUserCart = async (req,res) => {
         console.log(error)
         res.json({ success: false, message: error.message })
     }
-
 }
 
 // Calculate cart total with loungewear offer
@@ -104,7 +96,6 @@ const calculateCartTotal = async (req, res) => {
             if (product && (
                 product.categorySlug === 'zipless-feeding-lounge-wear' || 
                 product.categorySlug === 'non-feeding-lounge-wear'
-                // Excluded: 'zipless-feeding-dupatta-lounge-wear'
             )) {
                 // Add item multiple times based on quantity for offer calculation
                 for (let i = 0; i < item.quantity; i++) {
@@ -275,4 +266,4 @@ const removeFromCart = async (req, res) => {
     }
 };
 
-export { addToCart, updateCart, getUserCart, calculateCartTotal, getBulkStock, removeFromCart }
+export { addToCart, updateCart, getUserCart, calculateCartTotal, getBulkStock, removeFromCart } 
