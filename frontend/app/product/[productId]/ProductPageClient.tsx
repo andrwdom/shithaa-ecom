@@ -36,6 +36,7 @@ interface ProductPageClientProps {
 export default function ProductPageClient({ productId }: ProductPageClientProps) {
   const [product, setProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [selectedImage, setSelectedImage] = useState(0)
   const [selectedSize, setSelectedSize] = useState("")
   const [quantity, setQuantity] = useState(1)
@@ -65,6 +66,15 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
 
     fetchProduct();
   }, [productId])
+
+  // Per-size stock logic
+  const sizeOptions = Array.isArray(product?.availableSizes) && product.availableSizes.length > 0
+    ? product.availableSizes
+    : Array.isArray(product?.sizes) && product.sizes.length > 0
+      ? product.sizes.map(s => s.size)
+      : [];
+  const selectedSizeObj = product?.sizes?.find(s => s.size === selectedSize);
+  const selectedSizeStock = selectedSizeObj ? selectedSizeObj.stock : 0;
 
   // Auto-adjust quantity if it exceeds stock when size changes
   useEffect(() => {
@@ -100,7 +110,16 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
   }
 
   if (loading) {
-    return <PageLoading loadingMessage="Loading Product Details..." />
+    return (
+      <PageLoading loadingMessage="Loading Product Details...">
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-[#473C66] mx-auto"></div>
+            <p className="mt-4 text-lg text-gray-600">Loading product details...</p>
+          </div>
+        </div>
+      </PageLoading>
+    )
   }
 
   if (!product) {
@@ -116,14 +135,6 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
     )
   }
 
-  // Per-size stock logic
-  const sizeOptions = Array.isArray(product?.availableSizes) && product.availableSizes.length > 0
-    ? product.availableSizes
-    : Array.isArray(product?.sizes) && product.sizes.length > 0
-      ? product.sizes.map(s => s.size)
-      : [];
-  const selectedSizeObj = product.sizes.find(s => s.size === selectedSize);
-  const selectedSizeStock = selectedSizeObj ? selectedSizeObj.stock : 0;
   let stockStatus = '';
   if (!selectedSize) stockStatus = '';
   else if (selectedSizeStock > 5) stockStatus = 'In Stock';
