@@ -51,10 +51,12 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
         const res = await fetch(apiUrl);
         const data = await res.json();
         
-        if (data.success) {
+        if (data.product) {
+          setProduct(data.product);
+        } else if (data.success && data.data) {
           setProduct(data.data);
         } else {
-          setError(data.message || 'Failed to fetch product');
+          setError(data.message || data.error || 'Failed to fetch product');
         }
       } catch (error) {
         console.error('Error fetching product:', error);
