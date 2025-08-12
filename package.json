@@ -1,4 +1,21 @@
 {
+  "name": "shithaa-ecommerce",
+  "version": "1.0.0",
+  "description": "Shithaa - Elegant Maternity & Feeding Wear E-commerce Platform",
+  "main": "ecosystem.config.js",
+  "scripts": {
+    "deploy": "chmod +x deploy.sh && ./deploy.sh deploy",
+    "start": "chmod +x start-pm2.sh && ./start-pm2.sh",
+    "build": "cd frontend && npm run build && cd ../admin && npm run build",
+    "install-all": "cd frontend && npm install && cd ../backend && npm install && cd ../admin && npm install",
+    "pm2:start": "pm2 start ecosystem.config.js",
+    "pm2:stop": "pm2 stop all",
+    "pm2:restart": "pm2 restart all",
+    "pm2:delete": "pm2 delete all",
+    "pm2:status": "pm2 status",
+    "pm2:logs": "pm2 logs",
+    "pm2:monitor": "pm2 monit"
+  },
   "dependencies": {
     "@tailwindcss/line-clamp": "^0.4.4",
     "axios": "^1.10.0",
@@ -10,5 +27,19 @@
   },
   "devDependencies": {
     "@types/file-saver": "^2.0.7"
-  }
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "keywords": [
+    "ecommerce",
+    "maternity",
+    "nextjs",
+    "express",
+    "mongodb",
+    "pm2"
+  ],
+  "author": "Shithaa Team",
+  "license": "ISC"
 }
