@@ -14,7 +14,9 @@ import { safeFetch } from "@/lib/api-health"
 import WishlistButton from "@/components/WishlistButton"
 
 interface Product {
-  id: number
+  id?: number
+  _id?: string
+  customId?: string
   name: string
   price: number
   originalPrice: number
@@ -96,10 +98,10 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
     // This ensures checkout shows only this product, ignoring cart contents
     clearCart();
     
-    // Set buy now item with fresh data
+    // Set buy now item with fresh data - use _id as primary ID since that's what backend returns
     setBuyNowItem({
-      id: product.id,
-      _id: product.id.toString(),
+      id: product._id || product.id || productId,
+      _id: (product._id || product.id || productId)?.toString() || productId,
       name: product.name,
       price: product.price,
       quantity,
@@ -111,6 +113,7 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
     window.location.href = "/checkout?mode=buynow";
   }
 
+  // Safety check - ensure product exists before rendering
   if (loading) {
     return (
       <PageLoading loadingMessage="Loading Product Details...">
@@ -129,6 +132,21 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
       <div className="min-h-screen bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Product Not Found</h1>
+          <Button onClick={() => (window.location.href = "/")} className="rounded-full">
+            Return to Home
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  // Additional safety check - ensure all required fields exist
+  if (!product.name || !product.price || !product.images || !product.sizes) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Invalid Product Data</h1>
+          <p className="text-gray-600 mb-4">This product appears to have incomplete information.</p>
           <Button onClick={() => (window.location.href = "/")} className="rounded-full">
             Return to Home
           </Button>
@@ -179,25 +197,26 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
               </Button>
               <h1 className="text-lg font-semibold text-gray-900 truncate flex-1">{product.name}</h1>
               <div className="flex items-center space-x-2">
-                <WishlistButton productId={product.id.toString()} size="sm" />
+                <WishlistButton productId={product.id?.toString() || product._id || productId} size="sm" />
                 <Button
                   variant="ghost"
                   size="sm"
+                  className="text-gray-500 hover:text-gray-700"
                   onClick={async () => {
-                    const shareData = {
-                      title: product.name,
-                      text: `Check out this product on Shithaa.in: ${product.name}`,
-                      url: typeof window !== 'undefined' ? window.location.href : ''
-                    };
                     if (navigator.share) {
+                      const shareData = {
+                        title: product.name || 'Product',
+                        text: product.description || 'Check out this product',
+                        url: window.location.href
+                      };
                       try {
                         await navigator.share(shareData);
                       } catch (err) {
-                        // User cancelled or error
+                        console.log('Share cancelled');
                       }
                     } else if (navigator.clipboard) {
                       try {
-                        await navigator.clipboard.writeText(shareData.url);
+                        await navigator.clipboard.writeText(window.location.href);
                         alert('Link copied!');
                       } catch (err) {
                         alert('Could not copy link');
@@ -282,8 +301,8 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
                   {
                     "@type": "ListItem",
                     "position": 3,
-                    "name": product.category,
-                    "item": `https://shithaa.in/collections/${product.category.toLowerCase().replace(/ /g, '-')}`
+                    "name": product.category || "Product",
+                    "item": `https://shithaa.in/collections/${(product.category || "product").toLowerCase().replace(/ /g, '-')}`
                   },
                   {
                     "@type": "ListItem",
@@ -460,8 +479,8 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
                     onClick={() => {
                       if (!product) return;
                       addToCart({
-                        id: product.id.toString(),
-                        _id: product.id.toString(),
+                        id: product.id?.toString() || product._id || productId,
+                        _id: product.id?.toString() || product._id || productId,
                         name: product.name,
                         price: product.price,
                         quantity,

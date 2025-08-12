@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { useCart } from "./cart-context";
 
 export interface BuyNowItem {
-  id: number;
+  id: string | number;
   _id: string;
   name: string;
   price: number;
