@@ -23,9 +23,9 @@ export default {
         ],
       },
       colors: {
-        primary: '#E11D48', // Shitha pink
-        accent: '#F472B6',  // Shitha accent
-        background: '#FDF2F8', // Shitha bg
+        primary: '#E11D48', // Shithaa pink
+        accent: '#F472B6',  // Shithaa accent
+        background: '#FDF2F8', // Shithaa bg
         brand: '#473C66',
         'brand-dark': '#3B3158',
         theme: {

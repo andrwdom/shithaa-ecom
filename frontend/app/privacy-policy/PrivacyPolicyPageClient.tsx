@@ -45,7 +45,7 @@ export default function PrivacyPolicyPageClient() {
             </li>
             <li><b>Cookies</b><br/>We use cookies to improve your browsing experience and analyze website traffic. You can disable cookies in your browser settings if you prefer not to share this data.</li>
             <li><b>Changes to This Privacy Policy</b><br/>We may update this policy from time to time. Any changes will be posted on this page with the updated date.</li>
-            <li><b>Contact Us</b><br/>If you have any questions or concerns about this Privacy Policy, please contact us at:<br/>Email: <a href="mailto:info.shitha@gmail.com" className="underline">info.shitha@gmail.com</a><br/>Instagram: <a href="https://www.instagram.com/shithaa.in" className="underline">@shithaa.in</a></li>
+            <li><b>Contact Us</b><br/>If you have any questions about this Privacy Policy, please contact us at:<br/>Email: <a href="mailto:info.shithaa@gmail.com" className="underline">info.shithaa@gmail.com</a><br/>Instagram: <a href="https://www.instagram.com/shithaa.in" className="underline">@shithaa.in</a></li>
           </ol>
         </div>
       </main>

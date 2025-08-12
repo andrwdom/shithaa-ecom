@@ -669,7 +669,7 @@ const generateInvoice = async (req, res) => {
     doc.pipe(res);
 
     // --- HEADER ---
-    doc.font('Helvetica-Bold').fontSize(30).fillColor('#473C66').text('Shitha', { align: 'center' });
+    doc.font('Helvetica-Bold').fontSize(30).fillColor('#473C66').text('Shithaa', { align: 'center' });
     doc.moveDown(0.1);
     doc.font('Helvetica').fontSize(13).fillColor('#B39DDB').text('Elegance for Every Mother', { align: 'center' });
     doc.moveDown(0.5);

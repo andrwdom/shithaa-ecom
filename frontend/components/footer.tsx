@@ -22,7 +22,7 @@ export default function Footer() {
             </div>
             <h3 className="font-bold mb-3 text-lg font-serif">Refund Policy</h3>
             <p className="text-gray-400 text-sm lg:text-base">
-              Refunds accepted within 2 days of receiving your order. DM us on Instagram or email info.shitha@gmail.com.
+              Refunds accepted within 2 days of receiving your order. DM us on Instagram or email info.shithaa@gmail.com.
             </p>
           </div>
           <div className="text-center group">
@@ -151,7 +151,7 @@ export default function Footer() {
                 <div className="w-8 h-8 bg-gray-800 rounded-lg flex items-center justify-center">
                   <Mail className="h-4 w-4 text-white" />
                 </div>
-                <span className="text-gray-400">info.shitha@gmail.com</span>
+                <span className="text-gray-400">info.shithaa@gmail.com</span>
               </div>
               <div className="flex items-center space-x-3">
                 <div className="w-8 h-8 bg-gray-800 rounded-lg flex items-center justify-center">
@@ -172,7 +172,7 @@ export default function Footer() {
         </div>
 
         <div className="border-t border-gray-800 mt-16 pt-8 text-center">
-          <p className="text-gray-400">&copy; 2024 Shitha. All rights reserved. Made with 💕 for mothers everywhere.</p>
+          <p className="text-gray-400">&copy; 2024 Shithaa. All rights reserved. Made with 💕 for mothers everywhere.</p>
         </div>
       </div>
     </footer>

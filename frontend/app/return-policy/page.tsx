@@ -103,8 +103,8 @@ export default function ReturnPolicyPage() {
                 @shithaa.in
               </a>{" "}
               (preferred method) or email us at{" "}
-              <a href="mailto:info.shitha@gmail.com" className="text-[#473C66] hover:underline font-semibold">
-                info.shitha@gmail.com
+              <a href="mailto:info.shithaa@gmail.com" className="text-[#473C66] hover:underline font-semibold">
+                info.shithaa@gmail.com
               </a>
             </p>
           </div>

@@ -12,7 +12,7 @@ export default function TermsPageClient() {
         </button>
         <h1 className="text-3xl font-bold mb-6 font-serif">Terms and Conditions</h1>
         <div className="space-y-6 text-base leading-relaxed">
-          <p>
+          <p className="text-gray-600 mb-6">
             Welcome to Shithaa.in. These Terms and Conditions ("Terms") govern your use of our website located at www.shithaa.in and the services we offer. By accessing or using the Site, you agree to be bound by these Terms.
           </p>
           <ol className="list-decimal pl-6 space-y-2">
@@ -45,7 +45,7 @@ export default function TermsPageClient() {
               <b>Returns & Refunds</b><br />
               We offer refunds only if the delivered product is damaged or defective.<br />
               Items must be unused and in original packaging.<br />
-              We only accept refund requests within 2 days of receiving your order. To request a refund, please contact us via Instagram direct message (preferred) or email us at <a href="mailto:info.shitha@gmail.com" className="underline">info.shitha@gmail.com</a>. Refund requests made after 2 days from the date you receive your order will not be eligible.
+              Refunds and exchanges are only applicable for damaged products. Contact us via Instagram direct message (preferred) or email us at <a href="mailto:info.shithaa@gmail.com" className="underline">info.shithaa@gmail.com</a>. Refund requests made after 2 days from the date you receive your order will not be eligible.
             </li>
             <li>
               <b>Intellectual Property</b><br />
@@ -61,8 +61,8 @@ export default function TermsPageClient() {
             </li>
             <li>
               <b>Contact Information</b><br />
-              For questions about these Terms and Conditions, please contact us at:<br />
-              Email: <a href="mailto:info.shitha@gmail.com" className="underline">info.shitha@gmail.com</a><br />
+              <strong>Contact Information:</strong><br />
+              Email: <a href="mailto:info.shithaa@gmail.com" className="underline">info.shithaa@gmail.com</a><br />
               Instagram: <a href="https://www.instagram.com/shithaa.in" className="underline">@shithaa.in</a>
             </li>
           </ol>

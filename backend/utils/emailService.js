@@ -183,7 +183,7 @@ export const sendShippingNotification = async (order, shippingData) => {
               <div style="background: #fef3e7; padding: 20px; border-radius: 10px; margin: 30px 0; text-align: center; border: 1px solid #f59e0b;">
                 <p style="margin: 0; font-size: 14px; color: #555;">
                   Questions about your delivery? Contact our support team<br>
-                  📧 <a href="mailto:support@shithaa.com" style="color: #4D1E64;">support@shithaa.com</a><br>
+                  📧 <a href="mailto:info.shithaa@gmail.com" style="color: #4D1E64;">info.shithaa@gmail.com</a><br>
                   📱 <a href="tel:+919876543210" style="color: #4D1E64;">+91 98765 43210</a>
                 </p>
             </div>
@@ -400,7 +400,7 @@ export const sendOrderStatusUpdate = async (order, newStatus) => {
               <div style="background: #fef3e7; padding: 20px; border-radius: 10px; margin: 30px 0; text-align: center; border: 1px solid #f59e0b;">
                 <p style="margin: 0; font-size: 14px; color: #555;">
                   Need help? Contact our support team<br>
-                  📧 <a href="mailto:support@shithaa.com" style="color: #4D1E64;">support@shithaa.com</a><br>
+                  📧 <a href="mailto:info.shithaa@gmail.com" style="color: #4D1E64;">info.shithaa@gmail.com</a><br>
                   📱 <a href="tel:+919876543210" style="color: #4D1E64;">+91 98765 43210</a>
                 </p>
               </div>

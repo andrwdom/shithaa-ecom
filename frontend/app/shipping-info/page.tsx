@@ -133,8 +133,8 @@ export default function ShippingInfoPage() {
           <div className="text-center mt-8">
             <p className="text-sm text-gray-600">
               For any shipping-related questions, contact us at{" "}
-              <a href="mailto:info.shitha@gmail.com" className="text-[#473C66] hover:underline">
-                info.shitha@gmail.com
+              <a href="mailto:info.shithaa@gmail.com" className="text-[#473C66] hover:underline">
+                info.shithaa@gmail.com
               </a>
             </p>
           </div>

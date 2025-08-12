@@ -9,10 +9,10 @@ export default function AboutSection() {
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           <div className="space-y-6">
             <div>
-              <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-6 font-serif">About Shitha</h2>
+              <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-6 font-serif">About Shithaa</h2>
               <div className="space-y-4 text-lg text-gray-600 leading-relaxed">
                 <p>
-                  At Shitha, we believe that motherhood should be joyful, not stressful. Our mission is to make
+                  At Shithaa, we believe that motherhood should be joyful, not stressful. Our mission is to make
                   maternity wear both elegant and functional so that every mom feels confident and comfortable.
                 </p>
                 <p>
@@ -43,7 +43,7 @@ export default function AboutSection() {
             <div className="relative h-[500px] rounded-3xl overflow-hidden shadow-2xl">
               <Image
                 src="/placeholder.svg?height=500&width=400"
-                alt="About Shitha - Mother and baby"
+                alt="About Shithaa - Mother and baby"
                 fill
                 className="object-cover"
               />

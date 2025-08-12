@@ -83,7 +83,7 @@ function OrderSuccessContent() {
         )}
       </div>
       <h1 className={`text-3xl sm:text-4xl font-bold mb-2 ${isPaid ? 'text-green-700' : 'text-red-700'}`}>{isPaid ? 'Order Placed Successfully!' : 'Payment Failed'}</h1>
-      <p className="text-lg text-gray-700 mb-4">{isPaid ? 'Thank you for shopping with Shitha. Your order is confirmed.' : 'Your payment was not successful. Please try again.'}</p>
+      <p className="text-lg text-gray-700 mb-4">{isPaid ? 'Thank you for shopping with Shithaa. Your order is confirmed.' : 'Your payment was not successful. Please try again.'}</p>
       <div className="bg-white rounded-xl shadow p-6 mb-6 w-full max-w-lg mx-auto flex flex-col gap-2">
         <div className="flex flex-wrap justify-between text-left text-gray-800">
           <div className="font-semibold">Order ID:</div>

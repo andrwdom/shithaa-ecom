@@ -43,7 +43,7 @@ export const generateMetadata = async ({ params }: { params: Promise<{ categoryS
     twitter: {
       title: title,
       description: description,
-      images: ['/shitha-logo.jpg'],
+      images: ['/shithaa-logo.jpg'],
       card: 'summary_large_image',
     },
   }

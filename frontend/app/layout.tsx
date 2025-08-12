@@ -83,7 +83,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Shithaa - Elegant Maternity & Feeding Wear | Premium Maternity Clothing',
     description: 'Discover elegant maternity wear and feeding essentials at Shithaa. Premium quality, comfortable designs for expecting mothers. Best maternity clothing online.',
-    images: ['/shitha-logo.jpg'],
+    images: ['/shithaa-logo.jpg'],
   },
   robots: {
     index: true,
@@ -150,7 +150,7 @@ export default function RootLayout({
               "contactPoint": {
                 "@type": "ContactPoint",
                 "contactType": "customer service",
-                "email": "info.shitha@gmail.com"
+                "email": "info.shithaa@gmail.com"
               },
               "sameAs": [
                 "https://instagram.com/shithaa.in"
