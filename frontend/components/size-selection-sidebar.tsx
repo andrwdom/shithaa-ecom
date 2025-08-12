@@ -1,9 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { X, Plus, Minus, ShoppingBag } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
+import { useCart } from "@/components/cart-context"
 
 interface Product {
   id: number
@@ -38,12 +39,12 @@ export default function SizeSelectionSidebar({
   const { cartItems } = useCart()
 
   // Reset state when sidebar opens
-  useState(() => {
+  useEffect(() => {
     if (isOpen) {
       setSelectedSize("")
       setQuantity(1)
     }
-  })
+  }, [isOpen])
 
   // Get current cart quantity for selected product and size
   const getCurrentCartQuantity = (productId: string, size: string) => {
