@@ -195,4 +195,42 @@ function calculateLoungewearOffer(loungewearItems) {
     };
 }
 
-export { addToCart, updateCart, getUserCart, calculateCartTotal }
+// Get bulk stock information for multiple products
+const getBulkStock = async (req, res) => {
+    try {
+        const { productIds } = req.body;
+        
+        if (!productIds || !Array.isArray(productIds)) {
+            return res.status(400).json({
+                success: false,
+                message: "Product IDs array is required"
+            });
+        }
+
+        const products = await productModel.find({
+            _id: { $in: productIds }
+        }).select('_id name sizes stock categorySlug');
+
+        const stockData = products.map(product => ({
+            _id: product._id,
+            name: product.name,
+            sizes: product.sizes,
+            stock: product.stock,
+            categorySlug: product.categorySlug
+        }));
+
+        res.json({
+            success: true,
+            data: stockData
+        });
+
+    } catch (error) {
+        console.error('Get Bulk Stock Error:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+export { addToCart, updateCart, getUserCart, calculateCartTotal, getBulkStock }
