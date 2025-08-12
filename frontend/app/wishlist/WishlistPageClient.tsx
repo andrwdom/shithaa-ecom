@@ -21,6 +21,8 @@ interface WishlistItem {
     images: string[]
     description?: string
     category?: string
+    categorySlug?: string
+    sizes?: { size: string; stock: number }[]
   }
   addedAt: string
 }
@@ -57,17 +59,27 @@ export default function WishlistPageClient() {
       return
     }
 
+    // Check if product has stock information
+    const defaultSize = "M"; // Default size
+    const sizeData = item.product.sizes?.find((s: any) => s.size === defaultSize);
+    const stock = sizeData?.stock || 0;
+    
+    if (stock <= 0) {
+      toast.error("This item is out of stock");
+      return;
+    }
+
     addToCart({
       id: item.product._id,
       _id: item.product._id,
       name: item.product.name,
       price: item.product.price,
       quantity: 1,
-      size: "M", // Default size, user can change later
+      size: defaultSize, // Default size, user can change later
       image: item.product.images[0] || "/placeholder.svg",
       category: item.product.category,
       categorySlug: item.product.categorySlug,
-    }, false)
+    }, false, stock) // Pass stock for validation
     
     toast.success("Added to cart!")
   }

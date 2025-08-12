@@ -283,7 +283,18 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
     setIsSizeSelectionOpen(true);
   }
 
-  const handleSizeSelectionAddToCart = (product: any, size: string, quantity: number, _stock: number) => {
+  const handleSizeSelectionAddToCart = (product: any, size: string, quantity: number, stock: number) => {
+    // Validate stock before adding to cart
+    if (stock <= 0) {
+      alert('This size is out of stock');
+      return;
+    }
+    
+    if (quantity > stock) {
+      alert(`Cannot add more than ${stock} in stock for this size.`);
+      return;
+    }
+    
     addToCart({
       id: product._id || product.id,
       _id: product._id || product.id,
@@ -294,7 +305,8 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
       image: product.image,
       category: product.category,
       categorySlug: product.categorySlug,
-    });
+    }, false, stock); // Pass stock for validation
+    
     setAddedProduct({
       name: product.name,
       price: product.price,
@@ -306,6 +318,20 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
   };
 
   const handleSizeSelectionBuyNow = (product: any, size: string, quantity: number) => {
+    // Validate stock before proceeding to checkout
+    const sizeData = product.sizes?.find((s: any) => s.size === size);
+    const stock = sizeData?.stock || 0;
+    
+    if (stock <= 0) {
+      alert('This size is out of stock');
+      return;
+    }
+    
+    if (quantity > stock) {
+      alert(`Cannot buy more than ${stock} in stock for this size.`);
+      return;
+    }
+    
     setBuyNowItem({
       id: product._id || product.id,
       _id: product._id || product.id,

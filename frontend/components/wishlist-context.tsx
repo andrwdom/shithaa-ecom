@@ -9,8 +9,12 @@ interface WishlistItem {
     _id: string
     name: string
     price: number
+    originalPrice?: number
     images: string[]
     description?: string
+    category?: string
+    categorySlug?: string
+    sizes?: { size: string; stock: number }[]
   }
   addedAt: string
 }

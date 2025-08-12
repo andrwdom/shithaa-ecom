@@ -156,11 +156,45 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
       : [];
   const selectedSizeObj = product.sizes.find(s => s.size === selectedSize);
   const selectedSizeStock = selectedSizeObj ? selectedSizeObj.stock : 0;
+  
+  // Enhanced stock status logic
   let stockStatus = '';
-  if (!selectedSize) stockStatus = '';
-  else if (selectedSizeStock > 5) stockStatus = 'In Stock';
-  else if (selectedSizeStock > 0) stockStatus = `Only ${selectedSizeStock} left!`;
-  else stockStatus = 'Out of Stock';
+  let stockStatusColor = '';
+  if (!selectedSize) {
+    stockStatus = '';
+    stockStatusColor = '';
+  } else if (selectedSizeStock === 0) {
+    stockStatus = 'Out of Stock';
+    stockStatusColor = 'text-red-500';
+  } else if (selectedSizeStock <= 5) {
+    stockStatus = `Only ${selectedSizeStock} left!`;
+    stockStatusColor = 'text-orange-500';
+  } else {
+    stockStatus = 'In Stock';
+    stockStatusColor = 'text-green-600';
+  }
+
+  // Enhanced quantity validation
+  const handleQuantityChange = (newQuantity: number) => {
+    if (newQuantity < 1) return;
+    if (selectedSizeStock > 0 && newQuantity > selectedSizeStock) {
+      // Don't allow quantity higher than stock
+      return;
+    }
+    setQuantity(newQuantity);
+  };
+
+  const handleQuantityIncrease = () => {
+    if (selectedSizeStock > 0 && quantity < selectedSizeStock) {
+      setQuantity(quantity + 1);
+    }
+  };
+
+  const handleQuantityDecrease = () => {
+    if (quantity > 1) {
+      setQuantity(quantity - 1);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -444,7 +478,7 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
                   <div className="flex items-center border rounded-md overflow-hidden w-[110px]">
                     <button
                       type="button"
-                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                      onClick={handleQuantityDecrease}
                       disabled={quantity <= 1}
                       className="h-10 w-10 flex items-center justify-center text-lg font-bold text-gray-700 disabled:text-gray-300 bg-white hover:bg-gray-100 transition"
                     >
@@ -453,22 +487,42 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
                     <span className="flex-1 text-center text-base font-semibold text-gray-900 select-none">{quantity}</span>
                     <button
                       type="button"
-                      onClick={() => setQuantity(quantity + 1)}
-                      className="h-10 w-10 flex items-center justify-center text-lg font-bold text-gray-700 bg-white hover:bg-gray-100 transition"
+                      onClick={handleQuantityIncrease}
+                      disabled={selectedSizeStock > 0 && quantity >= selectedSizeStock}
+                      className="h-10 w-10 flex items-center justify-center text-lg font-bold text-gray-700 bg-white hover:bg-gray-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       +
                     </button>
                   </div>
-                  <span className={`ml-4 text-base font-semibold ${selectedSize && selectedSizeStock === 0 ? 'text-red-500' : selectedSizeStock <= 5 && selectedSizeStock > 0 ? 'text-yellow-600' : 'text-green-600'}`}>{stockStatus}</span>
+                  <span className={`ml-4 text-base font-semibold ${stockStatusColor}`}>{stockStatus}</span>
+                  
+                  {/* Stock warning if quantity exceeds stock */}
+                  {selectedSize && selectedSizeStock > 0 && quantity > selectedSizeStock && (
+                    <span className="text-xs text-red-500 font-medium">
+                      Max: {selectedSizeStock}
+                    </span>
+                  )}
+                  
                   <button
                     type="button"
-                    className="flex-1 border border-gray-400 rounded-md h-10 text-gray-900 font-semibold bg-white hover:bg-gray-100 transition text-sm"
-                    disabled={!selectedSize || selectedSizeStock === 0}
+                    className="flex-1 border border-gray-400 rounded-md h-10 text-gray-900 font-semibold bg-white hover:bg-gray-100 transition text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={!selectedSize || selectedSizeStock === 0 || (selectedSizeStock > 0 && quantity > selectedSizeStock)}
                     onClick={async () => {
                       if (!product) return;
                       try {
                         const selectedSizeData = product.sizes.find(s => s.size === selectedSize);
                         const stock = selectedSizeData?.stock || 0;
+                        
+                        // Final stock validation before adding to cart
+                        if (stock === 0) {
+                          alert('This size is out of stock');
+                          return;
+                        }
+                        
+                        if (quantity > stock) {
+                          alert(`Cannot add more than ${stock} in stock for this size.`);
+                          return;
+                        }
                         
                         await addToCart({
                           id: product.id.toString(),
@@ -501,8 +555,8 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
                 {/* Buy it now */}
                 <button
                   type="button"
-                  className="w-full h-12 rounded-md bg-[#473C66] hover:bg-[#3a3054] text-white font-bold text-base tracking-wide transition shadow-md"
-                  disabled={!selectedSize || selectedSizeStock === 0}
+                  className="w-full h-12 rounded-md bg-[#473C66] hover:bg-[#3a3054] text-white font-bold text-base tracking-wide transition shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={!selectedSize || selectedSizeStock === 0 || (selectedSizeStock > 0 && quantity > selectedSizeStock)}
                   onClick={handleBuyNow}
                 >
                   BUY IT NOW

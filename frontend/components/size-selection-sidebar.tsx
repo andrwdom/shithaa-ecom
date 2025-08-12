@@ -51,11 +51,23 @@ export default function SizeSelectionSidebar({
   const sizeOptions = sizeObjs.map(s => s.size);
   const selectedSizeObj = sizeObjs.find(s => s.size === selectedSize);
   const selectedSizeStock = selectedSizeObj ? selectedSizeObj.stock : 0;
+  
+  // Enhanced stock status logic
   let stockStatus = '';
-  if (!selectedSize) stockStatus = '';
-  else if (selectedSizeStock > 5) stockStatus = 'In Stock';
-  else if (selectedSizeStock > 0) stockStatus = `Only ${selectedSizeStock} left!`;
-  else stockStatus = 'Out of Stock';
+  let stockStatusColor = '';
+  if (!selectedSize) {
+    stockStatus = '';
+    stockStatusColor = '';
+  } else if (selectedSizeStock === 0) {
+    stockStatus = 'Out of Stock';
+    stockStatusColor = 'text-red-500';
+  } else if (selectedSizeStock <= 5) {
+    stockStatus = `Only ${selectedSizeStock} left!`;
+    stockStatusColor = 'text-orange-500';
+  } else {
+    stockStatus = 'In Stock';
+    stockStatusColor = 'text-green-600';
+  }
 
   const handleAddToCart = () => {
     if (!selectedSize) {
@@ -214,40 +226,46 @@ export default function SizeSelectionSidebar({
                 </div>
                 <button
                   onClick={increaseQuantity}
-                  className="w-12 h-12 border border-gray-300 rounded-r-lg flex items-center justify-center hover:bg-gray-50"
+                  className="w-12 h-12 border border-gray-300 rounded-r-lg flex items-center justify-center hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={selectedSizeStock !== undefined && quantity >= selectedSizeStock}
                 >
                   <Plus className="h-4 w-4" />
                 </button>
               </div>
-              {/* Show out of stock message if trying to exceed stock */}
-              {selectedSize && selectedSizeStock > 0 && quantity >= selectedSizeStock && (
-                <div className="text-xs text-red-500 font-semibold mt-1">No stock left for this quantity</div>
+              
+              {/* Stock status display */}
+              {selectedSize && (
+                <div className={`text-sm font-medium ${stockStatusColor}`}>
+                  {stockStatus}
+                </div>
+              )}
+              
+              {/* Stock warning if quantity exceeds stock */}
+              {selectedSize && selectedSizeStock > 0 && quantity > selectedSizeStock && (
+                <div className="text-xs text-red-500 font-medium">
+                  Maximum quantity: {selectedSizeStock}
+                </div>
               )}
             </div>
-          </div>
 
-          {/* Footer Actions */}
-          <div className="p-4 md:p-6 border-t border-gray-200 bg-white space-y-3">
-            <Button
-              onClick={handleAddToCart}
-              variant="outline"
-              size="lg"
-              className="w-full py-4 text-base font-semibold border-2 border-[#473C66] text-[#473C66] hover:bg-[#473C66] hover:text-white transition-all duration-300 bg-transparent rounded-xl"
-              disabled={sizeOptions.length === 0 || !selectedSize || selectedSizeStock === 0}
-            >
-              <ShoppingBag className="h-5 w-5 mr-2" />
-              ADD TO CART
-            </Button>
-
-            <Button
-              onClick={handleBuyNow}
-              size="lg"
-              className="w-full py-4 text-base font-semibold bg-[#473C66] hover:bg-[#3a3054] text-white transition-all duration-300 rounded-xl shadow-md"
-              disabled={sizeOptions.length === 0 || !selectedSize || selectedSizeStock === 0}
-            >
-              BUY IT NOW
-            </Button>
+            {/* Action Buttons */}
+            <div className="space-y-3">
+              <button
+                onClick={handleAddToCart}
+                disabled={!selectedSize || selectedSizeStock === 0 || (selectedSizeStock > 0 && quantity > selectedSizeStock)}
+                className="w-full py-4 px-6 bg-white border-2 border-[#473C66] text-[#473C66] font-bold rounded-xl hover:bg-[#473C66] hover:text-white transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                ADD TO CART
+              </button>
+              
+              <button
+                onClick={handleBuyNow}
+                disabled={!selectedSize || selectedSizeStock === 0 || (selectedSizeStock > 0 && quantity > selectedSizeStock)}
+                className="w-full py-4 px-6 bg-[#473C66] text-white font-bold rounded-xl hover:bg-[#3a3054] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                BUY IT NOW
+              </button>
+            </div>
 
             {/* Size Guide Link */}
             <div className="text-center">

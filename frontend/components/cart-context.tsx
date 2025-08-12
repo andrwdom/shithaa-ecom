@@ -317,9 +317,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   async function addToCart(item: CartItem, openSidebar: boolean = true, stock?: number) {
     // CRITICAL: Validate stock before any frontend updates
+    if (typeof stock === 'number' && stock <= 0) {
+      alert('This item is out of stock');
+      return;
+    }
+    
     if (typeof stock === 'number' && item.quantity > stock) {
-      alert(`Cannot add more than ${stock} in stock for this size.`)
-      return
+      alert(`Cannot add more than ${stock} in stock for this size.`);
+      return;
     }
 
     // CRITICAL: Check if adding this quantity would exceed stock when combined with existing cart items
@@ -328,8 +333,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     const newTotalQty = existingQty + item.quantity
     
     if (typeof stock === 'number' && newTotalQty > stock) {
-      alert(`Cannot add ${item.quantity} more. You already have ${existingQty} in cart, and only ${stock} available in stock.`)
-      return
+      alert(`Cannot add ${item.quantity} more. You already have ${existingQty} in cart, and only ${stock} available in stock.`);
+      return;
     }
 
     // Sync with backend FIRST if user is authenticated
@@ -401,9 +406,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     console.log('updateCartItem called:', { _id, size, quantity, stock, user: !!user })
     
     // CRITICAL: Validate stock before any frontend updates
+    if (typeof stock === 'number' && stock <= 0) {
+      alert('This item is out of stock');
+      return;
+    }
+    
     if (typeof stock === 'number' && quantity > stock) {
       console.warn(`Stock validation failed: quantity ${quantity} > stock ${stock}`)
-      alert(`Cannot set quantity higher than ${stock} in stock for this size.`)
+      alert(`Cannot set quantity higher than ${stock} in stock for this size.`);
       return
     }
 
@@ -448,15 +458,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           // Update frontend cart with validated data from backend
           setCartItems((prev) => {
             const existing = prev.find((i) => i._id === _id && i.size === size)
-            if (!existing) {
-              console.warn('Item not found in cart for update:', { _id, size })
-              return prev
+            if (existing) {
+              return prev.map((i) =>
+                i._id === _id && i.size === size
+                  ? { ...i, quantity: responseData.data.quantity }
+                  : i
+              )
             }
-            
-            console.log('Updating cart item with backend data:', { _id, size, oldQuantity: existing.quantity, newQuantity: responseData.data.quantity })
-            return prev.map((item) =>
-              item._id === _id && item.size === size ? { ...item, quantity: responseData.data.quantity } : item
-            )
+            return prev
           })
         }
       } catch (error) {
@@ -468,15 +477,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       // For non-authenticated users, update frontend immediately but with stock validation
       setCartItems((prev) => {
         const existing = prev.find((i) => i._id === _id && i.size === size)
-        if (!existing) {
-          console.warn('Item not found in cart for update:', { _id, size })
-          return prev
+        if (existing) {
+          return prev.map((i) =>
+            i._id === _id && i.size === size
+              ? { ...i, quantity: quantity }
+              : i
+          )
         }
-        
-        console.log('Updating cart item:', { _id, size, oldQuantity: existing.quantity, newQuantity: quantity })
-        return prev.map((item) =>
-          item._id === _id && item.size === size ? { ...item, quantity } : item
-        )
+        return prev
       })
     }
   }
