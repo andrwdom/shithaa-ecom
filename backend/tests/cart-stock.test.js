@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
-import { addToCart, updateCart, removeFromCart, getUserCart, calculateCartTotal } from '../controllers/cartControllerHardened.js';
-import { reserveStock, releaseStock, checkStockAvailability, getProductStock } from '../controllers/stockController.js';
+import { addToCart, updateCart, removeFromCart, getUserCart, calculateCartTotal } from '../controllers/cartController.js';
+// import { reserveStock, releaseStock, checkStockAvailability, getProductStock } from '../controllers/stockController.js';
 import userModel from '../models/userModel.js';
 import productModel from '../models/productModel.js';
 
