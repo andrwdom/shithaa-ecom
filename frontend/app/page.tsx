@@ -16,7 +16,6 @@ import PerformanceMonitor from "@/components/performance-monitor"
 import { useCart } from "@/components/cart-context"
 import { useBuyNow } from "@/components/buy-now-context"
 import { useAuth } from "@/components/auth/AuthContext"
-import SimpleCartTest from "@/components/simple-cart-test"
 
 interface Product {
   id: string
@@ -112,9 +111,6 @@ export default function Home() {
           <CategoryStrip onCategoryClick={handleCategorySelect} currentCategory={undefined} />
           <TestimonialsSection />
           <FAQAccordion />
-
-          {/* Debug cart context */}
-          <SimpleCartTest />
         </div>
       </main>
     </PageLoading>

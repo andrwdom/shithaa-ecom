@@ -29,7 +29,7 @@ export const metadata: Metadata = {
     default: "Shithaa - Elegant Maternity & Feeding Wear | Premium Mother & Baby Clothing",
     template: "%s | Shithaa"
   },
-  description: "Discover elegant maternity wear and feeding essentials at Shithaa. Premium quality, comfortable designs for expecting mothers. Shop the latest collection of maternity feeding wear, zipless lounge wear, and more. Free shipping on orders above ₹999.",
+  description: "Discover elegant maternity wear and feeding essentials at Shithaa. Premium quality, comfortable designs for expecting mothers. Shop the latest collection of maternity feeding wear, zipless lounge wear, and more.",
   keywords: [
     "maternity wear",
     "feeding wear",

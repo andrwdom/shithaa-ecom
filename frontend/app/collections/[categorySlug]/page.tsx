@@ -12,7 +12,7 @@ export const generateMetadata = async ({ params }: { params: Promise<{ categoryS
 
   // Enhanced SEO title and description with more targeted keywords
   const title = `${categoryName} Maternity Collection - Premium Maternity Wear | Shithaa`;
-  const description = `Shop our premium ${categoryName.toLowerCase()} maternity collection. Comfortable, stylish designs for expecting mothers. Zipless feeding wear, elegant maternity dresses & more. Free shipping on orders above ₹999.`;
+  const description = `Shop our premium ${categoryName.toLowerCase()} maternity collection. Comfortable, stylish designs for expecting mothers. Zipless feeding wear, elegant maternity dresses & more.`;
 
   return {
     title: title,

@@ -46,58 +46,32 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        setLoading(true)
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-
-        const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + '/api/products/' + productId;
-        const res = await safeFetch(apiUrl);
-
-        if (!res || !res.ok) {
-          throw new Error(`Failed to fetch product: ${res?.status || 'Network error'}`);
-        }
-
+        const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + `/api/products/${productId}`;
+        const res = await fetch(apiUrl);
         const data = await res.json();
-        if (data.data || data.product) {
-          const p = data.data || data.product;
-          setProduct({
-            id: p._id,
-            name: p.name,
-            price: p.price,
-            originalPrice: p.originalPrice,
-            images: p.images || [],
-            category: p.category,
-            description: p.description,
-            sizes: p.sizes || [],
-            features: p.features || [],
-            rating: p.rating,
-            reviews: p.reviews,
-            stock: (p.sizes || []).reduce((sum, s) => sum + (s.stock || 0), 0),
-            availableSizes: p.availableSizes || [],
-          });
+        
+        if (data.success) {
+          setProduct(data.data);
+        } else {
+          setError(data.message || 'Failed to fetch product');
         }
-        setLoading(false)
       } catch (error) {
-        if (process.env.NODE_ENV === 'development') {
-          console.error("Error fetching product:", error)
-        }
-        setLoading(false)
+        console.error('Error fetching product:', error);
+        setError('Failed to fetch product');
+      } finally {
+        setLoading(false);
       }
-    }
+    };
 
-    if (productId) {
-      fetchProduct()
-    }
-    // Refetch product data when coming back from order success
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        fetchProduct();
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
+    fetchProduct();
   }, [productId])
+
+  // Auto-adjust quantity if it exceeds stock when size changes
+  useEffect(() => {
+    if (selectedSize && selectedSizeStock > 0 && quantity > selectedSizeStock) {
+      setQuantity(selectedSizeStock)
+    }
+  }, [selectedSize, selectedSizeStock, quantity])
 
   const handleBuyNow = async () => {
     if (!selectedSize) {
@@ -445,17 +419,31 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
                     <span className="flex-1 text-center text-base font-semibold text-gray-900 select-none">{quantity}</span>
                     <button
                       type="button"
-                      onClick={() => setQuantity(quantity + 1)}
-                      className="h-10 w-10 flex items-center justify-center text-lg font-bold text-gray-700 bg-white hover:bg-gray-100 transition"
+                      onClick={() => {
+                        // Only allow increasing quantity if it doesn't exceed available stock
+                        if (selectedSizeStock && quantity < selectedSizeStock) {
+                          setQuantity(quantity + 1)
+                        }
+                      }}
+                      disabled={!selectedSize || !selectedSizeStock || quantity >= selectedSizeStock}
+                      className="h-10 w-10 flex items-center justify-center text-lg font-bold text-gray-700 bg-white hover:bg-gray-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       +
                     </button>
                   </div>
                   <span className={`ml-4 text-base font-semibold ${selectedSize && selectedSizeStock === 0 ? 'text-red-500' : selectedSizeStock <= 5 && selectedSizeStock > 0 ? 'text-yellow-600' : 'text-green-600'}`}>{stockStatus}</span>
+                  
+                  {/* Stock warning if quantity exceeds available stock */}
+                  {selectedSize && selectedSizeStock > 0 && quantity > selectedSizeStock && (
+                    <div className="text-xs text-red-500 font-medium">
+                      Maximum quantity: {selectedSizeStock}
+                    </div>
+                  )}
+                  
                   <button
                     type="button"
                     className="flex-1 border border-gray-400 rounded-md h-10 text-gray-900 font-semibold bg-white hover:bg-gray-100 transition text-sm"
-                    disabled={!selectedSize || selectedSizeStock === 0}
+                    disabled={!selectedSize || selectedSizeStock === 0 || quantity > selectedSizeStock}
                     onClick={() => {
                       if (!product) return;
                       addToCart({
@@ -477,7 +465,7 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
                 <button
                   type="button"
                   className="w-full h-12 rounded-md bg-[#473C66] hover:bg-[#3a3054] text-white font-bold text-base tracking-wide transition shadow-md"
-                  disabled={!selectedSize || selectedSizeStock === 0}
+                  disabled={!selectedSize || selectedSizeStock === 0 || quantity > selectedSizeStock}
                   onClick={handleBuyNow}
                 >
                   BUY IT NOW

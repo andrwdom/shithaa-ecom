@@ -153,11 +153,19 @@ export default function CartSidebar() {
                             variant="outline"
                             size="sm"
                             onClick={() => updateCartItem(item._id, item.size, item.quantity + 1, stock)}
-                            className="h-8 w-8 p-0"
+                            disabled={stock !== undefined && item.quantity >= stock}
+                            className="h-8 w-8 p-0 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             <Plus className="h-3 w-3" />
                           </Button>
                         </div>
+                        
+                        {/* Stock warning if quantity reaches limit */}
+                        {stock !== undefined && item.quantity >= stock && (
+                          <div className="text-xs text-red-500 font-medium mt-1">
+                            Max quantity reached ({stock} in stock)
+                          </div>
+                        )}
                         <Button
                           variant="ghost"
                           size="sm"
