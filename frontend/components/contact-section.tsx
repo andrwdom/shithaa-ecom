@@ -64,23 +64,25 @@ export default function ContactSection() {
   const contactMethods = [
     {
       icon: Mail,
-      title: "Email Us",
-      subtitle: "We reply within 24 hours",
+      title: "General Inquiries",
+      subtitle: "Questions about products, orders, or shipping",
       value: "info.shithaa@gmail.com",
       action: () => window.open("mailto:info.shithaa@gmail.com"),
       bgColor: "bg-purple-50",
       iconColor: "text-purple-600",
       hoverColor: "hover:bg-purple-100",
+      subValue: undefined,
     },
     {
       icon: Instagram,
-      title: "Instagram DM",
-      subtitle: "Best for refunds & quick support",
+      title: "Instagram Support",
+      subtitle: "Quick questions and product assistance",
       value: "@shithaa.in",
       action: () => window.open("https://www.instagram.com/shithaa.in", "_blank"),
       bgColor: "bg-pink-50",
       iconColor: "text-pink-600",
       hoverColor: "hover:bg-pink-100",
+      subValue: undefined,
     },
 
   ]
@@ -255,14 +257,14 @@ export default function ContactSection() {
                   </Button>
                 </form>
 
-                {/* Refund & Support CTA */}
+                {/* Customer Support CTA */}
                 <div className="mt-6 space-y-4">
                   <div className="p-4 bg-gradient-to-r from-pink-50 to-purple-50 rounded-xl border border-pink-200">
                     <div className="flex items-center gap-3">
                       <Instagram className="h-5 w-5 text-pink-600" />
                       <div className="flex-1">
-                        <p className="text-sm font-medium text-pink-800">Need a Refund or Have Questions?</p>
-                        <p className="text-xs text-pink-600">Instagram DM is the fastest way to reach us!</p>
+                        <p className="text-sm font-medium text-pink-800">Quick Questions or Product Help?</p>
+                        <p className="text-xs text-pink-600">Instagram DM for fastest response on general inquiries!</p>
                       </div>
                       <Button
                         type="button"
@@ -276,8 +278,8 @@ export default function ContactSection() {
                   </div>
                   
                   <div className="text-center text-sm text-gray-600">
-                    <p>💝 For refunds, exchanges, or urgent queries - Instagram DM gets the fastest response!</p>
-                    <p className="text-xs mt-1">📧 For general inquiries, use the form above and we'll email you back within 24 hours.</p>
+                    <p>💝 For product questions, sizing help, or general inquiries - Instagram DM gets the fastest response!</p>
+                    <p className="text-xs mt-1">📧 For detailed questions or order support, use the form above and we'll email you back within 24 hours.</p>
                   </div>
                 </div>
               </CardContent>

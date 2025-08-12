@@ -135,7 +135,8 @@ export default function ShippingInfoPage() {
               For any shipping-related questions, contact us at{" "}
               <a href="mailto:info.shithaa@gmail.com" className="text-[#473C66] hover:underline">
                 info.shithaa@gmail.com
-              </a>
+              </a>{" "}
+              or DM us on Instagram for faster response.
             </p>
           </div>
         </div>

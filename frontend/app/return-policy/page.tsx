@@ -34,15 +34,21 @@ export default function ReturnPolicyPage() {
       <div className="max-w-4xl w-full bg-white rounded-xl shadow-lg p-8">
         <h1 className="text-3xl md:text-4xl font-bold mb-6 text-center text-gray-800">Return & Exchange Policy</h1>
         
-        <div className="text-gray-700 space-y-6">
-          <div className="bg-red-50 rounded-lg p-6 mb-6">
-            <h2 className="text-xl font-semibold text-red-800 mb-3">🔄 Refund & Exchange Policy</h2>
-            <p className="text-red-700 text-lg leading-relaxed">
-              At Shithaa, we are committed to providing you with the highest quality maternity wear. 
-              <strong> Refunds and exchanges are only applicable for products that are damaged or defective upon delivery.</strong> 
-              We do not offer refunds or exchanges for change of mind, incorrect sizing, or any other reasons unrelated to product quality or damage.
-            </p>
-          </div>
+        <p className="text-gray-600 mb-6">
+          At Shithaa, we are committed to providing you with the highest quality maternity wear. 
+          Our refund and exchange policy is designed to ensure customer satisfaction while maintaining 
+          the integrity of our products.
+        </p>
+        
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8">
+          <h3 className="text-lg font-semibold text-blue-800 mb-3">📋 Important Refund Criteria</h3>
+          <ul className="text-blue-700 space-y-2">
+            <li>• Refunds are <strong>only</strong> available for damaged or defective products</li>
+            <li>• Products must be in original, unused condition</li>
+            <li>• Refund requests must be made within 2 days of receiving your order</li>
+            <li>• All refunds are subject to review and approval</li>
+          </ul>
+        </div>
 
           <div className="grid md:grid-cols-2 gap-6">
             <div className="bg-green-50 rounded-lg p-4">
@@ -124,7 +130,6 @@ export default function ReturnPolicyPage() {
             </p>
           </div>
         </div>
-      </div>
     </main>
   )
 }

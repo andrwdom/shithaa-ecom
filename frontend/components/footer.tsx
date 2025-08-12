@@ -20,10 +20,12 @@ export default function Footer() {
             <div className="w-16 h-16 mx-auto mb-6 bg-gray-800 rounded-lg flex items-center justify-center group-hover:bg-gray-700 transition-colors duration-300">
               <RotateCcw className="h-8 w-8 text-white" />
             </div>
-            <h3 className="font-bold mb-3 text-lg font-serif">Refund Policy</h3>
-            <p className="text-gray-400 text-sm lg:text-base">
-              Refunds accepted within 2 days of receiving your order. DM us on Instagram or email info.shithaa@gmail.com.
-            </p>
+            <div className="space-y-4 text-sm lg:text-base">
+              <h3 className="font-bold mb-3 text-lg font-serif">Customer Support</h3>
+              <p className="text-gray-400 text-sm lg:text-base">
+                Need help with your order or have questions? Contact us via Instagram DM or email info.shithaa@gmail.com.
+              </p>
+            </div>
           </div>
           <div className="text-center group">
             <div className="w-16 h-16 mx-auto mb-6 bg-gray-800 rounded-lg flex items-center justify-center group-hover:bg-gray-700 transition-colors duration-300">

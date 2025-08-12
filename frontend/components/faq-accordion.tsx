@@ -18,7 +18,7 @@ export default function FAQAccordion() {
     {
       question: "What is your return policy?",
       answer:
-        "Refunds and exchanges are only applicable for damaged products. Contact us via Instagram direct message (preferred) or email us at info.shithaa@gmail.com. Refund requests made after 2 days from the date you receive your order will not be eligible.",
+        "Refunds and exchanges are only applicable for damaged or defective products. Contact us via Instagram direct message (preferred) or email us at info.shithaa@gmail.com. Please note that refunds are subject to our policy terms and conditions.",
     },
     {
       question: "How long does delivery take?",
