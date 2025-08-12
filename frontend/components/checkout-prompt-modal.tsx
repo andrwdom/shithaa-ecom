@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import Image from "next/image"
 import React from "react"
-import { useCart } from "@/components/cart-context"
 
 interface CheckoutPromptModalProps {
   isOpen: boolean
@@ -33,23 +32,7 @@ export default function CheckoutPromptModal({
   selectedImageIndex = 0,
 }: CheckoutPromptModalProps) {
   const [activeIndex, setActiveIndex] = React.useState(selectedImageIndex)
-  const { refreshCartData } = useCart()
-  
   React.useEffect(() => { setActiveIndex(selectedImageIndex) }, [selectedImageIndex])
-  
-  // Handle checkout with data refresh
-  const handleCheckout = async () => {
-    try {
-      // Refresh cart data before proceeding to checkout
-      await refreshCartData();
-      onCheckout();
-    } catch (error) {
-      console.error("Error refreshing cart data:", error);
-      // Still proceed to checkout even if refresh fails
-      onCheckout();
-    }
-  };
-  
   if (!isOpen || !product) return null
 
   return (
@@ -92,7 +75,7 @@ export default function CheckoutPromptModal({
             {/* Action Buttons */}
             <div className="space-y-3">
               <Button
-                onClick={handleCheckout}
+                onClick={onCheckout}
                 size="lg"
                 className="w-full bg-[rgb(71,60,102)] hover:bg-[rgb(71,60,102)]/90 text-white py-3 rounded-xl font-semibold"
               >

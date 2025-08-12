@@ -5,9 +5,9 @@ import CouponInput from './CouponInput'
 import OrderSummary from './OrderSummary'
 import PlaceOrderButton from './PlaceOrderButton'
 import { useCart } from '@/components/cart-context'
-import { useBuyNow, CheckoutMode } from '@/components/buy-now-context'
+import { useBuyNow } from '@/components/buy-now-context'
 import Link from 'next/link'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import PageLoading from '@/components/page-loading';
 import Script from 'next/script';
 import { useAuth } from '@/components/auth/useAuth'
@@ -40,98 +40,42 @@ export default function CheckoutPage() {
   // Centralized state for all forms and summary
   const [shipping, setShipping] = useState<any>({})
   const [coupon, setCoupon] = useState<any>(null)
-  const [checkoutItems, setCheckoutItems] = useState<any[]>([])
+  const [cartItems, setCartItems] = useState<any[]>([])
   const [errors, setErrors] = useState<any>({})
   const [loading, setLoading] = useState(false)
   const [orderSummary, setOrderSummary] = useState<any>({ subtotal: 0, discount: 0, shipping: 0, total: 0 })
   const router = useRouter()
-  const searchParams = useSearchParams()
   const [processing, setProcessing] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
-  const [isLoadingData, setIsLoadingData] = useState(true);
   const { user } = useAuth();
 
-  const { cartItems: contextCartItems, cartTotal, cartSubtotal, offerDetails, refreshCartData } = useCart()
-  const { buyNowItem, checkoutMode, setCheckoutMode, resetCheckoutMode } = useBuyNow()
+  const { cartItems: contextCartItems, cartTotal, cartSubtotal, offerDetails } = useCart()
+  const { buyNowItem } = useBuyNow()
 
-  // CRITICAL FIX: Always fetch fresh data and determine checkout mode on mount
   useEffect(() => {
-    const initializeCheckout = async () => {
-      setIsLoadingData(true);
-      try {
-        // Check URL params for explicit mode
-        const urlMode = searchParams.get('mode');
-        
-        if (urlMode === 'buynow' && buyNowItem) {
-          // Buy Now mode - ensure we're in buy now mode
-          setCheckoutMode('buyNow');
-          setCheckoutItems([buyNowItem]);
-          console.log('Checkout initialized in Buy Now mode with:', buyNowItem);
-        } else if (buyNowItem && checkoutMode === 'buyNow') {
-          // Buy Now mode from context
-          setCheckoutItems([buyNowItem]);
-          console.log('Checkout initialized in Buy Now mode from context with:', buyNowItem);
-        } else {
-          // Cart mode - always fetch fresh cart data
-          setCheckoutMode('cart');
-          await refreshCartData();
-          setCheckoutItems(contextCartItems);
-          console.log('Checkout initialized in Cart mode with fresh data');
-        }
-      } catch (error) {
-        console.error("Error initializing checkout:", error);
-        // Fallback to cart mode
-        setCheckoutMode('cart');
-        setCheckoutItems(contextCartItems);
-      } finally {
-        setIsLoadingData(false);
-      }
-    };
-
-    initializeCheckout();
-  }, []); // Only run on mount
-
-  // Update checkout items when context data changes
-  useEffect(() => {
-    if (checkoutMode === 'buyNow' && buyNowItem) {
-      setCheckoutItems([buyNowItem]);
-    } else if (checkoutMode === 'cart') {
-      setCheckoutItems(contextCartItems);
+    // Detect buy-now or cart
+    if (buyNowItem) {
+      setCartItems([buyNowItem])
+    } else {
+      setCartItems(contextCartItems)
     }
-  }, [checkoutMode, buyNowItem, contextCartItems]);
-
-  // Clear checkout mode when leaving checkout page
-  useEffect(() => {
-    return () => {
-      // Reset checkout mode when component unmounts
-      resetCheckoutMode();
-    };
-  }, [resetCheckoutMode]);
-
-  // Additional safeguard: Check if we have valid items after initialization
-  useEffect(() => {
-    if (!isLoadingData && checkoutItems.length === 0) {
-      // No valid items found, redirect back to home
-      console.log("No valid items found in checkout, redirecting to home");
-      router.push("/");
-    }
-  }, [checkoutItems, isLoadingData, router]);
+  }, [buyNowItem, contextCartItems])
 
   useEffect(() => {
     // Subtotal should be the original sum before offers
-    const rawSubtotal = (typeof cartSubtotal === 'number' && cartSubtotal > 0 && checkoutMode === 'cart')
+    const rawSubtotal = (typeof cartSubtotal === 'number' && cartSubtotal > 0)
       ? cartSubtotal
-      : checkoutItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+      : cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
-    // Offer discount from backend calculation (only for cart mode)
-    const offerDiscount = (checkoutMode === 'cart' && offerDetails?.offerDiscount) ? offerDetails.offerDiscount : 0;
+    // Offer discount from backend calculation
+    const offerDiscount = offerDetails?.offerDiscount || 0;
 
     // Apply coupon on the amount after offer discount
     const amountAfterOffer = rawSubtotal - offerDiscount;
     const couponDiscount = coupon ? Math.round((amountAfterOffer * coupon.discountPercentage) / 100) : 0;
 
     // Calculate shipping using new shipping logic
-    const shippingCalculation = calculateShippingCost(checkoutItems, shipping as ShippingInfo);
+    const shippingCalculation = calculateShippingCost(cartItems, shipping as ShippingInfo);
     const shippingCost = shippingCalculation.shippingCost;
 
     // Final total: use computed values to avoid drift
@@ -145,7 +89,7 @@ export default function CheckoutPage() {
       shippingMessage: shippingCalculation.shippingMessage,
       isFreeShipping: shippingCalculation.isFreeShipping
     });
-  }, [checkoutItems, coupon, shipping, cartSubtotal, offerDetails, checkoutMode]);
+  }, [cartItems, coupon, shipping, cartSubtotal, offerDetails]);
 
   // PhonePe payment handler
   async function handlePhonePePayment() {
@@ -164,7 +108,7 @@ export default function CheckoutPage() {
         body: JSON.stringify({
           amount: orderSummary.total,
           shipping,
-          cartItems: checkoutItems,
+          cartItems,
           coupon,
           userId: user?.mongoId,
           email: user?.email,
@@ -197,7 +141,7 @@ export default function CheckoutPage() {
             email: user?.email || '',
           },
           shippingInfo: shipping,
-          items: checkoutItems,
+          items: cartItems,
           couponUsed: coupon ? { code: coupon.code, discount: coupon.discountPercentage || 0 } : null,
           totalAmount: orderSummary.total,
           paymentStatus: 'test-paid',
@@ -208,104 +152,92 @@ export default function CheckoutPage() {
       if (orderRes.ok && orderData.order && orderData.order.orderId) {
         router.push(`/order-success?orderId=${orderData.order.orderId}`);
       } else {
-        throw new Error('Failed to create order');
+        setPaymentError(orderData.message || 'Order save failed');
       }
     } catch (err: any) {
-      setPaymentError(err.message || 'Order creation failed. Try again.');
+      setPaymentError(err.message || 'Test payment failed.');
+    } finally {
       setProcessing(false);
     }
   }
 
-  if (isLoadingData) {
-    return <PageLoading loadingMessage="Loading Checkout...">
-      <div>Initializing checkout...</div>
-    </PageLoading>
-  }
-
-  if (checkoutItems.length === 0) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">No Items to Checkout</h1>
-          <p className="text-gray-600 mb-6">Your cart is empty or the buy now item is no longer available.</p>
-          <div className="space-x-4">
-            <Link href="/" className="inline-block bg-[#473C66] text-white px-6 py-3 rounded-full hover:bg-[#3a3054] transition">
-              Continue Shopping
-            </Link>
-            {checkoutMode === 'buyNow' && (
-              <button 
-                onClick={() => router.push("/")} 
-                className="inline-block border border-[#473C66] text-[#473C66] px-6 py-3 rounded-full hover:bg-[#473C66] hover:text-white transition"
-              >
-                Clear Buy Now
-              </button>
+  return (
+    <PageLoading loadingMessage="Loading Checkout..." minLoadingTime={1500}>
+      <div className="min-h-screen bg-gray-50 py-6 px-2 sm:px-4">
+        {/* Stepper/Progress Indicator */}
+        <div className="max-w-5xl mx-auto mb-8 px-4">
+          <ol className="flex items-center w-full text-sm font-medium text-gray-500">
+            <li className="flex-1 flex items-center gap-2">
+              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-[rgb(71,60,102)] text-white font-bold">1</span>
+              <span className="hidden sm:inline">Cart</span>
+              <span className="flex-1 h-1 bg-[rgb(71,60,102)] mx-2 rounded sm:block hidden"></span>
+            </li>
+            <li className="flex-1 flex items-center gap-2">
+              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-[rgb(71,60,102)] text-white font-bold ring-2 ring-[rgb(71,60,102)]/40">2</span>
+              <span className="text-[rgb(71,60,102)] font-semibold hidden sm:inline">Checkout</span>
+              <span className="flex-1 h-1 bg-gray-200 mx-2 rounded sm:block hidden"></span>
+            </li>
+            <li className="flex-1 flex items-center gap-2">
+              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-200 text-gray-400 font-bold">3</span>
+              <span className="hidden sm:inline">Payment</span>
+              <span className="flex-1 h-1 bg-gray-200 mx-2 rounded sm:block hidden"></span>
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-200 text-gray-400 font-bold">4</span>
+              <span className="hidden sm:inline">Complete</span>
+            </li>
+          </ol>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto mt-10 px-4">
+          {/* Left Section: Product Preview + Shipping Form Only */}
+          <div className="space-y-6">
+            <ProductPreviewSection items={cartItems} />
+            <ShippingForm value={shipping} onChange={setShipping} errors={errors.shipping} />
+            {/* CouponInput: show only on mobile/tablet */}
+            <div className="block md:hidden">
+              <CouponInput value={coupon} onApply={setCoupon} />
+            </div>
+            {paymentError && (
+              <div className="text-red-600 text-center font-semibold mb-2 flex flex-col items-center gap-2">
+                <span>{paymentError}</span>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline border-red-400 text-red-700 hover:bg-red-50 mt-2"
+                  onClick={handlePhonePePayment}
+                  disabled={processing}
+                >
+                  Retry PhonePe Payment
+                </button>
+              </div>
             )}
           </div>
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <Script
-        src="https://checkout.razorpay.com/v1/checkout.js"
-        strategy="beforeInteractive"
-      />
-      
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            {checkoutMode === 'buyNow' ? 'Buy Now Checkout' : 'Cart Checkout'}
-          </h1>
-          <p className="text-gray-600">
-            {checkoutMode === 'buyNow' 
-              ? 'Complete your purchase for this item' 
-              : 'Review your cart and complete your order'
-            }
-          </p>
-        </div>
-
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Left Column - Forms */}
-          <div className="lg:col-span-2 space-y-6">
-            <ProductPreviewSection 
-              items={checkoutItems} 
-              onEdit={() => router.push("/")}
-            />
-            
-            <ShippingForm 
-              shipping={shipping} 
-              setShipping={setShipping} 
-              errors={errors} 
-              setErrors={setErrors}
-            />
-            
-            <CouponInput 
-              coupon={coupon} 
-              setCoupon={setCoupon}
-            />
-          </div>
-
-          {/* Right Column - Order Summary */}
-          <div className="lg:col-span-1">
-            <OrderSummary 
-              cartItems={checkoutItems}
-              coupon={coupon}
-              summary={orderSummary}
-              offerDetails={checkoutMode === 'cart' ? offerDetails : null}
-            />
-            
-            <PlaceOrderButton 
-              onPhonePePayment={handlePhonePePayment}
-              onDummyPayment={handleDummyPayment}
-              processing={processing}
-              paymentError={paymentError}
-              disabled={checkoutItems.length === 0}
-            />
+          {/* Right Section: Order Summary + Confirm Button */}
+          <div className="space-y-4">
+            {/* CouponInput: show only on desktop */}
+            <div className="hidden md:block">
+              <CouponInput value={coupon} onApply={setCoupon} />
+            </div>
+            <OrderSummary cartItems={cartItems} coupon={coupon} summary={orderSummary} offerDetails={offerDetails} />
+            {/* Payment Buttons */}
+            <button
+              type="button"
+              className="w-full bg-[rgb(71,60,102)] hover:bg-[rgb(71,60,102)]/90 text-white text-lg font-semibold rounded-xl py-3 mt-4 transition disabled:opacity-60 disabled:cursor-not-allowed"
+              onClick={handlePhonePePayment}
+              disabled={processing}
+            >
+              {processing ? <span className="loading loading-spinner loading-md"></span> : 'Confirm Order (PhonePe)'}
+            </button>
+            <button
+              type="button"
+              className="w-full mt-2 text-sm bg-gray-100 text-gray-600 rounded-lg py-2 disabled:opacity-60 disabled:cursor-not-allowed"
+              onClick={handleDummyPayment}
+              disabled={processing}
+            >
+              {processing ? <span className="loading loading-spinner loading-md"></span> : 'Dummy Payment (Test)'}
+            </button>
           </div>
         </div>
       </div>
-    </div>
+    </PageLoading>
   )
 } 

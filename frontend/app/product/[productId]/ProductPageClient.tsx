@@ -7,14 +7,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Share2, Truck, Shield, RotateCcw, Plus, Minus, Star, ChevronRight } from "lucide-react"
 import Image from "next/image"
 import Script from "next/script"
-import ResponsiveImage from "@/components/responsive-image"
 import PageLoading from "@/components/page-loading"
 import { useCart } from "@/components/cart-context"
 import CheckoutPromptModal from "@/components/checkout-prompt-modal"
 import { useBuyNow } from "@/components/buy-now-context"
 import { safeFetch } from "@/lib/api-health"
 import WishlistButton from "@/components/WishlistButton"
-import { useRouter } from "next/navigation"
 
 interface Product {
   id: number
@@ -47,7 +45,6 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
   const [isCheckoutPromptOpen, setIsCheckoutPromptOpen] = useState(false)
   const [addedProduct, setAddedProduct] = useState<any>(null)
   const { setBuyNowItem } = useBuyNow()
-  const router = useRouter()
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -77,7 +74,7 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
             features: p.features || [],
             rating: p.rating,
             reviews: p.reviews,
-            stock: (p.sizes || []).reduce((sum: number, s: any) => sum + (s.stock || 0), 0),
+            stock: (p.sizes || []).reduce((sum, s) => sum + (s.stock || 0), 0),
             availableSizes: p.availableSizes || [],
           });
         }
@@ -105,34 +102,26 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
     };
   }, [productId])
 
-  const handleBuyNow = async () => {
+  const handleBuyNow = () => {
     if (!selectedSize) {
       alert("Please select a size first!")
       return
     }
     if (!product) return;
-    
-    // Set buy now item with fresh data
     setBuyNowItem({
       id: product.id,
-      _id: product.id.toString(),
+      _id: product.id,
       name: product.name,
       price: product.price,
       quantity,
       size: selectedSize,
       image: product.images[0] || "/placeholder.svg",
-      category: product.category,
-      categorySlug: product.category.toLowerCase().replace(/ /g, '-'),
     });
-    
-    // Navigate to checkout using router.push to avoid stale data
-    router.push("/checkout");
+    window.location.href = "/checkout?mode=buynow";
   }
 
   if (loading) {
-    return <PageLoading loadingMessage="Loading Product Details...">
-      <div>Loading...</div>
-    </PageLoading>
+    return <PageLoading loadingMessage="Loading Product Details..." />
   }
 
   if (!product) {
@@ -156,45 +145,11 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
       : [];
   const selectedSizeObj = product.sizes.find(s => s.size === selectedSize);
   const selectedSizeStock = selectedSizeObj ? selectedSizeObj.stock : 0;
-  
-  // Enhanced stock status logic
   let stockStatus = '';
-  let stockStatusColor = '';
-  if (!selectedSize) {
-    stockStatus = '';
-    stockStatusColor = '';
-  } else if (selectedSizeStock === 0) {
-    stockStatus = 'Out of Stock';
-    stockStatusColor = 'text-red-500';
-  } else if (selectedSizeStock <= 5) {
-    stockStatus = `Only ${selectedSizeStock} left!`;
-    stockStatusColor = 'text-orange-500';
-  } else {
-    stockStatus = 'In Stock';
-    stockStatusColor = 'text-green-600';
-  }
-
-  // Enhanced quantity validation
-  const handleQuantityChange = (newQuantity: number) => {
-    if (newQuantity < 1) return;
-    if (selectedSizeStock > 0 && newQuantity > selectedSizeStock) {
-      // Don't allow quantity higher than stock
-      return;
-    }
-    setQuantity(newQuantity);
-  };
-
-  const handleQuantityIncrease = () => {
-    if (selectedSizeStock > 0 && quantity < selectedSizeStock) {
-      setQuantity(quantity + 1);
-    }
-  };
-
-  const handleQuantityDecrease = () => {
-    if (quantity > 1) {
-      setQuantity(quantity - 1);
-    }
-  };
+  if (!selectedSize) stockStatus = '';
+  else if (selectedSizeStock > 5) stockStatus = 'In Stock';
+  else if (selectedSizeStock > 0) stockStatus = `Only ${selectedSizeStock} left!`;
+  else stockStatus = 'Out of Stock';
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -354,11 +309,10 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
           {/* Product Images */}
           <div className="space-y-4">
             <div className="relative aspect-[2/3] w-full max-w-md bg-white rounded-2xl overflow-hidden shadow-lg mx-auto">
-              <ResponsiveImage
-                imageUrls={product.images[selectedImage] || "/placeholder.svg"}
+              <Image
+                src={product.images[selectedImage] || "/placeholder.svg"}
                 alt={product.name}
                 fill
-                componentType="product-detail"
                 className="object-cover"
               />
               <button
@@ -385,12 +339,11 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
                       selectedImage === index ? "border-gray-900" : "border-gray-200"
                     }`}
                   >
-                    <ResponsiveImage
-                      imageUrls={image || "/placeholder.svg"}
+                    <Image
+                      src={image || "/placeholder.svg"}
                       alt={`${product.name} ${index + 1}`}
                       width={60}
                       height={90}
-                      componentType="product-detail"
                       className="object-cover w-full h-full"
                     />
                   </button>
@@ -478,7 +431,7 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
                   <div className="flex items-center border rounded-md overflow-hidden w-[110px]">
                     <button
                       type="button"
-                      onClick={handleQuantityDecrease}
+                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
                       disabled={quantity <= 1}
                       className="h-10 w-10 flex items-center justify-center text-lg font-bold text-gray-700 disabled:text-gray-300 bg-white hover:bg-gray-100 transition"
                     >
@@ -487,66 +440,38 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
                     <span className="flex-1 text-center text-base font-semibold text-gray-900 select-none">{quantity}</span>
                     <button
                       type="button"
-                      onClick={handleQuantityIncrease}
-                      disabled={selectedSizeStock > 0 && quantity >= selectedSizeStock}
-                      className="h-10 w-10 flex items-center justify-center text-lg font-bold text-gray-700 bg-white hover:bg-gray-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={() => setQuantity(quantity + 1)}
+                      className="h-10 w-10 flex items-center justify-center text-lg font-bold text-gray-700 bg-white hover:bg-gray-100 transition"
                     >
                       +
                     </button>
                   </div>
-                  <span className={`ml-4 text-base font-semibold ${stockStatusColor}`}>{stockStatus}</span>
-                  
-                  {/* Stock warning if quantity exceeds stock */}
-                  {selectedSize && selectedSizeStock > 0 && quantity > selectedSizeStock && (
-                    <span className="text-xs text-red-500 font-medium">
-                      Max: {selectedSizeStock}
-                    </span>
-                  )}
-                  
+                  <span className={`ml-4 text-base font-semibold ${selectedSize && selectedSizeStock === 0 ? 'text-red-500' : selectedSizeStock <= 5 && selectedSizeStock > 0 ? 'text-yellow-600' : 'text-green-600'}`}>{stockStatus}</span>
                   <button
                     type="button"
-                    className="flex-1 border border-gray-400 rounded-md h-10 text-gray-900 font-semibold bg-white hover:bg-gray-100 transition text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={!selectedSize || selectedSizeStock === 0 || (selectedSizeStock > 0 && quantity > selectedSizeStock)}
-                    onClick={async () => {
+                    className="flex-1 border border-gray-400 rounded-md h-10 text-gray-900 font-semibold bg-white hover:bg-gray-100 transition text-sm"
+                    disabled={!selectedSize || selectedSizeStock === 0}
+                    onClick={() => {
                       if (!product) return;
-                      try {
-                        const selectedSizeData = product.sizes.find(s => s.size === selectedSize);
-                        const stock = selectedSizeData?.stock || 0;
-                        
-                        // Final stock validation before adding to cart
-                        if (stock === 0) {
-                          alert('This size is out of stock');
-                          return;
-                        }
-                        
-                        if (quantity > stock) {
-                          alert(`Cannot add more than ${stock} in stock for this size.`);
-                          return;
-                        }
-                        
-                        await addToCart({
-                          id: product.id.toString(),
-                          _id: product.id.toString(),
-                          name: product.name,
-                          price: product.price,
-                          quantity,
-                          size: selectedSize,
-                          image: product.images[0] || "/placeholder.svg",
-                          category: product.category,
-                          categorySlug: product.category.toLowerCase().replace(/ /g, '-'),
-                        }, false, stock);
-                        
-                        setAddedProduct({
-                          name: product.name,
-                          price: product.price,
-                          image: product.images[0] || "/placeholder.svg",
-                          size: selectedSize,
-                          quantity,
-                        });
-                        setIsCheckoutPromptOpen(true);
-                      } catch (error) {
-                        console.error('Error adding to cart:', error);
-                      }
+                      addToCart({
+                        id: product._id,
+                        _id: product._id,
+                        name: product.name,
+                        price: product.price,
+                        quantity,
+                        size: selectedSize,
+                        image: product.images[0] || "/placeholder.svg",
+                        category: product.category,
+                        categorySlug: product.categorySlug,
+                      }, false);
+                      setAddedProduct({
+                        name: product.name,
+                        price: product.price,
+                        image: product.images[0] || "/placeholder.svg",
+                        size: selectedSize,
+                        quantity,
+                      });
+                      setIsCheckoutPromptOpen(true);
                     }}
                   >
                     ADD TO CART
@@ -555,8 +480,8 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
                 {/* Buy it now */}
                 <button
                   type="button"
-                  className="w-full h-12 rounded-md bg-[#473C66] hover:bg-[#3a3054] text-white font-bold text-base tracking-wide transition shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={!selectedSize || selectedSizeStock === 0 || (selectedSizeStock > 0 && quantity > selectedSizeStock)}
+                  className="w-full h-12 rounded-md bg-[#473C66] hover:bg-[#3a3054] text-white font-bold text-base tracking-wide transition shadow-md"
+                  disabled={!selectedSize || selectedSizeStock === 0}
                   onClick={handleBuyNow}
                 >
                   BUY IT NOW
@@ -577,8 +502,8 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
                     <span className="text-sm font-medium">Secure Checkout</span>
                   </div>
                   <div className="flex items-center gap-3">
-                    <RotateCcw className="h-5 w-6 text-gray-600" />
-                    <span className="text-sm font-medium">Refunds & exchanges for damaged products only</span>
+                    <RotateCcw className="h-5 w-5 text-gray-600" />
+                    <span className="text-sm font-medium">Refunds accepted within 2 days of receiving your order</span>
                   </div>
                 </div>
               </CardContent>
@@ -596,8 +521,7 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
         }}
         onCheckout={() => {
           setIsCheckoutPromptOpen(false);
-          // The checkout prompt modal will handle data refresh before navigation
-          // No need to modify this as the modal now handles it internally
+          window.location.href = "/checkout";
         }}
         product={addedProduct}
         images={product.images}

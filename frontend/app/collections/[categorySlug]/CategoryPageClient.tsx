@@ -261,11 +261,11 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
   }, [products, searchQuery, sortBy, sleeveTypeFilter])
 
   const handleProductClick = (productId: string) => {
-    router.push(`/product/${productId}`)
+    window.location.href = `/product/${productId}`
   }
 
   const handleCategorySelect = (slug: string) => {
-    router.push(`/collections/${slug}`)
+    window.location.href = `/collections/${slug}`
   }
 
   const handleAddToCart = (product: Product) => {
@@ -283,18 +283,7 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
     setIsSizeSelectionOpen(true);
   }
 
-  const handleSizeSelectionAddToCart = (product: any, size: string, quantity: number, stock: number) => {
-    // Validate stock before adding to cart
-    if (stock <= 0) {
-      alert('This size is out of stock');
-      return;
-    }
-    
-    if (quantity > stock) {
-      alert(`Cannot add more than ${stock} in stock for this size.`);
-      return;
-    }
-    
+  const handleSizeSelectionAddToCart = (product: any, size: string, quantity: number, _stock: number) => {
     addToCart({
       id: product._id || product.id,
       _id: product._id || product.id,
@@ -305,8 +294,7 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
       image: product.image,
       category: product.category,
       categorySlug: product.categorySlug,
-    }, false, stock); // Pass stock for validation
-    
+    });
     setAddedProduct({
       name: product.name,
       price: product.price,
@@ -318,20 +306,6 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
   };
 
   const handleSizeSelectionBuyNow = (product: any, size: string, quantity: number) => {
-    // Validate stock before proceeding to checkout
-    const sizeData = product.sizes?.find((s: any) => s.size === size);
-    const stock = sizeData?.stock || 0;
-    
-    if (stock <= 0) {
-      alert('This size is out of stock');
-      return;
-    }
-    
-    if (quantity > stock) {
-      alert(`Cannot buy more than ${stock} in stock for this size.`);
-      return;
-    }
-    
     setBuyNowItem({
       id: product._id || product.id,
       _id: product._id || product.id,
@@ -343,13 +317,11 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
       category: product.category,
       categorySlug: product.categorySlug,
     });
-    // Navigate to checkout using router.push to avoid stale data
-    router.push("/checkout");
+    window.location.href = "/checkout?mode=buynow";
   };
 
   const handleCheckout = () => {
-    // Navigate to checkout using router.push to avoid stale data
-    router.push("/checkout");
+    window.location.href = "/checkout";
   }
 
   // Check if any filters are active
@@ -460,12 +432,12 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
             {/* Breadcrumb */}
             <div className="px-4 sm:px-6 lg:px-8 py-6 w-full">
               <div className="flex items-center space-x-2 text-sm text-gray-600">
-                <Button variant="ghost" size="sm" onClick={() => router.push("/")}>
+                <Button variant="ghost" size="sm" onClick={() => (window.location.href = "/")}>
                   <Home className="h-4 w-4 mr-1" />
                   Home
                 </Button>
                 <ChevronRight className="h-4 w-4" />
-                <Button variant="ghost" size="sm" onClick={() => router.push("/collections")}>
+                <Button variant="ghost" size="sm" onClick={() => (window.location.href = "/collections")}>
                   Collections
                 </Button>
                 <ChevronRight className="h-4 w-4" />
