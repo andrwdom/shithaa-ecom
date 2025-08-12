@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { useCart } from "./cart-context";
 
 export interface BuyNowItem {
   id: number;
@@ -22,6 +23,7 @@ const BuyNowContext = createContext<BuyNowContextType | undefined>(undefined);
 
 export function BuyNowProvider({ children }: { children: React.ReactNode }) {
   const [buyNowItem, setBuyNowItemState] = useState<BuyNowItem | null>(null);
+  const { cartItems } = useCart();
 
   // Persist in sessionStorage for reloads
   useEffect(() => {
@@ -37,6 +39,15 @@ export function BuyNowProvider({ children }: { children: React.ReactNode }) {
     }
   }, [buyNowItem]);
 
+  // Auto-clear buy-now when cart operations occur (ensuring proper flow separation)
+  useEffect(() => {
+    if (buyNowItem && cartItems.length > 0) {
+      // If user has items in cart and tries to buy now, clear buy-now to avoid confusion
+      // This ensures checkout always shows the intended items
+      clearBuyNowItem();
+    }
+  }, [cartItems.length]);
+
   function setBuyNowItem(item: BuyNowItem | null) {
     setBuyNowItemState(item);
   }
@@ -47,7 +58,7 @@ export function BuyNowProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <BuyNowContext.Provider value={{ buyNowItem, setBuyNowItem, clearBuyNowItem }}>
+    < BuyNowContext.Provider value={{ buyNowItem, setBuyNowItem, clearBuyNowItem }}>
       {children}
     </BuyNowContext.Provider>
   );

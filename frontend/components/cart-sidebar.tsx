@@ -5,6 +5,7 @@ import { X, Plus, Minus, ShoppingBag, Gift } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
 import { useCart, CartItem } from "@/components/cart-context"
+import { useBuyNow } from "@/components/buy-now-context"
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -19,6 +20,7 @@ export default function CartSidebar() {
     offerDetails,
     isLoadingOffer
   } = useCart();
+  const { clearBuyNowItem } = useBuyNow();
   const [productStocks, setProductStocks] = useState<Record<string, Record<string, number>>>({});
   const router = useRouter();
 
@@ -46,6 +48,15 @@ export default function CartSidebar() {
     }
     if (isCartSidebarOpen && cartItems.length > 0) fetchStocks();
   }, [isCartSidebarOpen, cartItems]);
+
+  // Function to handle checkout from cart
+  const handleProceedToCheckout = () => {
+    // Clear any buy-now state to ensure checkout shows cart contents
+    clearBuyNowItem();
+    // Close sidebar and navigate to checkout
+    closeCartSidebar();
+    router.push('/checkout');
+  };
 
   if (!isCartSidebarOpen) return null;
 
@@ -210,7 +221,7 @@ export default function CartSidebar() {
             <div className="text-xs text-gray-500 text-center mb-4">
               Shipping calculated based on your location and items
             </div>
-            <Button className="w-full bg-[rgb(71,60,102)] hover:bg-[rgb(71,60,102)]/90 text-white py-3 rounded-xl font-semibold" onClick={() => { window.location.href = "/checkout"; }}>
+            <Button className="w-full bg-[rgb(71,60,102)] hover:bg-[rgb(71,60,102)]/90 text-white py-3 rounded-xl font-semibold" onClick={handleProceedToCheckout}>
               Proceed to Checkout
             </Button>
             <Button

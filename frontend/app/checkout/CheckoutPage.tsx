@@ -49,17 +49,36 @@ export default function CheckoutPage() {
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const { user } = useAuth();
 
-  const { cartItems: contextCartItems, cartTotal, cartSubtotal, offerDetails } = useCart()
-  const { buyNowItem } = useBuyNow()
+  const { cartItems: contextCartItems, cartTotal, cartSubtotal, offerDetails, notifyCheckoutCartChanged } = useCart()
+  const { buyNowItem, clearBuyNowItem } = useBuyNow()
 
+  // Real-time sync between cart and buy-now states
   useEffect(() => {
-    // Detect buy-now or cart
+    // Determine which items to show based on current state
     if (buyNowItem) {
+      // Buy Now flow: show only the buy-now item
       setCartItems([buyNowItem])
+      console.log('Checkout: Using Buy Now item:', buyNowItem)
     } else {
+      // Cart flow: show cart items
       setCartItems(contextCartItems)
+      console.log('Checkout: Using Cart items:', contextCartItems)
     }
   }, [buyNowItem, contextCartItems])
+
+  // Clear buy-now when user navigates away or completes checkout
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (buyNowItem) {
+        clearBuyNowItem()
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+    }
+  }, [buyNowItem, clearBuyNowItem])
 
   useEffect(() => {
     // Subtotal should be the original sum before offers
@@ -150,6 +169,10 @@ export default function CheckoutPage() {
       });
       const orderData = await orderRes.json();
       if (orderRes.ok && orderData.order && orderData.order.orderId) {
+        // Clear buy-now state on successful order
+        if (buyNowItem) {
+          clearBuyNowItem()
+        }
         router.push(`/order-success?orderId=${orderData.order.orderId}`);
       } else {
         setPaymentError(orderData.message || 'Order save failed');
@@ -169,7 +192,7 @@ export default function CheckoutPage() {
           <ol className="flex items-center w-full text-sm font-medium text-gray-500">
             <li className="flex-1 flex items-center gap-2">
               <span className="flex items-center justify-center w-8 h-8 rounded-full bg-[rgb(71,60,102)] text-white font-bold">1</span>
-              <span className="hidden sm:inline">Cart</span>
+              <span className="hidden sm:inline">{buyNowItem ? 'Product' : 'Cart'}</span>
               <span className="flex-1 h-1 bg-[rgb(71,60,102)] mx-2 rounded sm:block hidden"></span>
             </li>
             <li className="flex-1 flex items-center gap-2">

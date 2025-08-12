@@ -35,6 +35,8 @@ interface CartContextType {
   cartSubtotal: number
   offerDetails: OfferDetails | null
   isLoadingOffer: boolean
+  // Add function to notify checkout that cart has changed
+  notifyCheckoutCartChanged: () => void
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined)
@@ -48,6 +50,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cartSubtotal, setCartSubtotal] = useState(0)
   const [offerDetails, setOfferDetails] = useState<OfferDetails | null>(null)
   const [isLoadingOffer, setIsLoadingOffer] = useState(false)
+  // Add state to track cart changes for checkout
+  const [cartChangeCounter, setCartChangeCounter] = useState(0)
 
   // Load cart from localStorage on mount
   useEffect(() => {
@@ -68,6 +72,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     console.log("CartProvider: Saving cart to localStorage:", cartItems)
     localStorage.setItem("cartItems", JSON.stringify(cartItems))
+    // Increment counter to notify checkout of cart changes
+    setCartChangeCounter(prev => prev + 1)
   }, [cartItems])
 
   // Calculate cart total and check for offers when cart changes
@@ -178,6 +184,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem("cartItems")
   }
 
+  // Function to notify checkout that cart has changed
+  function notifyCheckoutCartChanged() {
+    setCartChangeCounter(prev => prev + 1)
+  }
+
   const contextValue: CartContextType = {
     cartItems, 
     addToCart, 
@@ -190,7 +201,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     cartTotal,
     cartSubtotal,
     offerDetails,
-    isLoadingOffer
+    isLoadingOffer,
+    notifyCheckoutCartChanged
   }
 
   console.log("CartProvider: Providing context value:", contextValue)

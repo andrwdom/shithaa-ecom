@@ -20,7 +20,8 @@ export default function CheckoutClient() {
   const { buyNowItem, clearBuyNowItem } = useBuyNow();
   const searchParams = useSearchParams();
   const isBuyNow = searchParams.get("mode") === "buynow" && !!buyNowItem;
-  const checkoutItems = isBuyNow ? [buyNowItem] : cartItems;
+  // Real-time sync: determine checkout items based on current state
+  const checkoutItems = buyNowItem ? [buyNowItem] : cartItems;
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
@@ -77,6 +78,20 @@ export default function CheckoutClient() {
       }));
     }
   }, [user]);
+
+  // Clear buy-now when user navigates away or completes checkout
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (buyNowItem) {
+        clearBuyNowItem();
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [buyNowItem, clearBuyNowItem]);
 
   // Calculate discounted total using cartTotal from context
   const subtotal = cartTotal || checkoutItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -303,8 +318,12 @@ export default function CheckoutClient() {
       }
       const data = await res.json();
       if (data.success) {
-        if (isBuyNow) clearBuyNowItem();
-        else clearCart();
+        // Clear appropriate state based on checkout type
+        if (isBuyNow) {
+          clearBuyNowItem();
+        } else {
+          clearCart();
+        }
         router.push("/order-success");
       } else {
         setError(data.message || "Order failed.");
@@ -323,7 +342,9 @@ export default function CheckoutClient() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 py-8 px-2">
         <Card className="w-full max-w-2xl shadow-xl border-0">
           <CardHeader className="pb-2">
-            <CardTitle className="text-3xl font-bold text-[rgb(71,60,102)]">Checkout</CardTitle>
+            <CardTitle className="text-3xl font-bold text-[rgb(71,60,102)]">
+              Checkout {isBuyNow ? '(Buy Now)' : '(Cart)'}
+            </CardTitle>
           </CardHeader>
           <Separator />
           <form onSubmit={handleProtectedSubmit}>
@@ -368,7 +389,9 @@ export default function CheckoutClient() {
               </div>
               <Separator />
               <div>
-                <h2 className="font-semibold mb-2 text-lg text-[rgb(71,60,102)]">Your Cart</h2>
+                <h2 className="font-semibold mb-2 text-lg text-[rgb(71,60,102)]">
+                  {isBuyNow ? 'Product Details' : 'Your Cart'}
+                </h2>
                 {isBuyNow && (
                   <Alert variant="default" className="mb-4">
                     <AlertDescription>
