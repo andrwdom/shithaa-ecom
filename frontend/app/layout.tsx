@@ -181,8 +181,10 @@ export default function RootLayout({
         <ServerErrorBoundary>
           <ErrorBoundary>
             <Providers>
-              <LayoutClient>{children}</LayoutClient>
-              <CartSidebar />
+              <LayoutClient>
+                {children}
+                <CartSidebar />
+              </LayoutClient>
             </Providers>
           </ErrorBoundary>
         </ServerErrorBoundary>

@@ -16,13 +16,7 @@ export interface CartItem {
 
 export interface OfferDetails {
   offerApplied: boolean;
-  offerDetails: {
-    completeSets: number;
-    remainingItems: number;
-    offerPrice: number;
-    originalPrice: number;
-    savings: number;
-  } | null;
+  offerDetails: any;
   offerDiscount: number;
   loungewearCount: number;
   otherItemsCount: number;
@@ -46,6 +40,8 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined)
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
+  console.log("CartProvider initializing...")
+  
   const [cartItems, setCartItems] = useState<CartItem[]>([])
   const [isCartSidebarOpen, setIsCartSidebarOpen] = useState(false)
   const [cartTotal, setCartTotal] = useState(0)
@@ -55,12 +51,22 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   // Load cart from localStorage on mount
   useEffect(() => {
+    console.log("CartProvider: Loading cart from localStorage")
     const stored = localStorage.getItem("cartItems")
-    if (stored) setCartItems(JSON.parse(stored))
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored)
+        console.log("CartProvider: Loaded cart items:", parsed)
+        setCartItems(parsed)
+      } catch (error) {
+        console.error("CartProvider: Error parsing stored cart:", error)
+      }
+    }
   }, [])
 
   // Save cart to localStorage on change
   useEffect(() => {
+    console.log("CartProvider: Saving cart to localStorage:", cartItems)
     localStorage.setItem("cartItems", JSON.stringify(cartItems))
   }, [cartItems])
 
@@ -73,6 +79,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       setOfferDetails(null)
     }
   }, [cartItems])
+
+  console.log("CartProvider: Rendering with cartItems:", cartItems)
 
   // Function to calculate cart total with offers
   const calculateCartTotalWithOffers = async () => {
@@ -170,30 +178,42 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem("cartItems")
   }
 
+  const contextValue: CartContextType = {
+    cartItems, 
+    addToCart, 
+    updateCartItem, 
+    removeFromCart, 
+    isCartSidebarOpen, 
+    openCartSidebar, 
+    closeCartSidebar, 
+    clearCart,
+    cartTotal,
+    cartSubtotal,
+    offerDetails,
+    isLoadingOffer
+  }
+
+  console.log("CartProvider: Providing context value:", contextValue)
+
   return (
-    <CartContext.Provider
-      value={{ 
-        cartItems, 
-        addToCart, 
-        updateCartItem, 
-        removeFromCart, 
-        isCartSidebarOpen, 
-        openCartSidebar, 
-        closeCartSidebar, 
-        clearCart,
-        cartTotal,
-        cartSubtotal,
-        offerDetails,
-        isLoadingOffer
-      }}
-    >
+    <CartContext.Provider value={contextValue}>
       {children}
     </CartContext.Provider>
   )
 }
 
 export function useCart() {
+  console.log("useCart hook called")
   const ctx = useContext(CartContext)
-  if (!ctx) throw new Error("useCart must be used within a CartProvider")
+  console.log("useCart: Context value:", ctx)
+  if (!ctx) {
+    console.error("useCart hook called outside of CartProvider")
+    console.error("Stack trace:", new Error().stack)
+    throw new Error("useCart must be used within a CartProvider")
+  }
+  console.log("useCart: Returning context:", ctx)
   return ctx
-} 
+}
+
+// Add default export for the context
+export default CartContext 
