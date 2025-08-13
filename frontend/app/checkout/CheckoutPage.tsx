@@ -63,6 +63,19 @@ export default function CheckoutPage() {
   // Check if we have items to checkout
   const hasItems = cartItems && cartItems.length > 0;
 
+  // Debug logging
+  useEffect(() => {
+    console.log("Checkout Debug:", {
+      buyNowItem: !!buyNowItem,
+      contextCartItems: contextCartItems.length,
+      cartItems: cartItems.length,
+      hasItems,
+      isCartLoaded,
+      localStorage: localStorage.getItem("cartItems") ? "has data" : "empty",
+      sessionStorage: sessionStorage.getItem("buyNowItem") ? "has data" : "empty"
+    });
+  }, [buyNowItem, contextCartItems, cartItems, hasItems, isCartLoaded]);
+
   // Handle cart loading state
   useEffect(() => {
     // If we have cart items or buy now item, mark as loaded
@@ -86,7 +99,7 @@ export default function CheckoutPage() {
     }
   }, [hasItems, contextCartItems, buyNowItem]);
 
-  // Fallback: Direct localStorage check if context hasn't loaded yet
+  // Enhanced fallback: Direct localStorage check and force cart restoration
   useEffect(() => {
     if (!hasItems && isCartLoaded) {
       // Double-check localStorage directly as a fallback
@@ -101,6 +114,16 @@ export default function CheckoutPage() {
               console.log("Checkout: Fallback - Found items in localStorage:", parsed);
               // Force a re-render by updating the cart context
               notifyCheckoutCartChanged();
+              
+              // Also try to manually restore the cart if context is still empty
+              if (contextCartItems.length === 0) {
+                console.log("Checkout: Manually restoring cart from localStorage");
+                // This will trigger the cart context to reload
+                window.dispatchEvent(new StorageEvent('storage', {
+                  key: 'cartItems',
+                  newValue: storedCart
+                }));
+              }
             }
           } catch (error) {
             console.error("Checkout: Error parsing localStorage cart:", error);
@@ -122,6 +145,31 @@ export default function CheckoutPage() {
 
       // Check after a short delay to allow contexts to load
       const timer = setTimeout(checkLocalStorage, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [hasItems, isCartLoaded, notifyCheckoutCartChanged, contextCartItems.length]);
+
+  // Additional cart restoration attempt with longer delay
+  useEffect(() => {
+    if (!hasItems && isCartLoaded) {
+      const delayedRestoration = () => {
+        const storedCart = localStorage.getItem("cartItems");
+        if (storedCart) {
+          try {
+            const parsed = JSON.parse(storedCart);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              console.log("Checkout: Delayed restoration attempt - Found items:", parsed);
+              // Force cart context refresh
+              notifyCheckoutCartChanged();
+            }
+          } catch (error) {
+            console.error("Checkout: Error in delayed restoration:", error);
+          }
+        }
+      };
+
+      // Try again after 1 second
+      const timer = setTimeout(delayedRestoration, 1000);
       return () => clearTimeout(timer);
     }
   }, [hasItems, isCartLoaded, notifyCheckoutCartChanged]);
@@ -211,22 +259,22 @@ export default function CheckoutPage() {
         <div className="max-w-5xl mx-auto mb-8 px-4">
           <ol className="flex items-center w-full text-sm font-medium text-gray-500">
             <li className="flex-1 flex items-center gap-2">
-              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-[rgb(71,60,102)] text-white font-bold">1</span>
-              <span className="hidden sm:inline">{buyNowItem ? 'Product' : 'Cart'}</span>
+              <span className="flex items-center justify-center w-10 h-10 rounded-full bg-[rgb(71,60,102)] text-white font-bold text-lg shadow-lg ring-4 ring-[rgb(71,60,102)]/20">1</span>
+              <span className="hidden sm:inline text-[rgb(71,60,102)] font-semibold">{buyNowItem ? 'Product' : 'Cart'}</span>
               <span className="flex-1 h-1 bg-[rgb(71,60,102)] mx-2 rounded sm:block hidden"></span>
             </li>
             <li className="flex-1 flex items-center gap-2">
-              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-[rgb(71,60,102)] text-white font-bold ring-2 ring-[rgb(71,60,102)]/40">2</span>
+              <span className="flex items-center justify-center w-10 h-10 rounded-full bg-[rgb(71,60,102)] text-white font-bold text-lg shadow-lg ring-4 ring-[rgb(71,60,102)]/20">2</span>
               <span className="text-[rgb(71,60,102)] font-semibold hidden sm:inline">Checkout</span>
               <span className="flex-1 h-1 bg-gray-200 mx-2 rounded sm:block hidden"></span>
             </li>
             <li className="flex items-center gap-2">
-              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-200 text-gray-400 font-bold">3</span>
-              <span className="hidden sm:inline">Payment</span>
+              <span className="flex items-center justify-center w-10 h-10 rounded-full bg-gray-200 text-gray-400 font-bold text-lg border-2 border-gray-300">3</span>
+              <span className="hidden sm:inline text-gray-400">Payment</span>
             </li>
             <li className="flex items-center gap-2">
-              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-200 text-gray-400 font-bold">4</span>
-              <span className="hidden sm:inline">Complete</span>
+              <span className="flex items-center justify-center w-10 h-10 rounded-full bg-gray-200 text-gray-400 font-bold text-lg border-2 border-gray-300">4</span>
+              <span className="hidden sm:inline text-gray-400">Complete</span>
             </li>
           </ol>
         </div>
@@ -256,15 +304,41 @@ export default function CheckoutPage() {
                 This might happen if you refreshed the page or cleared your browser data.
               </p>
               <div className="space-y-3">
+                <button 
+                  onClick={() => {
+                    // Force cart restoration
+                    const storedCart = localStorage.getItem("cartItems");
+                    if (storedCart) {
+                      try {
+                        const parsed = JSON.parse(storedCart);
+                        if (Array.isArray(parsed) && parsed.length > 0) {
+                          console.log("Checkout: Manual retry - Found items:", parsed);
+                          notifyCheckoutCartChanged();
+                          // Force a page refresh to restore cart context
+                          window.location.reload();
+                        }
+                      } catch (error) {
+                        console.error("Checkout: Error in manual retry:", error);
+                      }
+                    }
+                  }}
+                  className="inline-block bg-[rgb(71,60,102)] hover:bg-[rgb(71,60,102)]/90 text-white px-6 py-3 rounded-xl font-semibold transition-colors"
+                >
+                  Retry Restore Cart
+                </button>
+                <br />
                 <Link 
                   href="/" 
-                  className="inline-block bg-[rgb(71,60,102)] hover:bg-[rgb(71,60,102)]/90 text-white px-6 py-3 rounded-xl font-semibold transition-colors"
+                  className="inline-block bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-xl font-semibold transition-colors"
                 >
                   Continue Shopping
                 </Link>
                 <br />
                 <button 
-                  onClick={openCartSidebar}
+                  onClick={() => {
+                    // Open cart sidebar to show current state
+                    openCartSidebar();
+                  }}
                   className="inline-block border border-[rgb(71,60,102)] text-[rgb(71,60,102)] hover:bg-[rgb(71,60,102)] hover:text-white px-6 py-3 rounded-xl font-semibold transition-colors"
                 >
                   View Cart

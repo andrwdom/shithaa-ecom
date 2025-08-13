@@ -89,9 +89,32 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
+    // Additional restoration attempt for page refreshes
+    const handlePageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) {
+        console.log("CartProvider: Page restored from cache, reloading cart")
+        loadCart()
+      }
+    }
+
+    // Listen for page visibility changes
+    const handleVisibilityChange = () => {
+      if (!document.hidden && cartItems.length === 0) {
+        console.log("CartProvider: Page became visible, checking for stored cart")
+        loadCart()
+      }
+    }
+
     window.addEventListener('storage', handleStorageChange)
-    return () => window.removeEventListener('storage', handleStorageChange)
-  }, [])
+    window.addEventListener('pageshow', handlePageShow)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('pageshow', handlePageShow)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [cartItems.length])
 
   // Save cart to localStorage on change
   useEffect(() => {
