@@ -23,6 +23,12 @@ export default function CategoryReminder() {
       description: "Everyday elegance",
       color: "from-blue-400 to-blue-500",
     },
+    {
+      icon: Heart,
+      title: "Dupatta Lounge",
+      description: "Comfort with style",
+      color: "from-yellow-400 to-yellow-500",
+    },
   ]
 
   return (
@@ -33,7 +39,7 @@ export default function CategoryReminder() {
           <p className="text-lg text-gray-600">Every piece designed with love for your comfort</p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
           {categories.map((category, index) => {
             const Icon = category.icon
             return (

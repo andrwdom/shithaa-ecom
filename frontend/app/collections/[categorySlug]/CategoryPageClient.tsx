@@ -328,9 +328,9 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
           {/* Category Sidebar - Refined Design with Proper Bounds */}
           <div className="w-80 flex-shrink-0 hidden lg:block">
             <div className="sticky top-32 h-[calc(100vh-8rem)] overflow-y-auto">
-              <div className="bg-white shadow-lg rounded-2xl p-6 mx-4">
+              <div className="bg-white shadow-xl rounded-3xl p-6 mx-4 border border-gray-100">
                 <div className="mb-8">
-                  <h2 className="text-2xl font-bold text-[rgb(71,60,102)] font-serif">Categories</h2>
+                  <h2 className="text-2xl font-bold text-[rgb(71,60,102)] font-serif bg-gradient-to-r from-[rgb(71,60,102)] to-purple-600 bg-clip-text text-transparent">Categories</h2>
                 </div>
 
                 <div className="space-y-4">
@@ -371,6 +371,18 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
                       iconBgColor: "bg-green-100",
                       activeIconBgColor: "bg-green-500",
                     },
+                    {
+                      icon: Heart,
+                      title: "Zipless Feeding Dupatta Lounge Wear",
+                      slug: "zipless-feeding-dupatta-lounge-wear",
+                      description: "Zipless design with attached dupatta for comfort",
+                      bgColor: "bg-yellow-50/80",
+                      hoverBgColor: "hover:bg-yellow-100/80",
+                      borderColor: "border-yellow-100",
+                      hoverBorderColor: "hover:border-yellow-300",
+                      iconBgColor: "bg-yellow-100",
+                      activeIconBgColor: "bg-yellow-500",
+                    },
                   ].map((category) => {
                     const Icon = category.icon
                     const isActive = categorySlug === category.slug
@@ -379,25 +391,25 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
                       <button
                         key={category.slug}
                         onClick={() => handleCategorySelect(category.slug)}
-                        className={`w-full text-left p-4 rounded-2xl border-2 transition-all duration-300 ${
+                        className={`w-full text-left p-4 rounded-2xl border-2 transition-all duration-300 transform hover:scale-[1.02] hover:shadow-lg ${
                           isActive
-                            ? `${category.borderColor} ${category.activeIconBgColor.replace("bg-", "bg-").replace("-500", "-50")} border-opacity-60`
-                            : `${category.bgColor} ${category.hoverBgColor} ${category.borderColor} ${category.hoverBorderColor} border-opacity-40`
+                            ? `${category.borderColor} ${category.activeIconBgColor.replace("bg-", "bg-").replace("-500", "-50")} border-opacity-80 shadow-lg scale-[1.02]`
+                            : `${category.bgColor} ${category.hoverBgColor} ${category.borderColor} ${category.hoverBorderColor} border-opacity-40 hover:border-opacity-60`
                         }`}
                       >
                         <div className="flex items-start space-x-4">
-                          <div
-                            className={`p-3 rounded-xl ${isActive ? category.activeIconBgColor : category.iconBgColor} transition-all duration-300`}
-                          >
-                            <Icon className={`h-5 w-5 ${isActive ? "text-white" : "text-gray-600"}`} />
-                          </div>
+                                              <div
+                      className={`p-3 rounded-xl ${isActive ? category.activeIconBgColor : category.iconBgColor} transition-all duration-300 ${isActive ? 'shadow-md' : ''}`}
+                    >
+                      <Icon className={`h-5 w-5 ${isActive ? "text-white" : "text-gray-600"} ${isActive ? 'drop-shadow-sm' : ''}`} />
+                    </div>
                           <div className="flex-1">
                             <h3
-                              className={`font-semibold text-base mb-1 ${isActive ? "text-gray-900" : "text-gray-800"}`}
+                              className={`font-semibold text-base mb-1 ${isActive ? "text-gray-900" : "text-gray-800"} ${isActive ? 'font-bold' : ''}`}
                             >
                               {category.title}
                             </h3>
-                            <p className="text-sm text-gray-600 leading-relaxed">{category.description}</p>
+                            <p className={`text-sm leading-relaxed ${isActive ? "text-gray-700" : "text-gray-600"}`}>{category.description}</p>
                           </div>
                         </div>
                       </button>
@@ -405,8 +417,8 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
                   })}
 
                   {/* More Categories Coming Soon */}
-                  <div className="mt-8 p-6 bg-gradient-to-br from-purple-50/60 to-pink-50/60 rounded-2xl border-2 border-purple-100/40 text-center">
-                    <div className="w-12 h-12 mx-auto mb-4 bg-gradient-to-br from-purple-100 to-pink-100 rounded-full flex items-center justify-center">
+                  <div className="mt-8 p-6 bg-gradient-to-br from-purple-50/80 to-pink-50/80 rounded-2xl border-2 border-purple-200/60 text-center shadow-md hover:shadow-lg transition-all duration-300">
+                    <div className="w-12 h-12 mx-auto mb-4 bg-gradient-to-br from-purple-200 to-pink-200 rounded-full flex items-center justify-center shadow-sm">
                       <div className="text-2xl">✨</div>
                     </div>
                     <h3 className="font-bold text-gray-900 mb-2 font-serif">More Categories Coming Soon!</h3>
