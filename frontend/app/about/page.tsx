@@ -7,6 +7,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { useLoading } from "@/components/loading-context"
 import { useEffect } from "react"
+import Footer from "@/components/footer"
 
 
 // Animation variants
@@ -98,7 +99,7 @@ export default function AboutPage() {
               </motion.div>
 
               {/* Story Content */}
-              <motion.div variants={fadeInUp} className="grid md:grid-cols-3 gap-8 items-start">
+              <motion.div variants={fadeInUp} className="grid md:grid-cols-3 gap-8 lg:gap-12 items-start">
                 {/* Founder Image */}
                 <div className="relative">
                   <div className="bg-white rounded-2xl p-3 shadow-lg transform rotate-2">
@@ -117,7 +118,7 @@ export default function AboutPage() {
                   <div className="absolute -bottom-4 -right-4 bg-white rounded-full p-3 shadow-lg border border-pink-100">
                     <div className="flex items-center space-x-2">
                       <Instagram className="w-5 h-5 text-pink-500" />
-                      <span className="text-sm font-semibold text-gray-700">27k</span>
+                      <span className="text-sm font-semibold text-gray-700">32k+</span>
                     </div>
                   </div>
                 </div>
@@ -133,7 +134,7 @@ export default function AboutPage() {
                     <h3 className="text-2xl font-semibold text-[#473C66] mb-4">Founded with Love & Understanding</h3>
                     <p className="text-gray-700 leading-relaxed mb-4">
                       Shithaa was born from the heart of a passionate creator, mother, and influencer who, through her
-                      journey with her growing community of 27,000 followers, witnessed the beautiful yet challenging
+                      journey with her growing community of 32,000+ followers, witnessed the beautiful yet challenging
                       experience of expecting mothers preparing to welcome their little ones.
                     </p>
                     <p className="text-gray-700 leading-relaxed mb-4">
@@ -175,7 +176,7 @@ export default function AboutPage() {
               </motion.div>
 
               {/* Content Grid */}
-              <motion.div variants={fadeInUp} className="grid md:grid-cols-2 gap-12 items-center">
+              <motion.div variants={fadeInUp} className="grid md:grid-cols-2 gap-12 lg:gap-16 items-center">
                 {/* Left: Mission Statement */}
                 <div className="space-y-6">
                   <div className="bg-white rounded-2xl p-8 shadow-lg relative overflow-hidden">
@@ -248,12 +249,12 @@ export default function AboutPage() {
               </motion.div>
 
               {/* Stats Grid */}
-              <motion.div variants={fadeInUp} className="grid md:grid-cols-3 gap-8">
-                {[
-                  { icon: Users, number: "27k+", label: "Happy Followers", color: "from-blue-400 to-cyan-500" },
-                  { icon: Heart, number: "1000+", label: "Mothers Served", color: "from-pink-400 to-rose-500" },
-                  { icon: Smile, number: "98%", label: "Satisfaction Rate", color: "from-purple-400 to-indigo-500" },
-                ].map((stat, index) => (
+              <motion.div variants={fadeInUp} className="grid md:grid-cols-3 gap-8 lg:gap-12">
+                                  {[
+                    { icon: Users, number: "32k+", label: "Happy Followers", color: "from-blue-400 to-cyan-500" },
+                    { icon: Heart, number: "1000+", label: "Mothers Served", color: "from-pink-400 to-rose-500" },
+                    { icon: Smile, number: "98%", label: "Satisfaction Rate", color: "from-purple-400 to-indigo-500" },
+                  ].map((stat, index) => (
                   <motion.div
                     key={index}
                     variants={fadeInUp}
@@ -290,7 +291,7 @@ export default function AboutPage() {
                 </div>
                 
                 {/* Testimonials Grid */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8 lg:gap-10">
                   {[
                     { id: 1, image: "/testi1.jpeg" },
                     { id: 2, image: "/testi2.jpeg" },
@@ -356,7 +357,7 @@ export default function AboutPage() {
                 </div>
               </motion.div>
 
-              <motion.div variants={fadeInUp} className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+              <motion.div variants={fadeInUp} className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-10">
                 {[
                   {
                     icon: Heart,
@@ -452,6 +453,9 @@ export default function AboutPage() {
           </section>
         </div>
       </div>
+      
+      {/* Default Footer */}
+      <Footer />
     </>
   )
 }
