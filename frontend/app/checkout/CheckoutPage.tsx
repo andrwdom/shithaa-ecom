@@ -144,46 +144,6 @@ export default function CheckoutPage() {
     }
   }
 
-  // Dummy payment handler
-  async function handleDummyPayment() {
-    setProcessing(true);
-    setPaymentError(null);
-    try {
-      await new Promise(res => setTimeout(res, 1500));
-      const orderRes = await fetch((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + '/api/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userInfo: {
-            userId: user?.mongoId,
-            name: user?.displayName || user?.name || (user?.email ? user.email.split('@')[0] : 'User'),
-            email: user?.email || '',
-          },
-          shippingInfo: shipping,
-          items: cartItems,
-          couponUsed: coupon ? { code: coupon.code, discount: coupon.discountPercentage || 0 } : null,
-          totalAmount: orderSummary.total,
-          paymentStatus: 'test-paid',
-          createdAt: new Date().toISOString(),
-        })
-      });
-      const orderData = await orderRes.json();
-      if (orderRes.ok && orderData.order && orderData.order.orderId) {
-        // Clear buy-now state on successful order
-        if (buyNowItem) {
-          clearBuyNowItem()
-        }
-        router.push(`/order-success?orderId=${orderData.order.orderId}`);
-      } else {
-        setPaymentError(orderData.message || 'Order save failed');
-      }
-    } catch (err: any) {
-      setPaymentError(err.message || 'Test payment failed.');
-    } finally {
-      setProcessing(false);
-    }
-  }
-
   return (
     <PageLoading loadingMessage="Loading Checkout..." minLoadingTime={1500}>
       <div className="min-h-screen bg-gray-50 py-6 px-2 sm:px-4">
@@ -248,15 +208,7 @@ export default function CheckoutPage() {
               onClick={handlePhonePePayment}
               disabled={processing}
             >
-              {processing ? <span className="loading loading-spinner loading-md"></span> : 'Confirm Order (PhonePe)'}
-            </button>
-            <button
-              type="button"
-              className="w-full mt-2 text-sm bg-gray-100 text-gray-600 rounded-lg py-2 disabled:opacity-60 disabled:cursor-not-allowed"
-              onClick={handleDummyPayment}
-              disabled={processing}
-            >
-              {processing ? <span className="loading loading-spinner loading-md"></span> : 'Dummy Payment (Test)'}
+              {processing ? <span className="loading loading-spinner loading-md"></span> : 'Confirm Order'}
             </button>
           </div>
         </div>

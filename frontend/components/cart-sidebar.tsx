@@ -72,12 +72,12 @@ export default function CartSidebar() {
       <div className="fixed inset-0 bg-black/50 z-[9998]" onClick={closeCartSidebar} />
       
       {/* Sidebar */}
-      <div className="fixed right-0 top-0 h-full w-96 bg-white shadow-2xl z-[9999] transform transition-transform duration-300 flex flex-col">
+      <div className="fixed right-0 top-0 h-full w-[420px] max-w-[95vw] bg-white shadow-2xl z-[9999] transform transition-transform duration-300 flex flex-col">
         {/* Header */}
-        <div className="p-6 border-b border-gray-100 bg-gradient-to-r from-purple-50 to-white">
+        <div className="p-4 sm:p-6 border-b border-gray-100 bg-gradient-to-r from-purple-50 to-white">
           <div className="flex items-center justify-between mb-2">
-            <h2 className="text-2xl font-bold text-[rgb(71,60,102)] font-serif flex items-center gap-3">
-              <ShoppingBag className="h-7 w-7" />
+            <h2 className="text-xl sm:text-2xl font-bold text-[rgb(71,60,102)] font-serif flex items-center gap-2 sm:gap-3">
+              <ShoppingBag className="h-6 w-6 sm:h-7 sm:w-7" />
               Shopping Cart
             </h2>
             <Button 
@@ -103,16 +103,16 @@ export default function CartSidebar() {
               <p className="text-gray-400 text-sm">Start shopping to add items to your cart</p>
             </div>
           ) : (
-            <div className="p-6 space-y-6">
+            <div className="p-4 sm:p-6 space-y-5">
               {/* Special Offer Banner */}
               {offerDetails?.offerApplied && (
-                <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-4 shadow-sm">
-                  <div className="flex items-start gap-3">
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-3 sm:p-4 shadow-sm">
+                  <div className="flex items-start gap-2 sm:gap-3">
                     <div className="bg-green-100 p-2 rounded-lg">
-                      <Gift className="h-5 w-5 text-green-600" />
+                      <Gift className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-bold text-green-800 text-sm mb-1">
+                      <h3 className="font-bold text-green-800 text-xs sm:text-sm mb-1">
                         🎉 Special Loungewear Bundle Offer!
                       </h3>
                       <p className="text-green-700 text-xs leading-relaxed">
@@ -121,7 +121,7 @@ export default function CartSidebar() {
                           <span> • {offerDetails.offerDetails.remainingItems} item(s) at ₹450 each</span>
                         )}
                       </p>
-                      <div className="mt-2 text-green-800 font-semibold text-sm">
+                      <div className="mt-2 text-green-800 font-semibold text-xs sm:text-sm">
                         Total Savings: ₹{offerDetails.offerDiscount?.toLocaleString() || 0}
                       </div>
                     </div>
@@ -131,13 +131,13 @@ export default function CartSidebar() {
               
               {/* Progress to Next Offer */}
               {offerDetails?.loungewearCategoryCount && offerDetails.loungewearCategoryCount > 0 && offerDetails.loungewearCategoryCount < 3 && (
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 shadow-sm">
-                  <div className="flex items-center gap-3">
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-3 sm:p-4 shadow-sm">
+                  <div className="flex items-center gap-2 sm:gap-3">
                     <div className="bg-blue-100 p-2 rounded-lg">
-                      <Info className="h-5 w-5 text-blue-600" />
+                      <Info className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-semibold text-blue-800 text-sm mb-1">Almost there!</h3>
+                      <h3 className="font-semibold text-blue-800 text-xs sm:text-sm mb-1">Almost there!</h3>
                       <p className="text-blue-700 text-xs">
                         Add {3 - (offerDetails.loungewearCategoryCount || 0)} more loungewear item(s) to unlock the ₹1,299 bundle offer
                       </p>
@@ -153,10 +153,10 @@ export default function CartSidebar() {
                   const isMaxQuantity = stock !== undefined && item.quantity >= stock;
                   
                   return (
-                    <div key={`${item.id}-${item.size}`} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
-                      <div className="flex gap-4">
+                    <div key={`${item.id}-${item.size}`} className="bg-white border border-gray-200 rounded-xl p-3 sm:p-4 shadow-sm hover:shadow-md transition-shadow">
+                      <div className="flex gap-3 sm:gap-4">
                         {/* Product Image */}
-                        <div className="w-20 h-24 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                        <div className="w-16 h-20 sm:w-20 sm:h-24 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
                           <Image
                             src={item.image || "/placeholder.svg"}
                             alt={item.name}
@@ -168,7 +168,7 @@ export default function CartSidebar() {
                         
                         {/* Product Details */}
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-gray-900 text-sm leading-tight mb-2 line-clamp-2">
+                          <h3 className="font-semibold text-gray-900 text-xs sm:text-sm leading-tight mb-2 line-clamp-2">
                             {item.name}
                           </h3>
                           
@@ -176,25 +176,26 @@ export default function CartSidebar() {
                             <p className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
                               Size: {item.size}
                             </p>
-                            <p className="font-bold text-[rgb(71,60,102)] text-lg">
+                            <p className="font-bold text-[rgb(71,60,102)] text-base sm:text-lg">
                               ₹{item.price.toLocaleString()}
                             </p>
                           </div>
                           
-                          {/* Quantity Controls */}
-                          <div className="flex items-center justify-between">
+                          {/* Quantity Controls & Actions Row */}
+                          <div className="flex items-center justify-between mb-3">
+                            {/* Quantity Controls */}
                             <div className="flex items-center gap-2">
                               <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => updateCartItem(item._id, item.size, Math.max(1, item.quantity - 1), stock)}
-                                className="h-8 w-8 p-0 rounded-lg border-gray-300 hover:border-purple-400"
+                                className="h-7 w-7 sm:h-8 sm:w-8 p-0 rounded-lg border-gray-300 hover:border-purple-400"
                                 disabled={item.quantity <= 1}
                               >
                                 <Minus className="h-3 w-3" />
                               </Button>
                               
-                              <span className={`text-sm font-medium w-8 text-center ${
+                              <span className={`text-sm font-medium w-6 sm:w-8 text-center ${
                                 isMaxQuantity ? 'text-red-600' : 'text-gray-700'
                               }`}>
                                 {item.quantity}
@@ -211,40 +212,41 @@ export default function CartSidebar() {
                                   updateCartItem(item._id, item.size, item.quantity + 1, stock);
                                 }}
                                 disabled={isMaxQuantity}
-                                className="h-8 w-8 p-0 rounded-lg border-gray-300 hover:border-purple-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="h-7 w-7 sm:h-8 sm:w-8 p-0 rounded-lg border-gray-300 hover:border-purple-400 disabled:opacity-50 disabled:cursor-not-allowed"
                               >
                                 <Plus className="h-3 w-3" />
                               </Button>
                             </div>
                             
-                            {/* Stock Info & Remove Button */}
-                            <div className="flex items-center gap-3">
-                              {stock !== undefined && (
-                                <div className={`text-xs px-2 py-1 rounded-full ${
-                                  isMaxQuantity 
-                                    ? 'bg-red-100 text-red-700 border border-red-200' 
-                                    : 'bg-gray-100 text-gray-600'
-                                }`}>
-                                  {isMaxQuantity ? (
-                                    <span className="flex items-center gap-1">
-                                      <AlertTriangle className="h-3 w-3" />
-                                      Max ({stock})
-                                    </span>
-                                  ) : (
-                                    `${stock} in stock`
-                                  )}
-                                </div>
-                              )}
-                              
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => removeFromCart(item._id, item.size)}
-                                className="text-red-500 hover:text-red-700 hover:bg-red-50 text-xs px-3 py-1 h-auto"
-                              >
-                                Remove
-                              </Button>
-                            </div>
+                            {/* Stock Info */}
+                            {stock !== undefined && (
+                              <div className={`text-xs px-2 py-1 rounded-full ${
+                                isMaxQuantity 
+                                  ? 'bg-red-100 text-red-700 border border-red-200' 
+                                  : 'bg-gray-100 text-gray-600'
+                              }`}>
+                                {isMaxQuantity ? (
+                                  <span className="flex items-center gap-1">
+                                    <AlertTriangle className="h-3 w-3" />
+                                    Max ({stock})
+                                  </span>
+                                ) : (
+                                  `${stock} in stock`
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* Remove Button - Full Width Row */}
+                          <div className="pt-2 border-t border-gray-100">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeFromCart(item._id, item.size)}
+                              className="w-full text-red-500 hover:text-red-700 hover:bg-red-50 text-xs sm:text-sm py-2 h-auto border border-red-200 hover:border-red-300 rounded-lg transition-all duration-200"
+                            >
+                              Remove Item
+                            </Button>
                           </div>
                         </div>
                       </div>
@@ -258,15 +260,15 @@ export default function CartSidebar() {
 
         {/* Footer */}
         {cartItems.length > 0 && (
-          <div className="border-t border-gray-100 bg-gradient-to-r from-gray-50 to-white p-6 space-y-4">
+          <div className="border-t border-gray-100 bg-gradient-to-r from-gray-50 to-white p-4 sm:p-6 space-y-4">
             {/* Total */}
             <div className="flex justify-between items-center">
-              <span className="text-lg font-semibold text-gray-900">Total:</span>
+              <span className="text-base sm:text-lg font-semibold text-gray-900">Total:</span>
               <div className="text-right">
                 {isLoadingOffer ? (
                   <div className="text-sm text-gray-500">Calculating...</div>
                 ) : (
-                  <span className="text-2xl font-bold text-[rgb(71,60,102)]">
+                  <span className="text-xl sm:text-2xl font-bold text-[rgb(71,60,102)]">
                     ₹{cartTotal.toLocaleString()}
                   </span>
                 )}
@@ -282,7 +284,7 @@ export default function CartSidebar() {
             {/* Action Buttons */}
             <div className="space-y-3">
               <Button 
-                className="w-full bg-[rgb(71,60,102)] hover:bg-[rgb(71,60,102)]/90 text-white py-4 rounded-xl font-semibold text-base shadow-lg hover:shadow-xl transition-all duration-200" 
+                className="w-full bg-[rgb(71,60,102)] hover:bg-[rgb(71,60,102)]/90 text-white py-3 sm:py-4 rounded-xl font-semibold text-sm sm:text-base shadow-lg hover:shadow-xl transition-all duration-200" 
                 onClick={handleProceedToCheckout}
               >
                 Proceed to Checkout
@@ -290,7 +292,7 @@ export default function CartSidebar() {
               
               <Button
                 variant="outline"
-                className="w-full border-2 border-[rgb(71,60,102)] text-[rgb(71,60,102)] hover:bg-[rgb(71,60,102)] hover:text-white bg-transparent py-3 rounded-xl font-medium transition-all duration-200"
+                className="w-full border-2 border-[rgb(71,60,102)] text-[rgb(71,60,102)] hover:bg-[rgb(71,60,102)] hover:text-white bg-transparent py-2.5 sm:py-3 rounded-xl font-medium transition-all duration-200"
                 onClick={closeCartSidebar}
               >
                 Continue Shopping
