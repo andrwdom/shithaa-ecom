@@ -16,7 +16,7 @@ import { getIdToken } from "firebase/auth";
 import { Gift } from "lucide-react";
 
 export default function CheckoutClient() {
-  const { cartItems, clearCart, cartTotal, offerDetails } = useCart();
+  const { cartItems, clearCart, cartTotal, offerDetails, openCartSidebar } = useCart();
   const { buyNowItem, clearBuyNowItem } = useBuyNow();
   const searchParams = useSearchParams();
   const isBuyNow = searchParams.get("mode") === "buynow" && !!buyNowItem;
@@ -395,7 +395,7 @@ export default function CheckoutClient() {
                 {isBuyNow && (
                   <Alert variant="default" className="mb-4">
                     <AlertDescription>
-                      You are buying this item directly. <a href="/cart" className="underline ml-2">Go to cart instead?</a>
+                      You are buying this item directly. <button onClick={openCartSidebar} className="underline ml-2 hover:text-[rgb(71,60,102)]">Go to cart instead?</button>
                     </AlertDescription>
                   </Alert>
                 )}

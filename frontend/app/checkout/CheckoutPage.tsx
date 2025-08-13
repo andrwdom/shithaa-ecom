@@ -49,7 +49,7 @@ export default function CheckoutPage() {
   const [isCartLoaded, setIsCartLoaded] = useState(false);
   const { user } = useAuth();
 
-  const { cartItems: contextCartItems, cartTotal, cartSubtotal, offerDetails, notifyCheckoutCartChanged } = useCart()
+  const { cartItems: contextCartItems, cartTotal, cartSubtotal, offerDetails, notifyCheckoutCartChanged, openCartSidebar } = useCart()
   const { buyNowItem, clearBuyNowItem } = useBuyNow()
 
   // Determine which items to show based on current state
@@ -263,12 +263,12 @@ export default function CheckoutPage() {
                   Continue Shopping
                 </Link>
                 <br />
-                <Link 
-                  href="/cart" 
+                <button 
+                  onClick={openCartSidebar}
                   className="inline-block border border-[rgb(71,60,102)] text-[rgb(71,60,102)] hover:bg-[rgb(71,60,102)] hover:text-white px-6 py-3 rounded-xl font-semibold transition-colors"
                 >
                   View Cart
-                </Link>
+                </button>
               </div>
             </div>
           </div>
