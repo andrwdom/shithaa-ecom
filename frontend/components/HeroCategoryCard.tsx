@@ -36,12 +36,13 @@ export default function HeroCategoryCard({
 }: HeroCategoryCardProps) {
   const [images, setImages] = useState<HeroImage[]>([])
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(false) // Changed to false to immediately show placeholder
   const [error, setError] = useState<string | null>(null)
   const [isTransitioning, setIsTransitioning] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
   const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set())
   const [preloadedImages, setPreloadedImages] = useState<Set<string>>(new Set())
+  const [hasVpsImages, setHasVpsImages] = useState(false) // Track if VPS images are available
   
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
   const isMobile = useRef(false)
@@ -96,7 +97,6 @@ export default function HeroCategoryCard({
   // Fetch hero images from the API with retry logic
   const fetchHeroImages = useCallback(async () => {
     try {
-      setIsLoading(true)
       setError(null)
       
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
@@ -140,6 +140,7 @@ export default function HeroCategoryCard({
       })))
       
       setImages(heroImages)
+      setHasVpsImages(true) // Mark that VPS images are now available
       
       // Preload images for smooth transitions
       if (heroImages.length > 0) {
@@ -153,8 +154,6 @@ export default function HeroCategoryCard({
       setError('Failed to load images')
       // Try to use fallback images
       setImages([])
-    } finally {
-      setIsLoading(false)
     }
   }, [categorySlug, maxImages, isMobile])
 
@@ -194,8 +193,6 @@ export default function HeroCategoryCard({
     }
   }, [images.length, isPaused])
 
-
-
   // Preload image function with better error handling
   const preloadImage = useCallback((src: string) => {
     if (!src || preloadedImages.has(src)) return
@@ -211,26 +208,25 @@ export default function HeroCategoryCard({
     img.src = src
   }, [preloadedImages])
 
-  // Get current image
+  // Get current image - prioritize VPS images over placeholders
   const currentImage = useMemo(() => {
-    if (images.length === 0) {
-      return {
-        src: getPlaceholderImage(),
-        alt: `${title} - Coming Soon`,
-        lqip: '',
-        productId: '',
-        productName: title,
-        productSlug: categorySlug,
-        thumbUrl: getPlaceholderImage(),
-        originalUrl: getPlaceholderImage(),
-        width: 400,
-        height: 600
-      }
+    if (hasVpsImages && images.length > 0) {
+      return images[currentImageIndex]
     }
-    return images[currentImageIndex]
-  }, [images, currentImageIndex, title, categorySlug])
-
-
+    // Return placeholder image when VPS images are not yet loaded
+    return {
+      src: getPlaceholderImage(categorySlug),
+      alt: `${title} - ${categorySlug}`,
+      lqip: '',
+      productId: '',
+      productName: title,
+      productSlug: categorySlug,
+      thumbUrl: getPlaceholderImage(categorySlug),
+      originalUrl: getPlaceholderImage(categorySlug),
+      width: 400,
+      height: 600
+    }
+  }, [hasVpsImages, images, currentImageIndex, title, categorySlug])
 
   // Event handlers
   const handleCardClick = () => {
@@ -256,7 +252,6 @@ export default function HeroCategoryCard({
   const handleImageError = () => {
     console.error(`hero-image-error category=${categorySlug} productId=${currentImage.productId} url=${currentImage.thumbUrl}`)
     setError('Image failed to load')
-    setIsLoading(false)
   }
 
   const handleImageLoad = () => {
@@ -264,7 +259,6 @@ export default function HeroCategoryCard({
       productId: currentImage.productId,
       productName: currentImage.productName
     })
-    setIsLoading(false)
     setError(null)
   }
 
@@ -310,7 +304,7 @@ export default function HeroCategoryCard({
         >
           <div 
             className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
-              isLoading || isTransitioning ? 'opacity-0' : 'opacity-100'
+              isTransitioning ? 'opacity-0' : 'opacity-100'
             }`}
             style={{ willChange: 'opacity' }}
           >
@@ -329,15 +323,6 @@ export default function HeroCategoryCard({
             />
           </div>
         </ImageErrorBoundary>
-
-
-
-        {/* Loading Overlay with Skeleton */}
-        {isLoading && (
-          <div className="absolute inset-0 bg-gray-200 animate-pulse flex items-center justify-center">
-            <div className="w-16 h-16 bg-gray-300 rounded-full animate-pulse"></div>
-          </div>
-        )}
 
         {/* Error Overlay */}
         {error && (
@@ -380,12 +365,23 @@ export default function HeroCategoryCard({
       {/* Hover Effect Border */}
       <div className="absolute inset-0 rounded-3xl border-2 border-transparent group-hover:border-white/30 transition-all duration-300" />
 
-
     </div>
   )
 }
 
 // Helper functions
-function getPlaceholderImage(): string {
-  return '/images/placeholder.webp'
+function getPlaceholderImage(categorySlug: string): string {
+  // Map category slugs to specific placeholder images
+  switch (categorySlug) {
+    case "maternity-feeding-wear":
+      return "/placeholders/hero1.JPG"
+    case "zipless-feeding-lounge-wear":
+      return "/placeholders/hero2.JPG"
+    case "non-feeding-lounge-wear":
+      return "/placeholders/hero3.JPG"
+    case "zipless-feeding-dupatta-lounge-wear":
+      return "/placeholders/hero4.JPG"
+    default:
+      return "/placeholders/hero1.JPG"
+  }
 } 

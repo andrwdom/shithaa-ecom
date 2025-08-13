@@ -7,14 +7,14 @@ import { HERO_SECTION_CATEGORIES } from "@/lib/hero-section-images"
 
 const EnhancedHeroSection = () => {
   const [allImages, setAllImages] = useState<string[]>([])
-  const [isPreloading, setIsPreloading] = useState(true)
+  const [isPreloading, setIsPreloading] = useState(false) // Changed to false to immediately show cards
   const [preloadProgress, setPreloadProgress] = useState(0)
 
   const handleCategoryClick = useCallback((slug: string) => {
     window.location.href = `/collections/${slug}`
   }, [])
 
-  // Preload all hero images for better performance
+  // Preload all hero images for better performance (now runs in background)
   useEffect(() => {
     const preloadAllHeroImages = async () => {
       try {
@@ -67,7 +67,12 @@ const EnhancedHeroSection = () => {
       }
     }
 
-    preloadAllHeroImages()
+    // Start preloading in background after a small delay to prioritize UI rendering
+    const timer = setTimeout(() => {
+      preloadAllHeroImages()
+    }, 100)
+
+    return () => clearTimeout(timer)
   }, [])
 
   const handleImagesLoaded = useCallback((loadedImages: Set<string>) => {
@@ -84,7 +89,7 @@ const EnhancedHeroSection = () => {
       />
 
       <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-12 lg:mb-20">
+        <div className="text-center mb-12 lg:py-20">
           <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold text-gray-900 leading-tight mb-4 lg:mb-6 font-serif max-w-4xl mx-auto">
             PREMIUM MATERNITY WEARS
           </h1>
@@ -93,31 +98,12 @@ const EnhancedHeroSection = () => {
           </p>
         </div>
 
-        {/* Loading Indicator */}
-        {isPreloading && (
-          <div className="flex justify-center mb-8">
-            <div className="w-full max-w-md">
-              <div className="bg-gray-200 rounded-full h-2">
-                <div 
-                  className="bg-pink-500 h-2 rounded-full transition-all duration-300 ease-out"
-                  style={{ width: `${preloadProgress * 100}%` }}
-                ></div>
-              </div>
-              <p className="text-center text-sm text-gray-600 mt-2">
-                Loading beautiful images... {Math.round(preloadProgress * 100)}%
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Optimized Category Cards Grid */}
+        {/* Category Cards Grid - Now immediately visible */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 max-w-7xl mx-auto">
           {HERO_SECTION_CATEGORIES.map((category, index) => (
             <div
               key={category.id}
-              className={`transition-all duration-700 ease-out ${
-                isPreloading ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'
-              }`}
+              className="transition-all duration-700 ease-out opacity-100 translate-y-0"
               style={{ transitionDelay: `${index * 100}ms` }}
             >
               <HeroCategoryCard
