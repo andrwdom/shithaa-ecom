@@ -103,7 +103,7 @@ export default function AboutPage() {
                 <div className="relative">
                   <div className="bg-white rounded-2xl p-3 shadow-lg transform rotate-2">
                     <Image
-                      src="/placeholder.svg?height=300&width=250"
+                      src="/about-us.jpg"
                       alt="Founder of Shithaa with her child, representing the mother-child bond"
                       width={250}
                       height={300}

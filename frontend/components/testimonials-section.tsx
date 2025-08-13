@@ -121,7 +121,7 @@ const TestimonialCard = ({ testimonial, index, isActive }: TestimonialCardProps)
         </AnimatePresence>
 
         {/* Instagram DM Screenshot */}
-        <div className="relative rounded-xl md:rounded-2xl overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="relative rounded-xl md:rounded-2xl overflow-hidden">
           <Image
             src={testimonial.image}
             alt={`Customer testimonial ${index + 1} - Instagram DM screenshot`}
