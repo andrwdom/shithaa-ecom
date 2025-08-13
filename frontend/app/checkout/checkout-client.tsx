@@ -17,21 +17,88 @@ import { Gift } from "lucide-react";
 
 export default function CheckoutClient() {
   const { cartItems, clearCart, cartTotal, offerDetails, openCartSidebar } = useCart();
-  const { buyNowItem, clearBuyNowItem } = useBuyNow();
+  const { buyNowItem, clearBuyNowItem, isLoading: buyNowLoading, restoreFromStorage } = useBuyNow();
   const searchParams = useSearchParams();
   const isBuyNow = searchParams.get("mode") === "buynow" && !!buyNowItem;
   // Real-time sync: determine checkout items based on current state
   const checkoutItems = buyNowItem ? [buyNowItem] : cartItems;
+  
+  // Show loading state while buy now context is loading
+  if (buyNowLoading && searchParams.get("mode") === "buynow") {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-[#473C66] mx-auto"></div>
+          <p className="mt-4 text-lg text-gray-600">Loading your order...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  // Show error if no items found in buy now mode
+  if (searchParams.get("mode") === "buynow" && !buyNowItem && !buyNowLoading) {
+    const retryRestoreBuyNow = () => {
+      // Try to restore from storage using the context function
+      restoreFromStorage();
+      // If still no item after restoration attempt, reload the page
+      setTimeout(() => {
+        if (!buyNowItem) {
+          window.location.reload();
+        }
+      }, 100);
+    };
+
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="max-w-md mx-auto text-center">
+          <div className="bg-white rounded-xl shadow-lg p-8">
+            <div className="text-red-500 text-6xl mb-4">⚠️</div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-4">Order Not Found</h1>
+            <p className="text-gray-600 mb-6">
+              It looks like your order details couldn't be restored. This might happen if you refreshed the page or cleared your browser data.
+            </p>
+            <div className="space-y-3">
+              <button
+                onClick={retryRestoreBuyNow}
+                className="w-full bg-[#473C66] hover:bg-[#3a3054] text-white font-semibold py-3 px-6 rounded-lg transition"
+              >
+                Retry Restore Order
+              </button>
+              <button
+                onClick={() => window.location.href = "/"}
+                className="w-full border border-gray-300 text-gray-700 font-semibold py-3 px-6 rounded-lg hover:bg-gray-50 transition"
+              >
+                Continue Shopping
+              </button>
+              <button
+                onClick={() => window.history.back()}
+                className="w-full border border-gray-300 text-gray-700 font-semibold py-3 px-6 rounded-lg hover:bg-gray-50 transition"
+              >
+                Go Back
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
     phone: "",
     email: "",
     street: "",
+    address: "",
+    address1: "",
+    address2: "",
+    line1: "",
+    line2: "",
     city: "",
     state: "",
     country: "",
     zipcode: "",
+    pincode: "",
+    zip: "",
     paymentMethod: "Online",
   });
   const [loading, setLoading] = useState(false);

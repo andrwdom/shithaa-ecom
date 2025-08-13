@@ -50,7 +50,7 @@ export default function CheckoutPage() {
   const { user } = useAuth();
 
   const { cartItems: contextCartItems, cartTotal, cartSubtotal, offerDetails, notifyCheckoutCartChanged, openCartSidebar } = useCart()
-  const { buyNowItem, clearBuyNowItem } = useBuyNow()
+  const { buyNowItem, clearBuyNowItem, isLoading: buyNowLoading } = useBuyNow()
 
   // Determine which items to show based on current state
   const cartItems = buyNowItem ? [{
@@ -67,6 +67,7 @@ export default function CheckoutPage() {
   useEffect(() => {
     console.log("Checkout Debug:", {
       buyNowItem: !!buyNowItem,
+      buyNowLoading,
       contextCartItems: contextCartItems.length,
       cartItems: cartItems.length,
       hasItems,
@@ -74,17 +75,21 @@ export default function CheckoutPage() {
       localStorage: localStorage.getItem("cartItems") ? "has data" : "empty",
       sessionStorage: sessionStorage.getItem("buyNowItem") ? "has data" : "empty"
     });
-  }, [buyNowItem, contextCartItems, cartItems, hasItems, isCartLoaded]);
+  }, [buyNowItem, buyNowLoading, contextCartItems, cartItems, hasItems, isCartLoaded]);
 
-  // Handle cart loading state
+  // Handle cart loading state with better buy now support
   useEffect(() => {
     // If we have cart items or buy now item, mark as loaded
     if (hasItems) {
       setIsCartLoaded(true);
+    } else if (buyNowLoading) {
+      // Still loading buy now context, wait
+      console.log("Checkout: Buy now context still loading, waiting...");
+      return;
     } else {
       // Check if we're still loading from localStorage
       const storedCart = localStorage.getItem("cartItems");
-      const storedBuyNow = sessionStorage.getItem("buyNowItem");
+      const storedBuyNow = sessionStorage.getItem("buyNowItem") || localStorage.getItem("buyNowItem");
       
       if (storedCart || storedBuyNow) {
         // Still loading, wait a bit more
@@ -97,15 +102,15 @@ export default function CheckoutPage() {
         setIsCartLoaded(true);
       }
     }
-  }, [hasItems, contextCartItems, buyNowItem]);
+  }, [hasItems, buyNowLoading, contextCartItems, buyNowItem]);
 
   // Enhanced fallback: Direct localStorage check and force cart restoration
   useEffect(() => {
-    if (!hasItems && isCartLoaded) {
+    if (!hasItems && isCartLoaded && !buyNowLoading) {
       // Double-check localStorage directly as a fallback
       const checkLocalStorage = () => {
         const storedCart = localStorage.getItem("cartItems");
-        const storedBuyNow = sessionStorage.getItem("buyNowItem");
+        const storedBuyNow = sessionStorage.getItem("buyNowItem") || localStorage.getItem("buyNowItem");
         
         if (storedCart) {
           try {
@@ -134,11 +139,15 @@ export default function CheckoutPage() {
           try {
             const parsed = JSON.parse(storedBuyNow);
             if (parsed && parsed._id && parsed.name) {
-              console.log("Checkout: Fallback - Found buy-now item in sessionStorage:", parsed);
-              // The buy-now context should pick this up
+              console.log("Checkout: Fallback - Found buy-now item in storage:", parsed);
+              // Force a re-render by dispatching a storage event
+              window.dispatchEvent(new StorageEvent('storage', {
+                key: 'buyNowItem',
+                newValue: storedBuyNow
+              }));
             }
           } catch (error) {
-            console.error("Checkout: Error parsing sessionStorage buy-now:", error);
+            console.error("Checkout: Error parsing stored buy-now:", error);
           }
         }
       };
@@ -147,7 +156,7 @@ export default function CheckoutPage() {
       const timer = setTimeout(checkLocalStorage, 200);
       return () => clearTimeout(timer);
     }
-  }, [hasItems, isCartLoaded, notifyCheckoutCartChanged, contextCartItems.length]);
+  }, [hasItems, isCartLoaded, buyNowLoading, notifyCheckoutCartChanged, contextCartItems.length]);
 
   // Additional cart restoration attempt with longer delay
   useEffect(() => {
