@@ -146,7 +146,59 @@ export function createDebouncedFetch(delay: number = 300) {
   }
 }
 
-// Specialized fetch for hero images with longer cache TTL
+// Fallback hero images data when API is unavailable
+const FALLBACK_HERO_IMAGES = {
+  'maternity-feeding-wear': {
+    mobile: [
+      { id: 'fallback-1', url: '/placeholder.jpg', alt: 'Maternity Feeding Wear' },
+      { id: 'fallback-2', url: '/placeholder.jpg', alt: 'Maternity Feeding Wear' },
+      { id: 'fallback-3', url: '/placeholder.jpg', alt: 'Maternity Feeding Wear' },
+    ],
+    desktop: [
+      { id: 'fallback-1', url: '/placeholder.jpg', alt: 'Maternity Feeding Wear' },
+      { id: 'fallback-2', url: '/placeholder.jpg', alt: 'Maternity Feeding Wear' },
+      { id: 'fallback-3', url: '/placeholder.jpg', alt: 'Maternity Feeding Wear' },
+    ]
+  },
+  'zipless-feeding-lounge-wear': {
+    mobile: [
+      { id: 'fallback-1', url: '/placeholder.jpg', alt: 'Zipless Feeding Lounge Wear' },
+      { id: 'fallback-2', url: '/placeholder.jpg', alt: 'Zipless Feeding Lounge Wear' },
+      { id: 'fallback-3', url: '/placeholder.jpg', alt: 'Zipless Feeding Lounge Wear' },
+    ],
+    desktop: [
+      { id: 'fallback-1', url: '/placeholder.jpg', alt: 'Zipless Feeding Lounge Wear' },
+      { id: 'fallback-2', url: '/placeholder.jpg', alt: 'Zipless Feeding Lounge Wear' },
+      { id: 'fallback-3', url: '/placeholder.jpg', alt: 'Zipless Feeding Lounge Wear' },
+    ]
+  },
+  'non-feeding-lounge-wear': {
+    mobile: [
+      { id: 'fallback-1', url: '/placeholder.jpg', alt: 'Non-Feeding Lounge Wear' },
+      { id: 'fallback-2', url: '/placeholder.jpg', alt: 'Non-Feeding Lounge Wear' },
+      { id: 'fallback-3', url: '/placeholder.jpg', alt: 'Non-Feeding Lounge Wear' },
+    ],
+    desktop: [
+      { id: 'fallback-1', url: '/placeholder.jpg', alt: 'Non-Feeding Lounge Wear' },
+      { id: 'fallback-2', url: '/placeholder.jpg', alt: 'Non-Feeding Lounge Wear' },
+      { id: 'fallback-3', url: '/placeholder.jpg', alt: 'Non-Feeding Lounge Wear' },
+    ]
+  },
+  'zipless-feeding-dupatta-lounge-wear': {
+    mobile: [
+      { id: 'fallback-1', url: '/placeholder.jpg', alt: 'Zipless Feeding Dupatta Lounge Wear' },
+      { id: 'fallback-2', url: '/placeholder.jpg', alt: 'Zipless Feeding Dupatta Lounge Wear' },
+      { id: 'fallback-3', url: '/placeholder.jpg', alt: 'Zipless Feeding Dupatta Lounge Wear' },
+    ],
+    desktop: [
+      { id: 'fallback-1', url: '/placeholder.jpg', alt: 'Zipless Feeding Dupatta Lounge Wear' },
+      { id: 'fallback-2', url: '/placeholder.jpg', alt: 'Zipless Feeding Dupatta Lounge Wear' },
+      { id: 'fallback-3', url: '/placeholder.jpg', alt: 'Zipless Feeding Dupatta Lounge Wear' },
+    ]
+  }
+}
+
+// Specialized fetch for hero images with longer cache TTL and fallback
 export async function fetchHeroImages(
   categoryId: string, 
   device: 'mobile' | 'desktop' = 'desktop', 
@@ -161,16 +213,69 @@ export async function fetchHeroImages(
   const cacheKey = `hero-images-${categoryId}-${device}-${limit}`
   const cacheTTL = 10 * 60 * 1000 // 10 minutes for hero images
   
-  return safeFetch(url.toString(), {
-    method: 'GET',
-    headers: {
-      'Accept': 'application/json',
-      'Cache-Control': 'no-cache'
+  try {
+    const response = await safeFetch(url.toString(), {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Cache-Control': 'no-cache'
+      }
+    }, cacheKey, cacheTTL)
+    
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`)
     }
-  }, cacheKey, cacheTTL)
+    
+    return response
+  } catch (error) {
+    console.warn(`Failed to fetch hero images for ${categoryId}, using fallback data:`, error)
+    
+    // Return a mock response with fallback data
+    const fallbackData = FALLBACK_HERO_IMAGES[categoryId as keyof typeof FALLBACK_HERO_IMAGES]?.[device] || []
+    const limitedData = fallbackData.slice(0, limit)
+    
+    return new Response(JSON.stringify(limitedData), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Fallback-Data': 'true'
+      }
+    })
+  }
 }
 
-// Specialized fetch for products with caching
+// Fallback products data when API is unavailable
+const FALLBACK_PRODUCTS = [
+  {
+    id: 'fallback-1',
+    name: 'Maternity Feeding Dress',
+    description: 'Comfortable feeding dress for new mothers',
+    price: 2999,
+    category: 'maternity-feeding-wear',
+    images: ['/placeholder.jpg'],
+    inStock: true
+  },
+  {
+    id: 'fallback-2',
+    name: 'Zipless Lounge Wear',
+    description: 'Revolutionary comfort for everyday wear',
+    price: 2499,
+    category: 'zipless-feeding-lounge-wear',
+    images: ['/placeholder.jpg'],
+    inStock: true
+  },
+  {
+    id: 'fallback-3',
+    name: 'Casual Lounge Wear',
+    description: 'Elegant casual wear for comfort',
+    price: 1999,
+    category: 'non-feeding-lounge-wear',
+    images: ['/placeholder.jpg'],
+    inStock: true
+  }
+]
+
+// Specialized fetch for products with caching and fallback
 export async function fetchProducts(
   params: Record<string, string> = {}
 ): Promise<Response> {
@@ -187,12 +292,31 @@ export async function fetchProducts(
   const cacheKey = `products-${JSON.stringify(params)}`
   const cacheTTL = 2 * 60 * 1000 // 2 minutes for products
   
-  return safeFetch(url.toString(), {
-    method: 'GET',
-    headers: {
-      'Accept': 'application/json'
+  try {
+    const response = await safeFetch(url.toString(), {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json'
+      }
+    }, cacheKey, cacheTTL)
+    
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`)
     }
-  }, cacheKey, cacheTTL)
+    
+    return response
+  } catch (error) {
+    console.warn(`Failed to fetch products, using fallback data:`, error)
+    
+    // Return a mock response with fallback data
+    return new Response(JSON.stringify(FALLBACK_PRODUCTS), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Fallback-Data': 'true'
+      }
+    })
+  }
 }
 
 // Cleanup cache periodically
