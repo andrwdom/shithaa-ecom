@@ -5,7 +5,7 @@ import { useAuth } from "@/components/auth/useAuth"
 import { useWishlist } from "@/components/wishlist-context"
 import LoginModal from "@/components/auth/LoginModal"
 import { toast } from "sonner"
-import { Package, Calendar, Heart, MapPin, Phone, Mail, User, LogOut } from "lucide-react"
+import { Package, Calendar, Heart, LogOut, Crown, Star } from "lucide-react"
 import { getIdToken } from "firebase/auth"
 import OrderHistory from "./OrderHistory"
 import PageLoading from "@/components/page-loading"
@@ -40,6 +40,7 @@ interface UserProfile {
   name: string
   email: string
   uid: string
+  photoURL?: string
 }
 
 export default function AccountPageClient() {
@@ -66,7 +67,6 @@ export default function AccountPageClient() {
     const token = localStorage.getItem("token")
     if (token) return token
     if (!user) return null
-    // Try to get a new backend token using Firebase ID token
     try {
       const idToken = await getIdToken(user)
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/user/firebase-login`, {
@@ -88,7 +88,6 @@ export default function AccountPageClient() {
   async function checkAuthAndLoadData() {
     console.log("checkAuthAndLoadData called:", { user: !!user, authLoading })
     
-    // Wait for auth to finish loading
     if (authLoading) {
       return
     }
@@ -102,11 +101,12 @@ export default function AccountPageClient() {
 
     try {
       console.log("User authenticated, setting profile from Firebase Auth")
-      // Use Firebase Auth data directly
+      // Use Firebase Auth data directly including profile photo
       setUserProfile({
         name: user.displayName || "User",
         email: user.email || "",
-        uid: user.uid
+        uid: user.uid,
+        photoURL: user.photoURL || undefined
       })
       if (user.metadata && user.metadata.creationTime) {
         const date = new Date(user.metadata.creationTime)
@@ -180,46 +180,14 @@ export default function AccountPageClient() {
 
   function handleLoginSuccess() {
     setShowLogin(false)
-    // The useEffect will automatically reload data when user changes
   }
 
   async function handleLogout() {
     try {
       await logout()
-      // Don't set showLogin to true here - let the AuthContext handle the redirect
-      // The logout function in AuthContext will show the toast and redirect to home
     } catch (error) {
       console.error("Logout error:", error)
       toast.error("Failed to logout. Please try again.")
-    }
-  }
-
-  function formatDate(dateString: string | number) {
-    const date = typeof dateString === 'string' ? new Date(dateString) : new Date(dateString)
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric"
-    })
-  }
-
-  function getStatusColor(status: string) {
-    switch (status.toLowerCase()) {
-      case "delivered":
-        return "text-green-700 bg-green-100 border border-green-200"
-      case "shipped":
-      case "out for delivery":
-        return "text-purple-700 bg-purple-100 border border-purple-200"
-      case "processing":
-        return "text-blue-700 bg-blue-100 border border-blue-200"
-      case "packing":
-        return "text-purple-700 bg-purple-100 border border-purple-200"
-      case "pending":
-        return "text-yellow-700 bg-yellow-100 border border-yellow-200"
-      case "cancelled":
-        return "text-red-700 bg-red-100 border border-red-200"
-      default:
-        return "text-gray-700 bg-gray-100 border border-gray-200"
     }
   }
 
@@ -228,8 +196,8 @@ export default function AccountPageClient() {
       <PageLoading loadingMessage="Loading your account..." minLoadingTime={1000}>
         <div className="min-h-screen bg-gray-50 flex items-center justify-center">
           <div className="text-center">
-            <div className="loading loading-spinner loading-lg text-[rgb(71,60,102)]"></div>
-            <p className="mt-4 text-gray-600">Loading your account...</p>
+            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-[#473C66] mx-auto"></div>
+            <p className="mt-6 text-lg text-gray-600 font-medium">Loading your account...</p>
           </div>
         </div>
       </PageLoading>
@@ -241,9 +209,9 @@ export default function AccountPageClient() {
       <PageLoading loadingMessage="Welcome to Shithaa..." minLoadingTime={1000}>
         <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
           <div className="w-full max-w-md">
-            <div className="text-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome to Shithaa</h2>
-              <p className="text-gray-600">Sign in to access your account</p>
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-bold text-[#473C66] mb-3">Welcome to Shithaa</h2>
+              <p className="text-gray-600 text-lg">Sign in to access your account</p>
             </div>
             <LoginModal open={true} onClose={() => setShowLogin(false)} onSuccess={handleLoginSuccess} />
           </div>
@@ -254,105 +222,153 @@ export default function AccountPageClient() {
 
   return (
     <PageLoading loadingMessage="Loading your account..." minLoadingTime={1000}>
-      <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-purple-50">
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="bg-white rounded-2xl shadow-lg p-8 mb-8 border border-pink-100">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-            <div className="flex items-center space-x-6 mb-6 md:mb-0">
-              <div className="w-20 h-20 bg-gradient-to-br from-pink-400 to-purple-500 rounded-full flex items-center justify-center shadow-lg border-4 border-white">
-                <User className="w-10 h-10 text-white" />
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Profile Header */}
+          <div className="bg-white rounded-3xl shadow-xl p-8 mb-8 border border-gray-100">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-4 sm:space-y-0 sm:space-x-6 mb-6 lg:mb-0">
+                {/* Profile Photo */}
+                <div className="relative">
+                  {userProfile?.photoURL ? (
+                    <img 
+                      src={userProfile.photoURL} 
+                      alt={userProfile.name}
+                      className="w-24 h-24 sm:w-28 sm:h-28 rounded-full object-cover border-4 border-[#473C66]/10 shadow-lg"
+                    />
+                  ) : (
+                    <div className="w-24 h-24 sm:w-28 sm:h-28 bg-gradient-to-br from-[#473C66] to-[#5a4a7a] rounded-full flex items-center justify-center shadow-lg border-4 border-[#473C66]/10">
+                      <span className="text-white text-3xl font-bold">
+                        {userProfile?.name?.charAt(0)?.toUpperCase() || 'U'}
+                      </span>
+                    </div>
+                  )}
+                  {/* Premium Badge */}
+                  <div className="absolute -top-2 -right-2 bg-gradient-to-r from-amber-400 to-orange-500 rounded-full p-2 shadow-lg">
+                    <Crown className="w-4 h-4 text-white" />
+                  </div>
+                </div>
+                
+                {/* User Info */}
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-3">
+                    <h1 className="text-3xl sm:text-4xl font-bold text-gray-900">{userProfile?.name}</h1>
+                    <div className="flex items-center space-x-1 bg-amber-50 px-3 py-1 rounded-full">
+                      <Star className="w-4 h-4 text-amber-500 fill-current" />
+                      <span className="text-sm font-semibold text-amber-700">Premium</span>
+                    </div>
+                  </div>
+                  <p className="text-lg text-gray-600 font-medium">{userProfile?.email}</p>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm text-[#473C66] font-semibold">Member since {memberSince}</span>
+                    <div className="w-2 h-2 bg-[#473C66] rounded-full"></div>
+                    <span className="text-sm text-[#473C66] font-medium">Loyal Customer</span>
+                  </div>
+                </div>
               </div>
-              <div className="space-y-2">
-                <h1 className="text-3xl font-bold text-gray-900">{userProfile?.name}</h1>
-                <p className="text-gray-500 text-sm">{userProfile?.email}</p>
-                <div className="space-y-1">
-                  <p className="text-sm text-purple-600 font-medium">You deserve comfort, care & style 💜</p>
+              
+              {/* Logout Button */}
+              <button
+                onClick={handleLogout}
+                className="flex items-center space-x-3 px-6 py-3 bg-red-50 text-red-600 border border-red-200 rounded-2xl text-sm font-semibold hover:bg-red-100 hover:border-red-300 transition-all duration-200 shadow-sm hover:shadow-md"
+              >
+                <LogOut className="w-5 h-5" />
+                <span>Sign Out</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Stats Cards - Reordered as requested */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            {/* Wishlist Card - First */}
+            <div className="bg-white rounded-3xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-all duration-300 cursor-pointer group" onClick={() => window.location.href = '/wishlist'}>
+              <div className="flex items-center space-x-4">
+                <div className="w-16 h-16 bg-gradient-to-br from-pink-100 to-purple-100 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                  <Heart className="w-8 h-8 text-[#473C66]" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm text-gray-500 font-medium mb-1">Wishlist Items</p>
+                  <p className="text-3xl font-bold text-[#473C66]">{wishlistCount}</p>
+                  <p className="text-xs text-gray-400 mt-1">Saved for later</p>
                 </div>
               </div>
             </div>
-            <button
-              onClick={handleLogout}
-              className="flex items-center space-x-2 px-6 py-3 bg-red-50 text-red-600 border border-red-200 rounded-xl text-sm font-medium hover:bg-red-100 transition-all duration-200 shadow-sm"
-            >
-              <LogOut className="w-4 h-4" />
-              <span>Logout</span>
-            </button>
-          </div>
-        </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-2xl shadow-lg p-6 border border-pink-100 hover:shadow-xl transition-all duration-300">
-            <div className="flex items-center space-x-4">
-              <div className="w-14 h-14 bg-pink-100 rounded-xl flex items-center justify-center">
-                <Package className="w-7 h-7 text-pink-600" />
+            {/* Total Orders Card - Second */}
+            <div className="bg-white rounded-3xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-all duration-300">
+              <div className="flex items-center space-x-4">
+                <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-2xl flex items-center justify-center">
+                  <Package className="w-8 h-8 text-[#473C66]" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm text-gray-500 font-medium mb-1">Total Orders</p>
+                  <p className="text-3xl font-bold text-[#473C66]">{orderCount}</p>
+                  <p className="text-xs text-gray-400 mt-1">Orders placed</p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-gray-500 font-medium">Total Orders</p>
-                <p className="text-3xl font-bold text-gray-900">{orderCount}</p>
+            </div>
+
+            {/* Member Since Card - Third */}
+            <div className="bg-white rounded-3xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-all duration-300">
+              <div className="flex items-center space-x-4">
+                <div className="w-16 h-16 bg-gradient-to-br from-green-100 to-emerald-100 rounded-2xl flex items-center justify-center">
+                  <Calendar className="w-8 h-8 text-[#473C66]" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm text-gray-500 font-medium mb-1">Member Since</p>
+                  <p className="text-2xl font-bold text-[#473C66] leading-tight">{memberSince || "-"}</p>
+                  <p className="text-xs text-gray-400 mt-1">Loyal member</p>
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-lg p-6 border border-green-100 hover:shadow-xl transition-all duration-300">
-            <div className="flex items-center space-x-4">
-              <div className="w-14 h-14 bg-green-100 rounded-xl flex items-center justify-center">
-                <Calendar className="w-7 h-7 text-green-600" />
-              </div>
+          {/* Order History */}
+          <div className="bg-white rounded-3xl shadow-xl p-8 border border-gray-100">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-8">
               <div>
-                <p className="text-sm text-gray-500 font-medium">Member Since</p>
-                <p className="text-3xl font-bold text-gray-900">{memberSince || "-"}</p>
+                <h2 className="text-3xl font-bold text-gray-900 mb-2">Order History</h2>
+                {orders.length > 0 && (
+                  <p className="text-gray-600">
+                    You've placed <span className="font-semibold text-[#473C66]">{orderCount} orders</span> since <span className="font-semibold text-[#473C66]">{memberSince}</span>
+                  </p>
+                )}
               </div>
+              {orders.length > 0 && (
+                <div className="mt-4 lg:mt-0">
+                  <div className="inline-flex items-center space-x-2 bg-[#473C66]/10 px-4 py-2 rounded-full">
+                    <span className="text-sm font-medium text-[#473C66]">Thank you for being a valued customer</span>
+                    <span className="text-[#473C66]">🌸</span>
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-lg p-6 border border-purple-100 hover:shadow-xl transition-all duration-300 cursor-pointer" onClick={() => window.location.href = '/wishlist'}>
-            <div className="flex items-center space-x-4">
-              <div className="w-14 h-14 bg-purple-100 rounded-xl flex items-center justify-center">
-                <Heart className="w-7 h-7 text-purple-600" />
+            
+            {ordersLoading ? (
+              <div className="text-center py-16">
+                <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-[#473C66] mx-auto"></div>
+                <p className="mt-6 text-lg text-gray-600 font-medium">Loading your orders...</p>
               </div>
-              <div>
-                <p className="text-sm text-gray-500 font-medium">Wishlist</p>
-                <p className="text-3xl font-bold text-gray-900">{wishlistCount}</p>
+            ) : orders.length === 0 ? (
+              <div className="text-center py-16">
+                <div className="w-24 h-24 bg-gradient-to-br from-[#473C66]/10 to-[#473C66]/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Package className="w-12 h-12 text-[#473C66]" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-4">No orders yet</h3>
+                <p className="text-gray-600 mb-8 max-w-md mx-auto text-lg">Start shopping to see your order history here. We have beautiful maternity wear waiting for you!</p>
+                <a 
+                  href="/collections/maternity-feeding-wear" 
+                  className="inline-flex items-center px-8 py-4 bg-[#473C66] text-white font-semibold rounded-2xl hover:bg-[#3a3054] transition-all duration-200 shadow-lg hover:shadow-xl text-lg"
+                >
+                  Start Shopping
+                </a>
               </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Order History */}
-        <div className="bg-white rounded-2xl shadow-lg p-8 border border-pink-100">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">Order History</h2>
-            {orders.length > 0 && (
-              <p className="text-sm text-gray-500 italic">
-                You've placed <span className="font-semibold text-pink-600">{orderCount} orders</span> since <span className="font-semibold text-green-600">{memberSince}</span>. Thank you for being a valued customer 🌸
-              </p>
+            ) : (
+              <OrderHistory orders={orders} />
             )}
           </div>
-          
-          {ordersLoading ? (
-            <div className="text-center py-12">
-              <div className="loading loading-spinner loading-lg text-pink-600"></div>
-              <p className="mt-4 text-gray-600 font-medium">Loading your orders...</p>
-            </div>
-          ) : orders.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="w-20 h-20 bg-pink-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Package className="w-10 h-10 text-pink-600" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">No orders yet</h3>
-              <p className="text-gray-600 mb-6 max-w-md mx-auto">Start shopping to see your order history here. We have beautiful maternity wear waiting for you!</p>
-              <a href="/collections/maternity-feeding-wear" className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-pink-500 to-purple-600 text-white font-semibold rounded-xl hover:from-pink-600 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl">
-                Start Shopping
-              </a>
-            </div>
-          ) : (
-            <OrderHistory orders={orders} />
-          )}
         </div>
       </div>
-    </div>
     </PageLoading>
   )
 } 

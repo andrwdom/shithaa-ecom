@@ -266,26 +266,76 @@ export default function CheckoutPage() {
       <div className="min-h-screen bg-gray-50 py-6 px-2 sm:px-4">
         {/* Stepper/Progress Indicator */}
         <div className="max-w-5xl mx-auto mb-8 px-4">
-          <ol className="flex items-center w-full text-sm font-medium text-gray-500">
-            <li className="flex-1 flex items-center gap-2">
-              <span className="flex items-center justify-center w-10 h-10 rounded-full bg-[rgb(71,60,102)] text-white font-bold text-lg shadow-lg ring-4 ring-[rgb(71,60,102)]/20">1</span>
-              <span className="hidden sm:inline text-[rgb(71,60,102)] font-semibold">{buyNowItem ? 'Product' : 'Cart'}</span>
-              <span className="flex-1 h-1 bg-[rgb(71,60,102)] mx-2 rounded sm:block hidden"></span>
-            </li>
-            <li className="flex-1 flex items-center gap-2">
-              <span className="flex items-center justify-center w-10 h-10 rounded-full bg-[rgb(71,60,102)] text-white font-bold text-lg shadow-lg ring-4 ring-[rgb(71,60,102)]/20">2</span>
-              <span className="text-[rgb(71,60,102)] font-semibold hidden sm:inline">Checkout</span>
-              <span className="flex-1 h-1 bg-gray-200 mx-2 rounded sm:block hidden"></span>
-            </li>
-            <li className="flex items-center gap-2">
-              <span className="flex items-center justify-center w-10 h-10 rounded-full bg-gray-200 text-gray-400 font-bold text-lg border-2 border-gray-300">3</span>
-              <span className="hidden sm:inline text-gray-400">Payment</span>
-            </li>
-            <li className="flex items-center gap-2">
-              <span className="flex items-center justify-center w-10 h-10 rounded-full bg-gray-200 text-gray-400 font-bold text-lg border-2 border-gray-300">4</span>
-              <span className="hidden sm:inline text-gray-400">Complete</span>
-            </li>
-          </ol>
+          <div className="flex items-center justify-center">
+            <div className="flex items-center space-x-2 sm:space-x-4 md:space-x-8">
+              {/* Step 1: Cart/Product */}
+              <div className="flex flex-col items-center">
+                <div className="relative group">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-[#473C66] flex items-center justify-center shadow-lg transition-all duration-300 group-hover:scale-110 group-hover:shadow-xl ring-4 ring-[#473C66]/20">
+                    <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                    </svg>
+                  </div>
+                  <div className="absolute -top-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center animate-pulse">
+                    <svg className="w-3 h-3 sm:w-4 sm:h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                </div>
+                <span className="mt-2 text-xs sm:text-sm font-medium text-[#473C66] hidden sm:block transition-colors duration-300">
+                  {buyNowItem ? 'Product' : 'Cart'}
+                </span>
+              </div>
+
+              {/* Connector Line */}
+              <div className="w-8 sm:w-12 md:w-16 h-1 bg-[#473C66] rounded-full transition-all duration-500 relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-[#473C66] to-[#473C66] rounded-full animate-pulse"></div>
+              </div>
+
+              {/* Step 2: Checkout */}
+              <div className="flex flex-col items-center">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-[#473C66] flex items-center justify-center shadow-lg transition-all duration-300 hover:scale-110 hover:shadow-xl ring-4 ring-[#473C66]/20 animate-pulse">
+                  <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <span className="mt-2 text-xs sm:text-sm font-medium text-[#473C66] hidden sm:block transition-colors duration-300">Checkout</span>
+              </div>
+
+              {/* Connector Line */}
+              <div className="w-8 sm:w-12 md:w-16 h-1 bg-gray-200 rounded-full transition-all duration-500"></div>
+
+              {/* Step 3: Payment */}
+              <div className="flex flex-col items-center">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gray-200 flex items-center justify-center transition-all duration-300 hover:scale-110">
+                  <svg className="w-5 h-5 sm:w-6 sm:h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                  </svg>
+                </div>
+                <span className="mt-2 text-xs sm:text-sm font-medium text-gray-400 hidden sm:block transition-colors duration-300">Payment</span>
+              </div>
+
+              {/* Connector Line */}
+              <div className="w-8 sm:w-12 md:w-16 h-1 bg-gray-200 rounded-full transition-all duration-500"></div>
+
+              {/* Step 4: Complete */}
+              <div className="flex flex-col items-center">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gray-200 flex items-center justify-center transition-all duration-300 hover:scale-110">
+                  <svg className="w-5 h-5 sm:w-6 sm:h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <span className="mt-2 text-xs sm:text-sm font-medium text-gray-400 hidden sm:block transition-colors duration-300">Complete</span>
+              </div>
+            </div>
+          </div>
+          
+          {/* Current Step Indicator */}
+          <div className="text-center mt-4">
+            <span className="inline-block px-4 py-2 bg-[#473C66] text-white text-sm font-medium rounded-full shadow-lg">
+              Step 2 of 4: Checkout
+            </span>
+          </div>
         </div>
 
         {/* Show loading state while cart is being restored */}

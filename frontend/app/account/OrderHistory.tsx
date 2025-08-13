@@ -5,31 +5,31 @@ import { Clock, Cog, Truck, CheckCircle, Ban, ExternalLink, Package, Phone, Mail
 // Complete status configuration with icons and descriptions
 const STATUS_CONFIG = {
   Pending: {
-    color: "bg-yellow-100 text-yellow-800 border-yellow-200",
+    color: "bg-amber-100 text-amber-800 border-amber-200",
     icon: Clock,
-    iconColor: "text-yellow-500",
+    iconColor: "text-amber-500",
     description: "Order received, waiting to be processed",
-    accent: "from-yellow-300 to-yellow-400",
-    borderLeft: "border-l-4 border-yellow-400",
-    border: "border-yellow-400 ring-yellow-100"
+    accent: "from-amber-300 to-amber-400",
+    borderLeft: "border-l-4 border-amber-400",
+    border: "border-amber-400 ring-amber-100"
   },
   Processing: {
-    color: "bg-blue-100 text-blue-800 border-blue-200",
+    color: "bg-[#473C66]/10 text-[#473C66] border-[#473C66]/20",
     icon: Cog,
-    iconColor: "text-blue-500",
+    iconColor: "text-[#473C66]",
     description: "Order is being prepared and packed",
-    accent: "from-blue-300 to-blue-400",
-    borderLeft: "border-l-4 border-blue-400",
-    border: "border-blue-400 ring-blue-100"
+    accent: "from-[#473C66] to-[#5a4a7a]",
+    borderLeft: "border-l-4 border-[#473C66]",
+    border: "border-[#473C66] ring-[#473C66]/10"
   },
   Shipped: {
-    color: "bg-purple-100 text-purple-800 border-purple-200",
+    color: "bg-[#473C66]/10 text-[#473C66] border-[#473C66]/20",
     icon: Truck,
-    iconColor: "text-purple-500",
+    iconColor: "text-[#473C66]",
     description: "Order has been shipped and is in transit",
-    accent: "from-purple-300 to-purple-400",
-    borderLeft: "border-l-4 border-purple-400",
-    border: "border-purple-400 ring-purple-100"
+    accent: "from-[#473C66] to-[#5a4a7a]",
+    borderLeft: "border-l-4 border-[#473C66]",
+    border: "border-[#473C66] ring-[#473C66]/10"
   },
   Delivered: {
     color: "bg-green-100 text-green-800 border-green-200",
@@ -115,23 +115,23 @@ function OrderProgressTracker({ status }: { status: string }) {
               <div className="flex flex-col items-center">
                 <div className={`w-10 h-10 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${
                   stepStatus === 'completed' 
-                    ? 'bg-green-100 border-green-500 text-green-600' 
+                    ? 'bg-[#473C66] border-[#473C66] text-white shadow-lg' 
                     : stepStatus === 'pending'
-                    ? 'bg-blue-100 border-blue-500 text-blue-600'
+                    ? 'bg-[#473C66]/10 border-[#473C66] text-[#473C66]'
                     : 'bg-gray-100 border-gray-300 text-gray-400'
                 }`}>
                   <IconComponent className="w-5 h-5" />
                 </div>
                 <span className={`text-xs mt-2 font-medium text-center ${
-                  stepStatus === 'completed' ? 'text-green-600' : 
-                  stepStatus === 'pending' ? 'text-blue-600' : 'text-gray-400'
+                  stepStatus === 'completed' ? 'text-[#473C66] font-semibold' : 
+                  stepStatus === 'pending' ? 'text-[#473C66]' : 'text-gray-400'
                 }`}>
                   {step.label}
                 </span>
               </div>
               {index < steps.length - 1 && (
                 <div className={`flex-1 h-0.5 mx-2 transition-all duration-300 ${
-                  getStepStatus(steps[index + 1].id) === 'completed' ? 'bg-green-500' : 'bg-gray-300'
+                  getStepStatus(steps[index + 1].id) === 'completed' ? 'bg-[#473C66]' : 'bg-gray-300'
                 }`} />
               )}
             </div>
@@ -166,7 +166,7 @@ export default function OrderHistory({ orders }: { orders: any[] }) {
         return (
           <div
             key={order._id}
-            className={`relative flex items-stretch bg-white rounded-2xl shadow-lg border border-pink-100 ${config.borderLeft} transition-all duration-200 hover:shadow-xl hover:-translate-y-1 group overflow-hidden`}
+            className={`relative flex items-stretch bg-white rounded-3xl shadow-lg border border-gray-100 ${config.borderLeft} transition-all duration-200 hover:shadow-xl hover:-translate-y-1 group overflow-hidden`}
           >
             {/* Cancelled sticker */}
             {status.toLowerCase() === "cancelled" && (
@@ -174,13 +174,13 @@ export default function OrderHistory({ orders }: { orders: any[] }) {
                 <span className="bg-red-600 text-white text-xs font-bold px-4 py-1 rounded shadow-lg drop-shadow-lg border-2 border-white">Cancelled</span>
               </div>
             )}
-            <div className="flex flex-1 flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 p-4 sm:p-6">
+            <div className="flex flex-1 flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 p-6">
               {/* Product thumbnail - larger size */}
               {items[0]?.image && (
                 <img
                   src={Array.isArray(items[0].image) ? items[0].image[0] : items[0].image}
                   alt={items[0].name}
-                  className="w-24 h-24 object-cover rounded-xl border-2 border-pink-100 shadow-sm bg-gray-50"
+                  className="w-24 h-24 object-cover rounded-2xl border-2 border-gray-100 shadow-sm bg-gray-50"
                 />
               )}
               
@@ -197,7 +197,7 @@ export default function OrderHistory({ orders }: { orders: any[] }) {
                     
                     {/* Total Amount and Quantity */}
                     <div className="flex items-center gap-4 mb-2">
-                      <p className="text-lg font-semibold text-gray-900">
+                      <p className="text-lg font-semibold text-[#473C66]">
                         ₹{order.totalAmount || order.total || order.totalPrice || order.amount || 0}
                       </p>
                       <p className="text-sm text-gray-600">
@@ -218,7 +218,7 @@ export default function OrderHistory({ orders }: { orders: any[] }) {
                     
                     {/* Shipping tracking info if available */}
                     {order.shippingTracking && order.shippingTracking.partner && order.shippingTracking.trackingId && (
-                      <div className="flex items-center gap-1 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-md border border-blue-200 w-fit">
+                      <div className="flex items-center gap-1 text-xs text-[#473C66] bg-[#473C66]/10 px-3 py-1 rounded-full border border-[#473C66]/20 w-fit">
                         <Truck className="w-3 h-3" />
                         <span>{order.shippingTracking.partner}</span>
                         {order.shippingTracking.trackingUrl && (
@@ -234,7 +234,7 @@ export default function OrderHistory({ orders }: { orders: any[] }) {
                     
                     <button
                       onClick={() => setSelectedOrder(order)}
-                      className="w-full sm:w-auto px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors duration-200 shadow-sm"
+                      className="w-full sm:w-auto px-6 py-2 bg-[#473C66] text-white text-sm font-medium rounded-xl hover:bg-[#3a3054] transition-colors duration-200 shadow-sm hover:shadow-md"
                       aria-label={`View details for order ${order.orderId || order._id}`}
                     >
                       View Details
@@ -257,7 +257,7 @@ export default function OrderHistory({ orders }: { orders: any[] }) {
           aria-modal="true"
           aria-labelledby="order-modal-title"
         >
-          <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-3xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
                 <h2 id="order-modal-title" className="text-2xl font-bold text-gray-900">Order Details</h2>
@@ -273,11 +273,11 @@ export default function OrderHistory({ orders }: { orders: any[] }) {
               </div>
               
               {/* Order ID and Status Message */}
-              <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4 mb-6">
+              <div className="bg-gradient-to-r from-[#473C66]/5 to-[#473C66]/10 rounded-2xl p-6 mb-6 border border-[#473C66]/10">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <div>
                     <p className="text-sm text-gray-500 font-medium">Order ID</p>
-                    <p className="font-mono text-xl font-bold text-gray-900">{selectedOrder.orderId || selectedOrder._id}</p>
+                    <p className="font-mono text-xl font-bold text-[#473C66]">{selectedOrder.orderId || selectedOrder._id}</p>
                   </div>
                   <div className="text-right">
                     {(() => {
@@ -297,7 +297,7 @@ export default function OrderHistory({ orders }: { orders: any[] }) {
                         return (
                           <>
                             <p className="text-sm text-gray-500 font-medium">Tracking</p>
-                            <p className="text-lg font-semibold text-purple-600 flex items-center gap-1">
+                            <p className="text-lg font-semibold text-[#473C66] flex items-center gap-1">
                               <Truck className="w-4 h-4" />
                               Track Your Package
                             </p>
@@ -307,7 +307,7 @@ export default function OrderHistory({ orders }: { orders: any[] }) {
                         return (
                           <>
                             <p className="text-sm text-gray-500 font-medium">Status</p>
-                            <p className="text-lg font-semibold text-blue-600 flex items-center gap-1">
+                            <p className="text-lg font-semibold text-[#473C66] flex items-center gap-1">
                               <Cog className="w-4 h-4" />
                               Being Prepared
                             </p>
@@ -327,7 +327,7 @@ export default function OrderHistory({ orders }: { orders: any[] }) {
                         return (
                           <>
                             <p className="text-sm text-gray-500 font-medium">Status</p>
-                            <p className="text-lg font-semibold text-yellow-600 flex items-center gap-1">
+                            <p className="text-lg font-semibold text-amber-600 flex items-center gap-1">
                               <Clock className="w-4 h-4" />
                               Order Confirmed
                             </p>
