@@ -253,6 +253,11 @@ export default function CheckoutPage() {
       const data = await res.json();
       if (!res.ok || !data.redirectUrl) throw new Error(data.message || 'Failed to create payment session');
 
+      // Store the merchant transaction ID for later use
+      if (data.merchantTransactionId) {
+        localStorage.setItem('currentPaymentTransactionId', data.merchantTransactionId);
+      }
+
       // 2. Redirect to PhonePe payment page
       window.location.href = data.redirectUrl;
     } catch (err: any) {
