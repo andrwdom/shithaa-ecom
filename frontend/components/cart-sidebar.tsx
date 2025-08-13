@@ -22,37 +22,67 @@ export default function CartSidebar() {
   } = useCart();
   const { clearBuyNowItem } = useBuyNow();
   const [productStocks, setProductStocks] = useState<Record<string, Record<string, number>>>({});
+  const [isLoadingStocks, setIsLoadingStocks] = useState(false);
+  const [showEmptyState, setShowEmptyState] = useState(false);
   const router = useRouter();
+
+  // Show empty state after a small delay to prevent flickering
+  useEffect(() => {
+    if (cartItems.length === 0) {
+      const timer = setTimeout(() => setShowEmptyState(true), 100);
+      return () => clearTimeout(timer);
+    } else {
+      setShowEmptyState(false);
+    }
+  }, [cartItems.length]);
 
   // Fetch stock info for all cart items on open
   useEffect(() => {
     async function fetchStocks() {
+      if (cartItems.length === 0) return;
+      
+      setIsLoadingStocks(true);
       const stocks: Record<string, Record<string, number>> = {};
-      for (const item of cartItems) {
-        if (!stocks[item._id]) {
-          try {
-            const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + `/api/products/${item._id}`;
-            const res = await fetch(apiUrl);
-            if (res.ok) {
-              const data = await res.json();
-              if (data.product && Array.isArray(data.product.sizes)) {
-                stocks[item._id] = {};
-                for (const s of data.product.sizes) {
-                  stocks[item._id][s.size] = s.stock;
-                }
-              } else if (data.data && Array.isArray(data.data.sizes)) {
-                stocks[item._id] = {};
-                for (const s of data.data.sizes) {
-                  stocks[item._id][s.size] = s.stock;
+      
+      try {
+        // Import the safeFetch function
+        const { safeFetch } = await import('@/lib/api-utils')
+        
+        for (const item of cartItems) {
+          if (!stocks[item._id]) {
+            try {
+              const response = await safeFetch(
+                `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/products/${item._id}`,
+                {},
+                `product-stock-${item._id}`,
+                5 * 60 * 1000 // 5 minutes cache for stock info
+              )
+              
+              if (response.ok) {
+                const data = await response.json()
+                if (data.product && Array.isArray(data.product.sizes)) {
+                  stocks[item._id] = {};
+                  for (const s of data.product.sizes) {
+                    stocks[item._id][s.size] = s.stock;
+                  }
+                } else if (data.data && Array.isArray(data.data.sizes)) {
+                  stocks[item._id] = {};
+                  for (const s of data.data.sizes) {
+                    stocks[item._id][s.size] = s.stock;
+                  }
                 }
               }
+            } catch (error) {
+              console.error('Error fetching stock for item:', item._id, error);
             }
-          } catch (error) {
-            console.error('Error fetching stock for item:', item._id, error);
           }
         }
+      } catch (error) {
+        console.error('Error importing safeFetch:', error);
       }
+      
       setProductStocks(stocks);
+      setIsLoadingStocks(false);
     }
     if (isCartSidebarOpen && cartItems.length > 0) fetchStocks();
   }, [isCartSidebarOpen, cartItems]);
@@ -96,13 +126,22 @@ export default function CartSidebar() {
 
         {/* Cart Items */}
         <div className="flex-1 overflow-y-auto">
-          {cartItems.length === 0 ? (
+          {/* Show loading state while stocks are being fetched */}
+          {isLoadingStocks && cartItems.length > 0 ? (
+            <div className="text-center py-16 px-6">
+              <div className="animate-pulse">
+                <div className="h-20 w-20 bg-gray-200 rounded-full mx-auto mb-4"></div>
+                <div className="h-4 bg-gray-200 rounded w-32 mx-auto mb-2"></div>
+                <div className="h-3 bg-gray-200 rounded w-48 mx-auto"></div>
+              </div>
+            </div>
+          ) : cartItems.length === 0 && showEmptyState ? (
             <div className="text-center py-16 px-6">
               <ShoppingBag className="h-20 w-20 text-gray-300 mx-auto mb-4" />
               <p className="text-gray-500 text-lg mb-2">Your cart is empty</p>
               <p className="text-gray-400 text-sm">Start shopping to add items to your cart</p>
             </div>
-          ) : (
+          ) : cartItems.length > 0 ? (
             <div className="p-4 sm:p-6 space-y-5">
               {/* Special Offer Banner */}
               {offerDetails?.offerApplied && (
@@ -255,7 +294,7 @@ export default function CartSidebar() {
                 })}
               </div>
             </div>
-          )}
+          ) : null}
         </div>
 
         {/* Footer */}

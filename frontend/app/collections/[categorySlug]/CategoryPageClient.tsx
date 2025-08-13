@@ -168,29 +168,31 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
     async function getProducts() {
       setLoading(true);
       try {
-        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-        const url = new URL(`${baseUrl}/api/products`);
+        // Import the specialized fetch function
+        const { fetchProducts: fetchProductsAPI } = await import('@/lib/api-utils')
+        
+        const params: Record<string, string> = {}
         if (categorySlug) {
-          url.searchParams.append('categorySlug', categorySlug);
-          url.searchParams.append('sortBy', 'displayOrder');
-          url.searchParams.append('sortOrder', 'asc');
+          params.categorySlug = categorySlug
+          params.sortBy = 'displayOrder'
+          params.sortOrder = 'asc'
         }
         // Add sleeve type filter to API call if selected
         if (sleeveTypeFilter && sleeveTypeFilter !== 'all') {
-          url.searchParams.append('sleeveType', sleeveTypeFilter);
+          params.sleeveType = sleeveTypeFilter
         }
         // Add size filter to API call if selected
         if (selectedSize) {
-          url.searchParams.append('size', selectedSize);
+          params.size = selectedSize
         }
 
-        const res = await safeFetch(url.toString());
+        const response = await fetchProductsAPI(params)
 
-        if (!res || !res.ok) {
-          throw new Error(`Failed to fetch products: ${res?.status || 'Network error'} ${res?.statusText || ''}`);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch products: ${response.status} ${response.statusText}`);
         }
 
-        const data = await res.json();
+        const data = await response.json();
         // Map backend fields to frontend
         const mappedProducts = (data.products || []).map((p: any) => ({
           id: String(p.customId || p._id), // Use customId for routing, fallback to _id
@@ -214,11 +216,12 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
         if (process.env.NODE_ENV === 'development') {
           console.error('Error fetching products:', err);
         }
-        setError(err instanceof Error ? err.message : 'An error occurred while fetching products');
+        setError('Failed to load products. Please try again later.');
       } finally {
         setLoading(false);
       }
     }
+
     getProducts();
   }, [categorySlug, sleeveTypeFilter, selectedSize]);
 

@@ -124,31 +124,27 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setCartChangeCounter(prev => prev + 1)
   }, [cartItems])
 
-  // Calculate cart total and check for offers when cart changes
-  useEffect(() => {
-    if (cartItems.length > 0) {
-      calculateCartTotalWithOffers()
-    } else {
-      setCartTotal(0)
-      setOfferDetails(null)
-    }
-  }, [cartItems])
-
-  console.log("CartProvider: Rendering with cartItems:", cartItems)
-
-  // Function to calculate cart total with offers
+  // Function to calculate cart total with offers - moved before useEffect
   const calculateCartTotalWithOffers = useCallback(async () => {
     if (cartItems.length === 0) return
 
     setIsLoadingOffer(true)
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/cart/calculate-total`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      // Import the safeFetch function
+      const { safeFetch } = await import('@/lib/api-utils')
+      
+      const response = await safeFetch(
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/cart/calculate-total`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ items: cartItems }),
         },
-        body: JSON.stringify({ items: cartItems }),
-      })
+        `cart-total-${cartItems.map(item => `${item._id}-${item.size}-${item.quantity}`).join('-')}`,
+        2 * 60 * 1000 // 2 minutes cache
+      )
 
       if (response.ok) {
         const data = await response.json()
@@ -167,7 +163,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         // Fallback to simple calculation if API fails
         const fallbackTotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
         setCartTotal(fallbackTotal)
-        setCartSubtotal(fallbackTotal)
         setOfferDetails(null)
       }
     } catch (error) {
@@ -180,6 +175,18 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       setIsLoadingOffer(false)
     }
   }, [cartItems])
+
+  // Calculate cart total and check for offers when cart changes
+  useEffect(() => {
+    if (cartItems.length > 0) {
+      calculateCartTotalWithOffers()
+    } else {
+      setCartTotal(0)
+      setOfferDetails(null)
+    }
+  }, [cartItems, calculateCartTotalWithOffers])
+
+  console.log("CartProvider: Rendering with cartItems:", cartItems)
 
   const addToCart = useCallback((item: CartItem, openSidebar: boolean = true, stock?: number) => {
     setCartItems((prev) => {

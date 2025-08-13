@@ -99,21 +99,12 @@ export default function HeroCategoryCard({
     try {
       setError(null)
       
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
-      const url = new URL(`${baseUrl}/api/hero-images`)
-      url.searchParams.append('categoryId', categorySlug)
-      url.searchParams.append('device', isMobile.current ? 'mobile' : 'desktop')
-      url.searchParams.append('limit', maxImages.toString())
+      // Import the specialized fetch function
+      const { fetchHeroImages: fetchHeroImagesAPI } = await import('@/lib/api-utils')
       
-      console.log(`Fetching hero images from: ${url.toString()}`)
+      console.log(`Fetching hero images for category: ${categorySlug}`)
       
-      const response = await fetch(url.toString(), {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'Cache-Control': 'no-cache'
-        }
-      })
+      const response = await fetchHeroImagesAPI(categorySlug, isMobile.current ? 'mobile' : 'desktop', maxImages)
       
       if (!response.ok) {
         throw new Error(`Failed to fetch hero images: ${response.status} ${response.statusText}`)

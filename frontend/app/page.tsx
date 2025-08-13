@@ -41,9 +41,19 @@ export default function Home() {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + '/api/products?sortBy=displayOrder&sortOrder=asc';
-        const res = await fetch(apiUrl);
-        const data = await res.json();
+        // Import the specialized fetch function
+        const { fetchProducts: fetchProductsAPI } = await import('@/lib/api-utils')
+        
+        const response = await fetchProductsAPI({
+          sortBy: 'displayOrder',
+          sortOrder: 'asc'
+        })
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch products: ${response.status}`)
+        }
+        
+        const data = await response.json();
         // Map backend fields to frontend
         const products = (data.data || data.products || []).map((p: any) => ({
           id: String(p._id),
