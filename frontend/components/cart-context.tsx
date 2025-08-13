@@ -1,6 +1,6 @@
 "use client"
 
-import React, { createContext, useContext, useState, useEffect } from "react"
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from "react"
 
 export interface CartItem {
   id: string; // for frontend logic
@@ -114,7 +114,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       window.removeEventListener('pageshow', handlePageShow)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
-  }, [cartItems.length])
+  }, []) // Removed cartItems.length dependency to prevent infinite loops
 
   // Save cart to localStorage on change
   useEffect(() => {
@@ -137,7 +137,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   console.log("CartProvider: Rendering with cartItems:", cartItems)
 
   // Function to calculate cart total with offers
-  const calculateCartTotalWithOffers = async () => {
+  const calculateCartTotalWithOffers = useCallback(async () => {
     if (cartItems.length === 0) return
 
     setIsLoadingOffer(true)
@@ -175,14 +175,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       // Fallback to simple calculation
       const fallbackTotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
       setCartTotal(fallbackTotal)
-      setCartSubtotal(fallbackTotal)
       setOfferDetails(null)
     } finally {
       setIsLoadingOffer(false)
     }
-  }
+  }, [cartItems])
 
-  function addToCart(item: CartItem, openSidebar: boolean = true, stock?: number) {
+  const addToCart = useCallback((item: CartItem, openSidebar: boolean = true, stock?: number) => {
     setCartItems((prev) => {
       const existing = prev.find((i) => i._id === item._id && i.size === item.size)
       const existingQty = existing ? existing.quantity : 0
@@ -201,9 +200,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       return [...prev, item]
     })
     if (openSidebar) setIsCartSidebarOpen(true)
-  }
+  }, [])
 
-  function updateCartItem(_id: string, size: string, quantity: number, stock?: number) {
+  const updateCartItem = useCallback((_id: string, size: string, quantity: number, stock?: number) => {
     setCartItems((prev) => {
       const existing = prev.find((i) => i._id === _id && i.size === size)
       if (!existing) return prev;
@@ -225,30 +224,32 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         item._id === _id && item.size === size ? { ...item, quantity } : item
       )
     })
-  }
+  }, [])
 
-  function removeFromCart(_id: string, size: string) {
+  const removeFromCart = useCallback((_id: string, size: string) => {
     setCartItems((prev) => prev.filter((item) => !(item._id === _id && item.size === size)))
-  }
+  }, [])
 
-  function openCartSidebar() {
+  const openCartSidebar = useCallback(() => {
     setIsCartSidebarOpen(true)
-  }
-  function closeCartSidebar() {
-    setIsCartSidebarOpen(false)
-  }
+  }, [])
 
-  function clearCart() {
+  const closeCartSidebar = useCallback(() => {
+    setIsCartSidebarOpen(false)
+  }, [])
+
+  const clearCart = useCallback(() => {
     setCartItems([])
     localStorage.removeItem("cartItems")
-  }
+  }, [])
 
   // Function to notify checkout that cart has changed
-  function notifyCheckoutCartChanged() {
+  const notifyCheckoutCartChanged = useCallback(() => {
     setCartChangeCounter(prev => prev + 1)
-  }
+  }, [])
 
-  const contextValue: CartContextType = {
+  // Memoize context value to prevent unnecessary re-renders
+  const contextValue = useMemo(() => ({
     cartItems, 
     addToCart, 
     updateCartItem, 
@@ -262,7 +263,21 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     offerDetails,
     isLoadingOffer,
     notifyCheckoutCartChanged
-  }
+  }), [
+    cartItems, 
+    addToCart, 
+    updateCartItem, 
+    removeFromCart, 
+    isCartSidebarOpen, 
+    openCartSidebar, 
+    closeCartSidebar, 
+    clearCart,
+    cartTotal,
+    cartSubtotal,
+    offerDetails,
+    isLoadingOffer,
+    notifyCheckoutCartChanged
+  ])
 
   console.log("CartProvider: Providing context value:", contextValue)
 

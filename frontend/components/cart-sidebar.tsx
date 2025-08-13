@@ -71,8 +71,8 @@ export default function CartSidebar() {
       {/* Backdrop */}
       <div className="fixed inset-0 bg-black/50 z-[9998]" onClick={closeCartSidebar} />
       
-      {/* Sidebar */}
-      <div className="fixed right-0 top-0 h-full w-[420px] max-w-[95vw] bg-white shadow-2xl z-[9999] transform transition-transform duration-300 flex flex-col">
+      {/* Sidebar - Removed problematic transitions */}
+      <div className="fixed right-0 top-0 h-full w-[420px] max-w-[95vw] bg-white shadow-2xl z-[9999] flex flex-col cart-sidebar-mobile">
         {/* Header */}
         <div className="p-4 sm:p-6 border-b border-gray-100 bg-gradient-to-r from-purple-50 to-white">
           <div className="flex items-center justify-between mb-2">
@@ -153,7 +153,7 @@ export default function CartSidebar() {
                   const isMaxQuantity = stock !== undefined && item.quantity >= stock;
                   
                   return (
-                    <div key={`${item.id}-${item.size}`} className="bg-white border border-gray-200 rounded-xl p-3 sm:p-4 shadow-sm hover:shadow-md transition-shadow">
+                    <div key={`${item.id}-${item.size}`} className="bg-white border border-gray-200 rounded-xl p-3 sm:p-4 shadow-sm">
                       <div className="flex gap-3 sm:gap-4">
                         {/* Product Image */}
                         <div className="w-16 h-20 sm:w-20 sm:h-24 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
@@ -243,7 +243,7 @@ export default function CartSidebar() {
                               variant="ghost"
                               size="sm"
                               onClick={() => removeFromCart(item._id, item.size)}
-                              className="w-full text-red-500 hover:text-red-700 hover:bg-red-50 text-xs sm:text-sm py-2 h-auto border border-red-200 hover:border-red-300 rounded-lg transition-all duration-200"
+                              className="w-full text-red-500 hover:text-red-700 hover:bg-red-50 text-xs sm:text-sm py-2 h-auto border border-red-200 hover:border-red-300 rounded-lg"
                             >
                               Remove Item
                             </Button>
@@ -284,7 +284,7 @@ export default function CartSidebar() {
             {/* Action Buttons */}
             <div className="space-y-3">
               <Button 
-                className="w-full bg-[rgb(71,60,102)] hover:bg-[rgb(71,60,102)]/90 text-white py-3 sm:py-4 rounded-xl font-semibold text-sm sm:text-base shadow-lg hover:shadow-xl transition-all duration-200" 
+                className="w-full bg-[rgb(71,60,102)] hover:bg-[rgb(71,60,102)]/90 text-white py-3 sm:py-4 rounded-xl font-semibold text-sm sm:text-base shadow-lg" 
                 onClick={handleProceedToCheckout}
               >
                 Proceed to Checkout
@@ -292,7 +292,7 @@ export default function CartSidebar() {
               
               <Button
                 variant="outline"
-                className="w-full border-2 border-[rgb(71,60,102)] text-[rgb(71,60,102)] hover:bg-[rgb(71,60,102)] hover:text-white bg-transparent py-2.5 sm:py-3 rounded-xl font-medium transition-all duration-200"
+                className="w-full border-2 border-[rgb(71,60,102)] text-[rgb(71,60,102)] hover:bg-[rgb(71,60,102)] hover:text-white bg-transparent py-2.5 sm:py-3 rounded-xl font-medium"
                 onClick={closeCartSidebar}
               >
                 Continue Shopping

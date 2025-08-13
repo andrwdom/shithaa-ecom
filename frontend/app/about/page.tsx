@@ -7,7 +7,6 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { useLoading } from "@/components/loading-context"
 import { useEffect } from "react"
-import Footer from "@/components/footer"
 
 
 // Animation variants
@@ -442,7 +441,7 @@ export default function AboutPage() {
                   <Button
                     size="lg"
                     variant="outline"
-                    className="border-white text-white hover:bg-white hover:text-[#473C66] rounded-full px-8 py-3 font-semibold"
+                    className="border-white text-white bg-white/10 hover:bg-white hover:text-[#473C66] rounded-full px-8 py-3 font-semibold"
                     onClick={() => window.location.href = '/contact'}
                   >
                     Get in Touch
@@ -453,9 +452,6 @@ export default function AboutPage() {
           </section>
         </div>
       </div>
-      
-      {/* Default Footer */}
-      <Footer />
     </>
   )
 }
