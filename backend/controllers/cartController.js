@@ -96,8 +96,8 @@ const calculateCartTotal = async (req, res) => {
             if (product && (
                 product.categorySlug === 'zipless-feeding-lounge-wear' || 
                 product.categorySlug === 'non-feeding-lounge-wear' ||
-                product.categorySlug === 'zipless-feeding-dupatta-lounge-wear' ||
-                product.categorySlug === 'maternity-feeding-wear'
+                product.categorySlug === 'zipless-feeding-dupatta-lounge-wear'
+                // Removed 'maternity-feeding-wear' from offer categories
             )) {
                 // Add item multiple times based on quantity for offer calculation
                 for (let i = 0; i < item.quantity; i++) {

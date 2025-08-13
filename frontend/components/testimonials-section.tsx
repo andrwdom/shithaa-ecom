@@ -97,7 +97,7 @@ const TestimonialCard = ({ testimonial, index, isActive }: TestimonialCardProps)
     >
       {/* Glassmorphic container */}
       <motion.div
-        className="relative bg-white/90 backdrop-blur-md rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-xl md:shadow-2xl border border-white/20"
+        className="relative bg-transparent backdrop-blur-md rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-xl md:shadow-2xl border border-white/20"
         whileHover={{
           scale: 1.02,
           rotateZ: 0,
@@ -128,8 +128,6 @@ const TestimonialCard = ({ testimonial, index, isActive }: TestimonialCardProps)
             width={400}
             height={600}
             className="w-full h-[300px] md:h-[400px] lg:h-[500px] object-cover"
-            placeholder="blur"
-            blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAAcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
           />
 
 

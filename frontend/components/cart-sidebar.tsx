@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { X, Plus, Minus, ShoppingBag, Gift } from "lucide-react"
+import { X, Plus, Minus, ShoppingBag, Gift, AlertTriangle, Info } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
 import { useCart, CartItem } from "@/components/cart-context"
@@ -59,9 +59,7 @@ export default function CartSidebar() {
 
   // Function to handle checkout from cart
   const handleProceedToCheckout = () => {
-    // Clear any buy-now state to ensure checkout shows cart contents
     clearBuyNowItem();
-    // Close sidebar and navigate to checkout
     closeCartSidebar();
     router.push('/checkout');
   };
@@ -72,187 +70,232 @@ export default function CartSidebar() {
     <React.Fragment>
       {/* Backdrop */}
       <div className="fixed inset-0 bg-black/50 z-[9998]" onClick={closeCartSidebar} />
+      
       {/* Sidebar */}
       <div className="fixed right-0 top-0 h-full w-96 bg-white shadow-2xl z-[9999] transform transition-transform duration-300 flex flex-col">
         {/* Header */}
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-[rgb(71,60,102)] font-serif flex items-center gap-2">
-              <ShoppingBag className="h-6 w-6" />
+        <div className="p-6 border-b border-gray-100 bg-gradient-to-r from-purple-50 to-white">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-2xl font-bold text-[rgb(71,60,102)] font-serif flex items-center gap-3">
+              <ShoppingBag className="h-7 w-7" />
               Shopping Cart
             </h2>
-            <Button variant="ghost" size="sm" onClick={closeCartSidebar}>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={closeCartSidebar}
+              className="hover:bg-purple-100 rounded-full p-2"
+            >
               <X className="h-5 w-5" />
             </Button>
           </div>
-          <p className="text-sm text-gray-600 mt-1">
+          <p className="text-sm text-gray-600">
             {cartItems.length} item{cartItems.length !== 1 ? "s" : ""} in cart
           </p>
         </div>
+
         {/* Cart Items */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto">
           {cartItems.length === 0 ? (
-            <div className="text-center py-12">
-              <ShoppingBag className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500">Your cart is empty</p>
+            <div className="text-center py-16 px-6">
+              <ShoppingBag className="h-20 w-20 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500 text-lg mb-2">Your cart is empty</p>
+              <p className="text-gray-400 text-sm">Start shopping to add items to your cart</p>
             </div>
           ) : (
-            <React.Fragment>
-              {/* Discount Banner */}
+            <div className="p-6 space-y-6">
+              {/* Special Offer Banner */}
               {offerDetails?.offerApplied && (
-                <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-                  <div className="flex items-center gap-2 text-green-700">
-                    <Gift className="h-5 w-5" />
-                    <div className="flex-1">
-                      <p className="font-medium text-sm">🔥 Buy 3 Loungewear for ₹1299!</p>
-                      <p className="text-xs text-green-600">
-                        {offerDetails.offerDetails?.completeSets || 0} set(s) applied • 
-                        Save ₹{offerDetails.offerDiscount?.toLocaleString() || 0}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              {/* Progress to next offer */}
-              {offerDetails?.loungewearCategoryCount && offerDetails.loungewearCategoryCount > 0 && offerDetails.loungewearCategoryCount < 3 && (
-                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <div className="flex items-center gap-2 text-blue-700">
-                    <div className="flex-1">
-                      <p className="font-medium text-sm">Almost there!</p>
-                      <p className="text-xs text-blue-600">
-                        Add {3 - (offerDetails.loungewearCategoryCount || 0)} more loungewear item(s) to get the ₹1299 bundle offer
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              <div className="space-y-4">
-              {cartItems.map((item) => {
-                const stock = productStocks[item._id]?.[item.size];
-                return (
-                  <div key={`${item.id}-${item.size}`} className="flex items-center space-x-4 p-4 border border-gray-200 rounded-xl">
-                    <div className="w-16 h-20 bg-gray-100 rounded-lg overflow-hidden">
-                      <Image
-                        src={item.image || "/placeholder.svg"}
-                        alt={item.name}
-                        width={64}
-                        height={80}
-                        className="object-cover w-full h-full"
-                      />
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-4 shadow-sm">
+                  <div className="flex items-start gap-3">
+                    <div className="bg-green-100 p-2 rounded-lg">
+                      <Gift className="h-5 w-5 text-green-600" />
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900 text-sm line-clamp-2">{item.name}</h3>
-                      <p className="text-xs text-gray-500 mt-1">Size: {item.size}</p>
-                      <p className="font-bold text-[rgb(71,60,102)] mt-1">₹{item.price.toLocaleString()}</p>
-                      <div className="flex items-center justify-between mt-2">
-                        <div className="flex items-center space-x-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => updateCartItem(item._id, item.size, Math.max(1, item.quantity - 1), stock)}
-                            className="h-8 w-8 p-0"
-                            disabled={item.quantity <= 1}
-                          >
-                            <Minus className="h-3 w-3" />
-                          </Button>
-                          <span className={`text-sm font-medium w-8 text-center ${stock !== undefined && item.quantity >= stock ? 'text-red-500' : ''}`}>
-                            {item.quantity}
-                          </span>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              if (stock !== undefined && item.quantity >= stock) {
-                                alert(`Cannot add more than ${stock} in stock for this size.`);
-                                return;
-                              }
-                              updateCartItem(item._id, item.size, item.quantity + 1, stock);
-                            }}
-                            disabled={stock !== undefined && item.quantity >= stock}
-                            className="h-8 w-8 p-0 disabled:opacity-50 disabled:cursor-not-allowed"
-                            title={stock !== undefined && item.quantity >= stock ? `Only ${stock} available in stock` : 'Increase quantity'}
-                          >
-                            <Plus className="h-3 w-3" />
-                          </Button>
-                        </div>
-                        
-                        {/* Stock warning if quantity reaches limit */}
-                        {stock !== undefined && item.quantity >= stock && (
-                          <div className="text-xs text-red-500 font-medium mt-1 bg-red-50 px-2 py-1 rounded border border-red-200">
-                            ⚠️ Max quantity reached ({stock} in stock)
-                          </div>
+                      <h3 className="font-bold text-green-800 text-sm mb-1">
+                        🎉 Special Loungewear Bundle Offer!
+                      </h3>
+                      <p className="text-green-700 text-xs leading-relaxed">
+                        {offerDetails.offerDetails?.completeSets || 0} set(s) of 3 for ₹1,299 each
+                        {offerDetails.offerDetails?.remainingItems > 0 && (
+                          <span> • {offerDetails.offerDetails.remainingItems} item(s) at ₹450 each</span>
                         )}
-                        
-                        {/* Stock info display */}
-                        {stock !== undefined && (
-                          <div className="text-xs text-gray-500 mt-1">
-                            {item.quantity >= stock ? '⚠️ ' : ''}{stock} in stock
-                          </div>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeFromCart(item._id, item.size)}
-                          className="text-red-500 hover:text-red-700 text-xs"
-                        >
-                          Remove
-                        </Button>
+                      </p>
+                      <div className="mt-2 text-green-800 font-semibold text-sm">
+                        Total Savings: ₹{offerDetails.offerDiscount?.toLocaleString() || 0}
                       </div>
                     </div>
                   </div>
-                );
-              })}
+                </div>
+              )}
+              
+              {/* Progress to Next Offer */}
+              {offerDetails?.loungewearCategoryCount && offerDetails.loungewearCategoryCount > 0 && offerDetails.loungewearCategoryCount < 3 && (
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-blue-100 p-2 rounded-lg">
+                      <Info className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-blue-800 text-sm mb-1">Almost there!</h3>
+                      <p className="text-blue-700 text-xs">
+                        Add {3 - (offerDetails.loungewearCategoryCount || 0)} more loungewear item(s) to unlock the ₹1,299 bundle offer
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Cart Items */}
+              <div className="space-y-4">
+                {cartItems.map((item) => {
+                  const stock = productStocks[item._id]?.[item.size];
+                  const isMaxQuantity = stock !== undefined && item.quantity >= stock;
+                  
+                  return (
+                    <div key={`${item.id}-${item.size}`} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
+                      <div className="flex gap-4">
+                        {/* Product Image */}
+                        <div className="w-20 h-24 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                          <Image
+                            src={item.image || "/placeholder.svg"}
+                            alt={item.name}
+                            width={80}
+                            height={96}
+                            className="object-cover w-full h-full"
+                          />
+                        </div>
+                        
+                        {/* Product Details */}
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-gray-900 text-sm leading-tight mb-2 line-clamp-2">
+                            {item.name}
+                          </h3>
+                          
+                          <div className="flex items-center justify-between mb-3">
+                            <p className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                              Size: {item.size}
+                            </p>
+                            <p className="font-bold text-[rgb(71,60,102)] text-lg">
+                              ₹{item.price.toLocaleString()}
+                            </p>
+                          </div>
+                          
+                          {/* Quantity Controls */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => updateCartItem(item._id, item.size, Math.max(1, item.quantity - 1), stock)}
+                                className="h-8 w-8 p-0 rounded-lg border-gray-300 hover:border-purple-400"
+                                disabled={item.quantity <= 1}
+                              >
+                                <Minus className="h-3 w-3" />
+                              </Button>
+                              
+                              <span className={`text-sm font-medium w-8 text-center ${
+                                isMaxQuantity ? 'text-red-600' : 'text-gray-700'
+                              }`}>
+                                {item.quantity}
+                              </span>
+                              
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  if (stock !== undefined && item.quantity >= stock) {
+                                    alert(`Cannot add more than ${stock} in stock for this size.`);
+                                    return;
+                                  }
+                                  updateCartItem(item._id, item.size, item.quantity + 1, stock);
+                                }}
+                                disabled={isMaxQuantity}
+                                className="h-8 w-8 p-0 rounded-lg border-gray-300 hover:border-purple-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                <Plus className="h-3 w-3" />
+                              </Button>
+                            </div>
+                            
+                            {/* Stock Info & Remove Button */}
+                            <div className="flex items-center gap-3">
+                              {stock !== undefined && (
+                                <div className={`text-xs px-2 py-1 rounded-full ${
+                                  isMaxQuantity 
+                                    ? 'bg-red-100 text-red-700 border border-red-200' 
+                                    : 'bg-gray-100 text-gray-600'
+                                }`}>
+                                  {isMaxQuantity ? (
+                                    <span className="flex items-center gap-1">
+                                      <AlertTriangle className="h-3 w-3" />
+                                      Max ({stock})
+                                    </span>
+                                  ) : (
+                                    `${stock} in stock`
+                                  )}
+                                </div>
+                              )}
+                              
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeFromCart(item._id, item.size)}
+                                className="text-red-500 hover:text-red-700 hover:bg-red-50 text-xs px-3 py-1 h-auto"
+                              >
+                                Remove
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          </React.Fragment>
-        )}
+          )}
         </div>
+
         {/* Footer */}
         {cartItems.length > 0 && (
-          <div className="p-6 border-t border-gray-200 bg-gray-50">
-            {/* Offer Details */}
-            {offerDetails?.offerApplied && (
-              <div className="mb-4 bg-green-50 border border-green-200">
-                <div className="flex items-center gap-2 mb-2">
-                  <Gift className="h-4 w-4 text-green-600" />
-                  <span className="text-sm font-semibold text-green-800">Loungewear Offer Applied! 🎉</span>
-                </div>
-                <div className="text-xs text-green-700 space-y-1">
-                  <p>• {offerDetails.offerDetails?.completeSets} set(s) of 3 for ₹1299 each</p>
-                  {offerDetails.offerDetails?.remainingItems > 0 && (
-                    <p>• {offerDetails.offerDetails.remainingItems} item(s) at ₹450 each</p>
-                  )}
-                  <p className="font-semibold">You saved ₹{offerDetails.offerDiscount}!</p>
-                </div>
-              </div>
-            )}
-            
-
-
-            <div className="flex justify-between items-center mb-4">
+          <div className="border-t border-gray-100 bg-gradient-to-r from-gray-50 to-white p-6 space-y-4">
+            {/* Total */}
+            <div className="flex justify-between items-center">
               <span className="text-lg font-semibold text-gray-900">Total:</span>
               <div className="text-right">
                 {isLoadingOffer ? (
                   <div className="text-sm text-gray-500">Calculating...</div>
                 ) : (
-                  <span className="text-2xl font-bold text-[rgb(71,60,102)]">₹{cartTotal.toLocaleString()}</span>
+                  <span className="text-2xl font-bold text-[rgb(71,60,102)]">
+                    ₹{cartTotal.toLocaleString()}
+                  </span>
                 )}
               </div>
             </div>
-            <div className="text-xs text-gray-500 text-center mb-4">
+            
+            {/* Shipping Info */}
+            <div className="text-xs text-gray-500 text-center bg-white px-3 py-2 rounded-lg border border-gray-200">
+              <Info className="h-3 w-3 inline mr-1" />
               Shipping calculated based on your location and items
             </div>
-            <Button className="w-full bg-[rgb(71,60,102)] hover:bg-[rgb(71,60,102)]/90 text-white py-3 rounded-xl font-semibold" onClick={handleProceedToCheckout}>
-              Proceed to Checkout
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full mt-3 border-[rgb(71,60,102)] text-[rgb(71,60,102)] hover:bg-[rgb(71,60,102)] hover:text-white bg-transparent"
-              onClick={closeCartSidebar}
-            >
-              Continue Shopping
-            </Button>
+            
+            {/* Action Buttons */}
+            <div className="space-y-3">
+              <Button 
+                className="w-full bg-[rgb(71,60,102)] hover:bg-[rgb(71,60,102)]/90 text-white py-4 rounded-xl font-semibold text-base shadow-lg hover:shadow-xl transition-all duration-200" 
+                onClick={handleProceedToCheckout}
+              >
+                Proceed to Checkout
+              </Button>
+              
+              <Button
+                variant="outline"
+                className="w-full border-2 border-[rgb(71,60,102)] text-[rgb(71,60,102)] hover:bg-[rgb(71,60,102)] hover:text-white bg-transparent py-3 rounded-xl font-medium transition-all duration-200"
+                onClick={closeCartSidebar}
+              >
+                Continue Shopping
+              </Button>
+            </div>
           </div>
         )}
       </div>
