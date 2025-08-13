@@ -228,18 +228,7 @@ export default function CartSidebar() {
               </div>
             )}
             
-            {/* Loungewear Offer Hint */}
-            {offerDetails && !offerDetails.offerApplied && offerDetails.loungewearCategoryCount && offerDetails.loungewearCategoryCount > 0 && (
-              <div className="mb-4 p-3 bg-blue-50 border border-blue-200">
-                <div className="flex items-center gap-2 mb-1">
-                  <Gift className="h-4 w-4 text-blue-600" />
-                  <span className="text-sm font-semibold text-blue-800">almost there!</span>
-                </div>
-                <p className="text-xs text-blue-700">
-                  Add {offerDetails.loungewearCategoryCount} more loungewear item(s) to get 3 for ₹1299
-                </p>
-              </div>
-            )}
+
 
             <div className="flex justify-between items-center mb-4">
               <span className="text-lg font-semibold text-gray-900">Total:</span>
