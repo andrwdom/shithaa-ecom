@@ -56,16 +56,41 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   // Load cart from localStorage on mount
   useEffect(() => {
     console.log("CartProvider: Loading cart from localStorage")
-    const stored = localStorage.getItem("cartItems")
-    if (stored) {
+    const loadCart = () => {
       try {
-        const parsed = JSON.parse(stored)
-        console.log("CartProvider: Loaded cart items:", parsed)
-        setCartItems(parsed)
+        const stored = localStorage.getItem("cartItems")
+        if (stored) {
+          const parsed = JSON.parse(stored)
+          console.log("CartProvider: Loaded cart items:", parsed)
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setCartItems(parsed)
+          } else {
+            console.log("CartProvider: Stored cart is empty or invalid")
+            setCartItems([])
+          }
+        } else {
+          console.log("CartProvider: No stored cart found")
+          setCartItems([])
+        }
       } catch (error) {
         console.error("CartProvider: Error parsing stored cart:", error)
+        setCartItems([])
       }
     }
+
+    // Load immediately
+    loadCart()
+    
+    // Also listen for storage events (in case cart is updated in another tab)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "cartItems" && e.newValue) {
+        console.log("CartProvider: Storage event detected, reloading cart")
+        loadCart()
+      }
+    }
+
+    window.addEventListener('storage', handleStorageChange)
+    return () => window.removeEventListener('storage', handleStorageChange)
   }, [])
 
   // Save cart to localStorage on change

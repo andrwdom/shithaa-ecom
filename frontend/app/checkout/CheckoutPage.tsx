@@ -40,31 +40,91 @@ export default function CheckoutPage() {
   // Centralized state for all forms and summary
   const [shipping, setShipping] = useState<any>({})
   const [coupon, setCoupon] = useState<any>(null)
-  const [cartItems, setCartItems] = useState<any[]>([])
   const [errors, setErrors] = useState<any>({})
   const [loading, setLoading] = useState(false)
   const [orderSummary, setOrderSummary] = useState<any>({ subtotal: 0, discount: 0, shipping: 0, total: 0 })
   const router = useRouter()
   const [processing, setProcessing] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [isCartLoaded, setIsCartLoaded] = useState(false);
   const { user } = useAuth();
 
   const { cartItems: contextCartItems, cartTotal, cartSubtotal, offerDetails, notifyCheckoutCartChanged } = useCart()
   const { buyNowItem, clearBuyNowItem } = useBuyNow()
 
-  // Real-time sync between cart and buy-now states
+  // Determine which items to show based on current state
+  const cartItems = buyNowItem ? [{
+    ...buyNowItem,
+    id: buyNowItem.id.toString(), // Convert id to string to match CartItem type
+    categorySlug: undefined, // BuyNowItem doesn't have categorySlug
+    category: undefined // BuyNowItem doesn't have category
+  }] : contextCartItems;
+
+  // Check if we have items to checkout
+  const hasItems = cartItems && cartItems.length > 0;
+
+  // Handle cart loading state
   useEffect(() => {
-    // Determine which items to show based on current state
-    if (buyNowItem) {
-      // Buy Now flow: show only the buy-now item
-      setCartItems([buyNowItem])
-      console.log('Checkout: Using Buy Now item:', buyNowItem)
+    // If we have cart items or buy now item, mark as loaded
+    if (hasItems) {
+      setIsCartLoaded(true);
     } else {
-      // Cart flow: show cart items
-      setCartItems(contextCartItems)
-      console.log('Checkout: Using Cart items:', contextCartItems)
+      // Check if we're still loading from localStorage
+      const storedCart = localStorage.getItem("cartItems");
+      const storedBuyNow = sessionStorage.getItem("buyNowItem");
+      
+      if (storedCart || storedBuyNow) {
+        // Still loading, wait a bit more
+        const timer = setTimeout(() => {
+          setIsCartLoaded(true);
+        }, 100);
+        return () => clearTimeout(timer);
+      } else {
+        // No items found, mark as loaded
+        setIsCartLoaded(true);
+      }
     }
-  }, [buyNowItem, contextCartItems])
+  }, [hasItems, contextCartItems, buyNowItem]);
+
+  // Fallback: Direct localStorage check if context hasn't loaded yet
+  useEffect(() => {
+    if (!hasItems && isCartLoaded) {
+      // Double-check localStorage directly as a fallback
+      const checkLocalStorage = () => {
+        const storedCart = localStorage.getItem("cartItems");
+        const storedBuyNow = sessionStorage.getItem("buyNowItem");
+        
+        if (storedCart) {
+          try {
+            const parsed = JSON.parse(storedCart);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              console.log("Checkout: Fallback - Found items in localStorage:", parsed);
+              // Force a re-render by updating the cart context
+              notifyCheckoutCartChanged();
+            }
+          } catch (error) {
+            console.error("Checkout: Error parsing localStorage cart:", error);
+          }
+        }
+        
+        if (storedBuyNow) {
+          try {
+            const parsed = JSON.parse(storedBuyNow);
+            if (parsed && parsed._id && parsed.name) {
+              console.log("Checkout: Fallback - Found buy-now item in sessionStorage:", parsed);
+              // The buy-now context should pick this up
+            }
+          } catch (error) {
+            console.error("Checkout: Error parsing sessionStorage buy-now:", error);
+          }
+        }
+      };
+
+      // Check after a short delay to allow contexts to load
+      const timer = setTimeout(checkLocalStorage, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [hasItems, isCartLoaded, notifyCheckoutCartChanged]);
 
   // Clear buy-now when user navigates away or completes checkout
   useEffect(() => {
@@ -160,10 +220,9 @@ export default function CheckoutPage() {
               <span className="text-[rgb(71,60,102)] font-semibold hidden sm:inline">Checkout</span>
               <span className="flex-1 h-1 bg-gray-200 mx-2 rounded sm:block hidden"></span>
             </li>
-            <li className="flex-1 flex items-center gap-2">
+            <li className="flex items-center gap-2">
               <span className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-200 text-gray-400 font-bold">3</span>
               <span className="hidden sm:inline">Payment</span>
-              <span className="flex-1 h-1 bg-gray-200 mx-2 rounded sm:block hidden"></span>
             </li>
             <li className="flex items-center gap-2">
               <span className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-200 text-gray-400 font-bold">4</span>
@@ -171,47 +230,94 @@ export default function CheckoutPage() {
             </li>
           </ol>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto mt-10 px-4">
-          {/* Left Section: Product Preview + Shipping Form Only */}
-          <div className="space-y-6">
-            <ProductPreviewSection items={cartItems} />
-            <ShippingForm value={shipping} onChange={setShipping} errors={errors.shipping} />
-            {/* CouponInput: show only on mobile/tablet */}
-            <div className="block md:hidden">
-              <CouponInput value={coupon} onApply={setCoupon} />
+
+        {/* Show loading state while cart is being restored */}
+        {!isCartLoaded && (
+          <div className="max-w-5xl mx-auto px-4">
+            <div className="bg-white rounded-xl shadow p-8 text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[rgb(71,60,102)] mx-auto mb-4"></div>
+              <p className="text-gray-600">Restoring your checkout items...</p>
             </div>
-            {paymentError && (
-              <div className="text-red-600 text-center font-semibold mb-2 flex flex-col items-center gap-2">
-                <span>{paymentError}</span>
-                <button
-                  type="button"
-                  className="btn btn-sm btn-outline border-red-400 text-red-700 hover:bg-red-50 mt-2"
-                  onClick={handlePhonePePayment}
-                  disabled={processing}
-                >
-                  Retry PhonePe Payment
-                </button>
+          </div>
+        )}
+
+        {/* Show error state if no items found after loading */}
+        {isCartLoaded && !hasItems && (
+          <div className="max-w-5xl mx-auto px-4">
+            <div className="bg-white rounded-xl shadow p-8 text-center">
+              <div className="text-red-500 mb-4">
+                <svg className="h-16 w-16 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
               </div>
-            )}
-          </div>
-          {/* Right Section: Order Summary + Confirm Button */}
-          <div className="space-y-4">
-            {/* CouponInput: show only on desktop */}
-            <div className="hidden md:block">
-              <CouponInput value={coupon} onApply={setCoupon} />
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">No Items Found</h2>
+              <p className="text-gray-600 mb-6">
+                It looks like your cart is empty or the items couldn't be restored. 
+                This might happen if you refreshed the page or cleared your browser data.
+              </p>
+              <div className="space-y-3">
+                <Link 
+                  href="/" 
+                  className="inline-block bg-[rgb(71,60,102)] hover:bg-[rgb(71,60,102)]/90 text-white px-6 py-3 rounded-xl font-semibold transition-colors"
+                >
+                  Continue Shopping
+                </Link>
+                <br />
+                <Link 
+                  href="/cart" 
+                  className="inline-block border border-[rgb(71,60,102)] text-[rgb(71,60,102)] hover:bg-[rgb(71,60,102)] hover:text-white px-6 py-3 rounded-xl font-semibold transition-colors"
+                >
+                  View Cart
+                </Link>
+              </div>
             </div>
-            <OrderSummary cartItems={cartItems} coupon={coupon} summary={orderSummary} offerDetails={offerDetails} />
-            {/* Payment Buttons */}
-            <button
-              type="button"
-              className="w-full bg-[rgb(71,60,102)] hover:bg-[rgb(71,60,102)]/90 text-white text-lg font-semibold rounded-xl py-3 mt-4 transition disabled:opacity-60 disabled:cursor-not-allowed"
-              onClick={handlePhonePePayment}
-              disabled={processing}
-            >
-              {processing ? <span className="loading loading-spinner loading-md"></span> : 'Confirm Order'}
-            </button>
           </div>
-        </div>
+        )}
+
+        {/* Show checkout form only when we have items */}
+        {isCartLoaded && hasItems && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto mt-10 px-4">
+            {/* Left Section: Product Preview + Shipping Form Only */}
+            <div className="space-y-6">
+              <ProductPreviewSection items={cartItems} />
+              <ShippingForm value={shipping} onChange={setShipping} errors={errors.shipping} />
+              {/* CouponInput: show only on mobile/tablet */}
+              <div className="block md:hidden">
+                <CouponInput value={coupon} onApply={setCoupon} />
+              </div>
+              {paymentError && (
+                <div className="text-red-600 text-center font-semibold mb-2 flex flex-col items-center gap-2">
+                  <span>{paymentError}</span>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline border-red-400 text-red-700 hover:bg-red-50 mt-2"
+                    onClick={handlePhonePePayment}
+                    disabled={processing}
+                  >
+                    Retry PhonePe Payment
+                  </button>
+                </div>
+              )}
+            </div>
+            {/* Right Section: Order Summary + Confirm Button */}
+            <div className="space-y-4">
+              {/* CouponInput: show only on desktop */}
+              <div className="hidden md:block">
+                <CouponInput value={coupon} onApply={setCoupon} />
+              </div>
+              <OrderSummary cartItems={cartItems} coupon={coupon} summary={orderSummary} offerDetails={offerDetails} />
+              {/* Payment Buttons */}
+              <button
+                type="button"
+                className="w-full bg-[rgb(71,60,102)] hover:bg-[rgb(71,60,102)]/90 text-white text-lg font-semibold rounded-xl py-3 mt-4 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                onClick={handlePhonePePayment}
+                disabled={processing}
+              >
+                {processing ? <span className="loading loading-spinner loading-md"></span> : 'Confirm Order'}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </PageLoading>
   )

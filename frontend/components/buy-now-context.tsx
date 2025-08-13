@@ -27,8 +27,43 @@ export function BuyNowProvider({ children }: { children: React.ReactNode }) {
 
   // Persist in sessionStorage for reloads
   useEffect(() => {
-    const stored = sessionStorage.getItem("buyNowItem");
-    if (stored) setBuyNowItemState(JSON.parse(stored));
+    const loadBuyNowItem = () => {
+      try {
+        const stored = sessionStorage.getItem("buyNowItem");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          console.log("BuyNowProvider: Loaded buy-now item:", parsed);
+          if (parsed && parsed._id && parsed.name) {
+            setBuyNowItemState(parsed);
+          } else {
+            console.log("BuyNowProvider: Stored buy-now item is invalid, clearing");
+            sessionStorage.removeItem("buyNowItem");
+            setBuyNowItemState(null);
+          }
+        } else {
+          console.log("BuyNowProvider: No stored buy-now item found");
+          setBuyNowItemState(null);
+        }
+      } catch (error) {
+        console.error("BuyNowProvider: Error parsing stored buy-now item:", error);
+        sessionStorage.removeItem("buyNowItem");
+        setBuyNowItemState(null);
+      }
+    };
+
+    // Load immediately
+    loadBuyNowItem();
+    
+    // Also listen for storage events
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "buyNowItem") {
+        console.log("BuyNowProvider: Storage event detected, reloading buy-now item");
+        loadBuyNowItem();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   useEffect(() => {
