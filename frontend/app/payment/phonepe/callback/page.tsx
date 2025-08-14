@@ -166,67 +166,135 @@ function PhonePeCallbackInner() {
               setMessage('Payment successful! Creating your order...')
               setOrderId(paymentData.merchantTransactionId || transactionId)
               
-              // Create order after successful payment
+              // Try to create order directly if webhook hasn't done it yet
               try {
-                // Get the temporary order data from the backend using the transaction ID
-                const tempOrderRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/payment/phonepe/verify/${transactionId}`, {
-                  method: 'GET',
-                  headers: { 'Content-Type': 'application/json' }
-                })
+                // Wait a bit for webhook to process
+                await new Promise(resolve => setTimeout(resolve, 2000));
                 
-                if (tempOrderRes.ok) {
-                  const tempOrderData = await tempOrderRes.json()
-                  
-                  if (tempOrderData.success && tempOrderData.data) {
-                    // The verify endpoint should have already created the order
-                    // Just check if it was successful
-                    console.log('Order creation result:', tempOrderData)
+                // Check if order was created by webhook
+                const orderCheckRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/orders/phonepe/${transactionId}`);
+                
+                if (orderCheckRes.ok) {
+                  const orderCheckData = await orderCheckRes.json();
+                  if (orderCheckData.success && orderCheckData.order) {
+                    // Order was created by webhook
+                    console.log('Order created by webhook:', orderCheckData.order);
+                    setMessage('Payment successful! Your order has been confirmed.');
+                    setOrderDetails(orderCheckData.order);
                     
-                    if (tempOrderData.order) {
-                      // Order was created successfully
-                      console.log('Order created successfully:', tempOrderData.order)
-                      
-                      // Clear cart and buy-now items after successful order creation
-                      const pendingOrderData = sessionStorage.getItem('pendingOrderData')
-                      if (pendingOrderData) {
-                        const orderData = JSON.parse(pendingOrderData)
-                        if (orderData.isBuyNow) {
-                          // Clear buy-now item
-                          sessionStorage.removeItem('buyNowItem')
-                          localStorage.removeItem('buyNowItem')
-                        } else {
-                          // Clear cart items
-                          localStorage.removeItem('cartItems')
-                          sessionStorage.removeItem('cartItems')
-                        }
-                        // Clear pending order data
-                        sessionStorage.removeItem('pendingOrderData')
+                    // Clear cart and buy-now items
+                    const pendingOrderData = sessionStorage.getItem('pendingOrderData');
+                    if (pendingOrderData) {
+                      const orderData = JSON.parse(pendingOrderData);
+                      if (orderData.isBuyNow) {
+                        sessionStorage.removeItem('buyNowItem');
+                        localStorage.removeItem('buyNowItem');
+                      } else {
+                        localStorage.removeItem('cartItems');
+                        sessionStorage.removeItem('cartItems');
                       }
-                      
-                      setMessage('Payment successful! Your order has been created and confirmed.')
-                      setOrderDetails(tempOrderData.order)
-                      
-                      localStorage.setItem('lastOrder', JSON.stringify({
-                        id: tempOrderData.order._id || transactionId,
-                        orderSummary: { total: tempOrderData.order.totalAmount || tempOrderData.order.amount },
-                        paymentMethod: 'PhonePe'
-                      }))
-                      
-                      setTimeout(() => { router.push('/order-success') }, 3000)
-                    } else {
-                      throw new Error('Order creation failed')
+                      sessionStorage.removeItem('pendingOrderData');
                     }
+                    
+                    localStorage.setItem('lastOrder', JSON.stringify({
+                      id: orderCheckData.order._id || transactionId,
+                      orderSummary: { total: orderCheckData.order.totalAmount || orderCheckData.order.amount },
+                      paymentMethod: 'PhonePe'
+                    }));
+                    
+                    setTimeout(() => { router.push('/order-success') }, 3000);
                   } else {
-                    throw new Error(tempOrderData.message || 'Failed to create order')
+                    // Webhook didn't create order, create it manually
+                    throw new Error('Webhook order creation failed');
                   }
                 } else {
-                  throw new Error('Failed to verify payment and create order')
+                  // Webhook didn't create order, create it manually
+                  throw new Error('Webhook order creation failed');
                 }
               } catch (orderError) {
-                console.error('Failed to create order:', orderError)
-                setMessage('Payment successful but order creation failed. Please contact support.')
-                // Still redirect to account page to show payment success
-                setTimeout(() => { router.push('/account') }, 5000)
+                console.error('Webhook order creation failed, trying manual creation:', orderError);
+                
+                // Manual order creation as fallback
+                try {
+                  const pendingOrderData = sessionStorage.getItem('pendingOrderData');
+                  if (pendingOrderData) {
+                    const orderData = JSON.parse(pendingOrderData);
+                    
+                                         // Create order manually using the exact format expected by createStructuredOrder
+                     const createOrderRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/orders`, {
+                       method: 'POST',
+                       headers: {
+                         'Content-Type': 'application/json'
+                       },
+                       body: JSON.stringify({
+                         userInfo: {
+                           userId: orderData.userId,
+                           name: orderData.shipping.fullName,
+                           email: orderData.email
+                         },
+                         shippingInfo: {
+                           fullName: orderData.shipping.fullName,
+                           email: orderData.email,
+                           phone: orderData.shipping.phone,
+                           addressLine1: orderData.shipping.addressLine1,
+                           addressLine2: orderData.shipping.addressLine2 || '',
+                           city: orderData.shipping.city,
+                           state: orderData.shipping.state,
+                           postalCode: orderData.shipping.postalCode,
+                           country: orderData.shipping.country || 'India'
+                         },
+                         items: orderData.cartItems.map((item: any) => ({
+                           _id: item._id,
+                           name: item.name,
+                           quantity: item.quantity,
+                           price: item.price,
+                           image: item.image,
+                           size: item.size
+                         })),
+                         totalAmount: orderData.amount,
+                         paymentStatus: 'paid',
+                         createdAt: new Date().toISOString()
+                       })
+                     });
+                    
+                    if (createOrderRes.ok) {
+                      const orderResult = await createOrderRes.json();
+                      if (orderResult.success) {
+                        console.log('Order created manually:', orderResult.order);
+                        setMessage('Payment successful! Your order has been created and confirmed.');
+                        setOrderDetails(orderResult.order);
+                        
+                        // Clear cart and buy-now items
+                        if (orderData.isBuyNow) {
+                          sessionStorage.removeItem('buyNowItem');
+                          localStorage.removeItem('buyNowItem');
+                        } else {
+                          localStorage.removeItem('cartItems');
+                          sessionStorage.removeItem('cartItems');
+                        }
+                        sessionStorage.removeItem('pendingOrderData');
+                        
+                        localStorage.setItem('lastOrder', JSON.stringify({
+                          id: orderResult.order._id || transactionId,
+                          orderSummary: { total: orderResult.order.totalAmount },
+                          paymentMethod: 'PhonePe'
+                        }));
+                        
+                        setTimeout(() => { router.push('/order-success') }, 3000);
+                      } else {
+                        throw new Error('Manual order creation failed');
+                      }
+                    } else {
+                      throw new Error('Manual order creation failed');
+                    }
+                  } else {
+                    throw new Error('No pending order data found');
+                  }
+                } catch (manualError) {
+                  console.error('Manual order creation failed:', manualError);
+                  setMessage('Payment successful but order creation failed. Please contact support.');
+                  setTimeout(() => { router.push('/account') }, 5000);
+                }
               }
               
               if (interval) clearInterval(interval)

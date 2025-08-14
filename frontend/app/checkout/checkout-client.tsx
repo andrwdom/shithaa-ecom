@@ -316,60 +316,6 @@ export default function CheckoutClient() {
 
       // Prepare order data for payment processing
       const orderData = {
-        userInfo: {
-          userId: user.mongoId,
-          name: user.displayName || user.name || (user.email ? user.email.split('@')[0] : 'User'),
-          email: user.email,
-        },
-        address: {
-          firstName: form.firstName,
-          lastName: form.lastName,
-          phone: form.phone,
-          email: form.email || user.email,
-          street: form.street,
-          address: form.address,
-          address1: form.address1,
-          address2: form.address2,
-          line1: form.line1,
-          line2: form.line2,
-          city: form.city,
-          state: form.state,
-          country: form.country,
-          pincode: form.pincode,
-          zipcode: form.zipcode,
-          zip: form.zip,
-        },
-        shippingAddress: {
-          addressLine1: form.address1 || form.street || "",
-          addressLine2: form.address2 || "",
-          city: form.city || "",
-          state: form.state || "",
-          postalCode: form.pincode || form.zipcode || "",
-          country: form.country || "",
-        },
-        items: itemsWithId.map(item => ({
-          _id: item._id,
-          name: item.name,
-          quantity: item.quantity,
-          price: item.price,
-          image: item.image,
-          size: item.size
-        })),
-        couponUsed: appliedCoupon ? { code: appliedCoupon.code, discount: appliedCoupon.discountPercentage } : undefined,
-        totalAmount: total,
-        paymentMethod: form.paymentMethod,
-        createdAt: new Date().toISOString(),
-      };
-
-      // Store order data in sessionStorage for payment processing
-      const orderDataWithFlags = {
-        ...orderData,
-        isBuyNow: isBuyNow
-      };
-      sessionStorage.setItem('pendingOrderData', JSON.stringify(orderDataWithFlags));
-      
-      // Redirect to PhonePe payment gateway
-      const paymentPayload = {
         amount: total,
         shipping: {
           fullName: `${form.firstName} ${form.lastName}`,
@@ -387,15 +333,23 @@ export default function CheckoutClient() {
         email: form.email || user.email
       };
 
-      console.log('Initiating PhonePe payment:', paymentPayload);
+      // Store order data in sessionStorage for fallback order creation
+      const orderDataWithFlags = {
+        ...orderData,
+        isBuyNow: isBuyNow
+      };
+      sessionStorage.setItem('pendingOrderData', JSON.stringify(orderDataWithFlags));
+
+      console.log('Initiating PhonePe payment:', orderData);
       
+      // Use the existing working PhonePe create-session endpoint
       const paymentResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/payment/phonepe/create-session`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           token
         },
-        body: JSON.stringify(paymentPayload),
+        body: JSON.stringify(orderData),
       });
 
       if (!paymentResponse.ok) {
@@ -416,8 +370,6 @@ export default function CheckoutClient() {
       console.error('Payment error:', err);
       const errorMessage = err instanceof Error ? err.message : "Payment failed. Please try again.";
       setError(errorMessage);
-      // Clear pending order data on error
-      sessionStorage.removeItem('pendingOrderData');
     } finally {
       setLoading(false);
     }
