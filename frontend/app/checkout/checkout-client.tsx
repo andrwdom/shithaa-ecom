@@ -313,8 +313,9 @@ export default function CheckoutClient() {
         setLoading(false);
         return;
       }
-      // Prepare payload with all required fields
-      const payload = {
+
+      // Prepare order data for payment processing
+      const orderData = {
         userInfo: {
           userId: user.mongoId,
           name: user.displayName || user.name || (user.email ? user.email.split('@')[0] : 'User'),
@@ -347,7 +348,7 @@ export default function CheckoutClient() {
           country: form.country || "",
         },
         items: itemsWithId.map(item => ({
-          _id: item._id, // Use _id instead of id
+          _id: item._id,
           name: item.name,
           quantity: item.quantity,
           price: item.price,
@@ -356,53 +357,67 @@ export default function CheckoutClient() {
         })),
         couponUsed: appliedCoupon ? { code: appliedCoupon.code, discount: appliedCoupon.discountPercentage } : undefined,
         totalAmount: total,
-        paymentStatus: 'test-paid',
+        paymentMethod: form.paymentMethod,
         createdAt: new Date().toISOString(),
       };
-      // Extra logging for debugging
-      console.log('Order payload:', payload);
-      console.log('Form state:', form);
-      console.log('User:', user);
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/orders`, {
+
+      // Store order data in sessionStorage for payment processing
+      const orderDataWithFlags = {
+        ...orderData,
+        isBuyNow: isBuyNow
+      };
+      sessionStorage.setItem('pendingOrderData', JSON.stringify(orderDataWithFlags));
+      
+      // Redirect to PhonePe payment gateway
+      const paymentPayload = {
+        amount: total,
+        shipping: {
+          fullName: `${form.firstName} ${form.lastName}`,
+          email: form.email || user.email,
+          phone: form.phone,
+          addressLine1: form.address1 || form.street || "",
+          addressLine2: form.address2 || "",
+          city: form.city,
+          state: form.state,
+          postalCode: form.pincode || form.zipcode || "",
+          country: form.country || "India"
+        },
+        cartItems: itemsWithId,
+        userId: user.mongoId || user.uid,
+        email: form.email || user.email
+      };
+
+      console.log('Initiating PhonePe payment:', paymentPayload);
+      
+      const paymentResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/payment/phonepe/create-session`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           token
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(paymentPayload),
       });
-      if (res.status === 401) {
-        setError("Session expired. Please log in again.");
-        setShowLogin(true);
-        setLoading(false);
-        return;
+
+      if (!paymentResponse.ok) {
+        const errorData = await paymentResponse.json();
+        throw new Error(errorData.message || 'Payment initiation failed');
       }
-      if (res.status === 500) {
-        setError("Server error while placing order. Please try again or contact support.");
-        setShowLogin(true);
-        setLoading(false);
-        return;
-      }
-      const data = await res.json();
-      if (data.success) {
-        // Only clear state after successful order placement
-        if (isBuyNow) {
-          clearBuyNowItem();
-          // Don't clear cart for buy now - preserve user's cart items
-          console.log("Checkout: Buy now order successful, cart items preserved")
-        } else {
-          // Only clear cart after successful order from cart
-          clearCart();
-          console.log("Checkout: Cart order successful, cart cleared")
-        }
-        router.push("/order-success");
+
+      const paymentData = await paymentResponse.json();
+      
+      if (paymentData.success && paymentData.redirectUrl) {
+        // Redirect to PhonePe payment page
+        window.location.href = paymentData.redirectUrl;
       } else {
-        setError(data.message || "Order failed.");
-        // Don't clear anything if order failed - preserve cart and buy-now items
-        console.log("Checkout: Order failed, preserving cart and buy-now items")
+        throw new Error('Payment gateway error');
       }
+
     } catch (err) {
-      setError("Order failed. Please try again.");
+      console.error('Payment error:', err);
+      const errorMessage = err instanceof Error ? err.message : "Payment failed. Please try again.";
+      setError(errorMessage);
+      // Clear pending order data on error
+      sessionStorage.removeItem('pendingOrderData');
     } finally {
       setLoading(false);
     }
