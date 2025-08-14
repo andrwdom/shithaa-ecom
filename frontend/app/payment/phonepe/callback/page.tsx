@@ -6,13 +6,13 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
 function PhonePeCallbackInner() {
-  const [status, setStatus] = useState<'loading' | 'success' | 'failed' | 'pending'>('loading')
+  const [status, setStatus] = useState<'loading' | 'success' | 'pending'>('loading')
   const [message, setMessage] = useState('')
   const [orderId, setOrderId] = useState('')
   const [orderDetails, setOrderDetails] = useState<any>(null)
   const [tries, setTries] = useState(0)
   const [merchantTransactionId, setMerchantTransactionId] = useState('')
-  const [debugInfo, setDebugInfo] = useState('')
+
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -24,7 +24,6 @@ function PhonePeCallbackInner() {
     const urlParams = new URLSearchParams(window.location.search)
     const allParams = Object.fromEntries(urlParams.entries())
     console.log('All URL parameters:', allParams)
-    setDebugInfo(JSON.stringify(allParams, null, 2))
     
     const transactionId = urlParams.get('merchantTransactionId') || 
                         urlParams.get('transactionId') || 
@@ -64,7 +63,10 @@ function PhonePeCallbackInner() {
                   orderSummary: { total: recentOrderData.order.amount },
                   paymentMethod: 'PhonePe'
                 }))
-                setTimeout(() => { router.push('/account') }, 3000)
+                // Redirect to OrderSummary page with order ID
+                setTimeout(() => { 
+                  router.push(`/order-summary?orderId=${recentOrderData.order._id || recentOrderData.order.orderId}`)
+                }, 2000)
                 return
               }
             }
@@ -73,8 +75,21 @@ function PhonePeCallbackInner() {
           console.error('Emergency fallback failed:', fallbackError)
         }
         
-        setStatus('failed')
-        setMessage('Invalid payment response - No transaction ID found')
+        // No transaction ID found - redirect to PaymentFailed page
+        console.log('No transaction ID found, redirecting to PaymentFailed page')
+        const failureReason = 'Invalid payment response - No transaction ID found'
+        
+        // Clear any temporary order data since payment failed
+        sessionStorage.removeItem('pendingOrderData')
+        localStorage.removeItem('pendingOrderData')
+        localStorage.removeItem('phonepeOrderData')
+        localStorage.removeItem('phonepeBuyNowItem')
+        localStorage.removeItem('phonepeCartItems')
+        
+        // Redirect to PaymentFailed page with details
+        const failureUrl = `/payment-failed?reason=${encodeURIComponent(failureReason)}`
+        router.push(failureUrl)
+        return
       }
       
       checkRecentOrders()
@@ -114,15 +129,28 @@ function PhonePeCallbackInner() {
                 orderSummary: { total: order.amount },
                 paymentMethod: 'PhonePe'
               }))
-              setTimeout(() => { router.push('/account') }, 3000)
+              // Redirect to OrderSummary page with order ID
+              setTimeout(() => { 
+                router.push(`/order-summary?orderId=${order._id || order.orderId}`)
+              }, 2000)
               if (interval) clearInterval(interval)
               stopped = true
               return
             } else if (order.paymentStatus === 'failed') {
-              setStatus('failed')
-              setMessage('Payment failed. Please try again.')
-              if (interval) clearInterval(interval)
-              stopped = true
+              // Payment failed - redirect to PaymentFailed page
+              console.log('Order payment status is failed, redirecting to PaymentFailed page')
+              const failureReason = 'Payment was marked as failed'
+              
+              // Clear any temporary order data since payment failed
+              sessionStorage.removeItem('pendingOrderData')
+              localStorage.removeItem('pendingOrderData')
+              localStorage.removeItem('phonepeOrderData')
+              localStorage.removeItem('phonepeBuyNowItem')
+              localStorage.removeItem('phonepeCartItems')
+              
+              // Redirect to PaymentFailed page with details
+              const failureUrl = `/payment-failed?transactionId=${transactionId}&reason=${encodeURIComponent(failureReason)}`
+              router.push(failureUrl)
               return
             } else {
               // Order exists but payment status is pending, try PhonePe verification
@@ -344,7 +372,10 @@ function PhonePeCallbackInner() {
                         paymentMethod: 'PhonePe'
                       }))
                       
-                      setTimeout(() => { router.push('/order-success') }, 3000)
+                      // Redirect to OrderSummary page with order ID
+                      setTimeout(() => { 
+                        router.push(`/order-summary?orderId=${orderResult.order._id || orderResult.order.orderId}`)
+                      }, 2000)
                     } else {
                       console.error('Order creation failed with success: false:', orderResult)
                       console.error('Full order result:', JSON.stringify(orderResult, null, 2))
@@ -381,9 +412,21 @@ function PhonePeCallbackInner() {
                 }
               } catch (orderError) {
                 console.error('Order creation failed:', orderError)
-                setMessage('Payment successful but order creation failed. Please contact support.')
-                // Still redirect to account page to show payment success
-                setTimeout(() => { router.push('/account') }, 5000)
+                // Order creation failed - redirect to PaymentFailed page
+                console.log('Order creation failed, redirecting to PaymentFailed page')
+                const failureReason = 'Payment successful but order creation failed. Please contact support.'
+                
+                // Clear any temporary order data since order creation failed
+                sessionStorage.removeItem('pendingOrderData')
+                localStorage.removeItem('pendingOrderData')
+                localStorage.removeItem('phonepeOrderData')
+                localStorage.removeItem('phonepeBuyNowItem')
+                localStorage.removeItem('phonepeCartItems')
+                
+                // Redirect to PaymentFailed page with details
+                const failureUrl = `/payment-failed?transactionId=${transactionId}&reason=${encodeURIComponent(failureReason)}`
+                router.push(failureUrl)
+                return
               }
               
               if (interval) clearInterval(interval)
@@ -392,31 +435,76 @@ function PhonePeCallbackInner() {
               setStatus('pending')
               setMessage('Processing your payment, please wait...')
             } else {
-              setStatus('failed')
-              setMessage('Payment failed. Please try again.')
-              if (interval) clearInterval(interval)
-              stopped = true
+              // Payment failed - redirect to PaymentFailed page
+              console.log('Payment failed, redirecting to PaymentFailed page')
+              const failureReason = paymentData.message || 'Payment was not completed'
+              const failureAmount = paymentData.amount || amount
+              
+              // Clear any temporary order data since payment failed
+              sessionStorage.removeItem('pendingOrderData')
+              localStorage.removeItem('pendingOrderData')
+              localStorage.removeItem('phonepeOrderData')
+              localStorage.removeItem('phonepeBuyNowItem')
+              localStorage.removeItem('phonepeCartItems')
+              
+              // Redirect to PaymentFailed page with details
+              const failureUrl = `/payment-failed?transactionId=${transactionId}&reason=${encodeURIComponent(failureReason)}&amount=${failureAmount}`
+              router.push(failureUrl)
+              return
             }
           } else {
             console.error('PhonePe verification failed:', verifyData)
-            setStatus('failed')
-            setMessage(verifyData.message || 'Payment verification failed. Please contact support.')
-            if (interval) clearInterval(interval)
-            stopped = true
+            // Payment verification failed - redirect to PaymentFailed page
+            console.log('Payment verification failed, redirecting to PaymentFailed page')
+            const failureReason = verifyData.message || 'Payment verification failed'
+            
+            // Clear any temporary order data since payment failed
+            sessionStorage.removeItem('pendingOrderData')
+            localStorage.removeItem('pendingOrderData')
+            localStorage.removeItem('phonepeOrderData')
+            localStorage.removeItem('phonepeBuyNowItem')
+            localStorage.removeItem('phonepeCartItems')
+            
+            // Redirect to PaymentFailed page with details
+            const failureUrl = `/payment-failed?transactionId=${transactionId}&reason=${encodeURIComponent(failureReason)}`
+            router.push(failureUrl)
+            return
           }
         } else {
           console.error('PhonePe verification request failed with status:', verifyRes.status)
-          setStatus('failed')
-          setMessage('Payment verification failed. Please contact support.')
-          if (interval) clearInterval(interval)
-          stopped = true
+          // Payment verification request failed - redirect to PaymentFailed page
+          console.log('Payment verification request failed, redirecting to PaymentFailed page')
+          const failureReason = `Payment verification failed (HTTP ${verifyRes.status})`
+          
+          // Clear any temporary order data since payment failed
+          sessionStorage.removeItem('pendingOrderData')
+          localStorage.removeItem('pendingOrderData')
+          localStorage.removeItem('phonepeOrderData')
+          localStorage.removeItem('phonepeBuyNowItem')
+          localStorage.removeItem('phonepeCartItems')
+          
+          // Redirect to PaymentFailed page with details
+          const failureUrl = `/payment-failed?transactionId=${transactionId}&reason=${encodeURIComponent(failureReason)}`
+          router.push(failureUrl)
+          return
         }
       } catch (error) {
         console.error('Payment verification error:', error)
-        setStatus('failed')
-        setMessage('Payment processing error. Please contact support.')
-        if (interval) clearInterval(interval)
-        stopped = true
+        // Payment verification error - redirect to PaymentFailed page
+        console.log('Payment verification error, redirecting to PaymentFailed page')
+        const failureReason = 'Payment processing error occurred'
+        
+        // Clear any temporary order data since payment failed
+        sessionStorage.removeItem('pendingOrderData')
+        localStorage.removeItem('pendingOrderData')
+        localStorage.removeItem('phonepeOrderData')
+        localStorage.removeItem('phonepeBuyNowItem')
+        localStorage.removeItem('phonepeCartItems')
+        
+        // Redirect to PaymentFailed page with details
+        const failureUrl = `/payment-failed?transactionId=${transactionId}&reason=${encodeURIComponent(failureReason)}`
+        router.push(failureUrl)
+        return
       }
     }
     
@@ -429,47 +517,28 @@ function PhonePeCallbackInner() {
         setTries(t => t + 1)
         checkPaymentStatus()
       } else if (!stopped) {
-        setStatus('failed')
-        setMessage('Payment status could not be confirmed. Please contact support.')
-        if (interval) clearInterval(interval)
+        // Payment status could not be confirmed - redirect to PaymentFailed page
+        console.log('Payment status could not be confirmed, redirecting to PaymentFailed page')
+        const failureReason = 'Payment status could not be confirmed after multiple attempts'
+        
+        // Clear any temporary order data since payment failed
+        sessionStorage.removeItem('pendingOrderData')
+        localStorage.removeItem('pendingOrderData')
+        localStorage.removeItem('phonepeOrderData')
+        localStorage.removeItem('phonepeBuyNowItem')
+        localStorage.removeItem('phonepeCartItems')
+        
+        // Redirect to PaymentFailed page with details
+        const failureUrl = `/payment-failed?transactionId=${merchantTransactionId || 'unknown'}&reason=${encodeURIComponent(failureReason)}`
+        router.push(failureUrl)
+        return
       }
     }, 3000)
     
     return () => { if (interval) clearInterval(interval) }
   }, [router, tries])
 
-  const handleManualFix = async () => {
-    if (!merchantTransactionId) {
-      alert('Transaction ID not found')
-      return
-    }
-    
-    try {
-      // Try the quick fix endpoint first
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/payment/phonepe/quick-fix/${merchantTransactionId}`, {
-        method: 'POST'
-      })
-      if (res.ok) {
-        alert('Order manually marked as paid! Please refresh the page.')
-        window.location.reload()
-        return
-      }
-      
-      // Fallback to test-success endpoint
-      const fallbackRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/payment/phonepe/test-success/${merchantTransactionId}`, {
-        method: 'POST'
-      })
-      if (fallbackRes.ok) {
-        alert('Order manually marked as paid! Please refresh the page.')
-        window.location.reload()
-      } else {
-        const errorData = await fallbackRes.json()
-        alert(`Failed to mark order as paid: ${errorData.message || 'Unknown error'}`)
-      }
-    } catch (err) {
-      alert('Failed to mark order as paid')
-    }
-  }
+
 
   if (status === 'loading' || status === 'pending') {
     return (
@@ -522,7 +591,7 @@ function PhonePeCallbackInner() {
             </div>
             <div className="space-y-3">
               <Link 
-                href="/order-success" 
+                href={`/order-summary?orderId=${orderDetails?._id || orderDetails?.orderId || orderId}`}
                 className="btn btn-success w-full"
               >
                 View Order Details
@@ -535,55 +604,31 @@ function PhonePeCallbackInner() {
               </Link>
             </div>
           </>
-        ) : (
-          <>
-            <div className="text-red-500 mb-4">
-              <svg className="w-16 h-16 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <circle cx="12" cy="12" r="10" strokeWidth="2" stroke="currentColor" fill="#fee2e2" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </div>
-            <h1 className="text-2xl font-bold text-red-700 mb-2">Payment Failed</h1>
-            <p className="text-gray-600 mb-4">{message}</p>
-            
-            {/* Debug info for development */}
-            {process.env.NODE_ENV === 'development' && debugInfo && (
-              <div className="bg-gray-100 p-4 rounded mb-4 text-left">
-                <p className="text-xs text-gray-600 mb-2">Debug Info (URL Parameters):</p>
-                <pre className="text-xs text-gray-800 overflow-auto">{debugInfo}</pre>
-              </div>
-            )}
-            
-            <div className="space-y-3">
-              <Link 
-                href="/checkout" 
-                className="btn btn-primary w-full"
-              >
-                Try Again
-              </Link>
-              <Link 
-                href="/" 
-                className="btn btn-outline w-full"
-              >
-                Back to Home
-              </Link>
-              {merchantTransactionId && (
-                <button
-                  onClick={handleManualFix}
-                  className="btn btn-warning w-full text-sm"
-                >
-                  Manual Fix (If Payment Actually Succeeded)
-                </button>
-              )}
-              <Link 
-                href="/payment/phonepe/debug" 
-                className="btn btn-info w-full text-sm"
-              >
-                Debug Payment
-              </Link>
-            </div>
-          </>
-        )}
+                 ) : status === 'pending' ? (
+           <>
+             <div className="text-blue-500 mb-4">
+               <svg className="w-16 h-16 mx-auto animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                 <circle cx="12" cy="12" r="10" strokeWidth="2" stroke="currentColor" fill="#eff6ff" />
+                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+               </svg>
+             </div>
+             <h1 className="text-2xl font-bold text-blue-700 mb-2">Processing Payment</h1>
+             <p className="text-gray-600 mb-4">{message}</p>
+             <div className="bg-blue-50 rounded-lg p-4 mb-6">
+               <p className="text-sm text-blue-700">
+                 <strong>Transaction ID:</strong> {merchantTransactionId || orderId}
+               </p>
+               <p className="text-sm text-blue-700 mt-2">
+                 Please wait while we confirm your payment and create your order...
+               </p>
+             </div>
+             <div className="space-y-3">
+               <div className="btn btn-outline w-full cursor-not-allowed opacity-50">
+                 Processing...
+               </div>
+             </div>
+           </>
+         ) : null}
       </div>
     </div>
   )
