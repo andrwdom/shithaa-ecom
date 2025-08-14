@@ -219,6 +219,16 @@ app.get('/api/orders/public-list', async (req, res) => {
   }
 });
 
+// Test route to verify /api/orders is accessible
+app.get('/api/orders/test', (req, res) => {
+  console.log('Test route /api/orders/test hit');
+  res.json({ 
+    success: true, 
+    message: '/api/orders endpoint is working',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // CORS test endpoint
 app.get('/api/cors-test', (req, res) => {
   console.log('CORS test endpoint hit');
