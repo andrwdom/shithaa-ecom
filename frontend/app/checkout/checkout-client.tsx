@@ -336,20 +336,46 @@ export default function CheckoutClient() {
       // Store order data in sessionStorage for fallback order creation
       const orderDataWithFlags = {
         ...orderData,
-        isBuyNow: isBuyNow
+        isBuyNow: isBuyNow,
+        timestamp: Date.now(), // Add timestamp for debugging
+        redirectUrl: window.location.href // Add current URL for debugging
       };
+      
+      // Store in multiple locations for maximum persistence
       sessionStorage.setItem('pendingOrderData', JSON.stringify(orderDataWithFlags));
-      console.log('Stored order data in sessionStorage:', orderDataWithFlags);
+      localStorage.setItem('pendingOrderData', JSON.stringify(orderDataWithFlags));
+      
+      // Also store a backup with a different key
+      localStorage.setItem('phonepeOrderData', JSON.stringify(orderDataWithFlags));
+      
+      // Store cart/buy-now items separately as backup
+      if (isBuyNow && buyNowItem) {
+        localStorage.setItem('phonepeBuyNowItem', JSON.stringify(buyNowItem));
+      } else if (cartItems.length > 0) {
+        localStorage.setItem('phonepeCartItems', JSON.stringify(cartItems));
+      }
+      
+      console.log('Stored order data in multiple locations for maximum persistence:', orderDataWithFlags);
       console.log('User object during checkout:', {
         uid: user.uid,
         mongoId: user.mongoId,
         email: user.email,
         displayName: user.displayName
       });
-      console.log('SessionStorage content after storing:', {
-        pendingOrderData: sessionStorage.getItem('pendingOrderData'),
-        buyNowItem: sessionStorage.getItem('buyNowItem'),
-        cartItems: sessionStorage.getItem('cartItems')
+      console.log('Storage content after storing:', {
+        sessionStorage: {
+          pendingOrderData: sessionStorage.getItem('pendingOrderData'),
+          buyNowItem: sessionStorage.getItem('buyNowItem'),
+          cartItems: sessionStorage.getItem('cartItems')
+        },
+        localStorage: {
+          pendingOrderData: localStorage.getItem('pendingOrderData'),
+          phonepeOrderData: localStorage.getItem('phonepeOrderData'),
+          phonepeBuyNowItem: localStorage.getItem('phonepeBuyNowItem'),
+          phonepeCartItems: localStorage.getItem('phonepeCartItems'),
+          buyNowItem: localStorage.getItem('buyNowItem'),
+          cartItems: localStorage.getItem('cartItems')
+        }
       });
 
       console.log('Initiating PhonePe payment:', orderData);

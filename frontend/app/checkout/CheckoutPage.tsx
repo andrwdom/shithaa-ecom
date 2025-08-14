@@ -186,9 +186,9 @@ export default function CheckoutPage() {
   // Clear buy-now when user navigates away or completes checkout
   useEffect(() => {
     const handleBeforeUnload = () => {
-      if (buyNowItem) {
-        clearBuyNowItem()
-      }
+      // Don't clear buy-now item on page unload - let it persist until order completion
+      // This prevents data loss during payment redirects
+      console.log("CheckoutPage: Page unloading, preserving buy-now item for payment completion")
     }
 
     window.addEventListener('beforeunload', handleBeforeUnload)

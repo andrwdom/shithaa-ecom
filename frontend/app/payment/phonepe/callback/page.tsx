@@ -166,10 +166,88 @@ function PhonePeCallbackInner() {
               setMessage('Payment successful! Creating your order...')
               setOrderId(paymentData.merchantTransactionId || transactionId)
               
+              // Debug: Check what's available in storage
+              console.log('=== STORAGE DEBUG ===')
+              console.log('SessionStorage content:', {
+                pendingOrderData: sessionStorage.getItem('pendingOrderData'),
+                buyNowItem: sessionStorage.getItem('buyNowItem'),
+                cartItems: sessionStorage.getItem('cartItems')
+              })
+              console.log('LocalStorage content:', {
+                pendingOrderData: localStorage.getItem('pendingOrderData'),
+                buyNowItem: localStorage.getItem('buyNowItem'),
+                cartItems: localStorage.getItem('cartItems')
+              })
+              console.log('=== END STORAGE DEBUG ===')
+              
               // Direct order creation - no webhook dependency
               try {
-                const pendingOrderData = sessionStorage.getItem('pendingOrderData')
-                console.log('Retrieved pending order data:', pendingOrderData)
+                // Try to get order data from multiple storage locations
+                let pendingOrderData = sessionStorage.getItem('pendingOrderData')
+                
+                if (!pendingOrderData) {
+                  console.log('Order data not found in sessionStorage, checking localStorage backups...')
+                  pendingOrderData = localStorage.getItem('pendingOrderData')
+                }
+                
+                if (!pendingOrderData) {
+                  console.log('Order data not found in pendingOrderData, checking phonepeOrderData...')
+                  pendingOrderData = localStorage.getItem('phonepeOrderData')
+                }
+                
+                if (!pendingOrderData) {
+                  console.log('Order data not found in phonepeOrderData, trying to reconstruct from cart/buy-now...')
+                  // Try to reconstruct from cart/buy-now items
+                  const buyNowItem = localStorage.getItem('phonepeBuyNowItem')
+                  const cartItems = localStorage.getItem('phonepeCartItems')
+                  
+                  if (buyNowItem) {
+                    const buyNow = JSON.parse(buyNowItem)
+                    pendingOrderData = JSON.stringify({
+                      isBuyNow: true,
+                      cartItems: [buyNow],
+                      amount: buyNow.price * buyNow.quantity,
+                      email: buyNow.email || 'guest@example.com',
+                      shipping: {
+                        fullName: 'Guest User',
+                        email: buyNow.email || 'guest@example.com',
+                        phone: '0000000000',
+                        addressLine1: 'Guest Address',
+                        addressLine2: '',
+                        city: 'Guest City',
+                        state: 'Guest State',
+                        postalCode: '000000',
+                        country: 'India'
+                      },
+                      userId: null,
+                      timestamp: Date.now()
+                    })
+                    console.log('Reconstructed order data from buy-now item:', pendingOrderData)
+                  } else if (cartItems) {
+                    const cart = JSON.parse(cartItems)
+                    const total = cart.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0)
+                    pendingOrderData = JSON.stringify({
+                      isBuyNow: false,
+                      cartItems: cart,
+                      amount: total,
+                      email: 'guest@example.com',
+                      shipping: {
+                        fullName: 'Guest User',
+                        email: 'guest@example.com',
+                        phone: '0000000000',
+                        addressLine1: 'Guest Address',
+                        addressLine2: '',
+                        city: 'Guest City',
+                        state: 'Guest State',
+                        postalCode: '000000',
+                        country: 'India'
+                      },
+                      userId: null,
+                      timestamp: Date.now()
+                    })
+                    console.log('Reconstructed order data from cart items:', pendingOrderData)
+                  }
+                }
                 
                 if (pendingOrderData) {
                   const orderData = JSON.parse(pendingOrderData)
@@ -252,16 +330,20 @@ function PhonePeCallbackInner() {
                         // Clear buy-now item
                         sessionStorage.removeItem('buyNowItem')
                         localStorage.removeItem('buyNowItem')
+                        localStorage.removeItem('phonepeBuyNowItem')
                         console.log('Cleared buy-now items')
                       } else {
                         // Clear cart items
                         localStorage.removeItem('cartItems')
                         sessionStorage.removeItem('cartItems')
+                        localStorage.removeItem('phonepeCartItems')
                         console.log('Cleared cart items')
                       }
                       
                       // Clear pending order data
                       sessionStorage.removeItem('pendingOrderData')
+                      localStorage.removeItem('pendingOrderData')
+                      localStorage.removeItem('phonepeOrderData')
                       console.log('Cleared pending order data')
                       
                       setMessage('Payment successful! Your order has been created and confirmed.')
@@ -290,8 +372,8 @@ function PhonePeCallbackInner() {
                     throw new Error(errorData.message || `Failed to create order (${createOrderRes.status})`)
                   }
                 } else {
-                  console.error('No pending order data found in sessionStorage')
-                  throw new Error('No pending order data found')
+                  console.error('No order data found in any storage location')
+                  throw new Error('No order data found')
                 }
               } catch (orderError) {
                 console.error('Order creation failed:', orderError)
