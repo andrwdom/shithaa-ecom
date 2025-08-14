@@ -166,21 +166,10 @@ function PhonePeCallbackInner() {
               setMessage('Payment successful! Creating your order...')
               setOrderId(paymentData.merchantTransactionId || transactionId)
               
-              // Debug: Check what's available in storage
-              console.log('=== STORAGE DEBUG ===')
-              console.log('SessionStorage content:', {
-                pendingOrderData: sessionStorage.getItem('pendingOrderData'),
-                buyNowItem: sessionStorage.getItem('buyNowItem'),
-                cartItems: sessionStorage.getItem('cartItems')
-              })
-              console.log('LocalStorage content:', {
-                pendingOrderData: localStorage.getItem('pendingOrderData'),
-                buyNowItem: localStorage.getItem('buyNowItem'),
-                cartItems: localStorage.getItem('cartItems')
-              })
-              console.log('=== END STORAGE DEBUG ===')
+              // Skip PhonePe order lookup - go straight to order creation
+              console.log('Payment successful, proceeding directly to order creation')
               
-              // Direct order creation - no webhook dependency
+              // Direct order creation - no webhook dependency, no route conflicts
               try {
                 // Try to get order data from multiple storage locations
                 let pendingOrderData = sessionStorage.getItem('pendingOrderData')
