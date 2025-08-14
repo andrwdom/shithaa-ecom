@@ -101,16 +101,23 @@ const Add = ({token}) => {
       toast.error("Product ID is required");
       return;
     }
+
+    // Validate price
+    if (!price || isNaN(Number(price)) || Number(price) <= 0) {
+      toast.error("Please enter a valid price greater than 0");
+      return;
+    }
+
     setLoading(true);
     try {
       const formData = new FormData()
       formData.append("customId", customId)
       formData.append("name",name)
       formData.append("description",description)
-      formData.append("price",price)
+      formData.append("price", Number(price))
       formData.append("category", category); // display name
       formData.append("categorySlug", getCategorySlug(category)); // correct slug
-      formData.append("bestseller",bestseller)
+      formData.append("bestseller", bestseller.toString())
       formData.append("sizes", JSON.stringify(sizesWithStock))
       formData.append("availableSizes", JSON.stringify(sizesWithStock.map(s => s.size)))
       image1 && formData.append("image1",image1)
@@ -119,7 +126,7 @@ const Add = ({token}) => {
       image4 && formData.append("image4",image4)
       
       // Add sleeve type if applicable
-      if (shouldShowSleeveType() && sleeveType) {
+      if (shouldShowSleeveType() && sleeveType && sleeveType.trim()) {
         formData.append("sleeveType", sleeveType);
       }
       
@@ -136,6 +143,12 @@ const Add = ({token}) => {
       console.log('availableSizes:', sizesWithStock.map(s => s.size));
       console.log('sleeveType:', sleeveType);
       console.log('Images:', { image1, image2, image3, image4 });
+      
+      // Log FormData contents
+      console.log('FormData contents:');
+      for (let [key, value] of formData.entries()) {
+        console.log(key, ':', value);
+      }
       
       const response = await axios.post(
         import.meta.env.VITE_API_URL + "/api/products",
@@ -161,6 +174,13 @@ const Add = ({token}) => {
         toast.error(response.data.message || "Failed to add product.")
       }
     } catch (error) {
+      console.error('Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data,
+        headers: error.response?.headers
+      });
+      
       if (error.response && error.response.data && error.response.data.message) {
         toast.error(error.response.data.message)
       } else {

@@ -291,7 +291,9 @@ export const addProduct = async (req, res) => {
         try {
             imagesUrl = optimizedFiles.map(img => {
                 const baseFilename = path.parse(img.filename).name;
-                return imageOptimizer.generateResponsiveUrls(baseFilename, baseUrl);
+                const responsiveUrls = imageOptimizer.generateResponsiveUrls(baseFilename, baseUrl);
+                // Extract just the original/main image URL as a string
+                return responsiveUrls.original || `${baseUrl}/images/products/${img.filename}`;
             });
         } catch (error) {
             console.error('❌ Error generating responsive URLs:', error);
@@ -300,6 +302,8 @@ export const addProduct = async (req, res) => {
                 return `${baseUrl}/images/products/${img.filename}`;
             });
         }
+
+        console.log('📊 Image URLs generated:', imagesUrl);
 
         // Parse features if provided
         let parsedFeatures = [];
