@@ -339,6 +339,18 @@ export default function CheckoutClient() {
         isBuyNow: isBuyNow
       };
       sessionStorage.setItem('pendingOrderData', JSON.stringify(orderDataWithFlags));
+      console.log('Stored order data in sessionStorage:', orderDataWithFlags);
+      console.log('User object during checkout:', {
+        uid: user.uid,
+        mongoId: user.mongoId,
+        email: user.email,
+        displayName: user.displayName
+      });
+      console.log('SessionStorage content after storing:', {
+        pendingOrderData: sessionStorage.getItem('pendingOrderData'),
+        buyNowItem: sessionStorage.getItem('buyNowItem'),
+        cartItems: sessionStorage.getItem('cartItems')
+      });
 
       console.log('Initiating PhonePe payment:', orderData);
       
