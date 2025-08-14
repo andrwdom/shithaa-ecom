@@ -1,13 +1,11 @@
 import orderModel from "../models/orderModel.js";
 import userModel from "../models/userModel.js";
 import productModel from "../models/productModel.js";
-import TempOrder from "../models/TempOrder.js";
 import { successResponse, errorResponse } from '../utils/response.js';
 import { getUniqueOrderId } from './orderController.js';
 import { StandardCheckoutClient, Env, StandardCheckoutPayRequest } from 'pg-sdk-node';
 import { randomUUID } from 'crypto';
 import { generateInvoiceBuffer, sendInvoiceEmail } from '../utils/invoiceGenerator.js';
-import mongoose from 'mongoose';
 
 // PhonePe SDK configuration
 const PHONEPE_MERCHANT_ID = process.env.PHONEPE_MERCHANT_ID;
@@ -28,7 +26,7 @@ const getOrderUserEmail = (req, email) => {
 };
 
 // Helper function to update product stock
-export const updateProductStock = async (items) => {
+const updateProductStock = async (items) => {
     for (const item of items) {
         const product = await productModel.findById(item._id);
         if (product) {
@@ -66,14 +64,12 @@ export const createPhonePeSession = async (req, res) => {
       });
     }
 
-    // Don't create order or deduct stock yet - wait for payment confirmation
+    await updateProductStock(cartItems);
     const userEmail = getOrderUserEmail(req, email);
-    
-    // Generate unique merchant order ID for PhonePe
-    const merchantOrderId = randomUUID();
-    
-    // Store in temporary collection (we'll use a temporary collection)
-    const tempOrderData = {
+    const orderId = await getUniqueOrderId();
+
+    // Create order in database
+    const orderData = {
       userId: userId || (req.user && req.user.id),
       items: cartItems.map(item => ({
         _id: item._id,
@@ -103,21 +99,19 @@ export const createPhonePeSession = async (req, res) => {
       },
       amount: amount,
       paymentMethod: 'PhonePe',
+      payment: false,
+      date: Date.now(),
       email: userEmail,
       userInfo: { email: userEmail },
-      createdAt: Date.now(),
-      expiresAt: Date.now() + (30 * 60 * 1000) // 30 minutes expiry
+      status: 'Pending',
+      orderStatus: 'Pending',
+      paymentStatus: 'pending',
+      orderId
     };
+    const newOrder = await orderModel.create(orderData);
 
-    // Store in temporary collection
-    await TempOrder.create({
-      merchantOrderId,
-      orderData: tempOrderData,
-      createdAt: tempOrderData.createdAt,
-      expiresAt: tempOrderData.expiresAt
-    });
-
-    // Create PhonePe payment session
+    // Use SDK to create payment session
+    const merchantOrderId = randomUUID();
     const redirectUrl = `${process.env.PHONEPE_REDIRECT_URL || process.env.BASE_URL || 'https://shithaa.in'}/payment/phonepe/callback?merchantTransactionId=${merchantOrderId}`;
     const request = StandardCheckoutPayRequest.builder()
       .merchantOrderId(merchantOrderId)
@@ -127,14 +121,20 @@ export const createPhonePeSession = async (req, res) => {
 
     const response = await phonepeClient.pay(request);
     if (response && response.redirectUrl) {
+      // Save merchantOrderId to order for later status/callback
+      await orderModel.findByIdAndUpdate(newOrder._id, {
+        phonepeTransactionId: merchantOrderId
+      });
       return res.json({
         success: true,
-        merchantTransactionId: merchantOrderId,
+        orderId: newOrder._id,
+        phonepeTransactionId: merchantOrderId,
         redirectUrl: response.redirectUrl
       });
     } else {
-      // Clean up temporary order data if payment session creation failed
-      await TempOrder.deleteOne({ merchantOrderId });
+      // Restore stock and delete order if payment session creation failed
+      await updateProductStock(cartItems.map(item => ({ ...item, quantity: -item.quantity })));
+      await orderModel.findByIdAndDelete(newOrder._id);
       return res.status(400).json({
         success: false,
         message: 'Failed to create payment session',
@@ -211,29 +211,27 @@ export const phonePeCallback = async (req, res) => {
       }
     }
 
-    // Find temporary order data by merchantOrderId
-    console.log('Looking for temporary order with merchantOrderId:', merchantOrderId);
+    // Find order by merchantOrderId (orderId in callback payload)
+    console.log('Looking for order with phonepeTransactionId:', merchantOrderId);
     
-    const tempOrder = await TempOrder.findOne({ merchantOrderId });
-    if (!tempOrder) {
-      console.error('Temporary order not found for merchantOrderId:', merchantOrderId);
+    const order = await orderModel.findOne({ phonepeTransactionId: merchantOrderId });
+    if (!order) {
+      console.error('Order not found for phonepeTransactionId:', merchantOrderId);
       return res.status(404).json({
         success: false,
-        message: 'Temporary order not found'
+        message: 'Order not found'
       });
     }
 
-    // Check if temporary order has expired
-    if (tempOrder.expiresAt < Date.now()) {
-      console.log('Temporary order expired, cleaning up');
-      await TempOrder.deleteOne({ merchantOrderId });
-      return res.status(400).json({
-        success: false,
-        message: 'Order session expired'
-      });
-    }
+    console.log('Found order:', order._id, 'Current state:', state);
 
-    console.log('Found temporary order data, processing payment state:', state);
+    // Always save the full callback payload as paymentLog
+    const paymentLog = req.body;
+    let update = {
+      paymentLog,
+      phonepeTransactionId: merchantOrderId,
+      updatedAt: new Date()
+    };
 
     // Handle different success states
     const isSuccess = (
@@ -246,60 +244,57 @@ export const phonePeCallback = async (req, res) => {
     );
 
     if (isSuccess) {
-      console.log('Payment successful, creating actual order');
-      
-      // Deduct stock and create actual order
-      await updateProductStock(tempOrder.orderData.items);
-      const orderId = await getUniqueOrderId();
-      
-      const orderData = {
-        ...tempOrder.orderData,
-        phonepeTransactionId: merchantOrderId,
+      console.log('Payment successful, updating order status');
+      update = {
+        ...update,
         payment: true,
         paymentStatus: 'paid',
         orderStatus: 'Confirmed',
         status: 'Order Placed',
-        date: Date.now(),
-        orderId
       };
       
-      const newOrder = await orderModel.create(orderData);
-      
-      // Clear user's cart
-      if (newOrder.userId) {
-        await userModel.findByIdAndUpdate(newOrder.userId, { cartData: {} });
+      if (order.userId) {
+        await userModel.findByIdAndUpdate(order.userId, { cartData: {} });
       }
       
       // Generate and send invoice PDF via email (non-blocking)
       try {
-        const pdfBuffer = await generateInvoiceBuffer(newOrder);
-        await sendInvoiceEmail(newOrder, pdfBuffer);
+        const freshOrder = await orderModel.findById(order._id); // get latest
+        const pdfBuffer = await generateInvoiceBuffer(freshOrder);
+        await sendInvoiceEmail(freshOrder, pdfBuffer);
       } catch (err) {
         console.error('Invoice email error:', err);
       }
-      
-      // Clean up temporary order data
-      await TempOrder.deleteOne({ merchantOrderId });
-      
-      console.log('Order created successfully:', newOrder._id);
-      
-      res.json({
-        success: true,
-        message: 'Payment successful',
-        orderId: newOrder._id
-      });
     } else {
-      console.log('Payment failed, cleaning up temporary data');
+      console.log('Payment failed, updating order status');
+      update = {
+        ...update,
+        paymentStatus: 'failed',
+        orderStatus: 'Failed',
+        status: 'Payment Failed',
+      };
       
-      // Clean up temporary order data - no order created, no stock deducted
-      await TempOrder.deleteOne({ merchantOrderId });
-      
-      res.json({
-        success: false,
-        message: 'Payment failed',
-        orderId: null
-      });
+      // Restore product stock
+      for (const item of order.items) {
+        const product = await productModel.findById(item._id);
+        if (product) {
+          const sizeIndex = product.sizes.findIndex(s => s.size === item.size);
+          if (sizeIndex !== -1) {
+            product.sizes[sizeIndex].stock += item.quantity;
+            await product.save();
+          }
+        }
+      }
     }
+
+    await orderModel.findByIdAndUpdate(order._id, update);
+    console.log('Order updated successfully:', order._id);
+
+    res.json({
+      success: isSuccess,
+      message: isSuccess ? 'Payment successful' : 'Payment failed',
+      orderId: order._id
+    });
   } catch (error) {
     console.error('PhonePe Callback Error:', error);
     res.status(500).json({
@@ -323,84 +318,58 @@ export const verifyPhonePePayment = async (req, res) => {
       });
     }
 
-    // First check if we have a confirmed order in our database
+    // First check if we have the order in our database
     const order = await orderModel.findOne({ phonepeTransactionId: merchantTransactionId });
-    console.log('Confirmed order found:', order ? order._id : 'Not found');
+    console.log('Order found:', order ? order._id : 'Not found');
     
-    if (order) {
-      console.log('Order payment status:', order.paymentStatus);
-      console.log('Order order status:', order.orderStatus);
-
-      // Try to get status from PhonePe SDK
-      let phonepeResponse;
-      try {
-        console.log('Attempting PhonePe SDK verification...');
-        phonepeResponse = await phonepeClient.getOrderStatus(merchantTransactionId);
-        console.log('PhonePe SDK response:', phonepeResponse);
-      } catch (sdkError) {
-        console.error('PhonePe SDK Error:', sdkError);
-      }
-
-      // If we got response from PhonePe, use it
-      if (phonepeResponse) {
-        console.log('Using PhonePe SDK response');
-        return res.json({
-          success: true,
-          data: phonepeResponse
-        });
-      }
-
-      // Fallback to database status
-      console.log('Using database fallback');
-      return res.json({
-        success: true,
-        data: {
-          code: order.paymentStatus === 'paid' ? 'PAYMENT_SUCCESS' : 'PAYMENT_FAILED',
-          paymentState: order.paymentStatus === 'paid' ? 'COMPLETED' : 'FAILED',
-          merchantTransactionId: merchantTransactionId,
-          state: order.paymentStatus === 'paid' ? 'COMPLETED' : 'FAILED'
-        }
+    if (!order) {
+      console.log('Order not found for transaction:', merchantTransactionId);
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found for this transaction'
       });
     }
 
-    // If no confirmed order found, check for temporary order
-    console.log('No confirmed order found, checking for temporary order...');
-    const tempOrder = await TempOrder.findOne({ merchantOrderId: merchantTransactionId });
+    console.log('Order payment status:', order.paymentStatus);
+    console.log('Order order status:', order.orderStatus);
+
+    // Try to get status from PhonePe SDK
+    let phonepeResponse;
+    try {
+      console.log('Attempting PhonePe SDK verification...');
+      phonepeResponse = await phonepeClient.getOrderStatus(merchantTransactionId);
+      console.log('PhonePe SDK response:', phonepeResponse);
+    } catch (sdkError) {
+      console.error('PhonePe SDK Error:', sdkError);
+      
+          // If SDK fails, check our database status
+    console.log('Using database fallback for transaction:', merchantTransactionId);
     
-    if (tempOrder) {
-      console.log('Temporary order found, payment still pending');
-      
-      // Check if temporary order has expired
-      if (tempOrder.expiresAt < Date.now()) {
-        console.log('Temporary order expired');
-        await TempOrder.deleteOne({ merchantOrderId: merchantTransactionId });
-        return res.json({
-          success: true,
-          data: {
-            code: 'PAYMENT_EXPIRED',
-            paymentState: 'EXPIRED',
-            merchantTransactionId: merchantTransactionId,
-            state: 'EXPIRED'
-          }
-        });
-      }
-      
-      // Try to get status from PhonePe SDK
-      try {
-        console.log('Attempting PhonePe SDK verification for temporary order...');
-        const phonepeResponse = await phonepeClient.getOrderStatus(merchantTransactionId);
-        console.log('PhonePe SDK response for temp order:', phonepeResponse);
-        
-        if (phonepeResponse && phonepeResponse.state) {
-          return res.json({
-            success: true,
-            data: phonepeResponse
-          });
+    // Check if order was marked as paid through any means
+    if (order.paymentStatus === 'paid' || order.payment === true) {
+      console.log('Database shows payment successful');
+      return res.json({
+        success: true,
+        data: {
+          code: 'PAYMENT_SUCCESS',
+          paymentState: 'COMPLETED',
+          merchantTransactionId: merchantTransactionId,
+          state: 'COMPLETED'
         }
-      } catch (sdkError) {
-        console.error('PhonePe SDK Error for temp order:', sdkError);
-      }
-      
+      });
+    } else if (order.paymentStatus === 'failed') {
+      console.log('Database shows payment failed');
+      return res.json({
+        success: true,
+        data: {
+          code: 'PAYMENT_FAILED',
+          paymentState: 'FAILED',
+          merchantTransactionId: merchantTransactionId,
+          state: 'FAILED'
+        }
+      });
+    } else {
+      console.log('Database shows payment pending');
       return res.json({
         success: true,
         data: {
@@ -411,12 +380,27 @@ export const verifyPhonePePayment = async (req, res) => {
         }
       });
     }
+    }
 
-    // No order found at all
-    console.log('No order found for transaction:', merchantTransactionId);
-    return res.status(404).json({
-      success: false,
-      message: 'Order not found for this transaction'
+    // If we got response from PhonePe, use it
+    if (phonepeResponse) {
+      console.log('Using PhonePe SDK response');
+      return res.json({
+        success: true,
+        data: phonepeResponse
+      });
+    }
+
+    // Fallback to database status
+    console.log('Using database fallback');
+    return res.json({
+      success: true,
+      data: {
+        code: order.paymentStatus === 'paid' ? 'PAYMENT_SUCCESS' : 'PAYMENT_FAILED',
+        paymentState: order.paymentStatus === 'paid' ? 'COMPLETED' : 'FAILED',
+        merchantTransactionId: merchantTransactionId,
+        state: order.paymentStatus === 'paid' ? 'COMPLETED' : 'FAILED'
+      }
     });
 
   } catch (error) {

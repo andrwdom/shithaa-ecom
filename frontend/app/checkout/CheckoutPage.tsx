@@ -186,9 +186,9 @@ export default function CheckoutPage() {
   // Clear buy-now when user navigates away or completes checkout
   useEffect(() => {
     const handleBeforeUnload = () => {
-      // Don't clear buy-now item on page unload - let it persist until order completion
-      // This prevents data loss during payment redirects
-      console.log("CheckoutPage: Page unloading, preserving buy-now item for payment completion")
+      if (buyNowItem) {
+        clearBuyNowItem()
+      }
     }
 
     window.addEventListener('beforeunload', handleBeforeUnload)
@@ -252,11 +252,6 @@ export default function CheckoutPage() {
       });
       const data = await res.json();
       if (!res.ok || !data.redirectUrl) throw new Error(data.message || 'Failed to create payment session');
-
-      // Store the merchant transaction ID for later use
-      if (data.merchantTransactionId) {
-        localStorage.setItem('currentPaymentTransactionId', data.merchantTransactionId);
-      }
 
       // 2. Redirect to PhonePe payment page
       window.location.href = data.redirectUrl;
