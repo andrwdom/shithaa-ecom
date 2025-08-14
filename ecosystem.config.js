@@ -3,7 +3,7 @@ module.exports = {
     {
       name: 'shithaa-frontend',
       script: 'npm',
-      args: 'run build && start',
+      args: 'run start',
       cwd: './frontend',
       instances: 1,
       exec_mode: 'fork',
@@ -14,9 +14,9 @@ module.exports = {
         NODE_ENV: 'production',
         PORT: 3000
       },
-      error_file: './logs/frontend-err.log',
-      out_file: './logs/frontend-out.log',
-      log_file: './logs/frontend-combined.log',
+      error_file: './frontend/logs/frontend-err.log',
+      out_file: './frontend/logs/frontend-out.log',
+      log_file: './frontend/logs/frontend-combined.log',
       time: true
     },
     {
@@ -30,7 +30,11 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
         PORT: 4000
-      }
+      },
+      error_file: './backend/logs/backend-err.log',
+      out_file: './backend/logs/backend-out.log',
+      log_file: './backend/logs/backend-combined.log',
+      time: true
     },
     {
       name: 'shithaa-admin',
@@ -43,7 +47,11 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
         PORT: 5000
-      }
+      },
+      error_file: './admin/logs/admin-err.log',
+      out_file: './admin/logs/admin-out.log',
+      log_file: './admin/logs/admin-combined.log',
+      time: true
     }
   ]
 } 

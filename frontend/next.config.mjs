@@ -42,7 +42,7 @@ const nextConfig = {
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
   experimental: {
-    optimizeCss: true,
+    // optimizeCss: true, // Temporarily disabled to fix build error
     optimizePackageImports: ['@radix-ui/react-icons'],
   },
   compress: true,

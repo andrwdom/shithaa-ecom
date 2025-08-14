@@ -28,7 +28,7 @@ const getOrderUserEmail = (req, email) => {
 };
 
 // Helper function to update product stock
-const updateProductStock = async (items) => {
+export const updateProductStock = async (items) => {
     for (const item of items) {
         const product = await productModel.findById(item._id);
         if (product) {
