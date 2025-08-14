@@ -95,9 +95,9 @@ const TestimonialCard = ({ testimonial, index, isActive }: TestimonialCardProps)
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Glassmorphic container */}
+      {/* Container without overlay */}
       <motion.div
-        className="relative bg-transparent backdrop-blur-md rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-xl md:shadow-2xl border border-white/20"
+        className="relative rounded-2xl md:rounded-3xl p-4 md:p-6"
         whileHover={{
           scale: 1.02,
           rotateZ: 0,
