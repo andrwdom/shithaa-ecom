@@ -174,6 +174,85 @@ export default function RootLayout({
             })
           }}
         />
+        {/* Cart restoration script - ensures cart items are never lost */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                // Enhanced cart restoration script
+                function restoreCartFromStorage() {
+                  try {
+                    // Try localStorage first
+                    let cartData = localStorage.getItem('cartItems');
+                    if (!cartData) {
+                      // Fallback to sessionStorage
+                      cartData = sessionStorage.getItem('cartItems');
+                    }
+                    
+                    if (cartData) {
+                      const parsed = JSON.parse(cartData);
+                      if (Array.isArray(parsed) && parsed.length > 0) {
+                        console.log('Cart restoration script: Found', parsed.length, 'cart items');
+                        
+                        // Validate items before restoring
+                        const validItems = parsed.filter(item => 
+                          item && 
+                          item._id && 
+                          item.name && 
+                          typeof item.price === 'number' && 
+                          typeof item.quantity === 'number' && 
+                          item.size
+                        );
+                        
+                        if (validItems.length > 0) {
+                          // Store in both storages for redundancy
+                          localStorage.setItem('cartItems', JSON.stringify(validItems));
+                          sessionStorage.setItem('cartItems', JSON.stringify(validItems));
+                          console.log('Cart restoration script: Successfully restored', validItems.length, 'cart items');
+                        } else {
+                          console.log('Cart restoration script: No valid items found, clearing storage');
+                          localStorage.removeItem('cartItems');
+                          sessionStorage.removeItem('cartItems');
+                        }
+                      }
+                    }
+                  } catch (error) {
+                    console.error('Cart restoration script: Error restoring cart:', error);
+                    // Clear corrupted data
+                    localStorage.removeItem('cartItems');
+                    sessionStorage.removeItem('cartItems');
+                  }
+                }
+                
+                // Run restoration on page load
+                if (document.readyState === 'loading') {
+                  document.addEventListener('DOMContentLoaded', restoreCartFromStorage);
+                } else {
+                  restoreCartFromStorage();
+                }
+                
+                // Also run on page show (for back/forward navigation)
+                window.addEventListener('pageshow', function(event) {
+                  if (event.persisted) {
+                    restoreCartFromStorage();
+                  }
+                });
+                
+                // Run on focus (when user returns to tab)
+                window.addEventListener('focus', restoreCartFromStorage);
+                
+                // Run on visibility change
+                document.addEventListener('visibilitychange', function() {
+                  if (!document.hidden) {
+                    restoreCartFromStorage();
+                  }
+                });
+                
+                console.log('Cart restoration script: Initialized');
+              })();
+            `,
+          }}
+        />
       </head>
       <body className="font-body min-h-screen flex flex-col">
         <PerformanceMonitor />

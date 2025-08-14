@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { Menu, ShoppingBag, X, User, Mail, Info, Home, LogOut, List } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useCart } from "@/components/cart-context"
@@ -15,7 +15,7 @@ interface NavbarProps {
 export default function Navbar({ onCategoriesClick }: NavbarProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
-  const { cartItems, openCartSidebar } = useCart()
+  const { cartItems, openCartSidebar, restoreCartFromStorage } = useCart()
   const { wishlistItems } = useWishlist()
   const { user, logout } = useAuth()
 
@@ -26,6 +26,14 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
   console.log("Navbar - User state:", user)
   console.log("Navbar - Is menu open:", isMenuOpen)
   console.log("Navbar - Login modal open:", isLoginModalOpen)
+
+  // Attempt to restore cart when navbar mounts (as a fallback)
+  useEffect(() => {
+    if (cartItems.length === 0) {
+      console.log("Navbar: Cart is empty, attempting restoration")
+      restoreCartFromStorage()
+    }
+  }, [cartItems.length, restoreCartFromStorage])
 
   const handleAccountClick = () => {
     console.log("Account button clicked, user:", user)

@@ -149,9 +149,9 @@ export default function CheckoutClient() {
   // Clear buy-now when user navigates away or completes checkout
   useEffect(() => {
     const handleBeforeUnload = () => {
-      if (buyNowItem) {
-        clearBuyNowItem();
-      }
+      // Don't clear buy-now item on page unload - let it persist
+      // Only clear it after successful order completion
+      console.log("Checkout: Page unloading, preserving buy-now item")
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
@@ -385,16 +385,21 @@ export default function CheckoutClient() {
       }
       const data = await res.json();
       if (data.success) {
-        // Clear appropriate state based on checkout type
+        // Only clear state after successful order placement
         if (isBuyNow) {
           clearBuyNowItem();
           // Don't clear cart for buy now - preserve user's cart items
+          console.log("Checkout: Buy now order successful, cart items preserved")
         } else {
+          // Only clear cart after successful order from cart
           clearCart();
+          console.log("Checkout: Cart order successful, cart cleared")
         }
         router.push("/order-success");
       } else {
         setError(data.message || "Order failed.");
+        // Don't clear anything if order failed - preserve cart and buy-now items
+        console.log("Checkout: Order failed, preserving cart and buy-now items")
       }
     } catch (err) {
       setError("Order failed. Please try again.");

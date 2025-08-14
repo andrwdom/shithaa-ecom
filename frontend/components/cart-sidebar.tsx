@@ -18,7 +18,8 @@ export default function CartSidebar() {
     closeCartSidebar,
     cartTotal,
     offerDetails,
-    isLoadingOffer
+    isLoadingOffer,
+    restoreCartFromStorage
   } = useCart();
   const { clearBuyNowItem } = useBuyNow();
   const [productStocks, setProductStocks] = useState<Record<string, Record<string, number>>>({});
@@ -35,6 +36,14 @@ export default function CartSidebar() {
       setShowEmptyState(false);
     }
   }, [cartItems.length]);
+
+  // Attempt to restore cart when sidebar opens and cart is empty
+  useEffect(() => {
+    if (isCartSidebarOpen && cartItems.length === 0) {
+      console.log("Cart sidebar: Cart is empty, attempting restoration")
+      restoreCartFromStorage()
+    }
+  }, [isCartSidebarOpen, cartItems.length, restoreCartFromStorage])
 
   // Fetch stock info for all cart items on open
   useEffect(() => {

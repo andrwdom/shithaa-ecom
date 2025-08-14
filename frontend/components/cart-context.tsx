@@ -37,6 +37,8 @@ interface CartContextType {
   isLoadingOffer: boolean
   // Add function to notify checkout that cart has changed
   notifyCheckoutCartChanged: () => void
+  // Add function to restore cart from storage
+  restoreCartFromStorage: () => void
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined)
@@ -52,40 +54,78 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [isLoadingOffer, setIsLoadingOffer] = useState(false)
   // Add state to track cart changes for checkout
   const [cartChangeCounter, setCartChangeCounter] = useState(0)
+  // Add state to track if cart has been initialized
+  const [isCartInitialized, setIsCartInitialized] = useState(false)
 
-  // Load cart from localStorage on mount
-  useEffect(() => {
-    console.log("CartProvider: Loading cart from localStorage")
-    const loadCart = () => {
-      try {
-        const stored = localStorage.getItem("cartItems")
-        if (stored) {
-          const parsed = JSON.parse(stored)
-          console.log("CartProvider: Loaded cart items:", parsed)
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setCartItems(parsed)
+  // Enhanced function to load cart from localStorage
+  const loadCartFromStorage = useCallback(() => {
+    try {
+      const stored = localStorage.getItem("cartItems")
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        console.log("CartProvider: Loaded cart items from storage:", parsed)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Validate each item has required fields
+          const validItems = parsed.filter(item => 
+            item && 
+            item._id && 
+            item.name && 
+            typeof item.price === 'number' && 
+            typeof item.quantity === 'number' && 
+            item.size
+          )
+          if (validItems.length > 0) {
+            setCartItems(validItems)
+            console.log("CartProvider: Successfully restored", validItems.length, "cart items")
+            return true
           } else {
-            console.log("CartProvider: Stored cart is empty or invalid")
-            setCartItems([])
+            console.log("CartProvider: No valid items found in stored cart")
           }
         } else {
-          console.log("CartProvider: No stored cart found")
-          setCartItems([])
+          console.log("CartProvider: Stored cart is empty or invalid")
         }
-      } catch (error) {
-        console.error("CartProvider: Error parsing stored cart:", error)
-        setCartItems([])
+      } else {
+        console.log("CartProvider: No stored cart found")
       }
+    } catch (error) {
+      console.error("CartProvider: Error parsing stored cart:", error)
     }
+    return false
+  }, [])
 
-    // Load immediately
-    loadCart()
+  // Function to restore cart from storage (public API)
+  const restoreCartFromStorage = useCallback(() => {
+    console.log("CartProvider: Manual cart restoration requested")
+    return loadCartFromStorage()
+  }, [loadCartFromStorage])
+
+  // Load cart from localStorage on mount with multiple fallback strategies
+  useEffect(() => {
+    console.log("CartProvider: Initializing cart from storage...")
+    
+    // First attempt: immediate load
+    let restored = loadCartFromStorage()
+    
+    // Second attempt: if first failed, try again after a short delay
+    if (!restored) {
+      const timer = setTimeout(() => {
+        console.log("CartProvider: Retrying cart restoration...")
+        restored = loadCartFromStorage()
+        if (restored) {
+          setIsCartInitialized(true)
+        }
+      }, 100)
+      
+      return () => clearTimeout(timer)
+    } else {
+      setIsCartInitialized(true)
+    }
     
     // Also listen for storage events (in case cart is updated in another tab)
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === "cartItems" && e.newValue) {
         console.log("CartProvider: Storage event detected, reloading cart")
-        loadCart()
+        loadCartFromStorage()
       }
     }
 
@@ -93,36 +133,74 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     const handlePageShow = (e: PageTransitionEvent) => {
       if (e.persisted) {
         console.log("CartProvider: Page restored from cache, reloading cart")
-        loadCart()
+        loadCartFromStorage()
       }
     }
 
     // Listen for page visibility changes
     const handleVisibilityChange = () => {
-      if (!document.hidden && cartItems.length === 0) {
+      if (!document.hidden && cartItems.length === 0 && !isCartInitialized) {
         console.log("CartProvider: Page became visible, checking for stored cart")
-        loadCart()
+        loadCartFromStorage()
+      }
+    }
+
+    // Listen for focus events
+    const handleFocus = () => {
+      if (cartItems.length === 0 && !isCartInitialized) {
+        console.log("CartProvider: Window focused, checking for stored cart")
+        loadCartFromStorage()
       }
     }
 
     window.addEventListener('storage', handleStorageChange)
     window.addEventListener('pageshow', handlePageShow)
     document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('focus', handleFocus)
     
     return () => {
       window.removeEventListener('storage', handleStorageChange)
       window.removeEventListener('pageshow', handlePageShow)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('focus', handleFocus)
     }
-  }, []) // Removed cartItems.length dependency to prevent infinite loops
+  }, [loadCartFromStorage, cartItems.length, isCartInitialized])
 
-  // Save cart to localStorage on change
+  // Enhanced save cart to localStorage with error handling and backup
   useEffect(() => {
-    console.log("CartProvider: Saving cart to localStorage:", cartItems)
-    localStorage.setItem("cartItems", JSON.stringify(cartItems))
-    // Increment counter to notify checkout of cart changes
-    setCartChangeCounter(prev => prev + 1)
-  }, [cartItems])
+    if (cartItems.length > 0) {
+      console.log("CartProvider: Saving cart to localStorage:", cartItems)
+      try {
+        // Save to primary storage
+        localStorage.setItem("cartItems", JSON.stringify(cartItems))
+        
+        // Also save to sessionStorage as backup
+        sessionStorage.setItem("cartItems", JSON.stringify(cartItems))
+        
+        // Increment counter to notify checkout of cart changes
+        setCartChangeCounter(prev => prev + 1)
+        console.log("CartProvider: Cart saved successfully")
+      } catch (error) {
+        console.error("CartProvider: Error saving cart to localStorage:", error)
+        // Try sessionStorage as fallback
+        try {
+          sessionStorage.setItem("cartItems", JSON.stringify(cartItems))
+          console.log("CartProvider: Cart saved to sessionStorage as fallback")
+        } catch (sessionError) {
+          console.error("CartProvider: Failed to save cart to both storages:", sessionError)
+        }
+      }
+    } else if (cartItems.length === 0 && isCartInitialized) {
+      // Only clear storage if we're sure the cart should be empty
+      console.log("CartProvider: Cart is empty, clearing storage")
+      try {
+        localStorage.removeItem("cartItems")
+        sessionStorage.removeItem("cartItems")
+      } catch (error) {
+        console.error("CartProvider: Error clearing cart storage:", error)
+      }
+    }
+  }, [cartItems, isCartInitialized])
 
   // Function to calculate cart total with offers - moved before useEffect
   const calculateCartTotalWithOffers = useCallback(async () => {
@@ -245,9 +323,16 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setIsCartSidebarOpen(false)
   }, [])
 
+  // Enhanced clearCart function that only clears after successful order
   const clearCart = useCallback(() => {
+    console.log("CartProvider: clearCart called - this should only happen after successful order placement")
     setCartItems([])
-    localStorage.removeItem("cartItems")
+    try {
+      localStorage.removeItem("cartItems")
+      sessionStorage.removeItem("cartItems")
+    } catch (error) {
+      console.error("CartProvider: Error clearing cart storage:", error)
+    }
   }, [])
 
   // Function to notify checkout that cart has changed
@@ -282,7 +367,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     cartSubtotal,
     offerDetails,
     isLoadingOffer,
-    notifyCheckoutCartChanged
+    notifyCheckoutCartChanged,
+    restoreCartFromStorage
   }), [
     cartItems, 
     addToCart, 
@@ -296,7 +382,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     cartSubtotal,
     offerDetails,
     isLoadingOffer,
-    notifyCheckoutCartChanged
+    notifyCheckoutCartChanged,
+    restoreCartFromStorage
   ])
 
   console.log("CartProvider: Providing context value:", contextValue)
