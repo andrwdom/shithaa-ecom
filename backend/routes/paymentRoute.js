@@ -3,6 +3,7 @@ import {
     createPhonePeSession, 
     phonePeCallback, 
     verifyPhonePePayment,
+    createOrderFromPaymentSession,
     dummyPaymentSuccess
 } from '../controllers/paymentController.js';
 import { verifyToken, optionalVerifyToken } from '../middleware/auth.js';
@@ -15,6 +16,7 @@ const paymentRouter = express.Router();
 // PhonePe payment routes
 paymentRouter.post('/phonepe/create-session', verifyToken, createPhonePeSession);
 paymentRouter.post('/phonepe/callback', phonePeCallback);
+paymentRouter.post('/phonepe/create-order', verifyToken, createOrderFromPaymentSession);
 paymentRouter.post('/phonepe/dummy-success', verifyToken, dummyPaymentSuccess);
 paymentRouter.get('/phonepe/verify/:merchantTransactionId', optionalVerifyToken, verifyPhonePePayment);
 // PhonePe refund routes

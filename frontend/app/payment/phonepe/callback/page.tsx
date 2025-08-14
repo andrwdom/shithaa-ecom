@@ -194,10 +194,9 @@ function PhonePeCallbackInner() {
               setMessage('Payment successful! Creating your order...')
               setOrderId(paymentData.merchantTransactionId || transactionId)
               
-              // Skip PhonePe order lookup - go straight to order creation
-              console.log('Payment successful, proceeding directly to order creation')
+              // Payment successful - create order from payment session
+              console.log('Payment successful, creating order from payment session')
               
-              // Direct order creation - no webhook dependency, no route conflicts
               try {
                 // Try to get order data from multiple storage locations
                 let pendingOrderData = sessionStorage.getItem('pendingOrderData')
@@ -270,66 +269,26 @@ function PhonePeCallbackInner() {
                   const orderData = JSON.parse(pendingOrderData)
                   console.log('Parsed order data:', orderData)
                   
-                  // Create order using the exact format expected by createStructuredOrder
-                  const orderPayload = {
-                    userInfo: {
-                      userId: orderData.userId,
-                      name: orderData.shipping.fullName,
-                      email: orderData.email
-                    },
-                    shippingInfo: {
-                      fullName: orderData.shipping.fullName,
-                      email: orderData.email,
-                      phone: orderData.shipping.phone,
-                      addressLine1: orderData.shipping.addressLine1,
-                      addressLine2: orderData.shipping.addressLine2 || '',
-                      city: orderData.shipping.city,
-                      state: orderData.shipping.state,
-                      postalCode: orderData.shipping.postalCode,
-                      country: orderData.shipping.country || 'India'
-                    },
-                    items: orderData.cartItems.map((item: any) => ({
-                      _id: item._id,
-                      name: item.name,
-                      quantity: item.quantity,
-                      price: item.price,
-                      image: item.image,
-                      size: item.size
-                    })),
-                    totalAmount: orderData.amount,
-                    paymentStatus: 'paid',
-                    phonepeTransactionId: transactionId,
-                    paymentMethod: 'PhonePe',
-                    createdAt: new Date().toISOString()
-                  }
-                  
-                  // Validate required fields
-                  if (!orderPayload.userInfo.userId) {
-                    console.warn('User ID is missing, proceeding without user ID')
-                    delete orderPayload.userInfo.userId
-                  }
-                  if (!orderPayload.userInfo.email) {
-                    throw new Error('User email is missing')
-                  }
-                  if (!orderPayload.shippingInfo.fullName) {
+                  // Validate that we have the basic data needed
+                  if (!orderData.shipping?.fullName) {
                     throw new Error('Shipping name is missing')
                   }
-                  if (!orderPayload.items || orderPayload.items.length === 0) {
+                  if (!orderData.cartItems || orderData.cartItems.length === 0) {
                     throw new Error('Order items are missing')
                   }
-                  if (!orderPayload.totalAmount) {
+                  if (!orderData.amount) {
                     throw new Error('Total amount is missing')
                   }
                   
-                  console.log('Sending order creation request with payload:', orderPayload)
+                  console.log('Creating order from payment session for transaction:', transactionId)
                   
-                  const createOrderRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/orders`, {
+                  const createOrderRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/payment/phonepe/create-order`, {
                     method: 'POST',
                     headers: {
                       'Content-Type': 'application/json',
                       'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
                     },
-                    body: JSON.stringify(orderPayload)
+                    body: JSON.stringify({ phonepeTransactionId: transactionId })
                   })
                   
                   console.log('Order creation response status:', createOrderRes.status)
@@ -401,7 +360,7 @@ function PhonePeCallbackInner() {
                     console.error('Headers:', Object.fromEntries(createOrderRes.headers.entries()))
                     console.error('Error Data:', errorData)
                     console.error('Response Text:', responseText)
-                    console.error('Request Payload:', orderPayload)
+                    console.error('Transaction ID:', transactionId)
                     console.error('=== END ORDER CREATION FAILED ===')
                     
                     throw new Error(errorData.message || `Failed to create order (${createOrderRes.status})`)

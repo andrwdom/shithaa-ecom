@@ -330,7 +330,8 @@ export default function CheckoutClient() {
         },
         cartItems: itemsWithId,
         userId: user.mongoId || user.uid,
-        email: form.email || user.email
+        email: form.email || user.email,
+        checkoutSource: isBuyNow ? 'buy-now' : 'cart'
       };
 
       // Store order data in sessionStorage for fallback order creation
