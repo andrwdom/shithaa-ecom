@@ -2,7 +2,7 @@ import axios from 'axios'
 import React, { useState } from 'react'
 import { toast } from 'react-toastify'
 import { assets } from '../assets/assets'
-import shithaLogo from '../assets/shitha_logo.jpg'
+import shithaLogo from '../assets/shithaa_logo.jpg'
 
 const backendUrl = import.meta.env.VITE_API_URL;
 
