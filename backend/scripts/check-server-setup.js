@@ -3,6 +3,10 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -67,9 +71,38 @@ try {
 // Check MongoDB connection
 console.log('\n🗄️ Checking database connection:');
 try {
-    const { connectDB } = await import('../config/mongodb.js');
-    await connectDB();
-    console.log('   ✅ MongoDB connection successful');
+    // Try to import the config file first
+    const configPath = path.join(__dirname, '../config/mongodb.js');
+    if (!fs.existsSync(configPath)) {
+        console.log('   ❌ MongoDB config file not found');
+        console.log(`      Expected: ${configPath}`);
+    } else {
+        try {
+            const { connectDB } = await import('../config/mongodb.js');
+            if (typeof connectDB === 'function') {
+                await connectDB();
+                console.log('   ✅ MongoDB connection successful');
+            } else {
+                console.log('   ❌ connectDB is not a function');
+                console.log('      Type:', typeof connectDB);
+            }
+        } catch (importError) {
+            console.log('   ❌ Error importing MongoDB config:');
+            console.log(`      ${importError.message}`);
+        }
+    }
+    
+    // Test direct MongoDB connection
+    try {
+        const mongoose = await import('mongoose');
+        console.log('   🔄 Testing direct MongoDB connection...');
+        await mongoose.default.connect(process.env.MONGODB_URI);
+        console.log('   ✅ Direct MongoDB connection successful');
+        await mongoose.default.disconnect();
+    } catch (directError) {
+        console.log('   ❌ Direct MongoDB connection failed:');
+        console.log(`      ${directError.message}`);
+    }
 } catch (error) {
     console.log('   ❌ MongoDB connection failed:');
     console.log(`      ${error.message}`);
