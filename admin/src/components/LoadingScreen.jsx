@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { assets } from '../assets/assets';
-import shithaLogo from '../assets/shitha_logo.jpg'; 
+import shithaLogo from '../assets/shithaa_logo.jpg'; 
 
 const LoadingScreen = () => {
   const [isVisible, setIsVisible] = useState(true);
