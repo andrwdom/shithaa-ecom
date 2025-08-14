@@ -133,8 +133,8 @@ const TestimonialCard = ({ testimonial, index, isActive }: TestimonialCardProps)
 
 
           {/* Instagram indicator */}
-          <div className="absolute top-3 md:top-4 right-3 md:right-4 bg-white/90 backdrop-blur-sm rounded-full p-1.5 md:p-2 shadow-lg">
-            <Instagram className="w-3 h-3 md:w-4 md:h-4 text-pink-500" />
+          <div className="absolute top-3 md:top-4 right-3 md:right-4 bg-black/80 rounded-full p-1.5 md:p-2 shadow-lg">
+            <Instagram className="w-3 h-3 md:w-4 md:h-4 text-white" />
           </div>
         </div>
 
