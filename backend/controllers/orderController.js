@@ -197,8 +197,28 @@ export const createOrder = async (req, res) => {
 // PATCH createStructuredOrder
 const createStructuredOrder = async (req, res) => {
   try {
+    console.log('=== CREATE STRUCTURED ORDER DEBUG ===');
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
+    console.log('Request headers:', req.headers);
+    console.log('User info:', req.user);
+    
     let { userInfo, shippingInfo, items, couponUsed, totalAmount, paymentStatus, createdAt } = req.body;
+    
+    console.log('Parsed fields:');
+    console.log('- userInfo:', userInfo);
+    console.log('- shippingInfo:', shippingInfo);
+    console.log('- items:', items);
+    console.log('- totalAmount:', totalAmount);
+    console.log('- paymentStatus:', paymentStatus);
+    
     if (!userInfo || !shippingInfo || !items || !Array.isArray(items) || items.length === 0 || !totalAmount) {
+      console.error('Missing required fields validation failed');
+      console.error('- userInfo exists:', !!userInfo);
+      console.error('- shippingInfo exists:', !!shippingInfo);
+      console.error('- items exists:', !!items);
+      console.error('- items is array:', Array.isArray(items));
+      console.error('- items length:', items ? items.length : 'N/A');
+      console.error('- totalAmount exists:', !!totalAmount);
       return res.status(400).json({ message: 'Missing required fields' });
     }
     const userEmail = getOrderUserEmail(req, userInfo.email);
@@ -212,11 +232,15 @@ const createStructuredOrder = async (req, res) => {
     
     // Validate required shipping fields
     const requiredShippingFields = ['fullName', 'email', 'phone', 'addressLine1', 'city', 'state', 'postalCode'];
+    console.log('Validating required shipping fields...');
     for (const field of requiredShippingFields) {
+      console.log(`- ${field}:`, shippingInfo[field]);
       if (!shippingInfo[field]) {
+        console.error(`Missing required shipping field: ${field}`);
         return res.status(400).json({ message: `Missing required shipping field: ${field}` });
       }
     }
+    console.log('All required shipping fields are present');
     
     // Ensure shippingInfo has all required fields with proper structure
     const validatedShippingInfo = {
@@ -230,29 +254,40 @@ const createStructuredOrder = async (req, res) => {
       postalCode: shippingInfo.postalCode,
       country: shippingInfo.country || 'India'
     };
+    console.log('Validated shipping info:', validatedShippingInfo);
     
     // Extra validation and logging for items
+    console.log('Validating order items...');
     for (const item of itemsWithIds) {
+      console.log('Validating item:', item);
       if (!item._id) {
         console.error('Order item missing _id:', item);
         return res.status(400).json({ message: `Order item missing _id: ${JSON.stringify(item)}` });
       }
+      console.log(`Looking up product with _id: ${item._id}`);
       const product = await productModel.findById(item._id);
       if (!product) {
         console.error(`Product not found for _id: ${item._id}`);
         return res.status(400).json({ message: `Product not found for _id: ${item._id}` });
       }
+      console.log(`Product found: ${product.name}`);
+      console.log(`Looking for size: ${item.size} in product sizes:`, product.sizes.map(s => s.size));
       const sizeObj = product.sizes.find(s => s.size === item.size);
       if (!sizeObj) {
         console.error(`Size ${item.size} not found for product ${product.name}`);
         return res.status(400).json({ message: `Size ${item.size} not found for product ${product.name}` });
       }
+      console.log(`Size found: ${sizeObj.size}, stock: ${sizeObj.stock}, requested: ${item.quantity}`);
       if (sizeObj.stock < item.quantity) {
         console.error(`Insufficient stock for ${product.name} in size ${item.size}. Only ${sizeObj.stock} available.`);
         return res.status(400).json({ message: `Insufficient stock for ${product.name} in size ${item.size}. Only ${sizeObj.stock} available.` });
       }
+      console.log(`Item validation passed: ${product.name} - ${item.size} - ${item.quantity}`);
     }
+    console.log('All items validation passed');
     const orderId = await getUniqueOrderId();
+    console.log('Generated order ID:', orderId);
+    
     const orderDoc = {
       userInfo,
       shippingInfo: validatedShippingInfo,
@@ -267,10 +302,17 @@ const createStructuredOrder = async (req, res) => {
       userId: userInfo.userId || undefined,
       orderId
     };
+    
+    console.log('Final order document:', JSON.stringify(orderDoc, null, 2));
+    console.log('Creating order in database...');
+    
     const order = await orderModel.create(orderDoc);
+    console.log('Order created successfully:', order._id);
+    
     res.status(201).json({ success: true, order });
   } catch (err) {
     console.error('Create Structured Order Error (detailed):', err);
+    console.error('Error stack:', err.stack);
     res.status(500).json({ message: 'Server error while creating order', error: err.message, stack: err.stack });
   }
 };

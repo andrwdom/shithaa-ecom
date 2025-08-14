@@ -358,17 +358,32 @@ function PhonePeCallbackInner() {
                       setTimeout(() => { router.push('/order-success') }, 3000)
                     } else {
                       console.error('Order creation failed with success: false:', orderResult)
+                      console.error('Full order result:', JSON.stringify(orderResult, null, 2))
                       throw new Error(orderResult.message || 'Failed to create order')
                     }
                   } else {
                     let errorData
+                    let responseText = ''
                     try {
                       errorData = await createOrderRes.json()
                     } catch (parseError) {
                       errorData = { message: 'Failed to parse error response' }
                     }
-                    console.error('Order creation failed with status:', createOrderRes.status, 'Error:', errorData)
-                    console.error('Response text:', await createOrderRes.text())
+                    try {
+                      responseText = await createOrderRes.text()
+                    } catch (textError) {
+                      responseText = 'Failed to get response text'
+                    }
+                    
+                    console.error('=== ORDER CREATION FAILED ===')
+                    console.error('Status:', createOrderRes.status)
+                    console.error('Status Text:', createOrderRes.statusText)
+                    console.error('Headers:', Object.fromEntries(createOrderRes.headers.entries()))
+                    console.error('Error Data:', errorData)
+                    console.error('Response Text:', responseText)
+                    console.error('Request Payload:', orderPayload)
+                    console.error('=== END ORDER CREATION FAILED ===')
+                    
                     throw new Error(errorData.message || `Failed to create order (${createOrderRes.status})`)
                   }
                 } else {
