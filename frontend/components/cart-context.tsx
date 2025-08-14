@@ -255,6 +255,19 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setCartChangeCounter(prev => prev + 1)
   }, [])
 
+  // Listen for custom events to open cart sidebar
+  useEffect(() => {
+    const handleOpenCartSidebar = () => {
+      setIsCartSidebarOpen(true);
+    };
+
+    window.addEventListener('openCartSidebar', handleOpenCartSidebar);
+    
+    return () => {
+      window.removeEventListener('openCartSidebar', handleOpenCartSidebar);
+    };
+  }, []);
+
   // Memoize context value to prevent unnecessary re-renders
   const contextValue = useMemo(() => ({
     cartItems, 

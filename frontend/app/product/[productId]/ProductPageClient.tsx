@@ -96,10 +96,6 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
     }
     if (!product) return;
     
-    // Clear any existing cart context to ensure buy-now works independently
-    // This ensures checkout shows only this product, ignoring cart contents
-    clearCart();
-    
     // Set buy now item with fresh data - use _id as primary ID since that's what backend returns
     setBuyNowItem({
       id: product._id || product.id || productId,
@@ -112,6 +108,7 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
     });
     
     // Navigate to checkout - the checkout page will show only this product
+    // Cart items are preserved and will be available after checkout completion
     window.location.href = "/checkout?mode=buynow";
   }
 
@@ -383,7 +380,7 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
 
                 <p className="text-gray-600 leading-relaxed mb-6">{product.description}</p>
 
-                {/* Loungewear Offer Banner (exclude Dupatta category) */}
+                {/* Loungewear Offer Banner (only for eligible categories) */}
                 {(product.category === "Zipless Feeding Lounge Wear" || 
                   product.category === "Non-Feeding Lounge Wear") && (
                   <div className="mb-6 p-4 bg-gradient-to-r from-pink-50 to-purple-50 border border-pink-200 rounded-lg">

@@ -388,6 +388,7 @@ export default function CheckoutClient() {
         // Clear appropriate state based on checkout type
         if (isBuyNow) {
           clearBuyNowItem();
+          // Don't clear cart for buy now - preserve user's cart items
         } else {
           clearCart();
         }
@@ -462,7 +463,7 @@ export default function CheckoutClient() {
                 {isBuyNow && (
                   <Alert variant="default" className="mb-4">
                     <AlertDescription>
-                      You are buying this item directly. <button onClick={openCartSidebar} className="underline ml-2 hover:text-[rgb(71,60,102)]">Go to cart instead?</button>
+                      You are buying this item directly. Your cart items will be preserved for later. <button onClick={openCartSidebar} className="underline ml-2 hover:text-[rgb(71,60,102)]">Go to cart instead?</button>
                     </AlertDescription>
                   </Alert>
                 )}
@@ -544,6 +545,35 @@ export default function CheckoutClient() {
                 <div className="text-right font-bold mt-4 text-xl text-[rgb(71,60,102)]">Total: ₹{total}</div>
               </div>
               <Separator />
+              
+              {/* Show cart items for buy now users */}
+              {isBuyNow && cartItems.length > 0 && (
+                <div className="mb-6">
+                  <h2 className="font-semibold mb-3 text-lg text-[rgb(71,60,102)]">Your Cart Items (Preserved)</h2>
+                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <p className="text-sm text-gray-600 mb-3">
+                      These items are still in your cart and will be available after checkout:
+                    </p>
+                    <ul className="space-y-2">
+                      {cartItems.map((item) => (
+                        <li key={`${item.id}-${item.size}`} className="flex justify-between items-center text-sm">
+                          <span className="text-gray-700">{item.name} <span className="text-gray-500">({item.size})</span> x {item.quantity}</span>
+                          <span className="font-medium text-gray-900">₹{item.price * item.quantity}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="mt-3 pt-3 border-t border-gray-200">
+                      <button 
+                        onClick={openCartSidebar}
+                        className="text-sm text-[rgb(71,60,102)] hover:text-[rgb(71,60,102)]/80 underline font-medium"
+                      >
+                        View Full Cart ({cartItems.length} items)
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
               <div>
                 <h2 className="font-semibold mb-2 text-lg text-[rgb(71,60,102)]">Payment Method</h2>
                 <RadioGroup

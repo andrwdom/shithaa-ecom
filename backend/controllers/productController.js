@@ -221,10 +221,40 @@ export const addProduct = async (req, res) => {
         // Optimize images
         console.log('🔄 Starting image optimization...');
         const uploadDir = "/var/www/shithaa-ecom/uploads/products/";
-        const optimizationResult = await imageOptimizer.optimizeMultipleImages(images, uploadDir);
         
-        const { optimizedFiles, results } = optimizationResult;
-        const stats = imageOptimizer.getOptimizationStats(results);
+        let optimizationResult;
+        let optimizedFiles;
+        let results;
+        let stats;
+        
+        try {
+            optimizationResult = await imageOptimizer.optimizeMultipleImages(images, uploadDir);
+            optimizedFiles = optimizationResult.optimizedFiles;
+            results = optimizationResult.results;
+            stats = imageOptimizer.getOptimizationStats(results);
+        } catch (error) {
+            console.error('❌ Image optimization failed:', error);
+            // Use fallback - keep original files
+            optimizedFiles = images;
+            results = images.map(img => ({
+                originalName: img.originalname,
+                optimizedName: img.filename,
+                originalSize: '0 Bytes',
+                optimizedSize: '0 Bytes',
+                compressionRatio: 0,
+                processingTime: 0,
+                success: true,
+                error: null
+            }));
+            stats = {
+                totalFiles: images.length,
+                successful: images.length,
+                failed: 0,
+                totalSizeReduction: '0 Bytes',
+                avgCompressionRatio: 0,
+                totalProcessingTime: 0
+            };
+        }
 
         console.log('📊 Image Optimization Summary:');
         console.log(`   Total files: ${stats.totalFiles}`);
@@ -236,10 +266,20 @@ export const addProduct = async (req, res) => {
 
         // Build responsive image URLs for VPS using optimized filenames
         const baseUrl = process.env.BASE_URL || 'https://shithaa.in';
-        const imagesUrl = optimizedFiles.map(img => {
-            const baseFilename = path.parse(img.filename).name;
-            return imageOptimizer.generateResponsiveUrls(baseFilename, baseUrl);
-        });
+        let imagesUrl;
+        
+        try {
+            imagesUrl = optimizedFiles.map(img => {
+                const baseFilename = path.parse(img.filename).name;
+                return imageOptimizer.generateResponsiveUrls(baseFilename, baseUrl);
+            });
+        } catch (error) {
+            console.error('❌ Error generating responsive URLs:', error);
+            // Fallback to simple URLs
+            imagesUrl = optimizedFiles.map(img => {
+                return `${baseUrl}/images/products/${img.filename}`;
+            });
+        }
 
         // Parse features if provided
         let parsedFeatures = [];
@@ -334,7 +374,30 @@ export const addProduct = async (req, res) => {
         });
     } catch (error) {
         console.error('Add Product Error:', error);
-        res.status(500).json({ error: error.message });
+        
+        // Provide more specific error messages
+        let errorMessage = 'Failed to add product';
+        let statusCode = 500;
+        
+        if (error.name === 'ValidationError') {
+            errorMessage = 'Product validation failed: ' + error.message;
+            statusCode = 400;
+        } else if (error.code === 11000) {
+            errorMessage = 'Product ID already exists. Please use a unique ID.';
+            statusCode = 400;
+        } else if (error.message.includes('ENOENT')) {
+            errorMessage = 'File system error. Please check server configuration.';
+            statusCode = 500;
+        } else if (error.message.includes('permission')) {
+            errorMessage = 'Permission denied. Please check file permissions.';
+            statusCode = 500;
+        }
+        
+        res.status(statusCode).json({ 
+            success: false,
+            error: errorMessage,
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
     }
 }
 

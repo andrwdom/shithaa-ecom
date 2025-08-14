@@ -11,14 +11,17 @@ export default function LayoutClient({ children }: { children: React.ReactNode }
   const pathname = usePathname();
   const { isLoading } = useLoading();
 
+  // Hide navbar and footer during checkout for cleaner experience
+  const isCheckoutPage = pathname?.startsWith('/checkout');
+
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "instant" });
   }, [pathname]);
 
   return (
     <>
-      {/* Only show navbar when not loading */}
-      {!isLoading && (
+      {/* Only show navbar when not loading and not on checkout page */}
+      {!isLoading && !isCheckoutPage && (
         <>
           <Navbar onCategoriesClick={() => setIsCategorySidebarOpen(true)} />
           <CategorySidebar
@@ -32,8 +35,8 @@ export default function LayoutClient({ children }: { children: React.ReactNode }
         </>
       )}
       <main className="flex-1 flex flex-col">{children}</main>
-      {/* Only show footer when not loading */}
-      {!isLoading && <Footer />}
+      {/* Only show footer when not loading and not on checkout page */}
+      {!isLoading && !isCheckoutPage && <Footer />}
     </>
   );
 } 

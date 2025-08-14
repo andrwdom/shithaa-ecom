@@ -310,6 +310,7 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
       size,
       image: product.image,
     });
+    // Cart items are preserved and will be available after checkout completion
     window.location.href = "/checkout?mode=buynow";
   };
 
@@ -471,8 +472,7 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
 
               {/* Loungewear Offer Banner */}
               {(categorySlug === "zipless-feeding-lounge-wear" || 
-                categorySlug === "non-feeding-lounge-wear" || 
-                categorySlug === "zipless-feeding-dupatta-lounge-wear") && (
+                categorySlug === "non-feeding-lounge-wear") && (
                 <div className="mb-6 p-4 bg-gradient-to-r from-pink-50 to-purple-50 border border-pink-200 rounded-lg">
                   <div className="flex items-center gap-3">
                     <div className="flex-shrink-0">

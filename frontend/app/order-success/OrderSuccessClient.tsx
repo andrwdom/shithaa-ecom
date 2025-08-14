@@ -112,12 +112,44 @@ function OrderSuccessContent() {
         <>
           <div className="text-green-700 font-medium mb-2">Your invoice has been emailed to you.</div>
           <div className="text-gray-600 mb-6">You can also view your order in your account.</div>
+          
+          {/* Cart preservation message for buy now users */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 max-w-lg mx-auto">
+            <div className="text-blue-800 text-sm">
+              <p className="font-medium mb-2">🛒 Your cart items are still available!</p>
+              <p className="text-blue-700">
+                If you had other items in your cart, they're still there and ready for your next purchase.
+              </p>
+            </div>
+          </div>
+          
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <button
               className="px-6 py-3 rounded-xl bg-green-100 text-green-800 font-semibold shadow hover:bg-green-200 transition"
               onClick={() => router.push('/account')}
             >
               Track Order
+            </button>
+            <button
+              className="px-6 py-3 rounded-xl bg-blue-100 text-blue-800 font-semibold shadow hover:bg-blue-200 transition"
+              onClick={() => {
+                // Open cart sidebar if available, otherwise go to homepage
+                if (typeof window !== 'undefined' && window.location.pathname.includes('order-success')) {
+                  // Try to trigger cart sidebar open
+                  const event = new CustomEvent('openCartSidebar');
+                  window.dispatchEvent(event);
+                  // Fallback to homepage if cart sidebar doesn't open
+                  setTimeout(() => {
+                    if (window.location.pathname.includes('order-success')) {
+                      window.location.href = '/';
+                    }
+                  }, 100);
+                } else {
+                  window.location.href = '/';
+                }
+              }}
+            >
+              Continue Shopping
             </button>
             <a
               href="/"
