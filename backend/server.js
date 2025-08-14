@@ -205,7 +205,8 @@ app.use('/api/hero-images', heroImagesRouter)
 
 // Legacy routes for backward compatibility
 app.use('/api/product', productRouter)
-app.use('/api/order', orderRouter)
+// Removed duplicate order route registration to fix /api/orders/phonepe endpoint
+// app.use('/api/order', orderRouter)
 
 // Public orders debug route (before any middleware)
 app.get('/api/orders/public-list', async (req, res) => {

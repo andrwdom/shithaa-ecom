@@ -69,18 +69,27 @@ orderRouter.get('/:orderId/invoice', optionalVerifyToken, generateInvoice)
 
 // PhonePe order lookup endpoint
 orderRouter.get('/phonepe/:merchantTransactionId', async (req, res) => {
+  console.log('PhonePe order lookup endpoint hit:', req.params);
+  console.log('Request URL:', req.url);
+  console.log('Request method:', req.method);
+  
   try {
     const { merchantTransactionId } = req.params;
     if (!merchantTransactionId) {
+      console.log('No merchant transaction ID provided');
       return res.status(400).json({
         success: false,
         message: 'Merchant transaction ID is required'
       });
     }
 
+    console.log('Looking up order for transaction ID:', merchantTransactionId);
+    
     const order = await (await import('../models/orderModel.js')).default.findOne({
       phonepeTransactionId: merchantTransactionId
     });
+
+    console.log('Order lookup result:', order ? 'Found' : 'Not found');
 
     if (!order) {
       return res.status(404).json({
