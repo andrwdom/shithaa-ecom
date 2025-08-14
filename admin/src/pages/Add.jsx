@@ -71,7 +71,32 @@ const Add = ({token}) => {
 
    const onSubmitHandler = async (e) => {
     e.preventDefault();
-    if (loading) return;
+    
+    // Validate category selection
+    if (!category) {
+      toast.error("Please select a category");
+      return;
+    }
+
+    // Validate sleeve type for categories that require it
+    if (shouldShowSleeveType() && !sleeveType) {
+      toast.error("Please select a sleeve type for this category");
+      return;
+    }
+
+    // Validate that at least one image is selected
+    if (!image1 && !image2 && !image3 && !image4) {
+      toast.error("Please select at least one image");
+      return;
+    }
+
+    // Validate that at least one size with stock > 0 is selected
+    const sizesWithStock = sizes.filter(s => s.stock > 0);
+    if (sizesWithStock.length === 0) {
+      toast.error("Please select at least one size with stock greater than 0");
+      return;
+    }
+
     if (!customId.trim()) {
       toast.error("Product ID is required");
       return;
@@ -86,8 +111,8 @@ const Add = ({token}) => {
       formData.append("category", category); // display name
       formData.append("categorySlug", getCategorySlug(category)); // correct slug
       formData.append("bestseller",bestseller)
-      formData.append("sizes", JSON.stringify(sizes.filter(s => s.stock > 0)))
-      formData.append("availableSizes", JSON.stringify(sizes.filter(s => s.stock > 0).map(s => s.size)))
+      formData.append("sizes", JSON.stringify(sizesWithStock))
+      formData.append("availableSizes", JSON.stringify(sizesWithStock.map(s => s.size)))
       image1 && formData.append("image1",image1)
       image2 && formData.append("image2",image2)
       image3 && formData.append("image3",image3)
@@ -97,6 +122,20 @@ const Add = ({token}) => {
       if (shouldShowSleeveType() && sleeveType) {
         formData.append("sleeveType", sleeveType);
       }
+      
+      // Debug logging
+      console.log('Form data being sent:');
+      console.log('customId:', customId);
+      console.log('name:', name);
+      console.log('description:', description);
+      console.log('price:', price);
+      console.log('category:', category);
+      console.log('categorySlug:', getCategorySlug(category));
+      console.log('bestseller:', bestseller);
+      console.log('sizes:', sizesWithStock);
+      console.log('availableSizes:', sizesWithStock.map(s => s.size));
+      console.log('sleeveType:', sleeveType);
+      console.log('Images:', { image1, image2, image3, image4 });
       
       const response = await axios.post(
         import.meta.env.VITE_API_URL + "/api/products",
@@ -221,7 +260,7 @@ const Add = ({token}) => {
                     checked={checked}
                     onChange={e => {
                       if (e.target.checked) {
-                        setSizes(prev => [...prev, { size, stock: 0 }]);
+                        setSizes(prev => [...prev, { size, stock: 1 }]); // Default to 1 stock when selected
                       } else {
                         setSizes(prev => prev.filter(s => s.size !== size));
                       }
@@ -231,12 +270,12 @@ const Add = ({token}) => {
                   {checked && (
                     <input
                       type='number'
-                      min={0}
+                      min={1}
                       className='w-24 px-2 py-1 border rounded'
                       placeholder='Stock'
                       value={sizeObj.stock}
                       onChange={e => {
-                        const val = Number(e.target.value);
+                        const val = Math.max(1, Number(e.target.value)); // Ensure minimum stock of 1
                         setSizes(prev => prev.map(s => s.size === size ? { ...s, stock: val } : s));
                       }}
                     />
@@ -245,6 +284,11 @@ const Add = ({token}) => {
               );
             })}
           </div>
+          {sizes.length > 0 && (
+            <p className='text-sm text-gray-600 mt-2'>
+              Selected sizes: {sizes.map(s => `${s.size} (${s.stock})`).join(', ')}
+            </p>
+          )}
         </div>
 
         <div className='flex gap-2 mt-2'>

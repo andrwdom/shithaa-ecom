@@ -83,6 +83,19 @@ const EditProduct = ({ product, token, onClose, onUpdate }) => {
     if (!category) return 'Product category is required.';
     if (!Array.isArray(sizes) || sizes.length === 0) return 'At least one size must be selected.';
     
+    // Validate that at least one size has stock > 0
+    const sizesWithStock = sizes.filter(s => s.stock > 0);
+    if (sizesWithStock.length === 0) {
+      return 'At least one size must have stock greater than 0.';
+    }
+    
+    // Validate that at least one image is selected (either existing or new)
+    const hasExistingImages = product.images && product.images.length > 0;
+    const hasNewImages = image1 || image2 || image3 || image4;
+    if (!hasExistingImages && !hasNewImages) {
+      return 'At least one image is required.';
+    }
+    
     // Validate sleeveType only if category requires it
     if (shouldShowSleeveType() && !sleeveType) {
       return 'Sleeve type is required for this category.';
@@ -109,13 +122,16 @@ const EditProduct = ({ product, token, onClose, onUpdate }) => {
     try {
       const formData = new FormData()
 
+      // Get sizes with stock > 0
+      const sizesWithStock = sizes.filter(s => s.stock > 0);
+
       formData.append("name", name)
       formData.append("description", description)
       formData.append("price", price)
       formData.append("category", category)
       formData.append("categorySlug", getCategorySlug(category))
       formData.append("bestseller", bestseller)
-      formData.append("sizes", JSON.stringify(sizes.filter(s => s.stock > 0)))
+      formData.append("sizes", JSON.stringify(sizesWithStock))
       formData.append("stock", stock)
       formData.append("customId", customId)
       

@@ -127,6 +127,8 @@ export const addProduct = async (req, res) => {
     try {
         console.log('Add Product Request Body:', req.body);
         console.log('Add Product Files:', req.files);
+        console.log('Raw sizes value:', req.body.sizes);
+        console.log('Raw availableSizes value:', req.body.availableSizes);
 
         const { customId, name, description, price, category, subCategory, type, sizes, bestseller, originalPrice, categorySlug, features, isNewArrival, isBestSeller, availableSizes, stock, sleeveType } = req.body
 
@@ -173,6 +175,24 @@ export const addProduct = async (req, res) => {
                 console.log('Sizes is not an array:', parsedSizes);
                 throw new Error('Sizes must be an array');
             }
+            if (parsedSizes.length === 0) {
+                console.log('Sizes array is empty');
+                return res.status(400).json({
+                    success: false,
+                    message: "At least one size must be selected"
+                });
+            }
+            
+            // Validate that at least one size has stock > 0
+            const sizesWithStock = parsedSizes.filter(s => s.stock > 0);
+            if (sizesWithStock.length === 0) {
+                console.log('No sizes with stock > 0 found');
+                return res.status(400).json({
+                    success: false,
+                    message: "At least one size must have stock greater than 0"
+                });
+            }
+            
             console.log('Parsed sizes:', parsedSizes);
         } catch (error) {
             console.error('Sizes parsing error:', error);
