@@ -17,10 +17,18 @@ import ShippingRules from "../models/ShippingRules.js"
  * 2. For "Maternity Feeding Wear" category (special case):
  *    - Tamil Nadu:
  *       - 1 dress → ₹39
- *       - 2 dresses → ₹59
- *       - 3 dresses → ₹89
- *       - More than 3 dresses → ₹105 (max cap)
+ *       - 2 dresses → ₹49
+ *       - 3 dresses → ₹59
+ *       - 4 dresses → ₹69
+ *       - 5 dresses → ₹79
+ *       - 6 dresses → ₹89
+ *       - 7+ dresses → ₹99
  *    - Other states: Same logic as above
+ * 
+ * 3. Mixed Cart Handling (Tamil Nadu):
+ *    - Only count quantities from PAID shipping categories
+ *    - Ignore quantities from FREE shipping categories (Lounge Wear, etc.)
+ *    - Example: 4 Maternity Feeding + 4 Lounge Wear = Only 4 items count for shipping
  */
 export const calculateShipping = async (req, res) => {
     try {
@@ -52,11 +60,44 @@ export const calculateShipping = async (req, res) => {
 
         const isTamilNadu = shippingInfo.state.trim().toLowerCase() === 'tamil nadu';
         
-        // Count total dresses (items) in cart
-        const totalDresses = items.reduce((sum, item) => sum + item.quantity, 0);
+        // Helper function to identify free shipping categories in Tamil Nadu
+        const isFreeShippingCategory = (category, categorySlug) => {
+            if (!isTamilNadu) return false; // Only free in Tamil Nadu
+            
+            return (
+                category === "Zipless Feeding Lounge Wear" ||
+                category === "Non-Feeding Lounge Wear" ||
+                categorySlug === "zipless-feeding-lounge-wear" ||
+                categorySlug === "non-feeding-lounge-wear" ||
+                categorySlug === "zipless-feeding-dupatta-lounge-wear"
+            );
+        };
+        
+        // Filter items for shipping calculation based on location
+        let itemsForShippingCalculation = [];
+        let freeShippingItems = [];
+        
+        if (isTamilNadu) {
+            // In Tamil Nadu: separate paid vs free shipping items
+            items.forEach(item => {
+                const product = productMap[item._id];
+                if (product && isFreeShippingCategory(product.category, product.categorySlug)) {
+                    freeShippingItems.push(item);
+                } else {
+                    itemsForShippingCalculation.push(item);
+                }
+            });
+        } else {
+            // Other states: all items count for shipping
+            itemsForShippingCalculation = [...items];
+        }
+        
+        // Count total dresses (items) that actually contribute to shipping cost
+        const totalDressesForShipping = itemsForShippingCalculation.reduce((sum, item) => sum + item.quantity, 0);
+        const totalFreeShippingItems = freeShippingItems.reduce((sum, item) => sum + item.quantity, 0);
         
         // Check if any item is from "Maternity Feeding Wear" category
-        const hasMaternityFeedingWear = items.some(item => {
+        const hasMaternityFeedingWear = itemsForShippingCalculation.some(item => {
             const product = productMap[item._id];
             return product && (
                 product.category === "Maternity Feeding Wear" || 
@@ -77,51 +118,65 @@ export const calculateShipping = async (req, res) => {
                 });
                 
                 if (shippingRule) {
-                    const isTamilNadu = shippingInfo.state.trim().toLowerCase() === 'tamil nadu';
                     const rules = isTamilNadu ? shippingRule.rules.tamilNadu : shippingRule.rules.otherStates;
                     
-                    // Calculate shipping based on quantity
-                    if (totalDresses >= 7) {
+                    // Calculate shipping based on quantity (only paid shipping items in Tamil Nadu)
+                    if (totalDressesForShipping >= 7) {
                         shippingCost = rules.get('7+') || 99;
-                        shippingMessage = `₹${shippingCost} shipping for ${totalDresses} items`;
-                    } else if (totalDresses >= 4) {
+                        shippingMessage = `₹${shippingCost} shipping for ${totalDressesForShipping} maternity feeding items`;
+                    } else if (totalDressesForShipping >= 4) {
                         shippingCost = rules.get('4+') || (isTamilNadu ? 99 : 109);
-                        shippingMessage = `₹${shippingCost} shipping for ${totalDresses} items`;
+                        shippingMessage = `₹${shippingCost} shipping for ${totalDressesForShipping} maternity feeding items`;
                     } else {
-                        shippingCost = rules.get(totalDresses.toString()) || 0;
-                        shippingMessage = `₹${shippingCost} shipping for ${totalDresses} item${totalDresses > 1 ? 's' : ''}`;
+                        shippingCost = rules.get(totalDressesForShipping.toString()) || 0;
+                        shippingMessage = `₹${shippingCost} shipping for ${totalDressesForShipping} maternity feeding item${totalDressesForShipping > 1 ? 's' : ''}`;
+                    }
+                    
+                    // Add free shipping message if there are free shipping items in Tamil Nadu
+                    if (isTamilNadu && totalFreeShippingItems > 0) {
+                        shippingMessage += `, ${totalFreeShippingItems} lounge wear item${totalFreeShippingItems > 1 ? 's' : ''} free`;
                     }
                 } else {
                     // Fallback to old logic if no rule found
-                    if (totalDresses === 1) {
+                    if (totalDressesForShipping === 1) {
                         shippingCost = 39;
-                        shippingMessage = "₹39 shipping for 1 item";
-                    } else if (totalDresses === 2) {
+                        shippingMessage = "₹39 shipping for 1 maternity feeding item";
+                    } else if (totalDressesForShipping === 2) {
+                        shippingCost = 49;
+                        shippingMessage = "₹49 shipping for 2 maternity feeding items";
+                    } else if (totalDressesForShipping === 3) {
                         shippingCost = 59;
-                        shippingMessage = "₹59 shipping for 2 items";
-                    } else if (totalDresses === 3) {
-                        shippingCost = 89;
-                        shippingMessage = "₹89 shipping for 3 items";
-                    } else if (totalDresses > 3) {
-                        shippingCost = 105;
-                        shippingMessage = "₹105 shipping for 4+ items";
+                        shippingMessage = "₹59 shipping for 3 maternity feeding items";
+                    } else if (totalDressesForShipping > 3) {
+                        shippingCost = 69;
+                        shippingMessage = "₹69 shipping for 4+ maternity feeding items";
+                    }
+                    
+                    // Add free shipping message if there are free shipping items in Tamil Nadu
+                    if (isTamilNadu && totalFreeShippingItems > 0) {
+                        shippingMessage += `, ${totalFreeShippingItems} lounge wear item${totalFreeShippingItems > 1 ? 's' : ''} free`;
                     }
                 }
             } catch (error) {
                 console.error('Error calculating shipping with rules:', error);
                 // Fallback to old logic
-                if (totalDresses === 1) {
+                if (totalDressesForShipping === 1) {
                     shippingCost = 39;
-                    shippingMessage = "₹39 shipping for 1 item";
-                } else if (totalDresses === 2) {
+                    shippingMessage = "₹39 shipping for 1 maternity feeding item";
+                } else if (totalDressesForShipping === 2) {
+                    shippingCost = 49;
+                    shippingMessage = "₹49 shipping for 2 maternity feeding items";
+                } else if (totalDressesForShipping === 3) {
                     shippingCost = 59;
-                    shippingMessage = "₹59 shipping for 2 items";
-                } else if (totalDresses === 3) {
-                    shippingCost = 89;
-                    shippingMessage = "₹89 shipping for 3 items";
-                } else if (totalDresses > 3) {
-                    shippingCost = 105;
-                    shippingMessage = "₹105 shipping for 4+ items";
+                    shippingMessage = "₹59 shipping for 3 maternity feeding items";
+                } else if (totalDressesForShipping > 3) {
+                    shippingCost = 69;
+                    shippingMessage = "₹69 shipping for 4+ maternity feeding items";
+                }
+                
+                // Add free shipping message if there are free shipping items in Tamil Nadu
+                if (isTamilNadu && totalFreeShippingItems > 0) {
+                    shippingMessage += `, ${totalFreeShippingItems} lounge wear item${totalFreeShippingItems > 1 ? 's' : ''} free`;
                 }
             }
         } else {
@@ -130,19 +185,23 @@ export const calculateShipping = async (req, res) => {
                 // Free shipping for Tamil Nadu (except Maternity Feeding Wear)
                 shippingCost = 0;
                 isFreeShipping = true;
-                shippingMessage = "Free shipping within Tamil Nadu!";
+                if (totalFreeShippingItems > 0) {
+                    shippingMessage = `Free shipping for ${totalFreeShippingItems} item${totalFreeShippingItems > 1 ? 's' : ''} within Tamil Nadu!`;
+                } else {
+                    shippingMessage = "Free shipping within Tamil Nadu!";
+                }
             } else {
                 // Other states - charge shipping
-                if (totalDresses === 1) {
+                if (totalDressesForShipping === 1) {
                     shippingCost = 39;
                     shippingMessage = "₹39 shipping for 1 item";
-                } else if (totalDresses === 2) {
+                } else if (totalDressesForShipping === 2) {
                     shippingCost = 59;
                     shippingMessage = "₹59 shipping for 2 items";
-                } else if (totalDresses === 3) {
+                } else if (totalDressesForShipping === 3) {
                     shippingCost = 89;
                     shippingMessage = "₹89 shipping for 3 items";
-                } else if (totalDresses > 3) {
+                } else if (totalDressesForShipping > 3) {
                     shippingCost = 105;
                     shippingMessage = "₹105 shipping for 4+ items";
                 }
@@ -155,9 +214,14 @@ export const calculateShipping = async (req, res) => {
                 shippingCost,
                 isFreeShipping,
                 shippingMessage,
-                totalDresses,
+                totalDressesForShipping,
+                totalFreeShippingItems,
                 hasMaternityFeedingWear,
-                isTamilNadu
+                isTamilNadu,
+                // Debug information
+                totalItems: items.reduce((sum, item) => sum + item.quantity, 0),
+                paidShippingItems: itemsForShippingCalculation.length,
+                freeShippingItems: freeShippingItems.length
             }
         };
 

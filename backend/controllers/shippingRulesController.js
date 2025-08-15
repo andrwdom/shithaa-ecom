@@ -214,6 +214,69 @@ export const seedDefaultShippingRules = async (req, res) => {
                         ['4+', 109]
                     ])
                 }
+            },
+            {
+                category: 'zipless-feeding-lounge-wear',
+                categoryName: 'Zipless Feeding Lounge Wear',
+                rules: {
+                    tamilNadu: new Map([
+                        ['1', 0],  // Free shipping in Tamil Nadu
+                        ['2', 0],
+                        ['3', 0],
+                        ['4', 0],
+                        ['5', 0],
+                        ['6', 0],
+                        ['7+', 0]
+                    ]),
+                    otherStates: new Map([
+                        ['1', 39],
+                        ['2', 49],
+                        ['3', 59],
+                        ['4+', 69]
+                    ])
+                }
+            },
+            {
+                category: 'non-feeding-lounge-wear',
+                categoryName: 'Non-Feeding Lounge Wear',
+                rules: {
+                    tamilNadu: new Map([
+                        ['1', 0],  // Free shipping in Tamil Nadu
+                        ['2', 0],
+                        ['3', 0],
+                        ['4', 0],
+                        ['5', 0],
+                        ['6', 0],
+                        ['7+', 0]
+                    ]),
+                    otherStates: new Map([
+                        ['1', 39],
+                        ['2', 49],
+                        ['3', 59],
+                        ['4+', 69]
+                    ])
+                }
+            },
+            {
+                category: 'zipless-feeding-dupatta-lounge-wear',
+                categoryName: 'Zipless Feeding Dupatta Lounge Wear',
+                rules: {
+                    tamilNadu: new Map([
+                        ['1', 0],  // Free shipping in Tamil Nadu
+                        ['2', 0],
+                        ['3', 0],
+                        ['4', 0],
+                        ['5', 0],
+                        ['6', 0],
+                        ['7+', 0]
+                    ]),
+                    otherStates: new Map([
+                        ['1', 39],
+                        ['2', 49],
+                        ['3', 59],
+                        ['4+', 69]
+                    ])
+                }
             }
         ];
 

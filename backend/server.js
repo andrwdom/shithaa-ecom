@@ -232,6 +232,14 @@ app.get('/api/cors-test', (req, res) => {
   });
 });
 
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'ok',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // CORS error handler - simplified
 app.use((err, req, res, next) => {
     if (err.message === 'Not allowed by CORS') {
