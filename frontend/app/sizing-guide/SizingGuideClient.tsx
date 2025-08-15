@@ -208,14 +208,16 @@ export default function SizingGuideClient() {
                     {/* Size Chart Image */}
                     <div className="relative">
                       <div className="bg-gray-100 rounded-lg p-4">
-                        <Image
-                          src={chart.image}
-                          alt={chart.alt}
-                          width={800}
-                          height={600}
-                          className="w-full h-auto rounded-lg shadow-md"
-                          priority
-                        />
+                        <div className="flex justify-center">
+                          <Image
+                            src={chart.image}
+                            alt={chart.alt}
+                            width={800}
+                            height={600}
+                            className="w-full max-w-2xl lg:max-w-3xl xl:max-w-4xl h-auto rounded-lg shadow-md"
+                            priority
+                          />
+                        </div>
                       </div>
                       
                       {/* Download Button */}

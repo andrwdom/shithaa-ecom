@@ -1,0 +1,213 @@
+/* Informational Pages Design System */
+/* Premium Maternity Wear Brand Identity */
+
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+.pageContainer {
+  min-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1rem;
+  background-color: #F5F1EB;
+}
+
+.contentWrapper {
+  max-width: 720px;
+  width: 100%;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  padding: 2rem;
+}
+
+.pageTitle {
+  font-family: 'Playfair Display', serif;
+  font-weight: 600;
+  font-size: 2.5rem;
+  line-height: 1.2;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  color: #473C66;
+}
+
+.pageDescription {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.125rem;
+  line-height: 1.6;
+  color: #333;
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.infoCard {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(71, 60, 102, 0.08);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+  gap: 0.75rem;
+}
+
+.cardIcon {
+  width: 24px;
+  height: 24px;
+  color: #473C66;
+  flex-shrink: 0;
+}
+
+.cardTitle {
+  font-family: 'Playfair Display', serif;
+  font-weight: 600;
+  font-size: 1.25rem;
+  color: #473C66;
+  margin: 0;
+}
+
+.cardContent {
+  font-family: 'Inter', sans-serif;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #333;
+}
+
+.cardList {
+  margin: 0;
+  padding-left: 1.5rem;
+}
+
+.cardListItem {
+  margin-bottom: 0.5rem;
+  font-family: 'Inter', sans-serif;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #333;
+}
+
+.cardListItem:last-child {
+  margin-bottom: 0;
+}
+
+.highlightText {
+  color: #473C66;
+  font-weight: 600;
+}
+
+.link {
+  color: #473C66;
+  text-decoration: underline;
+  transition: color 0.2s ease;
+}
+
+.link:hover {
+  color: #5a4b7a;
+}
+
+.backButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #473C66;
+  background: rgba(71, 60, 102, 0.05);
+  border: 1px solid rgba(71, 60, 102, 0.1);
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  margin-bottom: 1.5rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.backButton:hover {
+  background: rgba(71, 60, 102, 0.1);
+  border-color: rgba(71, 60, 102, 0.2);
+}
+
+.backButton:active {
+  transform: translateY(1px);
+}
+
+.footerNote {
+  text-align: center;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(71, 60, 102, 0.1);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.875rem;
+  color: #666;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .pageContainer {
+    padding: 2rem 1rem;
+  }
+  
+  .contentWrapper {
+    padding: 1.5rem;
+  }
+  
+  .pageTitle {
+    font-size: 2rem;
+  }
+  
+  .infoCard {
+    padding: 1.25rem;
+  }
+  
+  .cardTitle {
+    font-size: 1.125rem;
+  }
+}
+
+/* Grid Layout for Cards */
+.cardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.cardGrid .infoCard {
+  margin-bottom: 0;
+}
+
+/* Special Styling for Lists */
+.orderedList {
+  list-style: decimal;
+  padding-left: 1.5rem;
+  margin: 1rem 0;
+}
+
+.orderedListItem {
+  margin-bottom: 0.75rem;
+  font-family: 'Inter', sans-serif;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #333;
+}
+
+.orderedListItem:last-child {
+  margin-bottom: 0;
+}
+
+/* Emphasis and Strong Text */
+.emphasis {
+  font-weight: 600;
+  color: #473C66;
+}
+
+.strong {
+  font-weight: 600;
+  color: #333;
+} 

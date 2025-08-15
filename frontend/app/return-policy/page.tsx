@@ -1,6 +1,7 @@
 import Navbar from '@/components/navbar'
 import Footer from '@/components/footer'
 import { Metadata } from 'next'
+import styles from '../styles/informational-pages.module.css'
 
 // SEO Metadata for return policy page
 export const metadata: Metadata = {
@@ -30,106 +31,142 @@ export const metadata: Metadata = {
 
 export default function ReturnPolicyPage() {
   return (
-    <main className="min-h-[60vh] flex flex-col items-center justify-center py-12 px-4 bg-gradient-to-br from-pink-50 to-green-50">
-      <div className="max-w-4xl w-full bg-white rounded-xl shadow-lg p-8">
-        <h1 className="text-3xl md:text-4xl font-bold mb-6 text-center text-gray-800">Return & Exchange Policy</h1>
+    <main className={styles.pageContainer}>
+      <div className={styles.contentWrapper}>
+        <h1 className={styles.pageTitle}>Return & Exchange Policy</h1>
         
-        <p className="text-gray-600 mb-6">
+        <p className={styles.pageDescription}>
           At Shithaa, we are committed to providing you with the highest quality maternity wear. 
           Our refund and exchange policy is designed to ensure customer satisfaction while maintaining 
           the integrity of our products.
         </p>
         
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8">
-          <h3 className="text-lg font-semibold text-blue-800 mb-3">📋 Important Refund Criteria</h3>
-          <ul className="text-blue-700 space-y-2">
-            <li>• Refunds are <strong>only</strong> available for damaged or defective products</li>
-            <li>• Products must be in original, unused condition</li>
-            <li>• Refund requests must be made within 2 days of receiving your order</li>
-            <li>• All refunds are subject to review and approval</li>
+        <div className={styles.infoCard}>
+          <div className={styles.cardHeader}>
+            <svg className={styles.cardIcon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <h3 className={styles.cardTitle}>Important Refund Criteria</h3>
+          </div>
+          <ul className={styles.cardList}>
+            <li className={styles.cardListItem}>Refunds are <span className={styles.emphasis}>only</span> available for damaged or defective products</li>
+            <li className={styles.cardListItem}>Products must be in original, unused condition</li>
+            <li className={styles.cardListItem}>Refund requests must be made within <span className={styles.emphasis}>2 days</span> of receiving your order</li>
+            <li className={styles.cardListItem}>All refunds are subject to review and approval</li>
           </ul>
         </div>
 
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="bg-green-50 rounded-lg p-4">
-              <h3 className="text-lg font-semibold text-green-800 mb-2">⏰ Time Limit for Claims</h3>
-              <p className="text-green-700">
-                All refund and exchange requests must be submitted within <strong>2 days of receiving your order</strong>. 
-                Claims made after this period will not be considered.
-              </p>
+        <div className={styles.cardGrid}>
+          <div className={styles.infoCard}>
+            <div className={styles.cardHeader}>
+              <svg className={styles.cardIcon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <h3 className={styles.cardTitle}>Time Limit for Claims</h3>
             </div>
-            
-            <div className="bg-blue-50 rounded-lg p-4">
-              <h3 className="text-lg font-semibold text-blue-800 mb-2">📸 Evidence Requirements</h3>
-              <p className="text-blue-700">
-                To process your claim, we require <strong>video evidence without pause</strong> clearly showing the damage or defect. 
-                Photos may also be requested as additional documentation.
-              </p>
+            <p className={styles.cardContent}>
+              All refund and exchange requests must be submitted within <span className={styles.emphasis}>2 days of receiving your order</span>. 
+              Claims made after this period will not be considered.
+            </p>
+          </div>
+          
+          <div className={styles.infoCard}>
+            <div className={styles.cardHeader}>
+              <svg className={styles.cardIcon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              <h3 className={styles.cardTitle}>Evidence Requirements</h3>
             </div>
-          </div>
-
-          <div className="bg-yellow-50 rounded-lg p-6">
-            <h3 className="text-lg font-semibold text-yellow-800 mb-3">📋 Eligibility Criteria</h3>
-            <ul className="text-yellow-700 space-y-2 text-base">
-              <li>• <strong>Product must be damaged or defective</strong> upon delivery</li>
-              <li>• <strong>Video evidence without pause</strong> must be provided</li>
-              <li>• Product must be in original, unworn condition</li>
-              <li>• Original packaging and tags must be intact</li>
-              <li>• Claim must be submitted within 2 days of delivery</li>
-              <li>• Original invoice or order confirmation must be included</li>
-            </ul>
-          </div>
-
-          <div className="bg-purple-50 rounded-lg p-6">
-            <h3 className="text-lg font-semibold text-purple-800 mb-3">🚫 What We Don't Accept</h3>
-            <ul className="text-purple-700 space-y-2 text-base">
-              <li>• Change of mind or preference</li>
-              <li>• Incorrect size selection by customer</li>
-              <li>• Products worn or used after delivery</li>
-              <li>• Claims submitted after 2 days</li>
-              <li>• Products without proper video evidence</li>
-              <li>• Items returned without original packaging</li>
-            </ul>
-          </div>
-
-          <div className="bg-indigo-50 rounded-lg p-6">
-            <h3 className="text-lg font-semibold text-indigo-800 mb-3">📞 How to Submit a Claim</h3>
-            <p className="text-indigo-700 mb-3">
-              To request a refund or exchange for a damaged product, please follow these steps:
-            </p>
-            <ol className="text-indigo-700 space-y-2 ml-4">
-              <li>1. <strong>Document the damage immediately</strong> - Take a video without pause showing the defect</li>
-              <li>2. <strong>Contact us within 2 days</strong> of receiving your order</li>
-              <li>3. <strong>Provide video evidence</strong> and order details</li>
-              <li>4. <strong>Wait for our assessment</strong> and response</li>
-            </ol>
-            <p className="text-indigo-700 mt-3">
-              Contact us via Instagram direct message at{" "}
-              <a href="https://www.instagram.com/shithaa.in" className="text-[#473C66] hover:underline font-semibold" target="_blank" rel="noopener noreferrer">
-                @shithaa.in
-              </a>{" "}
-              (preferred method) or email us at{" "}
-              <a href="mailto:info.shithaa@gmail.com" className="text-[#473C66] hover:underline font-semibold">
-                info.shithaa@gmail.com
-              </a>
-            </p>
-          </div>
-
-          <div className="bg-gray-50 rounded-lg p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-3">⚡ Processing Time</h3>
-            <p className="text-gray-700">
-              Once we receive your claim with proper video evidence, we will review it within <strong>24-48 hours</strong>. 
-              If approved, refunds will be processed within <strong>5-7 business days</strong> to your original payment method.
-            </p>
-          </div>
-
-          <div className="text-center mt-8">
-            <p className="text-sm text-gray-600">
-              For any questions about our return and exchange policy, please don't hesitate to contact us. 
-              We're here to ensure your satisfaction with our products.
+            <p className={styles.cardContent}>
+              To process your claim, we require <span className={styles.emphasis}>video evidence without pause</span> clearly showing the damage or defect. 
+              Photos may also be requested as additional documentation.
             </p>
           </div>
         </div>
+
+        <div className={styles.infoCard}>
+          <div className={styles.cardHeader}>
+            <svg className={styles.cardIcon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <h3 className={styles.cardTitle}>Eligibility Criteria</h3>
+          </div>
+          <ul className={styles.cardList}>
+            <li className={styles.cardListItem}><span className={styles.strong}>Product must be damaged or defective</span> upon delivery</li>
+            <li className={styles.cardListItem}><span className={styles.strong}>Video evidence without pause</span> must be provided</li>
+            <li className={styles.cardListItem}>Product must be in original, unworn condition</li>
+            <li className={styles.cardListItem}>Original packaging and tags must be intact</li>
+            <li className={styles.cardListItem}>Claim must be submitted within 2 days of delivery</li>
+            <li className={styles.cardListItem}>Original invoice or order confirmation must be included</li>
+          </ul>
+        </div>
+
+        <div className={styles.infoCard}>
+          <div className={styles.cardHeader}>
+            <svg className={styles.cardIcon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L5.636 5.636" />
+            </svg>
+            <h3 className={styles.cardTitle}>What We Don't Accept</h3>
+          </div>
+          <ul className={styles.cardList}>
+            <li className={styles.cardListItem}>Change of mind or preference</li>
+            <li className={styles.cardListItem}>Incorrect size selection by customer</li>
+            <li className={styles.cardListItem}>Products worn or used after delivery</li>
+            <li className={styles.cardListItem}>Claims submitted after 2 days</li>
+            <li className={styles.cardListItem}>Products without proper video evidence</li>
+            <li className={styles.cardListItem}>Items returned without original packaging</li>
+          </ul>
+        </div>
+
+        <div className={styles.infoCard}>
+          <div className={styles.cardHeader}>
+            <svg className={styles.cardIcon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+            <h3 className={styles.cardTitle}>How to Submit a Claim</h3>
+          </div>
+          <p className={styles.cardContent}>
+            To request a refund or exchange for a damaged product, please follow these steps:
+          </p>
+          <ol className={styles.orderedList}>
+            <li className={styles.orderedListItem}><span className={styles.strong}>Document the damage immediately</span> - Take a video without pause showing the defect</li>
+            <li className={styles.orderedListItem}><span className={styles.strong}>Contact us within 2 days</span> of receiving your order</li>
+            <li className={styles.orderedListItem}><span className={styles.strong}>Provide video evidence</span> and order details</li>
+            <li className={styles.orderedListItem}><span className={styles.strong}>Wait for our assessment</span> and response</li>
+          </ol>
+          <p className={styles.cardContent}>
+            Contact us via Instagram direct message at{" "}
+            <a href="https://www.instagram.com/shithaa.in" className={styles.link} target="_blank" rel="noopener noreferrer">
+              @shithaa.in
+            </a>{" "}
+            (preferred method) or email us at{" "}
+            <a href="mailto:info.shithaa@gmail.com" className={styles.link}>
+              info.shithaa@gmail.com
+            </a>
+          </p>
+        </div>
+
+        <div className={styles.infoCard}>
+          <div className={styles.cardHeader}>
+            <svg className={styles.cardIcon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            <h3 className={styles.cardTitle}>Processing Time</h3>
+          </div>
+          <p className={styles.cardContent}>
+            Once we receive your claim with proper video evidence, we will review it within <span className={styles.emphasis}>24-48 hours</span>. 
+            If approved, refunds will be processed within <span className={styles.emphasis}>5-7 business days</span> to your original payment method.
+          </p>
+        </div>
+
+        <div className={styles.footerNote}>
+          <p>
+            For any questions about our return and exchange policy, please don't hesitate to contact us. 
+            We're here to ensure your satisfaction with our products.
+          </p>
+        </div>
+      </div>
     </main>
   )
 }
