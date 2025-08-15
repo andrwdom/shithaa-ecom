@@ -189,11 +189,17 @@ node scripts/migrate-orders.js
 
 ## 🛡️ Security Features
 
-- JWT-based authentication
-- Firebase Auth integration
-- Secure payment processing
-- Input validation and sanitization
-- HTTPS enforcement (production)
+- **HttpOnly Cookie Authentication**: Secure token storage with automatic rotation
+- **JWT-based Authentication**: Short-lived access tokens (15m) + refresh tokens (7d)
+- **Firebase Auth Integration**: Social login with secure backend validation
+- **CSRF Protection**: Token-based protection for state-changing operations
+- **Input Validation**: Zod schema validation for all API requests
+- **File Upload Security**: MIME type validation, size limits, secure storage
+- **Rate Limiting**: Comprehensive rate limiting for API endpoints
+- **Security Headers**: Helmet.js with CSP, HSTS, and other protections
+- **CORS Protection**: Strict origin validation with environment-driven configuration
+- **Secure Payment Processing**: Webhook signature verification and idempotency
+- **HTTPS Enforcement**: Production-only secure connections
 
 ## 📱 Mobile Optimization
 
@@ -242,6 +248,20 @@ If you need to fix existing orders:
 cd backend
 node scripts/migrate-orders.js
 ```
+
+### Admin User Setup
+After deployment, create an admin user:
+```bash
+cd backend
+# Set environment variables first
+export ADMIN_EMAIL=admin@shithaa.in
+export ADMIN_PASSWORD=your-secure-password
+
+# Run admin seeding
+npm run seed-admin
+```
+
+**Important**: Change the default admin credentials immediately after first login!
 
 ## 📞 Support
 

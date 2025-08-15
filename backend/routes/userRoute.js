@@ -7,7 +7,9 @@ import {
     getProfile,
     updateProfile,
     firebaseLogin,
-    getPublicProfile
+    getPublicProfile,
+    refreshToken,
+    logout
 } from '../controllers/userController.js';
 import { verifyToken } from '../middleware/auth.js';
 
@@ -18,6 +20,8 @@ userRouter.post('/register', registerUser)
 userRouter.post('/login', loginUser)
 userRouter.post('/admin', adminLogin)
 userRouter.post('/firebase-login', firebaseLogin)
+userRouter.post('/refresh-token', refreshToken)
+userRouter.post('/logout', logout)
 
 // Profile routes
 userRouter.get('/auth/profile', verifyToken, getProfile); // GET /api/auth/profile

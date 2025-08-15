@@ -27,9 +27,9 @@ export default function GoogleLoginButton({ onSuccess }: { onSuccess: () => void
       const data = await res.json();
       console.log("Backend response:", data);
       
-      if (data.success && data.data.token) {
-        localStorage.setItem("token", data.data.token);
-        console.log("Token stored in localStorage");
+      if (data.success && data.data.user) {
+        // SECURITY: Token is now stored in HttpOnly cookies, no need for localStorage
+        console.log("Login successful, tokens stored in HttpOnly cookies");
         
         // Enhanced welcome message with user's name
         const userName = result.user.displayName?.split(' ')[0] || 'there';

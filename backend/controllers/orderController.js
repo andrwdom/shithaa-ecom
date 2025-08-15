@@ -341,14 +341,8 @@ async function updateProductStock(items) {
             console.error(`Insufficient stock for ${item.name} in size ${item.size}. Only ${product.sizes[sizeIndex].stock} available.`);
             throw new Error(`Insufficient stock for ${item.name} in size ${item.size}. Only ${product.sizes[sizeIndex].stock} available.`);
         }
-        // Log before and after
-        console.log(`Stock before: ${product.sizes[sizeIndex].stock}`);
-        product.sizes[sizeIndex].stock -= item.quantity;
-        console.log(`Stock after: ${product.sizes[sizeIndex].stock}`);
-        await product.save();
-        // Fetch again to confirm
-        const updated = await productModel.findById(product._id);
-        console.log(`Stock in DB after save: ${updated.sizes[sizeIndex].stock}`);
+        // Stock validation only - actual decrement happens after payment confirmation
+        console.log(`Stock validation: ${product.sizes[sizeIndex].stock} available for ${item.quantity} requested`);
     }
 }
 
@@ -368,7 +362,16 @@ const placeOrder = async (req, res) => {
     if (!customerName || !email || !phone || !address || !items || !totalPrice || !paymentMethod) {
       return res.status(400).json({ message: 'Missing required fields' });
     }
-    await updateProductStock(items);
+    // Validate stock availability without decrementing (stock will be decremented after payment confirmation)
+    const { validateStockForItems } = await import('../utils/stock.js');
+    const stockValidations = await validateStockForItems(items);
+    
+    // Check if any items have insufficient stock
+    const stockIssues = stockValidations.filter(v => !v.available);
+    if (stockIssues.length > 0) {
+        const errorMessages = stockIssues.map(issue => issue.error).join('; ');
+        return res.status(400).json({ message: `Stock validation failed: ${errorMessages}` });
+    }
     const userEmail = getOrderUserEmail(req, email);
     const orderId = await getUniqueOrderId();
     const orderData = {
@@ -412,7 +415,16 @@ const processCardPayment = async (req, res) => {
         if (!cardDetails) {
             return res.json({ success: false, message: "Card details are required" });
         }
-        await updateProductStock(items);
+        // Validate stock availability without decrementing (stock will be decremented after payment confirmation)
+        const { validateStockForItems } = await import('../utils/stock.js');
+        const stockValidations = await validateStockForItems(items);
+        
+        // Check if any items have insufficient stock
+        const stockIssues = stockValidations.filter(v => !v.available);
+        if (stockIssues.length > 0) {
+            const errorMessages = stockIssues.map(issue => issue.error).join('; ');
+            return res.json({ success: false, message: `Stock validation failed: ${errorMessages}` });
+        }
         const userEmail = getOrderUserEmail(req, email);
         const orderId = await getUniqueOrderId();
         const orderData = {
@@ -521,16 +533,20 @@ const updateStatus = async (req,res) => {
                 timestamp: new Date()
             };
 
-            // Restore product stock if order is cancelled
-            for (const item of order.items) {
-                const product = await productModel.findById(item._id);
-                if (product) {
-                    const sizeIndex = product.sizes.findIndex(s => s.size === item.size);
-                    if (sizeIndex !== -1) {
-                        product.sizes[sizeIndex].stock += item.quantity;
-                        await product.save();
-                    }
-                }
+            // Restore product stock if order is cancelled using atomic operations
+            const { batchChangeStock } = await import('../utils/stock.js');
+            try {
+                const operations = order.items.map(item => ({
+                    productId: item._id,
+                    size: item.size,
+                    quantityChange: item.quantity
+                }));
+                
+                await batchChangeStock(operations);
+                console.log('Stock restored successfully for cancelled order status update');
+            } catch (error) {
+                console.error('Failed to restore stock for cancelled order status update:', error);
+                // Don't fail the order status update if stock restoration fails
             }
         }
 
@@ -593,16 +609,20 @@ const cancelOrder = async (req, res) => {
             }
         });
 
-        // Restore product stock
-        for (const item of order.items) {
-            const product = await productModel.findById(item._id);
-            if (product) {
-                const sizeIndex = product.sizes.findIndex(s => s.size === item.size);
-                if (sizeIndex !== -1) {
-                    product.sizes[sizeIndex].stock += item.quantity;
-                    await product.save();
-                }
-            }
+        // Restore product stock using atomic operations
+        const { batchChangeStock } = await import('../utils/stock.js');
+        try {
+            const operations = order.items.map(item => ({
+                productId: item._id,
+                size: item.size,
+                quantityChange: item.quantity
+            }));
+            
+            await batchChangeStock(operations);
+            console.log('Stock restored successfully for cancelled order');
+        } catch (error) {
+            console.error('Failed to restore stock for cancelled order:', error);
+            // Don't fail the order cancellation if stock restoration fails
         }
 
         res.json({ success: true, message: "Order cancelled successfully" });
@@ -853,6 +873,38 @@ export const getOrdersByEmail = async (req, res) => {
   }
 };
 
+// NEW: Function to decrement stock after payment confirmation
+export const confirmOrderStock = async (orderId) => {
+    try {
+        const order = await orderModel.findById(orderId);
+        if (!order) {
+            throw new Error('Order not found');
+        }
+        
+        // Decrement stock using atomic operations
+        const { batchChangeStock } = await import('../utils/stock.js');
+        const operations = order.items.map(item => ({
+            productId: item._id,
+            size: item.size,
+            quantityChange: -item.quantity
+        }));
+        
+        const results = await batchChangeStock(operations);
+        console.log('Stock decremented successfully after payment confirmation:', results);
+        
+        // Update order to mark stock as confirmed
+        await orderModel.findByIdAndUpdate(orderId, { 
+            stockConfirmed: true,
+            stockConfirmedAt: new Date()
+        });
+        
+        return results;
+    } catch (error) {
+        console.error('Failed to confirm order stock:', error);
+        throw error;
+    }
+};
+
 export { 
     placeOrder, 
     processCardPayment, 
@@ -864,5 +916,6 @@ export {
   updateOrderStatus,
     generateInvoice,
     createStructuredOrder,
-    getUniqueOrderId
+    getUniqueOrderId,
+    confirmOrderStock
 };

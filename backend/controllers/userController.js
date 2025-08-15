@@ -75,19 +75,44 @@ const loginUser = async (req, res) => {
         const isMatch = await bcrypt.compare(password, user.password);
 
         if (isMatch) {
-            const token = createToken({ 
+            // SECURITY: Create access and refresh tokens
+            const accessToken = createToken({ 
                 id: user._id,
                 email: user.email,
                 role: 'user'
             });
             
-            // Return user data along with token
+            const refreshToken = createToken({ 
+                id: user._id,
+                email: user.email,
+                role: 'user',
+                type: 'refresh'
+            }, '7d');
+            
+            // SECURITY: Set HttpOnly cookies for secure token storage
+            res.cookie('token', accessToken, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax',
+                maxAge: 15 * 60 * 1000, // 15 minutes
+                path: '/'
+            });
+            
+            res.cookie('refresh_token', refreshToken, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax',
+                maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+                path: '/'
+            });
+            
+            // Return user data without token (now stored in HttpOnly cookies)
             const userData = { ...user.toObject() };
             delete userData.password;
             
             res.json({ 
                 success: true, 
-                data: { user: userData, token },
+                data: { user: userData },
                 message: 'Login successful'
             });
         }
@@ -132,19 +157,44 @@ const registerUser = async (req, res) => {
 
         const user = await newUser.save()
 
-        const token = createToken({ 
+        // SECURITY: Create access and refresh tokens
+        const accessToken = createToken({ 
             id: user._id,
             email: user.email,
             role: 'user'
         });
+        
+        const refreshToken = createToken({ 
+            id: user._id,
+            email: user.email,
+            role: 'user',
+            type: 'refresh'
+        }, '7d');
+        
+        // SECURITY: Set HttpOnly cookies for secure token storage
+        res.cookie('token', accessToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 15 * 60 * 1000, // 15 minutes
+            path: '/'
+        });
+        
+        res.cookie('refresh_token', refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+            path: '/'
+        });
 
-        // Return user data along with token
+        // Return user data without token (now stored in HttpOnly cookies)
         const userData = { ...user.toObject() };
         delete userData.password;
 
         res.json({ 
             success: true, 
-            data: { user: userData, token },
+            data: { user: userData },
             message: 'Registration successful'
         });
 
@@ -166,27 +216,66 @@ const adminLogin = async (req, res) => {
             });
         }
 
-        // Change default admin credentials
-        if (email === 'admin@gmail.com' && password === 'admin123') {
-            const token = createToken({
-                email: email,
-                role: 'admin',
-                id: 'admin' // Adding an ID for consistency
-            });
-            return res.status(200).json({
-                success: true, 
-                data: { 
-                    user: { email, role: 'admin' }, 
-                    token 
-                },
-                message: 'Admin login successful'
-            });
-        } else {
+        // SECURITY: Check admin credentials from database instead of hardcoded values
+        const adminUser = await userModel.findOne({ email, role: 'admin' });
+        if (!adminUser) {
             return res.status(401).json({
                 success: false, 
                 message: "Invalid credentials"
             });
         }
+
+        // Verify password
+        const isMatch = await bcrypt.compare(password, adminUser.password);
+        if (!isMatch) {
+            return res.status(401).json({
+                success: false, 
+                message: "Invalid credentials"
+            });
+        }
+
+        // SECURITY: Create access and refresh tokens for admin
+        const accessToken = createToken({
+            id: adminUser._id,
+            email: adminUser.email,
+            role: 'admin'
+        });
+        
+        const refreshToken = createToken({
+            id: adminUser._id,
+            email: adminUser.email,
+            role: 'admin',
+            type: 'refresh'
+        }, '7d');
+
+        // SECURITY: Set HttpOnly cookies for secure token storage
+        res.cookie('token', accessToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 15 * 60 * 1000, // 15 minutes
+            path: '/'
+        });
+        
+        res.cookie('refresh_token', refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+            path: '/'
+        });
+
+        // Return user data without token (now stored in HttpOnly cookies)
+        const userData = { ...adminUser.toObject() };
+        delete userData.password;
+
+        return res.status(200).json({
+            success: true, 
+            data: { 
+                user: userData
+            },
+            message: 'Admin login successful'
+        });
 
     } catch (error) {
         console.error('Admin login error:', error);
@@ -297,6 +386,87 @@ export const firebaseLogin = async (req, res) => {
     console.error('Firebase login error:', error);
     res.status(500).json({ success: false, message: 'Firebase login failed: ' + error.message });
   }
+};
+
+// SECURITY: Refresh token endpoint for token rotation
+export const refreshToken = async (req, res) => {
+    try {
+        const refreshToken = req.cookies?.refresh_token;
+        
+        if (!refreshToken) {
+            return res.status(401).json({
+                success: false,
+                message: 'No refresh token provided'
+            });
+        }
+
+        // Verify refresh token
+        const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET);
+        
+        if (decoded.type !== 'refresh') {
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid token type'
+            });
+        }
+
+        // Check if user still exists
+        const user = await userModel.findById(decoded.id);
+        if (!user) {
+            return res.status(401).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        // Generate new access token
+        const newAccessToken = createToken({
+            id: user._id,
+            email: user.email,
+            role: user.role
+        });
+
+        // Set new access token in HttpOnly cookie
+        res.cookie('token', newAccessToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 15 * 60 * 1000, // 15 minutes
+            path: '/'
+        });
+
+        res.json({
+            success: true,
+            message: 'Token refreshed successfully'
+        });
+
+    } catch (error) {
+        console.error('Token refresh error:', error);
+        return res.status(401).json({
+            success: false,
+            message: 'Invalid refresh token'
+        });
+    }
+};
+
+// SECURITY: Logout endpoint to clear cookies
+export const logout = async (req, res) => {
+    try {
+        // Clear auth cookies
+        res.clearCookie('token', { path: '/' });
+        res.clearCookie('refresh_token', { path: '/' });
+        
+        res.json({
+            success: true,
+            message: 'Logged out successfully'
+        });
+    } catch (error) {
+        console.error('Logout error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Logout failed'
+        });
+    }
 };
 
 export { loginUser, registerUser, adminLogin }

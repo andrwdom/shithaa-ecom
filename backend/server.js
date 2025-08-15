@@ -2,6 +2,8 @@ import express from 'express'
 import cors from 'cors'
 import 'dotenv/config'
 import rateLimit from 'express-rate-limit'
+import cookieParser from 'cookie-parser'
+import helmet from 'helmet'
 import connectDB from './config/mongodb.js'
 import { config } from './config.js'
 import userRouter from './routes/userRoute.js'
@@ -99,24 +101,24 @@ const authLimiter = rateLimit({
 app.use('/api/user/login', authLimiter);
 app.use('/api/user/admin', authLimiter);
 
-// Security headers
-app.use((req, res, next) => {
-    // Set security headers
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('X-Frame-Options', 'DENY');
-    res.setHeader('X-XSS-Protection', '1; mode=block');
-    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-    
-    // Update CSP to allow admin domain and new frontend
-    res.setHeader('Content-Security-Policy', 
-        "default-src 'self'; " +
-        "img-src 'self' data: https: http:; " +
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; " +
-        "style-src 'self' 'unsafe-inline' https:; " +
-        "connect-src 'self' https://shithaa.in https://admin.shithaa.in https://shitha-frontend.vercel.app https://admin.shithaa.com https://shithaa.com http://localhost:5173 http://localhost:5174 http://localhost:3000 http://localhost:3001;"
-    );
-    next();
-});
+// SECURITY: Helmet for comprehensive security headers
+app.use(helmet({
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+    contentSecurityPolicy: {
+        useDefaults: true,
+        directives: {
+            "default-src": ["'self'"],
+            "img-src": ["'self'", "data:", "blob:", "https:", "http:"],
+            "script-src": ["'self'"],
+            "style-src": ["'self'", "'unsafe-inline'"],
+            "connect-src": ["'self'", "https://shithaa.in", "https://admin.shithaa.in", "https://shitha-frontend.vercel.app", "https://admin.shithaa.com", "https://shithaa.com", "http://localhost:5173", "http://localhost:5174", "http://localhost:3000", "http://localhost:3001"],
+            "frame-ancestors": ["'none'"],
+        },
+    }
+}));
+
+// SECURITY: Cookie parser for HttpOnly cookies
+app.use(cookieParser());
 
 // --- CORS CONFIGURATION ---
 const allowedOrigins = [
@@ -134,9 +136,36 @@ const allowedOrigins = [
     'https://www.admin.shithaa.in'
 ];
 
-// TEMPORARY EMERGENCY FIX - Allow all origins for debugging
+// SECURITY: Strict CORS configuration with environment-driven origins
 const corsOptions = {
-    origin: true, // Allow all origins temporarily
+    origin: (origin, callback) => {
+        // SECURITY: Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) {
+            return callback(null, true);
+        }
+        
+        // SECURITY: Check if origin is in allowed list
+        if (allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+        
+        // SECURITY: Additional check for subdomains
+        const originHost = new URL(origin).hostname;
+        const isSubdomain = allowedOrigins.some(allowed => {
+            try {
+                const allowedHost = new URL(allowed).hostname;
+                return originHost === allowedHost || originHost.endsWith('.' + allowedHost);
+            } catch (e) {
+                return false;
+            }
+        });
+        
+        if (isSubdomain) {
+            return callback(null, true);
+        }
+        
+        return callback(new Error(`Origin ${origin} not allowed by CORS`));
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: [
@@ -147,7 +176,8 @@ const corsOptions = {
         'Accept',
         'Origin',
         'X-Requested-With',
-        'Cache-Control'
+        'Cache-Control',
+        'x-csrf-token' // SECURITY: Allow CSRF token header
     ],
     exposedHeaders: [
         'Content-Range',
@@ -238,6 +268,35 @@ app.get('/api/health', (req, res) => {
     status: 'ok',
     timestamp: new Date().toISOString()
   });
+});
+
+// SECURITY: CSRF token endpoint for state-changing operations
+app.get('/api/csrf-token', (req, res) => {
+  try {
+    // SECURITY: Generate CSRF token for form protection
+    const csrfToken = require('crypto').randomBytes(32).toString('hex');
+    
+    // SECURITY: Set CSRF token in HttpOnly cookie
+    res.cookie('csrf-token', csrfToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 1000, // 1 hour
+      path: '/'
+    });
+    
+    res.json({ 
+      success: true, 
+      csrfToken,
+      message: 'CSRF token generated successfully'
+    });
+  } catch (error) {
+    console.error('CSRF token generation error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to generate CSRF token' 
+    });
+  }
 });
 
 // CORS error handler - simplified

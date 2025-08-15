@@ -28,29 +28,41 @@ const getOrderUserEmail = (req, email) => {
 
 // Helper function to update product stock (reserve or restore)
 const updateProductStock = async (items) => {
-    for (const item of items) {
-        const product = await productModel.findById(item._id);
-        if (product) {
-            const sizeIndex = product.sizes.findIndex(s => s.size === item.size);
-            if (sizeIndex !== -1) {
-                product.sizes[sizeIndex].stock -= item.quantity;
-                await product.save();
-            }
-        }
+    const { batchChangeStock } = await import('../utils/stock.js');
+    
+    try {
+        const operations = items.map(item => ({
+            productId: item._id,
+            size: item.size,
+            quantityChange: -item.quantity
+        }));
+        
+        const results = await batchChangeStock(operations);
+        console.log('Stock updated successfully for payment session:', results);
+        return results;
+    } catch (error) {
+        console.error('Stock update failed for payment session:', error);
+        throw new Error(`Stock update failed: ${error.message}`);
     }
 };
 
 // Helper function to restore product stock (for failed payments)
 const restoreProductStock = async (items) => {
-    for (const item of items) {
-        const product = await productModel.findById(item._id);
-        if (product) {
-            const sizeIndex = product.sizes.findIndex(s => s.size === item.size);
-            if (sizeIndex !== -1) {
-                product.sizes[sizeIndex].stock += item.quantity;
-                await product.save();
-            }
-        }
+    const { batchChangeStock } = await import('../utils/stock.js');
+    
+    try {
+        const operations = items.map(item => ({
+            productId: item._id,
+            size: item.size,
+            quantityChange: item.quantity
+        }));
+        
+        const results = await batchChangeStock(operations);
+        console.log('Stock restored successfully for failed payment:', results);
+        return results;
+    } catch (error) {
+        console.error('Stock restoration failed for failed payment:', error);
+        throw new Error(`Stock restoration failed: ${error.message}`);
     }
 };
 
@@ -310,16 +322,13 @@ export const phonePeCallback = async (req, res) => {
         status: 'Payment Failed',
       };
       
-      // Restore product stock
-      for (const item of order.items) {
-        const product = await productModel.findById(item._id);
-        if (product) {
-          const sizeIndex = product.sizes.findIndex(s => s.size === item.size);
-          if (sizeIndex !== -1) {
-            product.sizes[sizeIndex].stock += item.quantity;
-            await product.save();
-          }
-        }
+      // Restore product stock using atomic operations
+      try {
+        await restoreProductStock(order.items);
+        console.log('Stock restored successfully for failed PhonePe payment');
+      } catch (error) {
+        console.error('Failed to restore stock for failed PhonePe payment:', error);
+        // Don't fail the callback processing if stock restoration fails
       }
     }
 
@@ -607,11 +616,22 @@ export const createOrderFromPaymentSession = async (req, res) => {
 
     console.log('Order created successfully from payment session:', order._id);
 
-    // Mark stock as confirmed (no longer reserved)
-    await PaymentSession.findByIdAndUpdate(paymentSession._id, { stockReserved: false });
+          // Confirm stock decrement after successful payment
+      try {
+        const { confirmOrderStock } = await import('../controllers/orderController.js');
+        await confirmOrderStock(order._id);
+        console.log('Stock confirmed and decremented for order:', order._id);
+      } catch (stockError) {
+        console.error('Failed to confirm stock for order:', order._id, stockError);
+        // Don't fail the order creation if stock confirmation fails
+        // The stock was already reserved during payment session creation
+      }
 
-    // Delete the payment session since order is now created
-    await PaymentSession.findByIdAndDelete(paymentSession._id);
+      // Mark stock as confirmed (no longer reserved)
+      await PaymentSession.findByIdAndUpdate(paymentSession._id, { stockReserved: false });
+
+      // Delete the payment session since order is now created
+      await PaymentSession.findByIdAndDelete(paymentSession._id);
 
     res.status(201).json({
       success: true,

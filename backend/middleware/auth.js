@@ -3,22 +3,20 @@ import userModel from '../models/userModel.js'
 
 const verifyToken = async (req, res, next) => {
     try {
-        // Check for token in both formats
-        let token = req.headers.token;
+        // SECURITY: Check for token in HttpOnly cookies first, then headers for backward compatibility
+        let token = req.cookies?.token;
         
-        // If not found in token header, check Authorization header
+        // Fallback to headers for backward compatibility
+        if (!token && req.headers.token) {
+            token = req.headers.token;
+        }
+        
         if (!token && req.headers.authorization) {
             const authHeader = req.headers.authorization;
             if (authHeader.startsWith('Bearer ')) {
                 token = authHeader.substring(7); // Remove 'Bearer ' prefix
             }
         }
-        
-        console.log('Auth middleware - Token found:', !!token);
-        console.log('Auth middleware - Headers:', {
-            token: req.headers.token ? 'present' : 'missing',
-            authorization: req.headers.authorization ? 'present' : 'missing'
-        });
         
         if (!token) {
             return res.status(401).json({
@@ -28,11 +26,16 @@ const verifyToken = async (req, res, next) => {
         }
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        console.log('Auth middleware - Decoded token:', decoded);
+        
+        // SECURITY: Check if token is expired
+        if (decoded.exp && Date.now() >= decoded.exp * 1000) {
+            return res.status(401).json({
+                success: false,
+                message: 'Token expired'
+            });
+        }
         
         const user = await userModel.findById(decoded.id);
-        console.log('Auth middleware - User found:', !!user);
-
         if (!user) {
             return res.status(401).json({
                 success: false,
@@ -42,7 +45,6 @@ const verifyToken = async (req, res, next) => {
 
         req.user = user;
         req.user.id = user._id.toString();
-        console.log('Auth middleware - Set user ID:', req.user.id);
         next();
     } catch (error) {
         console.error('Auth middleware - Error:', error);

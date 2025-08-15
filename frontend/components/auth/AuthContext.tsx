@@ -18,29 +18,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log("Auth state changed:", firebaseUser ? "User logged in" : "No user");
       setUser(firebaseUser);
       setLoading(false);
-      // Fetch backend user profile if logged in
+      // SECURITY: Fetch backend user profile using HttpOnly cookies
       if (firebaseUser) {
-        const token = localStorage.getItem('token');
-        if (token) {
-          try {
-            const res = await fetch((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + '/api/user/auth/profile', {
-              headers: { token }
-            });
-            const data = await res.json();
-            if (res.ok && data.data) {
-              setMongoUser(data.data);
-            } else {
-              // Silently handle 401/403 errors - user might not be logged in to backend
-              if (res.status !== 401 && res.status !== 403) {
-                console.warn('Profile fetch failed:', data.message);
-              }
-              setMongoUser(null);
+        try {
+          const res = await fetch((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + '/api/user/auth/profile', {
+            credentials: 'include' // SECURITY: Send cookies with request
+          });
+          const data = await res.json();
+          if (res.ok && data.data) {
+            setMongoUser(data.data);
+          } else {
+            // Silently handle 401/403 errors - user might not be logged in to backend
+            if (res.status !== 401 && res.status !== 403) {
+              console.warn('Profile fetch failed:', data.message);
             }
-          } catch (e) {
-            // Silently handle network errors
             setMongoUser(null);
           }
-        } else {
+        } catch (e) {
+          // Silently handle network errors
           setMongoUser(null);
         }
       } else {
@@ -64,8 +59,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       console.log("Logout toast notification should have been shown");
 
-      // Clear local storage
-      localStorage.removeItem("token");
+      // SECURITY: Call backend logout to clear HttpOnly cookies
+      try {
+        await fetch((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + '/api/user/logout', {
+          method: 'POST',
+          credentials: 'include'
+        });
+      } catch (e) {
+        console.warn('Backend logout failed:', e);
+      }
       
       // Sign out from Firebase
       await signOut(auth);
