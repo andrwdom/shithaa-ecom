@@ -167,42 +167,21 @@ export default function SizingGuideClient() {
           transition={{ delay: 0.3 }}
           className="bg-white rounded-2xl shadow-lg overflow-hidden"
         >
-          {/* Tab Navigation */}
-          <div className="border-b border-gray-200">
-            <nav className="flex">
-              {sizeCharts.map((chart) => (
-                <button
-                  key={chart.id}
-                  onClick={() => setActiveTab(chart.id)}
-                  className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${
-                    activeTab === chart.id
-                      ? "text-[#473c66] border-b-2 border-[#473c66] bg-[#473c66]/5"
-                      : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
-                  }`}
-                >
-                  {chart.title}
-                </button>
-              ))}
-            </nav>
-          </div>
-
-          {/* Tab Content */}
-          <div className="p-6 md:p-8">
-            <AnimatePresence mode="wait">
-              {sizeCharts.map((chart) => (
-                activeTab === chart.id && (
-                  <motion.div
-                    key={chart.id}
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.3 }}
-                    className="space-y-6"
-                  >
+          {/* Desktop Layout - Side by Side Charts (≥1024px) */}
+          <div className="hidden lg:block">
+            <div className="p-6 md:p-8">
+              <div className="text-center mb-8">
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">Size Charts</h3>
+                <p className="text-gray-600">View both size charts for comprehensive sizing information</p>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-8">
+                {sizeCharts.map((chart) => (
+                  <div key={chart.id} className="space-y-6">
                     {/* Chart Header */}
                     <div className="text-center">
-                      <h3 className="text-2xl font-bold text-gray-900 mb-2">{chart.title}</h3>
-                      <p className="text-gray-600">{chart.description}</p>
+                      <h4 className="text-xl font-bold text-gray-900 mb-2">{chart.title}</h4>
+                      <p className="text-sm text-gray-600">{chart.description}</p>
                     </div>
 
                     {/* Size Chart Image */}
@@ -236,7 +215,7 @@ export default function SizingGuideClient() {
                     <div className="bg-[#473c66]/5 rounded-lg p-6">
                       <div className="flex items-center gap-3 mb-4">
                         <Info className="h-5 w-5 text-[#473c66]" />
-                        <h4 className="font-semibold text-gray-900">Pro Tips</h4>
+                        <h5 className="font-semibold text-gray-900">Pro Tips</h5>
                       </div>
                       <ul className="space-y-2">
                         {chart.tips.map((tip, index) => (
@@ -247,10 +226,99 @@ export default function SizingGuideClient() {
                         ))}
                       </ul>
                     </div>
-                  </motion.div>
-                )
-              ))}
-            </AnimatePresence>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Mobile & Tablet Layout - Tab Navigation (<1024px) */}
+          <div className="lg:hidden">
+            {/* Tab Navigation */}
+            <div className="border-b border-gray-200">
+              <nav className="flex">
+                {sizeCharts.map((chart) => (
+                  <button
+                    key={chart.id}
+                    onClick={() => setActiveTab(chart.id)}
+                    className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${
+                      activeTab === chart.id
+                        ? "text-[#473c66] border-b-2 border-[#473c66] bg-[#473c66]/5"
+                        : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    {chart.title}
+                  </button>
+                ))}
+              </nav>
+            </div>
+
+            {/* Tab Content */}
+            <div className="p-6 md:p-8">
+              <AnimatePresence mode="wait">
+                {sizeCharts.map((chart) => (
+                  activeTab === chart.id && (
+                    <motion.div
+                      key={chart.id}
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.3 }}
+                      className="space-y-6"
+                    >
+                      {/* Chart Header */}
+                      <div className="text-center">
+                        <h3 className="text-2xl font-bold text-gray-900 mb-2">{chart.title}</h3>
+                        <p className="text-gray-600">{chart.description}</p>
+                      </div>
+
+                      {/* Size Chart Image */}
+                      <div className="relative">
+                        <div className="bg-gray-100 rounded-lg p-4">
+                          <div className="flex justify-center">
+                            <Image
+                              src={chart.image}
+                              alt={chart.alt}
+                              width={800}
+                              height={600}
+                              className="w-full max-w-2xl lg:max-w-3xl xl:max-w-4xl h-auto rounded-lg shadow-md"
+                              priority
+                            />
+                          </div>
+                        </div>
+                        
+                        {/* Download Button */}
+                        <div className="mt-4 flex justify-center">
+                          <button
+                            onClick={() => handleDownload(chart.image, chart.title)}
+                            className="flex items-center gap-2 px-6 py-3 bg-[#473c66] text-white font-medium rounded-lg hover:bg-[#473c66]/80 transition-colors"
+                          >
+                            <Download className="h-4 w-4" />
+                            Download Size Chart
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Tips Section */}
+                      <div className="bg-[#473c66]/5 rounded-lg p-6">
+                        <div className="flex items-center gap-3 mb-4">
+                          <Info className="h-5 w-5 text-[#473c66]" />
+                          <h4 className="font-semibold text-gray-900">Pro Tips</h4>
+                        </div>
+                        <ul className="space-y-2">
+                          {chart.tips.map((tip, index) => (
+                            <li key={index} className="flex items-start gap-2 text-sm text-gray-700">
+                              <span className="w-2 h-2 bg-[#473c66] rounded-full mt-2 flex-shrink-0"></span>
+                              {tip}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </motion.div>
+                  )
+                ))}
+              </AnimatePresence>
+            </div>
           </div>
         </motion.div>
 
