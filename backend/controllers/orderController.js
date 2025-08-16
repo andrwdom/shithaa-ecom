@@ -916,6 +916,5 @@ export {
   updateOrderStatus,
     generateInvoice,
     createStructuredOrder,
-    getUniqueOrderId,
-    confirmOrderStock
+    getUniqueOrderId
 };
