@@ -1,5 +1,4 @@
 import express from 'express'
-import cors from 'cors'
 import 'dotenv/config'
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -138,80 +137,12 @@ app.use(helmet({
 // SECURITY: Cookie parser for HttpOnly cookies
 app.use(cookieParser());
 
-// --- CORS CONFIGURATION ---
-const allowedOrigins = [
-    'http://localhost:5173',
-    'http://localhost:5174',
-    'http://localhost:3000',
-    'http://localhost:3001',
-    'https://shithaa.in',
-    'https://admin.shithaa.in',
-    'https://shitha-frontend.vercel.app',
-    'https://admin.shithaa.com',
-    'https://shithaa.com',
-    // Add any additional domains that might be needed
-    'https://www.shithaa.in',
-    'https://www.admin.shithaa.in'
-];
+// CORS is completely handled by nginx - no backend configuration needed
 
-// SECURITY: Strict CORS configuration with environment-driven origins
-const corsOptions = {
-    origin: (origin, callback) => {
-        // SECURITY: Allow requests with no origin (like mobile apps or curl requests)
-        if (!origin) {
-            return callback(null, true);
-        }
-        
-        // SECURITY: Check if origin is in allowed list
-        if (allowedOrigins.includes(origin)) {
-            return callback(null, true);
-        }
-        
-        // SECURITY: Additional check for subdomains
-        const originHost = new URL(origin).hostname;
-        const isSubdomain = allowedOrigins.some(allowed => {
-            try {
-                const allowedHost = new URL(allowed).hostname;
-                return originHost === allowedHost || originHost.endsWith('.' + allowedHost);
-            } catch (e) {
-                return false;
-            }
-        });
-        
-        if (isSubdomain) {
-            return callback(null, true);
-        }
-        
-        return callback(new Error(`Origin ${origin} not allowed by CORS`));
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: [
-        'Content-Type',
-        'Authorization',
-        'token',
-        'x-requested-with',
-        'Accept',
-        'Origin',
-        'X-Requested-With',
-        'Cache-Control',
-        'x-csrf-token' // SECURITY: Allow CSRF token header
-    ],
-    exposedHeaders: [
-        'Content-Range',
-        'X-Content-Range',
-        'X-Total-Count'
-    ],
-    preflightContinue: false,
-    optionsSuccessStatus: 204,
-    maxAge: 86400 // 24 hours
-};
+// CORS is completely handled by nginx - no backend CORS configuration needed
 
-// Apply CORS middleware only once
-app.use(cors(corsOptions));
-
-// CORS is handled by nginx - no need for duplicate headers here
-// This middleware is removed to prevent duplicate CORS headers
+// CORS is completely handled by nginx - no backend CORS middleware needed
+// This prevents duplicate CORS headers that cause browser errors
 
 // middlewares
 app.use(express.json())
