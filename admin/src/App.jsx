@@ -15,7 +15,7 @@ import ShippingRules from './pages/ShippingRules';
 import ProtectedRoute from './components/ProtectedRoute';
 import WithClickSpark from './components/WithClickSpark';
 
-export const backendUrl = import.meta.env.VITE_API_URL
+export const backendUrl = 'https://shithaa.in'
 export const currency = '₹'
 
 const App = () => {
