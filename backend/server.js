@@ -8,7 +8,10 @@ const __dirname = dirname(__filename);
 
 // Load environment variables from the correct path
 import dotenv from 'dotenv';
-dotenv.config({ path: join(__dirname, '.env') });
+const envPath = join(__dirname, '.env');
+console.log('🔧 Loading .env from:', envPath);
+console.log('🔧 .env file exists:', require('fs').existsSync(envPath));
+dotenv.config({ path: envPath });
 import rateLimit from 'express-rate-limit'
 import cookieParser from 'cookie-parser'
 import helmet from 'helmet'
@@ -41,6 +44,8 @@ console.log('🔧 Environment Variables Debug:');
 console.log('NODE_ENV:', process.env.NODE_ENV);
 console.log('PORT:', process.env.PORT);
 console.log('JWT_SECRET:', process.env.JWT_SECRET ? 'SET' : 'NOT SET');
+console.log('JWT_SECRET length:', process.env.JWT_SECRET ? process.env.JWT_SECRET.length : 0);
+console.log('JWT_SECRET preview:', process.env.JWT_SECRET ? process.env.JWT_SECRET.substring(0, 10) + '...' : 'N/A');
 console.log('MONGODB_URI:', process.env.MONGODB_URI ? 'SET' : 'NOT SET');
 console.log('GOOGLE_APPLICATION_CREDENTIALS:', process.env.GOOGLE_APPLICATION_CREDENTIALS ? 'SET' : 'NOT SET');
 console.log('---');
