@@ -1,6 +1,15 @@
 import express from 'express'
 import cors from 'cors'
 import 'dotenv/config'
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Load environment variables from the correct path
+import dotenv from 'dotenv';
+dotenv.config({ path: join(__dirname, '.env') });
 import rateLimit from 'express-rate-limit'
 import cookieParser from 'cookie-parser'
 import helmet from 'helmet'
@@ -27,6 +36,15 @@ import productModel from './models/productModel.js'
 // App Config
 const app = express()
 const PORT = config.port
+
+// Debug environment variables
+console.log('🔧 Environment Variables Debug:');
+console.log('NODE_ENV:', process.env.NODE_ENV);
+console.log('PORT:', process.env.PORT);
+console.log('JWT_SECRET:', process.env.JWT_SECRET ? 'SET' : 'NOT SET');
+console.log('MONGODB_URI:', process.env.MONGODB_URI ? 'SET' : 'NOT SET');
+console.log('GOOGLE_APPLICATION_CREDENTIALS:', process.env.GOOGLE_APPLICATION_CREDENTIALS ? 'SET' : 'NOT SET');
+console.log('---');
 
 // Trust proxy - required for rate limiting behind reverse proxy
 app.set('trust proxy', 1)
@@ -319,10 +337,20 @@ app.use((err, req, res, next) => {
 try {
   if (!admin.apps.length) {
     if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-      admin.initializeApp({
-        credential: admin.credential.applicationDefault(),
-      });
-      console.log('Firebase Admin SDK initialized with service account');
+      const serviceAccountPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+      console.log('🔧 Firebase credentials path:', serviceAccountPath);
+      
+      // Check if file exists
+      const fs = await import('fs');
+      if (fs.existsSync(serviceAccountPath)) {
+        admin.initializeApp({
+          credential: admin.credential.cert(serviceAccountPath),
+        });
+        console.log('✅ Firebase Admin SDK initialized with service account');
+      } else {
+        console.error('❌ Firebase credentials file not found:', serviceAccountPath);
+        console.log('Server will continue without Firebase Admin SDK');
+      }
     } else if (process.env.NODE_ENV === 'development') {
       // For development, try to initialize with project ID only
       admin.initializeApp({
