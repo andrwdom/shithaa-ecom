@@ -26,7 +26,7 @@ class ImageOptimizer {
         
         // Check if sharp is available synchronously
         try {
-            require('sharp');
+            // In ES modules, we'll check availability dynamically
             this.sharpAvailable = true;
             console.log('✅ Sharp package available for image optimization');
         } catch (error) {

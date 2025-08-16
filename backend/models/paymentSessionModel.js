@@ -4,15 +4,13 @@ const paymentSessionSchema = new mongoose.Schema({
   // Unique session identifier
   sessionId: { 
     type: String, 
-    required: true, 
-    unique: true 
+    required: true
   },
   
   // PhonePe transaction identifier
   phonepeTransactionId: { 
     type: String, 
-    required: true, 
-    unique: true 
+    required: true
   },
   
   // User information

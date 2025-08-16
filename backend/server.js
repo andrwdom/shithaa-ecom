@@ -35,6 +35,7 @@ import admin from 'firebase-admin'
 import orderModel from './models/orderModel.js'
 import Category from './models/Category.js'
 import productModel from './models/productModel.js'
+import { randomBytes } from 'crypto'
 
 // App Config
 const app = express()
@@ -155,6 +156,7 @@ app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 app.use('/uploads', express.static('uploads'))
 app.use('/images', express.static('/var/www/shithaa-ecom/uploads'));
+app.use('/gallery', express.static('/var/www/shithaa-ecom/uploads'));
 
 // api endpoints
 app.use('/api/user', userRouter)
@@ -212,7 +214,7 @@ app.get('/api/health', (req, res) => {
 app.get('/api/csrf-token', (req, res) => {
   try {
     // SECURITY: Generate CSRF token for form protection
-    const csrfToken = require('crypto').randomBytes(32).toString('hex');
+            const csrfToken = randomBytes(32).toString('hex');
     
     // SECURITY: Set CSRF token in HttpOnly cookie
     res.cookie('csrf-token', csrfToken, {

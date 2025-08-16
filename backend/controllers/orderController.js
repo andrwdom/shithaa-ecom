@@ -27,14 +27,15 @@ export const getUserOrders = async (req, res) => {
         const orQuery = [];
         if (userId) {
           orQuery.push({ userId: userId });
-          if (typeof userId === 'string' && userId.length === 24 && /^[a-fA-F0-9]{24}$/.test(userId)) {
-            try {
-              const objectId = require('mongoose').Types.ObjectId(userId);
-              orQuery.push({ userId: objectId });
-            } catch (e) {
-              // ignore invalid ObjectId
-            }
+                  if (typeof userId === 'string' && userId.length === 24 && /^[a-fA-F0-9]{24}$/.test(userId)) {
+          try {
+            const { Types } = await import('mongoose');
+            const objectId = Types.ObjectId(userId);
+            orQuery.push({ userId: objectId });
+          } catch (e) {
+            // ignore invalid ObjectId
           }
+        }
         }
         if (userEmail) {
           orQuery.push({ email: userEmail });
