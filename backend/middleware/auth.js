@@ -56,6 +56,12 @@ const verifyToken = async (req, res, next) => {
 };
 
 const isAdmin = async (req, res, next) => {
+    // Debug logging
+    console.log('=== ADMIN AUTH DEBUG ===');
+    console.log('Request headers:', req.headers);
+    console.log('Token header:', req.headers.token);
+    console.log('Authorization header:', req.headers.authorization);
+    
     // Check for token in both formats
     let token = req.headers.token;
     
@@ -67,7 +73,12 @@ const isAdmin = async (req, res, next) => {
         }
     }
 
+    console.log('Final token being used:', token);
+    console.log('Token type:', typeof token);
+    console.log('Token length:', token ? token.length : 0);
+
     if (!token) {
+        console.log('❌ No token provided');
         return res.status(401).json({ 
             success: false, 
             message: 'Not Authorized - No token provided' 
@@ -75,19 +86,25 @@ const isAdmin = async (req, res, next) => {
     }
 
     try {
+        console.log('JWT_SECRET exists:', !!process.env.JWT_SECRET);
+        console.log('JWT_SECRET length:', process.env.JWT_SECRET ? process.env.JWT_SECRET.length : 0);
+        
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        console.log('Token decoded successfully:', { id: decoded.id, email: decoded.email, role: decoded.role });
         
         if (decoded.role !== 'admin') {
+            console.log('❌ User role is not admin:', decoded.role);
             return res.status(403).json({ 
                 success: false, 
                 message: 'Not Authorized - Admin access required' 
             });
         }
 
+        console.log('✅ Admin authentication successful');
         req.user = decoded;
         next();
     } catch (error) {
-        console.log('Admin Auth Error:', error);
+        console.log('❌ JWT verification failed:', error.message);
         return res.status(401).json({ 
             success: false, 
             message: 'Not Authorized - Invalid token' 
