@@ -2,6 +2,7 @@ import express from 'express'
 import 'dotenv/config'
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { existsSync } from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -10,7 +11,7 @@ const __dirname = dirname(__filename);
 import dotenv from 'dotenv';
 const envPath = join(__dirname, '.env');
 console.log('🔧 Loading .env from:', envPath);
-console.log('🔧 .env file exists:', require('fs').existsSync(envPath));
+console.log('🔧 .env file exists:', existsSync(envPath));
 dotenv.config({ path: envPath });
 import rateLimit from 'express-rate-limit'
 import cookieParser from 'cookie-parser'
@@ -277,8 +278,7 @@ try {
       console.log('🔧 Firebase credentials path:', serviceAccountPath);
       
       // Check if file exists
-      const fs = await import('fs');
-      if (fs.existsSync(serviceAccountPath)) {
+      if (existsSync(serviceAccountPath)) {
         admin.initializeApp({
           credential: admin.credential.cert(serviceAccountPath),
         });
