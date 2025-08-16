@@ -7,6 +7,7 @@ export default defineConfig({
   server: { port: 5174 },
   preview: {
     port: 4173,
+    host: '0.0.0.0',
     allowedHosts: ['admin.shithaa.in'],
   },
 })
