@@ -67,15 +67,17 @@ module.exports = {
     },
     {
       name: 'shithaa-admin',
-      script: 'admin/server.js',
-      cwd: '/var/www/shithaa-ecom',
+      script: 'npm',
+      args: 'preview',
+      cwd: './admin',
       instances: 1,
+      exec_mode: 'fork',
       autorestart: true,
       watch: false,
       max_memory_restart: '1G',
       env: {
         NODE_ENV: 'production',
-        PORT: 5000
+        PORT: 5174
       },
       error_file: './admin/logs/admin-err.log',
       out_file: './admin/logs/admin-out.log',

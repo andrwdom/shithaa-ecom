@@ -347,14 +347,15 @@ try {
       });
       console.log('Firebase Admin SDK initialized with project ID only (development mode)');
     } else {
-      console.error('FATAL: GOOGLE_APPLICATION_CREDENTIALS is not set. Firebase Admin SDK cannot verify tokens in production.');
-      process.exit(1);
+      console.warn('⚠️  GOOGLE_APPLICATION_CREDENTIALS is not set. Firebase Admin SDK will not be available for token verification.');
+      console.warn('⚠️  Server will continue running without Firebase authentication.');
+      console.warn('⚠️  To enable Firebase, set GOOGLE_APPLICATION_CREDENTIALS environment variable.');
     }
   }
 } catch (error) {
   console.error('Firebase Admin SDK initialization failed:', error.message);
-  console.log('Firebase Admin SDK will not be available for token verification');
-  process.exit(1);
+  console.warn('⚠️  Firebase Admin SDK will not be available for token verification');
+  console.warn('⚠️  Server will continue running without Firebase authentication.');
 }
 
 // Graceful shutdown

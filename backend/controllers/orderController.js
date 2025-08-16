@@ -908,7 +908,7 @@ export const confirmOrderStock = async (orderId) => {
 export { 
     placeOrder, 
     processCardPayment, 
- allOrders, 
+    allOrders, 
     userOrders, 
     updateStatus, 
     cancelOrder, 
