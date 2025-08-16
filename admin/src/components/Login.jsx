@@ -3,8 +3,7 @@ import React, { useState } from 'react'
 import { toast } from 'react-toastify'
 import { assets } from '../assets/assets'
 import shithaLogo from '../assets/shithaa_logo.jpg'
-
-const backendUrl = import.meta.env.VITE_API_URL;
+import { backendUrl } from '../App'
 
 const Login = ({setToken}) => {
 
@@ -14,15 +13,18 @@ const Login = ({setToken}) => {
     const onSubmitHandler = async (e) => {
         try {
             e.preventDefault();
+            console.log('Login attempt with:', { email, password });
             const response = await axios.post(backendUrl + '/api/user/admin',{email,password})
+            console.log('Login response:', response.data);
             if (response.data.success) {
+                console.log('Setting token:', response.data.data.token);
                 setToken(response.data.data.token)
             } else {
                 toast.error(response.data.message)
             }
              
         } catch (error) {
-            console.log(error);
+            console.log('Login error:', error);
             toast.error(error.message)
         }
     }

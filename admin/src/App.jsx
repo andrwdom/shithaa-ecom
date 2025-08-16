@@ -20,9 +20,11 @@ export const currency = '₹'
 
 const App = () => {
 
-  const [token, setToken] = useState(localStorage.getItem('token')?localStorage.getItem('token'):'');
+  const [token, setToken] = useState(localStorage.getItem('token') ? localStorage.getItem('token') : '');
 
   useEffect(()=>{
+    console.log('App.jsx: Token changed to:', token);
+    console.log('App.jsx: localStorage token:', localStorage.getItem('token'));
     localStorage.setItem('token',token)
   },[token])
 

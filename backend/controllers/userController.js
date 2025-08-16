@@ -265,14 +265,15 @@ const adminLogin = async (req, res) => {
             path: '/'
         });
 
-        // Return user data without token (now stored in HttpOnly cookies)
+        // Return user data with token for admin panel compatibility
         const userData = { ...adminUser.toObject() };
         delete userData.password;
 
         return res.status(200).json({
             success: true, 
             data: { 
-                user: userData
+                user: userData,
+                token: accessToken // Include token for admin panel
             },
             message: 'Admin login successful'
         });
@@ -437,6 +438,7 @@ export const refreshToken = async (req, res) => {
 
         res.json({
             success: true,
+            data: { token: newAccessToken }, // Include token for admin panel
             message: 'Token refreshed successfully'
         });
 

@@ -51,6 +51,53 @@ const Add = ({token}) => {
      });
    }, []);
 
+   // Check token validity on component mount
+   useEffect(() => {
+     const storedToken = localStorage.getItem('token');
+     if (!storedToken || storedToken !== token) {
+       console.log('Token mismatch detected:');
+       console.log('Stored token:', storedToken);
+       console.log('Prop token:', token);
+     }
+     
+     // Test token validity
+     testTokenValidity();
+   }, [token]);
+
+   // Function to test if the token is valid
+   const testTokenValidity = async () => {
+     try {
+       const response = await axios.get(`${backendUrl}/api/categories`, {
+         headers: { token }
+       });
+       console.log('Token is valid - categories fetched successfully');
+     } catch (error) {
+       console.error('Token validation failed:', error.response?.status, error.response?.data);
+       if (error.response?.status === 401) {
+         toast.error("Your session has expired. Please log in again.");
+         // Clear invalid token
+         localStorage.removeItem('token');
+         window.location.href = '/';
+       }
+     }
+   };
+
+   // Function to refresh token if needed
+   const refreshToken = async () => {
+     try {
+       const response = await axios.post(`${backendUrl}/api/user/refresh-token`, {}, {
+         withCredentials: true
+       });
+       if (response.data.success) {
+         console.log('Token refreshed successfully');
+         return true;
+       }
+     } catch (error) {
+       console.error('Token refresh failed:', error);
+     }
+     return false;
+   };
+
    // Category to slug mapping
    const getCategorySlug = (categoryName) => {
      const categoryMap = {
@@ -71,6 +118,17 @@ const Add = ({token}) => {
 
    const onSubmitHandler = async (e) => {
     e.preventDefault();
+    
+    // Debug: Log the token to see what's being sent
+    console.log('Token being used:', token);
+    console.log('Token type:', typeof token);
+    console.log('Token length:', token ? token.length : 0);
+    
+    // Check if token exists
+    if (!token || token.trim() === '') {
+      toast.error("Authentication token is missing. Please log in again.");
+      return;
+    }
     
     // Validate category selection
     if (!category) {
@@ -150,8 +208,11 @@ const Add = ({token}) => {
         console.log(key, ':', value);
       }
       
+      // Debug: Log the request headers
+      console.log('Request headers being sent:', { token });
+      
       const response = await axios.post(
-        import.meta.env.VITE_API_URL + "/api/products",
+        backendUrl + "/api/products",
         formData,
         { headers: { token } }
       )
@@ -181,10 +242,22 @@ const Add = ({token}) => {
         headers: error.response?.headers
       });
       
-      if (error.response && error.response.data && error.response.data.message) {
-        toast.error(error.response.data.message)
+      if (error.response?.status === 401) {
+        if (error.response?.data?.message) {
+          toast.error(`Authentication failed: ${error.response.data.message}`);
+        } else {
+          toast.error("Authentication failed. Your session may have expired. Please log in again.");
+        }
+        // Optionally redirect to login
+        // window.location.href = '/';
+      } else if (error.response?.status === 403) {
+        toast.error("Access denied. You don't have permission to perform this action.");
+      } else if (error.response?.status >= 500) {
+        toast.error("Server error. Please try again later.");
+      } else if (error.response?.data?.message) {
+        toast.error(error.response.data.message);
       } else {
-        toast.error(error.message || "Unknown error occurred.")
+        toast.error(error.message || "Unknown error occurred.");
       }
     }
     setLoading(false);
