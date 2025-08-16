@@ -192,25 +192,8 @@ const corsOptions = {
 // Apply CORS middleware only once
 app.use(cors(corsOptions));
 
-// Add a fallback CORS handler for any missed requests
-app.use((req, res, next) => {
-    // Set CORS headers for all responses
-    const origin = req.headers.origin;
-    if (origin && allowedOrigins.includes(origin)) {
-        res.header('Access-Control-Allow-Origin', origin);
-    }
-    res.header('Access-Control-Allow-Credentials', 'true');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, token, x-requested-with, Accept, Origin, X-Requested-With, Cache-Control');
-    
-    // Handle preflight requests
-    if (req.method === 'OPTIONS') {
-        res.status(200).end();
-        return;
-    }
-    
-    next();
-});
+// CORS is handled by nginx - no need for duplicate headers here
+// This middleware is removed to prevent duplicate CORS headers
 
 // middlewares
 app.use(express.json())
