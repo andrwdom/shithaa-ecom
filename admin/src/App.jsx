@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Navbar from './components/Navbar'
 import Sidebar from './components/Sidebar'
 import { Routes, Route, Navigate } from 'react-router-dom'
@@ -10,7 +10,6 @@ import Login from './components/Login'
 import { ToastContainer } from 'react-toastify';
 import { Toaster } from 'react-hot-toast';
 import 'react-toastify/dist/ReactToastify.css';
-import LoadingScreen from './components/LoadingScreen';
 import CarouselManagement from './pages/CarouselManagement';
 import ShippingRules from './pages/ShippingRules';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -40,7 +39,6 @@ const App = () => {
       <div className='bg-gray-50 min-h-screen'>
         <ToastContainer />
         <Toaster position="top-right" />
-        {/* <LoadingScreen /> */}
         {token === ""
           ? (
             <Routes>
