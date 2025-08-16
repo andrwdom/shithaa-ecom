@@ -3,7 +3,7 @@ module.exports = {
     {
       name: 'shithaa-frontend',
       script: 'npm',
-      args: 'run start',
+      args: 'start',
       cwd: './frontend',
       instances: 1,
       exec_mode: 'fork',
@@ -17,8 +17,37 @@ module.exports = {
       error_file: './frontend/logs/frontend-err.log',
       out_file: './frontend/logs/frontend-out.log',
       log_file: './frontend/logs/frontend-combined.log',
-      time: true
+      time: true,
+      // Add better error handling and startup options
+      min_uptime: '10s',
+      max_restarts: 10,
+      restart_delay: 4000
     },
+    // Alternative frontend configuration using start script
+    // Uncomment the section below if the npm start approach fails
+    /*
+    {
+      name: 'shithaa-frontend-alt',
+      script: './frontend/start.sh',
+      cwd: '.',
+      instances: 1,
+      exec_mode: 'fork',
+      autorestart: true,
+      watch: false,
+      max_memory_restart: '1G',
+      env: {
+        NODE_ENV: 'production',
+        PORT: 3000
+      },
+      error_file: './frontend/logs/frontend-err.log',
+      out_file: './frontend/logs/frontend-out.log',
+      log_file: './frontend/logs/frontend-combined.log',
+      time: true,
+      min_uptime: '10s',
+      max_restarts: 10,
+      restart_delay: 4000
+    },
+    */
     {
       name: 'shithaa-backend',
       script: 'backend/server.js',
