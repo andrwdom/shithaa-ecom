@@ -27,7 +27,7 @@ const connectDB = async () => {
         };
 
         // Construct MongoDB URI based on environment
-        const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/shitha';
+        const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/shitha-maternity';
         
         // Connect with retry mechanism
         await mongoose.connect(uri, options);
