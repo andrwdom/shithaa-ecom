@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken'
 import userModel from '../models/userModel.js'
+import { environment } from '../config/environment.js'
 
 const verifyToken = async (req, res, next) => {
     try {
@@ -25,7 +26,7 @@ const verifyToken = async (req, res, next) => {
             });
         }
 
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const decoded = jwt.verify(token, environment.jwtSecret);
         
         // SECURITY: Check if token is expired
         if (decoded.exp && Date.now() >= decoded.exp * 1000) {
@@ -75,7 +76,7 @@ const isAdmin = async (req, res, next) => {
     }
 
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const decoded = jwt.verify(token, environment.jwtSecret);
         
         if (decoded.role !== 'admin') {
             return res.status(403).json({ 
@@ -112,7 +113,7 @@ const optionalVerifyToken = async (req, res, next) => {
             req.user = null;
             return next();
         }
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const decoded = jwt.verify(token, environment.jwtSecret);
         const user = await userModel.findById(decoded.id);
         req.user = user || null;
         if (req.user) req.user.id = req.user._id.toString();

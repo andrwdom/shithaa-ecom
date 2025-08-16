@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken'
+import { environment } from '../config/environment.js'
 
 const adminAuth = async (req, res, next) => {
     try {
@@ -12,7 +13,7 @@ const adminAuth = async (req, res, next) => {
         }
 
         try {
-            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            const decoded = jwt.verify(token, environment.jwtSecret);
             
             if (!decoded || decoded.role !== 'admin') {
                 return res.status(403).json({ 

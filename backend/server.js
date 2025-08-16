@@ -5,7 +5,7 @@ import rateLimit from 'express-rate-limit'
 import cookieParser from 'cookie-parser'
 import helmet from 'helmet'
 import connectDB from './config/mongodb.js'
-import { config } from './config.js'
+import { environment, validateEnvironment } from './config/environment.js'
 import userRouter from './routes/userRoute.js'
 import productRouter from './routes/productRoute.js'
 import cartRouter from './routes/cartRoute.js'
@@ -26,7 +26,10 @@ import productModel from './models/productModel.js'
 
 // App Config
 const app = express()
-const PORT = config.port
+const PORT = environment.port
+
+// Validate environment configuration
+validateEnvironment()
 
 // Trust proxy - required for rate limiting behind reverse proxy
 app.set('trust proxy', 1)
@@ -126,12 +129,10 @@ const allowedOrigins = [
     'http://localhost:5174',
     'http://localhost:3000',
     'http://localhost:3001',
-    'https://shithaa.in',
+    environment.baseUrl,
+    environment.frontendUrl,
     'https://admin.shithaa.in',
-    'https://shitha-frontend.vercel.app',
     'https://admin.shithaa.com',
-    'https://shithaa.com',
-    // Add any additional domains that might be needed
     'https://www.shithaa.in',
     'https://www.admin.shithaa.in'
 ];
@@ -192,25 +193,7 @@ const corsOptions = {
 // Apply CORS middleware only once
 app.use(cors(corsOptions));
 
-// Add a fallback CORS handler for any missed requests
-app.use((req, res, next) => {
-    // Set CORS headers for all responses
-    const origin = req.headers.origin;
-    if (origin && allowedOrigins.includes(origin)) {
-        res.header('Access-Control-Allow-Origin', origin);
-    }
-    res.header('Access-Control-Allow-Credentials', 'true');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, token, x-requested-with, Accept, Origin, X-Requested-With, Cache-Control');
-    
-    // Handle preflight requests
-    if (req.method === 'OPTIONS') {
-        res.status(200).end();
-        return;
-    }
-    
-    next();
-});
+// CORS is already handled by the cors() middleware above
 
 // middlewares
 app.use(express.json())
@@ -233,10 +216,7 @@ app.use('/api/shipping', shippingRouter)
 app.use('/api/shipping-rules', shippingRulesRouter)
 app.use('/api/hero-images', heroImagesRouter)
 
-// Legacy routes for backward compatibility
-app.use('/api/product', productRouter)
-// Removed duplicate order route registration to fix /api/orders/phonepe endpoint
-// app.use('/api/order', orderRouter)
+// Legacy routes removed to prevent conflicts
 
 // Public orders debug route (before any middleware)
 app.get('/api/orders/public-list', async (req, res) => {
@@ -367,8 +347,8 @@ process.on('SIGTERM', () => {
     });
 });
 
-const server = app.listen(PORT, '127.0.0.1', () => {
-    console.log(`Server running on port ${PORT} (localhost only)`);
+const server = app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
 });
 
 // Handle server errors
@@ -381,4 +361,4 @@ server.on('error', (error) => {
 });
 
 console.log('Backend server started - latest code loaded');
-console.log('DEBUG: Loaded PHONEPE_MERCHANT_ID:', process.env.PHONEPE_MERCHANT_ID);
+console.log('DEBUG: Loaded PHONEPE_MERCHANT_ID:', environment.phonepeMerchantId);
