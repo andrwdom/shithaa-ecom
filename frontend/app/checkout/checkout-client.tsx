@@ -342,59 +342,49 @@ export default function CheckoutClient() {
       localStorage.setItem('phonepeOrderData', JSON.stringify(orderDataWithFlags));
       
       // Store cart/buy-now items separately as backup
-      if (isBuyNowMode && buyNowItem) {
-        localStorage.setItem('phonepeBuyNowItem', JSON.stringify(buyNowItem));
-      } else if (cartItems.length > 0) {
-        localStorage.setItem('phonepeCartItems', JSON.stringify(cartItems));
+      if (isBuyNowMode) {
+        localStorage.setItem('phonepeBuyNowItem', JSON.stringify(checkoutItems[0]));
+      } else {
+        localStorage.setItem('phonepeCartItems', JSON.stringify(checkoutItems));
       }
       
-      console.log('Stored order data in multiple locations for maximum persistence:', orderDataWithFlags);
-      console.log('User object during checkout:', {
-        uid: user.uid,
-        mongoId: user.mongoId,
-        email: user.email,
-        displayName: user.displayName
-      });
-      console.log('Storage content after storing:', {
-        sessionStorage: {
-          pendingOrderData: sessionStorage.getItem('pendingOrderData'),
-          buyNowItem: sessionStorage.getItem('buyNowItem'),
-          cartItems: sessionStorage.getItem('cartItems')
-        },
-        localStorage: {
-          pendingOrderData: localStorage.getItem('pendingOrderData'),
-          phonepeOrderData: localStorage.getItem('phonepeOrderData'),
-          phonepeBuyNowItem: localStorage.getItem('phonepeBuyNowItem'),
-          phonepeCartItems: localStorage.getItem('phonepeCartItems'),
-          buyNowItem: localStorage.getItem('buyNowItem'),
-          cartItems: localStorage.getItem('cartItems')
-        }
-      });
-
-      console.log('Initiating PhonePe payment:', orderData);
-      
-      // Use the existing working PhonePe create-session endpoint
-      const paymentResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/payment/phonepe/create-session`, {
-        method: "POST",
+      // Create PhonePe payment session
+      const paymentRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/payment/phonepe/create-session`, {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
-        body: JSON.stringify(orderData),
+        body: JSON.stringify(orderData)
       });
 
-      if (!paymentResponse.ok) {
-        const errorData = await paymentResponse.json();
-        throw new Error(errorData.message || 'Payment initiation failed');
-      }
-
-      const paymentData = await paymentResponse.json();
-      
-      if (paymentData.success && paymentData.redirectUrl) {
-        // Redirect to PhonePe payment page
-        window.location.href = paymentData.redirectUrl;
+      if (paymentRes.ok) {
+        const paymentData = await paymentRes.json();
+        
+        if (paymentData.success && paymentData.data?.redirectUrl) {
+          // Store the PhonePe transaction ID for better tracking
+          if (paymentData.data.phonepeTransactionId) {
+            const orderDataWithTransaction = {
+              ...orderDataWithFlags,
+              phonepeTransactionId: paymentData.data.phonepeTransactionId
+            };
+            
+            // Update stored data with transaction ID
+            sessionStorage.setItem('pendingOrderData', JSON.stringify(orderDataWithTransaction));
+            localStorage.setItem('pendingOrderData', JSON.stringify(orderDataWithTransaction));
+            localStorage.setItem('phonepeOrderData', JSON.stringify(orderDataWithTransaction));
+            
+            console.log('Stored order data with PhonePe transaction ID:', paymentData.data.phonepeTransactionId);
+          }
+          
+          // Redirect to PhonePe payment gateway
+          window.location.href = paymentData.data.redirectUrl;
+        } else {
+          throw new Error(paymentData.message || 'Failed to create payment session');
+        }
       } else {
-        throw new Error('Payment gateway error');
+        const errorData = await paymentRes.json();
+        throw new Error(errorData.message || `Payment session creation failed (${paymentRes.status})`);
       }
 
     } catch (err) {
