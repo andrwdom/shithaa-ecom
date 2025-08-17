@@ -99,7 +99,7 @@ export function BuyNowProvider({ children }: { children: ReactNode }) {
       localStorage.setItem("buyNowItem", itemData); // Backup in localStorage
       console.log("BuyNowProvider: Saved buy-now item to both storages");
       
-      // Also store in checkout flow specific storage
+      // Store in checkout flow specific storage with unique key
       const buyNowData = {
         flow: {
           mode: 'buy-now',
@@ -120,17 +120,9 @@ export function BuyNowProvider({ children }: { children: ReactNode }) {
     }
   }, [buyNowItem]);
 
-  // Auto-clear buy-now when cart operations occur (ensuring proper flow separation)
-  useEffect(() => {
-    // Only clear if cart length actually changed and we have a buy-now item
-    if (buyNowItem && cartItems.length > 0 && lastCartLengthRef.current !== cartItems.length) {
-      // If user has items in cart and tries to buy now, clear buy-now to avoid confusion
-      // This ensures checkout always shows the intended items
-      console.log("BuyNowProvider: Cart items detected, clearing buy-now item");
-      clearBuyNowItem();
-    }
-    lastCartLengthRef.current = cartItems.length;
-  }, [cartItems.length, buyNowItem]);
+  // REMOVED: Auto-clear buy-now when cart operations occur
+  // This was causing conflicts between buy-now and cart flows
+  // Buy-now and cart should be completely independent
 
   function setBuyNowItem(item: BuyNowItem | null) {
     console.log("BuyNowProvider: Setting buy-now item:", item);

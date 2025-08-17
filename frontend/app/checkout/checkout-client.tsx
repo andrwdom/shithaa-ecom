@@ -440,11 +440,15 @@ export default function CheckoutClient() {
       // Also store a backup with a different key
       localStorage.setItem('phonepeOrderData', JSON.stringify(orderDataWithFlags));
       
-      // Store cart/buy-now items separately as backup
+      // Store cart/buy-now items separately as backup with flow-specific keys
       if (isBuyNowMode) {
         localStorage.setItem('phonepeBuyNowItem', JSON.stringify(checkoutItems[0]));
+        // Store buy-now specific order data
+        localStorage.setItem('buyNowOrderData', JSON.stringify(orderDataWithFlags));
       } else {
         localStorage.setItem('phonepeCartItems', JSON.stringify(checkoutItems));
+        // Store cart specific order data
+        localStorage.setItem('cartOrderData', JSON.stringify(orderDataWithFlags));
       }
       
       // Create PhonePe payment session

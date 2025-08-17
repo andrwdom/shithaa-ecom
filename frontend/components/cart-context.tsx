@@ -63,7 +63,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem("cartItems", cartData); // Backup in localStorage
       console.log("CartProvider: Saved cart items to both storages");
       
-      // Also store in checkout flow specific storage
+      // Store in checkout flow specific storage with unique key
       const cartCheckoutData = {
         flow: {
           mode: 'cart',
