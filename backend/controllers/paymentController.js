@@ -14,12 +14,26 @@ const PHONEPE_API_KEY = process.env.PHONEPE_API_KEY;
 const PHONEPE_SALT_INDEX = parseInt(process.env.PHONEPE_SALT_INDEX || '1', 10);
 const PHONEPE_ENV = process.env.PHONEPE_ENV === 'PRODUCTION' ? Env.PRODUCTION : Env.SANDBOX;
 
-const phonepeClient = StandardCheckoutClient.getInstance(
-  PHONEPE_MERCHANT_ID,
-  PHONEPE_API_KEY,
-  PHONEPE_SALT_INDEX,
-  PHONEPE_ENV
-);
+console.log('=== PhonePe SDK Initialization ===');
+console.log('Environment variables:');
+console.log('- PHONEPE_MERCHANT_ID:', PHONEPE_MERCHANT_ID);
+console.log('- PHONEPE_API_KEY:', PHONEPE_API_KEY ? 'SET (' + PHONEPE_API_KEY.substring(0, 8) + '...)' : 'NOT SET');
+console.log('- PHONEPE_SALT_INDEX:', PHONEPE_SALT_INDEX);
+console.log('- PHONEPE_ENV:', process.env.PHONEPE_ENV, '->', PHONEPE_ENV);
+
+let phonepeClient;
+try {
+  phonepeClient = StandardCheckoutClient.getInstance(
+    PHONEPE_MERCHANT_ID,
+    PHONEPE_API_KEY,
+    PHONEPE_SALT_INDEX,
+    PHONEPE_ENV
+  );
+  console.log('PhonePe client initialized successfully');
+} catch (initError) {
+  console.error('PhonePe client initialization failed:', initError);
+  phonepeClient = null;
+}
 
 // Helper function to get user email for orders
 const getOrderUserEmail = (req, email) => {
@@ -76,6 +90,10 @@ function cleanMobileNumber(number) {
 // Create PhonePe payment session using SDK
 export const createPhonePeSession = async (req, res) => {
   try {
+    console.log('=== PhonePe Session Creation Started ===');
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
+    console.log('User:', req.user);
+    
     const {
       amount,
       shipping,
@@ -85,17 +103,21 @@ export const createPhonePeSession = async (req, res) => {
     } = req.body;
 
     if (!amount || !shipping || !cartItems || cartItems.length === 0) {
+      console.log('Validation failed - missing required fields');
       return res.status(400).json({
         success: false,
         message: 'Missing required fields'
       });
     }
 
+    console.log('Validation passed, proceeding with session creation');
     const userEmail = getOrderUserEmail(req, email);
+    console.log('User email:', userEmail);
     
     // Generate unique session and transaction IDs
     const sessionId = randomUUID();
     const phonepeTransactionId = randomUUID();
+    console.log('Generated IDs - Session:', sessionId, 'Transaction:', phonepeTransactionId);
     
     // Create payment session (temporary storage, not an order)
     const paymentSessionData = {
@@ -133,25 +155,88 @@ export const createPhonePeSession = async (req, res) => {
       }
     };
 
+    console.log('Payment session data prepared, attempting stock reservation...');
+    
     // Reserve stock temporarily (will be confirmed or restored based on payment result)
-    await updateProductStock(cartItems);
+    try {
+      await updateProductStock(cartItems);
+      console.log('Stock reservation successful');
+    } catch (stockError) {
+      console.error('Stock reservation failed:', stockError);
+      return res.status(400).json({
+        success: false,
+        message: 'Stock reservation failed',
+        error: stockError.message
+      });
+    }
     
     // Mark stock as reserved in payment session
     paymentSessionData.stockReserved = true;
     
+    console.log('Attempting to save payment session to database...');
+    
     // Save payment session to database
-    const paymentSession = await PaymentSession.create(paymentSessionData);
+    let paymentSession;
+    try {
+      paymentSession = await PaymentSession.create(paymentSessionData);
+      console.log('Payment session saved successfully:', paymentSession._id);
+    } catch (dbError) {
+      console.error('Database save failed:', dbError);
+      // Try to restore stock since session creation failed
+      try {
+        await restoreProductStock(cartItems);
+        console.log('Stock restored after database failure');
+      } catch (restoreError) {
+        console.error('Failed to restore stock after database failure:', restoreError);
+      }
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to create payment session in database',
+        error: dbError.message
+      });
+    }
+
+    console.log('PhonePe SDK configuration check:');
+    console.log('- Merchant ID:', PHONEPE_MERCHANT_ID);
+    console.log('- API Key:', PHONEPE_API_KEY ? 'SET' : 'NOT SET');
+    console.log('- Salt Index:', PHONEPE_SALT_INDEX);
+    console.log('- Environment:', PHONEPE_ENV);
+    console.log('- Client initialized:', !!phonepeClient);
+
+    // Check if PhonePe client is available
+    if (!phonepeClient) {
+      console.error('PhonePe client not initialized, cannot proceed');
+      // Restore stock since we can't create payment
+      await restoreProductStock(cartItems);
+      // Delete payment session
+      await PaymentSession.findByIdAndDelete(paymentSession._id);
+      
+      return res.status(500).json({
+        success: false,
+        message: 'Payment service not available',
+        error: 'PhonePe client initialization failed'
+      });
+    }
 
     // Use SDK to create payment session
     const redirectUrl = `${process.env.PHONEPE_REDIRECT_URL || process.env.BASE_URL || 'https://shithaa.in'}/payment/phonepe/callback?merchantTransactionId=${phonepeTransactionId}`;
+    console.log('Redirect URL:', redirectUrl);
+    
+    console.log('Building PhonePe payment request...');
     const request = StandardCheckoutPayRequest.builder()
       .merchantOrderId(phonepeTransactionId)
       .amount(amount * 100) // paise
       .redirectUrl(redirectUrl)
       .build();
+    
+    console.log('PhonePe request built, calling phonepeClient.pay()...');
+    console.log('Request details:', JSON.stringify(request, null, 2));
 
     const response = await phonepeClient.pay(request);
+    console.log('PhonePe SDK response received:', response);
+    
     if (response && response.redirectUrl) {
+      console.log('Payment session created successfully, updating database...');
       // Update payment session with PhonePe response
       await PaymentSession.findByIdAndUpdate(paymentSession._id, {
         'phonepeResponse.redirectUrl': response.redirectUrl,
@@ -160,6 +245,7 @@ export const createPhonePeSession = async (req, res) => {
         'phonepeResponse.responseMessage': response.message || 'Payment session created'
       });
 
+      console.log('=== PhonePe Session Creation Successful ===');
       return res.json({
         success: true,
         sessionId: sessionId,
@@ -167,6 +253,7 @@ export const createPhonePeSession = async (req, res) => {
         redirectUrl: response.redirectUrl
       });
     } else {
+      console.log('PhonePe response missing redirectUrl, cleaning up...');
       // Restore stock if payment session creation failed
       await restoreProductStock(cartItems);
       
@@ -180,12 +267,17 @@ export const createPhonePeSession = async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('PhonePe SDK Session Creation Error:', error);
+    console.error('=== PhonePe SDK Session Creation Error ===');
+    console.error('Error details:', error);
+    console.error('Error stack:', error.stack);
+    console.error('Error message:', error.message);
     
     // If there was an error after stock reservation, try to restore it
     if (req.body.cartItems) {
       try {
+        console.log('Attempting to restore stock after error...');
         await restoreProductStock(req.body.cartItems);
+        console.log('Stock restored successfully after error');
       } catch (stockError) {
         console.error('Failed to restore stock after error:', stockError);
       }
