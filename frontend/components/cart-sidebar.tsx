@@ -4,8 +4,9 @@ import React from "react"
 import { X, Plus, Minus, ShoppingBag, Gift, AlertTriangle, Info } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
-import { useCart, CartItem } from "@/components/cart-context"
-import { useBuyNow } from "@/components/buy-now-context"
+import { useCart } from "./cart-context";
+import { useBuyNow } from "./buy-now-context";
+import { useCheckoutFlow } from "./checkout-flow-manager";
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 
@@ -21,6 +22,7 @@ export default function CartSidebar() {
     isLoadingOffer
   } = useCart();
   const { clearBuyNowItem } = useBuyNow();
+  const { setCheckoutFlow } = useCheckoutFlow();
   const [productStocks, setProductStocks] = useState<Record<string, Record<string, number>>>({});
   const [isLoadingStocks, setIsLoadingStocks] = useState(false);
   const [showEmptyState, setShowEmptyState] = useState(false);
@@ -136,7 +138,7 @@ export default function CartSidebar() {
   const handleProceedToCheckout = () => {
     clearBuyNowItem();
     closeCartSidebar();
-    router.push('/checkout');
+    setCheckoutFlow('cart');
   };
 
   if (!isCartSidebarOpen) return null;

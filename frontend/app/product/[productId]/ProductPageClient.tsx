@@ -8,9 +8,9 @@ import { ArrowLeft, Share2, Truck, Shield, RotateCcw, Plus, Minus, Star, Chevron
 import Image from "next/image"
 import Script from "next/script"
 import PageLoading from "@/components/page-loading"
-import { useCart } from "@/components/cart-context"
-import { useBuyNow } from "@/components/buy-now-context"
-import { safeFetch } from "@/lib/api-health"
+import { useCart } from "@/components/cart-context";
+import { useBuyNow } from "@/components/buy-now-context";
+import { useCheckoutFlow } from "@/components/checkout-flow-manager";
 import WishlistButton from "@/components/WishlistButton"
 import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
@@ -48,6 +48,7 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
   const [isWishlisted, setIsWishlisted] = useState(false)
   const { addToCart, openCartSidebar, clearCart } = useCart()
   const { setBuyNowItem } = useBuyNow()
+  const { setCheckoutFlow } = useCheckoutFlow();
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -98,19 +99,20 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
     if (!product) return;
     
     // Set buy now item with fresh data - use _id as primary ID since that's what backend returns
-    setBuyNowItem({
-      id: product._id || product.id || productId,
+    const buyNowItem = {
+      id: (product._id || product.id || productId)?.toString() || productId,
       _id: (product._id || product.id || productId)?.toString() || productId,
       name: product.name,
       price: product.price,
       quantity,
       size: selectedSize,
       image: product.images[0] || "/placeholder.svg",
-    });
+    };
     
-    // Navigate to checkout - the checkout page will show only this product
-    // Cart items are preserved and will be available after checkout completion
-    window.location.href = "/checkout?mode=buynow";
+    setBuyNowItem(buyNowItem);
+    
+    // Navigate to checkout using the checkout flow manager
+    setCheckoutFlow('buy-now');
   }
 
   // Safety check - ensure product exists before rendering

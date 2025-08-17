@@ -55,6 +55,39 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const calculationTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const lastCartHashRef = useRef<string>('')
 
+  // Enhanced persistence - save to both storages for better reliability
+  useEffect(() => {
+    if (cartItems.length > 0) {
+      const cartData = JSON.stringify(cartItems);
+      sessionStorage.setItem("cartItems", cartData);
+      localStorage.setItem("cartItems", cartData); // Backup in localStorage
+      console.log("CartProvider: Saved cart items to both storages");
+      
+      // Also store in checkout flow specific storage
+      const cartCheckoutData = {
+        flow: {
+          mode: 'cart',
+          items: cartItems,
+          source: 'cart',
+          timestamp: Date.now(),
+          sessionId: `cart_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+        },
+        items: cartItems,
+        timestamp: Date.now()
+      };
+      sessionStorage.setItem("cartCheckoutData", JSON.stringify(cartCheckoutData));
+      localStorage.setItem("cartCheckoutData", JSON.stringify(cartCheckoutData));
+    } else {
+      sessionStorage.removeItem("cartItems");
+      localStorage.removeItem("cartItems");
+      console.log("CartProvider: Cleared cart items from both storages");
+      
+      // Also clear checkout flow data
+      sessionStorage.removeItem("cartCheckoutData");
+      localStorage.removeItem("cartCheckoutData");
+    }
+  }, [cartItems]);
+
   // Load cart from storage ONLY on initial mount
   useEffect(() => {
     if (wasCartIntentionallyCleared) {

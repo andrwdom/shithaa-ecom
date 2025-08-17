@@ -12,40 +12,32 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/components/auth/useAuth";
 import LoginModal from "@/components/auth/LoginModal";
 import { useBuyNow } from "@/components/buy-now-context";
+import { useCheckoutFlow } from "@/components/checkout-flow-manager";
 import { getIdToken } from "firebase/auth";
 import { Gift } from "lucide-react";
 
 export default function CheckoutClient() {
   const { cartItems, clearCart, cartTotal, offerDetails, openCartSidebar } = useCart();
   const { buyNowItem, clearBuyNowItem, isLoading: buyNowLoading, restoreFromStorage } = useBuyNow();
+  const { currentFlow, isBuyNowMode, isCartMode, checkoutItems, totalAmount, isLoading: flowLoading, refreshCheckoutFlow } = useCheckoutFlow();
   const searchParams = useSearchParams();
-  const isBuyNow = searchParams.get("mode") === "buynow" && !!buyNowItem;
-  // Real-time sync: determine checkout items based on current state
-  const checkoutItems = buyNowItem ? [buyNowItem] : cartItems;
   
-  // Show loading state while buy now context is loading
-  if (buyNowLoading && searchParams.get("mode") === "buynow") {
+  // Show loading state while checkout flow is loading
+  if (flowLoading || (searchParams.get("mode") === "buynow" && buyNowLoading)) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-[#473C66] mx-auto"></div>
-          <p className="mt-4 text-lg text-gray-600">Loading your order...</p>
+          <p className="text-lg text-gray-600">Loading your order...</p>
         </div>
       </div>
     );
   }
   
-  // Show error if no items found in buy now mode
-  if (searchParams.get("mode") === "buynow" && !buyNowItem && !buyNowLoading) {
-    const retryRestoreBuyNow = () => {
-      // Try to restore from storage using the context function
-      restoreFromStorage();
-      // If still no item after restoration attempt, reload the page
-      setTimeout(() => {
-        if (!buyNowItem) {
-          window.location.reload();
-        }
-      }, 100);
+  // Show error if no valid checkout flow
+  if (!currentFlow || checkoutItems.length === 0) {
+    const retryRestore = () => {
+      refreshCheckoutFlow();
     };
 
     return (
@@ -59,7 +51,7 @@ export default function CheckoutClient() {
             </p>
             <div className="space-y-3">
               <button
-                onClick={retryRestoreBuyNow}
+                onClick={retryRestore}
                 className="w-full bg-[#473C66] hover:bg-[#3a3054] text-white font-semibold py-3 px-6 rounded-lg transition"
               >
                 Retry Restore Order
@@ -290,7 +282,7 @@ export default function CheckoutClient() {
       return;
     }
     if (checkoutItems.length === 0) {
-      setError(isBuyNow ? "No Buy Now item found." : "Your cart is empty.");
+      setError(isBuyNowMode ? "No Buy Now item found." : "Your cart is empty.");
       return;
     }
     setLoading(true);
@@ -331,13 +323,13 @@ export default function CheckoutClient() {
         cartItems: itemsWithId,
         userId: user.mongoId || user.uid,
         email: form.email || user.email,
-        checkoutSource: isBuyNow ? 'buy-now' : 'cart'
+        checkoutSource: isBuyNowMode ? 'buy-now' : 'cart'
       };
 
       // Store order data in sessionStorage for fallback order creation
       const orderDataWithFlags = {
         ...orderData,
-        isBuyNow: isBuyNow,
+        isBuyNow: isBuyNowMode,
         timestamp: Date.now(), // Add timestamp for debugging
         redirectUrl: window.location.href // Add current URL for debugging
       };
@@ -350,7 +342,7 @@ export default function CheckoutClient() {
       localStorage.setItem('phonepeOrderData', JSON.stringify(orderDataWithFlags));
       
       // Store cart/buy-now items separately as backup
-      if (isBuyNow && buyNowItem) {
+      if (isBuyNowMode && buyNowItem) {
         localStorage.setItem('phonepeBuyNowItem', JSON.stringify(buyNowItem));
       } else if (cartItems.length > 0) {
         localStorage.setItem('phonepeCartItems', JSON.stringify(cartItems));
@@ -422,7 +414,7 @@ export default function CheckoutClient() {
         <Card className="w-full max-w-2xl shadow-xl border-0">
           <CardHeader className="pb-2">
             <CardTitle className="text-3xl font-bold text-[rgb(71,60,102)]">
-              Checkout {isBuyNow ? '(Buy Now)' : '(Cart)'}
+              Checkout {isBuyNowMode ? '(Buy Now)' : '(Cart)'}
             </CardTitle>
           </CardHeader>
           <Separator />
@@ -469,9 +461,9 @@ export default function CheckoutClient() {
               <Separator />
               <div>
                 <h2 className="font-semibold mb-2 text-lg text-[rgb(71,60,102)]">
-                  {isBuyNow ? 'Product Details' : 'Your Cart'}
+                  {isBuyNowMode ? 'Product Details' : 'Your Cart'}
                 </h2>
-                {isBuyNow && (
+                {isBuyNowMode && (
                   <Alert variant="default" className="mb-4">
                     <AlertDescription>
                       You are buying this item directly. Your cart items will be preserved for later. <button onClick={openCartSidebar} className="underline ml-2 hover:text-[rgb(71,60,102)]">Go to cart instead?</button>
@@ -558,7 +550,7 @@ export default function CheckoutClient() {
               <Separator />
               
               {/* Show cart items for buy now users */}
-              {isBuyNow && cartItems.length > 0 && (
+              {isBuyNowMode && cartItems.length > 0 && (
                 <div className="mb-6">
                   <h2 className="font-semibold mb-3 text-lg text-[rgb(71,60,102)]">Your Cart Items (Preserved)</h2>
                   <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">

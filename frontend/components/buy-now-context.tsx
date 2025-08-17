@@ -1,16 +1,18 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useRef } from "react";
-import { useCart } from "./cart-context";
+import { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
+import { useCart } from './cart-context';
 
 export interface BuyNowItem {
-  id: string | number;
+  id: string;
   _id: string;
   name: string;
   price: number;
   quantity: number;
   size: string;
   image: string;
+  category?: string;
+  categorySlug?: string;
 }
 
 interface BuyNowContextType {
@@ -23,7 +25,7 @@ interface BuyNowContextType {
 
 const BuyNowContext = createContext<BuyNowContextType | undefined>(undefined);
 
-export function BuyNowProvider({ children }: { children: React.ReactNode }) {
+export function BuyNowProvider({ children }: { children: ReactNode }) {
   const [buyNowItem, setBuyNowItemState] = useState<BuyNowItem | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { cartItems } = useCart();
@@ -96,6 +98,21 @@ export function BuyNowProvider({ children }: { children: React.ReactNode }) {
       sessionStorage.setItem("buyNowItem", itemData);
       localStorage.setItem("buyNowItem", itemData); // Backup in localStorage
       console.log("BuyNowProvider: Saved buy-now item to both storages");
+      
+      // Also store in checkout flow specific storage
+      const buyNowData = {
+        flow: {
+          mode: 'buy-now',
+          items: [buyNowItem],
+          source: 'buy-now',
+          timestamp: Date.now(),
+          sessionId: `buynow_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+        },
+        items: [buyNowItem],
+        timestamp: Date.now()
+      };
+      sessionStorage.setItem("buyNowCheckoutData", JSON.stringify(buyNowData));
+      localStorage.setItem("buyNowCheckoutData", JSON.stringify(buyNowData));
     } else {
       sessionStorage.removeItem("buyNowItem");
       localStorage.removeItem("buyNowItem");
@@ -123,53 +140,78 @@ export function BuyNowProvider({ children }: { children: React.ReactNode }) {
   function clearBuyNowItem() {
     console.log("BuyNowProvider: Clearing buy-now item");
     setBuyNowItemState(null);
+    
+    // Clear from all storage locations
     sessionStorage.removeItem("buyNowItem");
     localStorage.removeItem("buyNowItem");
+    sessionStorage.removeItem("buyNowCheckoutData");
+    localStorage.removeItem("buyNowCheckoutData");
+    
+    // Also clear any checkout flow data
+    sessionStorage.removeItem("checkoutFlow");
   }
 
   function restoreFromStorage() {
-    console.log("BuyNowProvider: Restoring buy-now item from storage");
-    const stored = sessionStorage.getItem("buyNowItem");
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      if (parsed && parsed._id && parsed.name) {
-        setBuyNowItemState(parsed);
-        console.log("BuyNowProvider: Restored buy-now item from sessionStorage");
-      } else {
-        console.log("BuyNowProvider: Stored buy-now item in sessionStorage is invalid, clearing");
-        sessionStorage.removeItem("buyNowItem");
-        localStorage.removeItem("buyNowItem");
-        setBuyNowItemState(null);
+    console.log("BuyNowProvider: Attempting to restore from storage");
+    setIsLoading(true);
+    
+    try {
+      // Try to restore from checkout flow data first
+      const checkoutData = sessionStorage.getItem("buyNowCheckoutData") || localStorage.getItem("buyNowCheckoutData");
+      if (checkoutData) {
+        const parsed = JSON.parse(checkoutData);
+        if (parsed.items && parsed.items.length > 0) {
+          const item = parsed.items[0];
+          if (item && item._id && item.name) {
+            console.log("BuyNowProvider: Restored from checkout flow data:", item);
+            setBuyNowItemState(item);
+            setIsLoading(false);
+            return;
+          }
+        }
       }
-    } else {
-      const stored = localStorage.getItem("buyNowItem");
+      
+      // Fallback to regular buy-now storage
+      const stored = sessionStorage.getItem("buyNowItem") || localStorage.getItem("buyNowItem");
       if (stored) {
         const parsed = JSON.parse(stored);
         if (parsed && parsed._id && parsed.name) {
+          console.log("BuyNowProvider: Restored from regular storage:", parsed);
           setBuyNowItemState(parsed);
-          console.log("BuyNowProvider: Restored buy-now item from localStorage");
         } else {
-          console.log("BuyNowProvider: Stored buy-now item in localStorage is invalid, clearing");
-          sessionStorage.removeItem("buyNowItem");
-          localStorage.removeItem("buyNowItem");
-          setBuyNowItemState(null);
+          console.log("BuyNowProvider: Stored item is invalid, clearing");
+          clearBuyNowItem();
         }
       } else {
-        console.log("BuyNowProvider: No stored buy-now item found in either storage");
-        setBuyNowItemState(null);
+        console.log("BuyNowProvider: No stored item found");
       }
+    } catch (error) {
+      console.error("BuyNowProvider: Error restoring from storage:", error);
+      clearBuyNowItem();
+    } finally {
+      setIsLoading(false);
     }
   }
 
+  const value: BuyNowContextType = {
+    buyNowItem,
+    setBuyNowItem,
+    clearBuyNowItem,
+    isLoading,
+    restoreFromStorage
+  };
+
   return (
-    <BuyNowContext.Provider value={{ buyNowItem, setBuyNowItem, clearBuyNowItem, isLoading, restoreFromStorage }}>
+    <BuyNowContext.Provider value={value}>
       {children}
     </BuyNowContext.Provider>
   );
 }
 
 export function useBuyNow() {
-  const ctx = useContext(BuyNowContext);
-  if (!ctx) throw new Error("useBuyNow must be used within a BuyNowProvider");
-  return ctx;
+  const context = useContext(BuyNowContext);
+  if (context === undefined) {
+    throw new Error('useBuyNow must be used within a BuyNowProvider');
+  }
+  return context;
 } 

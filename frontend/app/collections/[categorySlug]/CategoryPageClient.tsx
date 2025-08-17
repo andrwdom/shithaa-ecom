@@ -13,8 +13,9 @@ import SizeSelectionSidebar from "@/components/size-selection-sidebar"
 import CheckoutPromptModal from "@/components/checkout-prompt-modal"
 import ErrorBoundary from "@/components/error-boundary"
 import { safeFetch } from "@/lib/api-health"
-import { useBuyNow } from "@/components/buy-now-context"
-import { useCart } from "@/components/cart-context"                                                                                                                       
+import { useBuyNow } from "@/components/buy-now-context";
+import { useCart } from "@/components/cart-context";
+import { useCheckoutFlow } from "@/components/checkout-flow-manager";
 import { useRouter, useSearchParams } from "next/navigation"
 import WishlistButton from "@/components/WishlistButton"
 
@@ -57,6 +58,7 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
   const [selectedSize, setSelectedSize] = useState<string>("")
   const { setBuyNowItem } = useBuyNow()
   const { addToCart, openCartSidebar } = useCart()
+  const { setCheckoutFlow } = useCheckoutFlow();
 
   // Available sizes for filtering (removed XS)
   const AVAILABLE_SIZES = ["S", "M", "L", "XL", "XXL", "3XL"]
@@ -301,7 +303,7 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
   };
 
   const handleSizeSelectionBuyNow = (product: any, size: string, quantity: number) => {
-    setBuyNowItem({
+    const buyNowItem = {
       id: product.customId || product._id, // Use customId for routing  
       _id: product._id, // Keep MongoDB ID for internal operations
       name: product.name,
@@ -309,13 +311,16 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
       quantity,
       size,
       image: product.image,
-    });
-    // Cart items are preserved and will be available after checkout completion
-    window.location.href = "/checkout?mode=buynow";
+    };
+    
+    setBuyNowItem(buyNowItem);
+    
+    // Navigate to checkout using the checkout flow manager
+    setCheckoutFlow('buy-now');
   };
 
   const handleCheckout = () => {
-    window.location.href = "/checkout";
+    setCheckoutFlow('cart');
   }
 
   // Check if any filters are active
