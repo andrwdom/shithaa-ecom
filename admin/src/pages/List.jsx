@@ -90,22 +90,22 @@ const ProductCard = ({ product, onEdit, onDelete, isDragging, onDragStart, onDra
       onDrop={(e) => onDrop(e, product)}
       onDragEnd={onDragEnd}
     >
-      {/* Product Image */}
-      <div className="relative aspect-[4/5] bg-gray-50">
-        {/* Drag Handle */}
+              {/* Product Image */}
+        <div className="relative aspect-[4/5] bg-gray-50">
+          {/* Drag Handle */}
         <div className="absolute top-2 left-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-          <div className="bg-blue-600 text-white rounded-full p-1.5 cursor-grab active:cursor-grabbing shadow-lg">
-            <GripVertical className="h-3 w-3" />
+            <div className="bg-blue-600 text-white rounded-full p-1.5 cursor-grab active:cursor-grabbing shadow-lg">
+              <GripVertical className="h-3 w-3" />
+            </div>
           </div>
-        </div>
+          
+          <img
+            src={product.images?.[0] || '/placeholder.svg'}
+            alt={product.name}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            loading="lazy"
+          />
         
-        <img
-          src={product.images?.[0] || '/placeholder.svg'}
-          alt={product.name}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          loading="lazy"
-        />
-      
         {/* Quick Stock Status */}
         <div className="absolute top-2 right-2">
           {stockInfo.status === 'out' && (
@@ -126,35 +126,35 @@ const ProductCard = ({ product, onEdit, onDelete, isDragging, onDragStart, onDra
             <img
               src={product.images[1]}
               alt={product.name}
-              className="w-full h-full object-cover"
-              loading="lazy"
-            />
-          </div>
+            className="w-full h-full object-cover"
+            loading="lazy"
+          />
+        </div>
         )}
       </div>
 
       {/* Product Info */}
-      <div className="p-5">
+      <div className="p-4">
         {/* Product Name */}
-        <h3 className="font-medium text-gray-900 text-sm line-clamp-2 mb-3 min-h-[2.5rem]">
+        <h3 className="font-medium text-gray-900 text-sm line-clamp-2 mb-2 min-h-[2.5rem]">
           {product.name}
         </h3>
 
         {/* Category */}
-        <p className="text-xs text-gray-600 mb-3 bg-gray-50 px-3 py-1.5 rounded-md inline-block">
+        <p className="text-xs text-gray-600 mb-3 bg-gray-50 px-2 py-1 rounded-md inline-block">
           {product.category || 'Uncategorized'}
         </p>
 
         {/* Size & Stock Info */}
-        <div className="flex flex-wrap gap-2 mb-4">
-          {product.sizes?.slice(0, 4).map((sizeObj, index) => {
+        <div className="flex flex-wrap gap-1 mb-3">
+          {product.sizes?.slice(0, 3).map((sizeObj, index) => {
             const size = typeof sizeObj === 'object' ? sizeObj.size : sizeObj
             const stock = typeof sizeObj === 'object' ? sizeObj.stock || 0 : 0
             return <StockBadge key={index} size={size} stock={stock} />
           })}
-          {product.sizes?.length > 4 && (
+          {product.sizes?.length > 3 && (
             <span className="text-xs text-gray-400 px-2 py-1">
-              +{product.sizes.length - 4} more
+              +{product.sizes.length - 3} more
             </span>
           )}
         </div>
@@ -169,8 +169,8 @@ const ProductCard = ({ product, onEdit, onDelete, isDragging, onDragStart, onDra
               <span className="text-sm text-gray-400 line-through">
                 {currency}{product.originalPrice}
               </span>
-            )}
-          </div>
+          )}
+        </div>
 
           {/* Stock Status Icon */}
           <div className="flex items-center">
@@ -242,51 +242,51 @@ const ProductTableRow = ({ product, onEdit, onDelete, isDragging, onDragStart, o
       onDragEnd={onDragEnd}
     >
       {/* Drag Handle Column */}
-      <td className="px-3 py-3 w-6">
+      <td className="px-4 py-3 w-8">
         <div className="flex items-center justify-center">
           <div className="bg-blue-600 text-white rounded-full p-1 cursor-grab active:cursor-grabbing shadow-sm hover:shadow-md transition-all duration-200 opacity-0 group-hover:opacity-100">
-            <GripVertical className="h-3 w-3" />
+              <GripVertical className="h-3 w-3" />
+            </div>
           </div>
-        </div>
       </td>
-
-      {/* Left Section: Product Info (expanded to use more space) */}
-      <td className="px-4 py-3 w-1/2">
-        <div className="flex items-start space-x-4">
+          
+      {/* Left Section: Product Info (40%) */}
+      <td className="px-4 py-3 w-2/5">
+        <div className="flex items-start space-x-3">
           <div className="flex-shrink-0">
-            <img
-              src={product.images?.[0] || '/placeholder.svg'}
-              alt={product.name}
-              className="w-20 h-24 object-cover rounded-lg border border-gray-200"
-            />
+          <img
+            src={product.images?.[0] || '/placeholder.svg'}
+            alt={product.name}
+              className="w-14 h-18 object-cover rounded-lg border border-gray-200"
+          />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center space-x-2 mb-2">
+            <div className="flex items-center space-x-2 mb-1">
               <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
                 {product.customId}
-              </span>
+        </span>
               {product.bestseller && (
                 <span className="text-xs font-medium text-amber-700 bg-amber-100 px-2 py-1 rounded-full">
                   Bestseller
-                </span>
-              )}
+            </span>
+          )}
             </div>
-            <h3 className="text-sm font-medium text-gray-900 truncate max-w-md mb-2" title={product.name}>
+            <h3 className="text-sm font-medium text-gray-900 truncate max-w-xs" title={product.name}>
               {product.name}
             </h3>
-            <p className="text-xs text-gray-500 line-clamp-2 max-w-md">
+            <p className="text-xs text-gray-500 mt-1 line-clamp-2 max-w-xs">
               {product.description}
             </p>
           </div>
         </div>
       </td>
 
-      {/* Right Section: Details & Actions (expanded to use more space) */}
-      <td className="px-4 py-3 w-1/2">
-        <div className="space-y-4">
-          {/* Line 1: Category, Price, and Sleeve Type - Better distributed */}
-          <div className="grid grid-cols-3 gap-6 items-center">
-            <div>
+      {/* Right Section: Details & Actions (60%) */}
+      <td className="px-4 py-3 w-3/5">
+        <div className="space-y-3">
+          {/* Line 1: Category, Price, and Sleeve Type */}
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
               <div className="text-sm text-gray-900 font-medium">
                 {product.category}
               </div>
@@ -296,32 +296,27 @@ const ProductTableRow = ({ product, onEdit, onDelete, isDragging, onDragStart, o
                 </div>
               )}
             </div>
-            <div className="text-center">
-              <div className="text-lg font-bold text-gray-900">
-                ₹{product.price}
-              </div>
-            </div>
             <div className="text-right">
-              <div className="text-xs text-gray-500">
-                Total Stock: {totalStock}
+              <div className="text-sm font-semibold text-gray-900">
+                ₹{product.price}
               </div>
             </div>
           </div>
 
-          {/* Line 2: Stock Badges + Actions - Better spaced */}
+          {/* Line 2: Stock Badges + Actions */}
           <div className="flex items-center justify-between">
-            {/* Stock Badges - Horizontal Row with more space */}
+            {/* Stock Badges - Horizontal Row */}
             <div className="flex-1">
-              <div className="flex flex-wrap gap-3">
-                {product.sizes?.slice(0, 8).map((sizeObj) => {
-                  const size = typeof sizeObj === 'object' ? sizeObj.size : sizeObj
+              <div className="flex flex-wrap gap-2">
+                {product.sizes?.slice(0, 6).map((sizeObj) => {
+            const size = typeof sizeObj === 'object' ? sizeObj.size : sizeObj
                   const stock = typeof sizeObj === 'object' ? sizeObj.stock : 0
                   const stockInfo = getStockStatus(stock)
                   
                   return (
                     <span
                       key={size}
-                      className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium ${
+                      className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                         stockInfo.status === 'out' 
                           ? 'bg-red-50 text-red-700 border border-red-200' 
                           : stockInfo.status === 'low'
@@ -333,57 +328,57 @@ const ProductTableRow = ({ product, onEdit, onDelete, isDragging, onDragStart, o
                     </span>
                   )
                 })}
-                {product.sizes && product.sizes.length > 8 && (
+                {product.sizes && product.sizes.length > 6 && (
                   <span className="text-xs text-gray-500 px-2 py-1">
-                    +{product.sizes.length - 8} more
+                    +{product.sizes.length - 6} more
                   </span>
                 )}
-              </div>
+        </div>
             </div>
 
-            {/* Actions - Horizontal Row, Right-Aligned with better spacing */}
-            <div className="flex items-center space-x-3 ml-6">
+            {/* Actions - Horizontal Row, Right-Aligned */}
+            <div className="flex items-center space-x-2 ml-4">
               {/* Edit Button */}
-              <button
-                onClick={() => onEdit(product)}
-                className="p-2.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors duration-200"
-                title="Edit Product"
-              >
-                <Edit className="h-4 w-4" />
-              </button>
+          <button
+            onClick={() => onEdit(product)}
+                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors duration-200"
+            title="Edit Product"
+          >
+            <Edit className="h-4 w-4" />
+          </button>
               
               {/* Delete Button */}
-              <button
-                onClick={() => onDelete(product._id)}
-                className="p-2.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
-                title="Delete Product"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-
+          <button
+            onClick={() => onDelete(product._id)}
+                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
+            title="Delete Product"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+          
               {/* Reorder Actions Dropdown */}
               <div className="relative">
                 <button
-                  className="p-2.5 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors duration-200"
+                  className="p-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors duration-200"
                   title="Reorder Options"
                 >
                   <GripVertical className="h-4 w-4" />
                 </button>
-                <div className="absolute right-0 top-full mt-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
-                  <button
-                    onClick={() => onMoveTop(product._id)}
+                <div className="absolute right-0 top-full mt-1 w-36 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
+            <button
+              onClick={() => onMoveTop(product._id)}
                     className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 rounded-t-lg transition-colors duration-200 flex items-center space-x-2"
-                  >
+            >
                     <ChevronUp className="h-4 w-4" />
                     <span>Move to Top</span>
-                  </button>
-                  <button
-                    onClick={() => onMoveBottom(product._id)}
+            </button>
+            <button
+              onClick={() => onMoveBottom(product._id)}
                     className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 rounded-b-lg transition-colors duration-200 flex items-center space-x-2"
-                  >
+            >
                     <ChevronDown className="h-4 w-4" />
                     <span>Move to Bottom</span>
-                  </button>
+            </button>
                 </div>
               </div>
             </div>
@@ -1090,7 +1085,7 @@ const List = ({ token }) => {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="w-full px-6 lg:px-8 xl:px-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 py-8">
             <div className="space-y-2">
               <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
@@ -1159,7 +1154,7 @@ const List = ({ token }) => {
 
         {/* Category Tabs */}
         <div className="border-t border-gray-200 bg-gray-50">
-          <div className="w-full px-6 lg:px-8 xl:px-12">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center gap-3 py-4 overflow-x-auto">
               <button
                 onClick={() => setSelectedCategory('all')}
@@ -1224,13 +1219,13 @@ const List = ({ token }) => {
 
       {/* Filters - Desktop */}
       <div className="hidden lg:block bg-gray-50 border-b border-gray-200">
-        <div className="w-full px-6 lg:px-8 xl:px-12 py-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="space-y-6">
             {/* Search and Basic Filters */}
-                         <FilterSection title="Search & Basic Filters" icon={Search}>
-               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                 {/* Search */}
-                 <div className="lg:col-span-2 xl:col-span-1">
+            <FilterSection title="Search & Basic Filters" icon={Search}>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Search */}
+        <div className="lg:col-span-2">
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Search Products</label>
               <div className="relative">
                     <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -1280,9 +1275,9 @@ const List = ({ token }) => {
               </div>
             </FilterSection>
       
-                         {/* Advanced Filters */}
-             <FilterSection title="Advanced Filters" icon={Settings}>
-               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {/* Advanced Filters */}
+            <FilterSection title="Advanced Filters" icon={Settings}>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* Stock Filter */}
       <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Stock Status</label>
@@ -1393,7 +1388,7 @@ const List = ({ token }) => {
       </div>
 
         {/* Main Content */}
-      <div className="w-full px-6 lg:px-8 xl:px-12 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Drag & Drop Indicator */}
         {isDragging && (
           <div className="mb-6 p-6 bg-blue-600 text-white rounded-xl shadow-xl">
@@ -1420,7 +1415,7 @@ const List = ({ token }) => {
           {loading ? (
           /* Loading State */
           <div className={viewMode === 'card' 
-            ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-7 2xl:grid-cols-9 gap-4 xl:gap-6"
+            ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 xl:gap-6"
             : "space-y-4"
           }>
             {Array.from({ length: PRODUCTS_PER_PAGE }).map((_, index) => (
@@ -1441,13 +1436,13 @@ const List = ({ token }) => {
           ) : (
           /* Products Display */
             <>
-                          {viewMode === 'card' ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-7 2xl:grid-cols-9 gap-4 xl:gap-6">
+              {viewMode === 'card' ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 xl:gap-6">
                 {products.map((product) => (
-                  <ProductCard
+                    <ProductCard
                     key={product._id}
                     product={product}
-                    onEdit={setEditingProduct}
+                      onEdit={setEditingProduct}
                     onDelete={handleDeleteProduct}
                     isDragging={draggedProduct?._id === product._id}
                     onDragStart={handleDragStart}
@@ -1456,46 +1451,46 @@ const List = ({ token }) => {
                     onDragEnd={handleDragEnd}
                     onMoveTop={(productId) => handleMoveProduct(productId, 'top')}
                     onMoveBottom={(productId) => handleMoveProduct(productId, 'bottom')}
-                  />
-                ))}
-              </div>
+                    />
+                  ))}
+                </div>
               ) : (
               <>
                                         {/* Desktop Table View */}
-        <div className="hidden lg:block bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm w-full">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                                        <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-6">
-                          {/* Drag handle column */}
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-1/2">
-                          Product Information
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-1/2">
-                          Details & Actions
-                        </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+        <div className="hidden lg:block bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-8">
+                            {/* Drag handle column */}
+                          </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-2/5">
+                  Product Information
+                          </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-3/5">
+                  Details & Actions
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
               {products.map((product, index) => (
-                <ProductTableRow
-                  key={product._id}
-                  product={product}
-                  onEdit={setEditingProduct}
-                  onDelete={handleDeleteProduct}
-                  isDragging={draggedProduct?._id === product._id}
-                  onDragStart={handleDragStart}
-                  onDragOver={handleDragOver}
-                  onDrop={handleDrop}
-                  onDragEnd={handleDragEnd}
-                  onMoveTop={(productId) => handleMoveProduct(productId, 'top')}
-                  onMoveBottom={(productId) => handleMoveProduct(productId, 'bottom')}
-                />
-              ))}
-            </tbody>
-          </table>
-        </div>
+                      <ProductTableRow
+                        key={product._id}
+                        product={product}
+                        onEdit={setEditingProduct}
+                        onDelete={handleDeleteProduct}
+                        isDragging={draggedProduct?._id === product._id}
+                        onDragStart={handleDragStart}
+                        onDragOver={handleDragOver}
+                        onDrop={handleDrop}
+                        onDragEnd={handleDragEnd}
+                        onMoveTop={(productId) => handleMoveProduct(productId, 'top')}
+                        onMoveBottom={(productId) => handleMoveProduct(productId, 'bottom')}
+                      />
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
 
                 {/* Mobile List View */}
                 <div className="lg:hidden space-y-4">
