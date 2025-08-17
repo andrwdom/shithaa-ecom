@@ -27,13 +27,13 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
   console.log("Navbar - Is menu open:", isMenuOpen)
   console.log("Navbar - Login modal open:", isLoginModalOpen)
 
-  // Attempt to restore cart when navbar mounts (as a fallback)
-  useEffect(() => {
-    if (cartItems.length === 0) {
-      console.log("Navbar: Cart is empty, attempting restoration")
-      restoreCartFromStorage()
-    }
-  }, [cartItems.length, restoreCartFromStorage])
+  // Cart restoration is now handled by CartProvider context - removed to prevent conflicts
+  // useEffect(() => {
+  //   if (cartItems.length === 0) {
+  //     console.log("Navbar: Cart is empty, attempting restoration")
+  //     restoreCartFromStorage()
+  //   }
+  // }, [cartItems.length, restoreCartFromStorage])
 
   const handleAccountClick = () => {
     console.log("Account button clicked, user:", user)
