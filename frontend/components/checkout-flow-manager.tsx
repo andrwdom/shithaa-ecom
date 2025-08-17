@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCart } from './cart-context';
 import { useBuyNow } from './buy-now-context';
@@ -39,7 +39,8 @@ interface CheckoutFlowContextType {
 
 const CheckoutFlowContext = createContext<CheckoutFlowContextType | undefined>(undefined);
 
-export function CheckoutFlowProvider({ children }: { children: ReactNode }) {
+// Inner component that uses useSearchParams
+function CheckoutFlowProviderInner({ children }: { children: ReactNode }) {
   const [currentFlow, setCurrentFlow] = useState<CheckoutFlow | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   
@@ -57,7 +58,7 @@ export function CheckoutFlowProvider({ children }: { children: ReactNode }) {
       setIsLoading(true);
       
       try {
-        const urlMode = searchParams.get('mode');
+        const urlMode = searchParams?.get('mode');
         const isBuyNowRequested = urlMode === 'buynow';
         
         // Check if we have a stored flow that matches the current request
@@ -231,7 +232,7 @@ export function CheckoutFlowProvider({ children }: { children: ReactNode }) {
     // Force re-initialization of the flow
     setIsLoading(true);
     setTimeout(() => {
-      const urlMode = searchParams.get('mode');
+      const urlMode = searchParams?.get('mode');
       if (urlMode === 'buynow' && buyNowItem) {
         setCheckoutFlow('buy-now');
       } else if (cartItems.length > 0) {
@@ -262,6 +263,17 @@ export function CheckoutFlowProvider({ children }: { children: ReactNode }) {
     <CheckoutFlowContext.Provider value={value}>
       {children}
     </CheckoutFlowContext.Provider>
+  );
+}
+
+// Main provider component with Suspense boundary
+export function CheckoutFlowProvider({ children }: { children: ReactNode }) {
+  return (
+    <Suspense fallback={<div>Loading checkout...</div>}>
+      <CheckoutFlowProviderInner>
+        {children}
+      </CheckoutFlowProviderInner>
+    </Suspense>
   );
 }
 
