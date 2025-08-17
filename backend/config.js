@@ -27,6 +27,16 @@ export const config = {
   maxFileSize: parseInt(process.env.MAX_FILE_SIZE) || 104857600, // 100MB in bytes
   uploadPath: process.env.UPLOAD_PATH || './uploads',
   
+  // Image Optimization Configuration
+  imageOptimization: {
+    quality: parseInt(process.env.IMAGE_QUALITY) || 80, // Reduce from default 90 for faster processing
+    maxWidth: parseInt(process.env.IMAGE_MAX_WIDTH) || 800, // Reduce max dimensions
+    maxHeight: parseInt(process.env.IMAGE_MAX_HEIGHT) || 800,
+    variants: process.env.IMAGE_VARIANTS ? process.env.IMAGE_VARIANTS.split(',') : ['original', 'webp'], // Reduce variants
+    skipOptimization: process.env.SKIP_IMAGE_OPTIMIZATION === 'true' || false,
+    compressionLevel: parseInt(process.env.IMAGE_COMPRESSION_LEVEL) || 6 // WebP compression level (0-6, lower = faster)
+  },
+  
   // CORS Configuration
   corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:3000',
   

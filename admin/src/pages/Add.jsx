@@ -4,6 +4,17 @@ import axios from 'axios'
 import { backendUrl } from '../App'
 import { toast } from 'react-toastify'
 
+/**
+ * Add Product Component with Image Optimization
+ * 
+ * Features:
+ * - Automatic image compression for files > 500KB
+ * - Real-time upload progress tracking
+ * - File size display for each image
+ * - Optimized for faster product uploads
+ * - Maintains image quality while reducing file size
+ */
+
 const Add = ({token}) => {
 
   const [image1,setImage1] = useState(false)
@@ -38,9 +49,72 @@ const Add = ({token}) => {
    const SLEEVE_TYPE_OPTIONS = ["Puff Sleeve", "Normal Sleeve"];
 
    const [loading, setLoading] = useState(false)
+   const [uploadProgress, setUploadProgress] = useState(0)
 
    // Helper: all possible sizes
    const ALL_SIZES = ["S", "M", "L", "XL", "XXL"];
+
+   // Image compression function
+   const compressImage = (file) => {
+     return new Promise((resolve) => {
+       const canvas = document.createElement('canvas');
+       const ctx = canvas.getContext('2d');
+       const img = new Image();
+       
+       img.onload = () => {
+         // Calculate new dimensions (max 800px width/height)
+         const maxWidth = 800;
+         const maxHeight = 800;
+         let { width, height } = img;
+         
+         if (width > height) {
+           if (width > maxWidth) {
+             height = (height * maxWidth) / width;
+             width = maxWidth;
+           }
+         } else {
+           if (height > maxHeight) {
+             width = (width * maxHeight) / height;
+             height = maxHeight;
+           }
+         }
+         
+         canvas.width = width;
+         canvas.height = height;
+         ctx.drawImage(img, 0, 0, width, height);
+         
+         canvas.toBlob((blob) => {
+           resolve(new File([blob], file.name, { type: 'image/jpeg' }));
+         }, 'image/jpeg', 0.8);
+       };
+       
+       img.src = URL.createObjectURL(file);
+     });
+   };
+
+   // Handle image selection with compression
+   const handleImageChange = async (e, setImageFunction) => {
+     const file = e.target.files[0];
+     if (file) {
+       try {
+         // Show compression message
+         toast.info("Compressing image...");
+         
+         // Compress image if it's larger than 500KB
+         if (file.size > 500 * 1024) {
+           const compressedFile = await compressImage(file);
+           setImageFunction(compressedFile);
+           toast.success(`Image compressed from ${(file.size / 1024).toFixed(1)}KB to ${(compressedFile.size / 1024).toFixed(1)}KB`);
+         } else {
+           setImageFunction(file);
+         }
+       } catch (error) {
+         console.error('Image compression failed:', error);
+         setImageFunction(file); // Fallback to original file
+         toast.warn("Image compression failed, using original file");
+       }
+     }
+   };
 
    useEffect(() => {
      // Fetch categories from backend
@@ -178,6 +252,7 @@ const Add = ({token}) => {
     }
 
     setLoading(true);
+    setUploadProgress(0);
     try {
       const formData = new FormData()
       formData.append("customId", customId)
@@ -225,7 +300,15 @@ const Add = ({token}) => {
       const response = await axios.post(
         backendUrl + "/api/products",
         formData,
-        { headers: { token } }
+        { 
+          headers: { token },
+          onUploadProgress: (progressEvent) => {
+            const percentCompleted = Math.round(
+              (progressEvent.loaded * 100) / progressEvent.total
+            );
+            setUploadProgress(percentCompleted);
+          }
+        }
       )
       if (response.status === 201 || response.data.success) {
         toast.success("Product added successfully!")
@@ -272,6 +355,7 @@ const Add = ({token}) => {
       }
     }
     setLoading(false);
+    setUploadProgress(0);
    }
 
   return (
@@ -281,21 +365,41 @@ const Add = ({token}) => {
         <div>
           <p className='mb-2'>Upload Image</p>
           <div className='flex gap-2'>
-            <label htmlFor="image1">
+            <label htmlFor="image1" className="relative">
               <img className='w-20' src={!image1 ? assets.upload_area : URL.createObjectURL(image1)} alt="" />
-              <input onChange={(e)=>setImage1(e.target.files[0])} type="file" id="image1" hidden/>
+              <input onChange={(e)=>handleImageChange(e, setImage1)} type="file" id="image1" hidden/>
+              {image1 && (
+                <div className="absolute -bottom-6 left-0 text-xs text-gray-600 bg-white px-1 rounded">
+                  {(image1.size / 1024).toFixed(1)}KB
+                </div>
+              )}
             </label>
-            <label htmlFor="image2">
+            <label htmlFor="image2" className="relative">
               <img className='w-20' src={!image2 ? assets.upload_area : URL.createObjectURL(image2)} alt="" />
-              <input onChange={(e)=>setImage2(e.target.files[0])} type="file" id="image2" hidden/>
+              <input onChange={(e)=>handleImageChange(e, setImage2)} type="file" id="image2" hidden/>
+              {image2 && (
+                <div className="absolute -bottom-6 left-0 text-xs text-gray-600 bg-white px-1 rounded">
+                  {(image2.size / 1024).toFixed(1)}KB
+                </div>
+              )}
             </label>
-            <label htmlFor="image3">
+            <label htmlFor="image3" className="relative">
               <img className='w-20' src={!image3 ? assets.upload_area : URL.createObjectURL(image3)} alt="" />
-              <input onChange={(e)=>setImage3(e.target.files[0])} type="file" id="image3" hidden/>
+              <input onChange={(e)=>handleImageChange(e, setImage3)} type="file" id="image3" hidden/>
+              {image3 && (
+                <div className="absolute -bottom-6 left-0 text-xs text-gray-600 bg-white px-1 rounded">
+                  {(image3.size / 1024).toFixed(1)}KB
+                </div>
+              )}
             </label>
-            <label htmlFor="image4">
+            <label htmlFor="image4" className="relative">
               <img className='w-20' src={!image4 ? assets.upload_area : URL.createObjectURL(image4)} alt="" />
-              <input onChange={(e)=>setImage4(e.target.files[0])} type="file" id="image4" hidden/>
+              <input onChange={(e)=>handleImageChange(e, setImage4)} type="file" id="image4" hidden/>
+              {image4 && (
+                <div className="absolute -bottom-6 left-0 text-xs text-gray-600 bg-white px-1 rounded">
+                  {(image4.size / 1024).toFixed(1)}KB
+                </div>
+              )}
             </label>
           </div>
         </div>
@@ -399,6 +503,22 @@ const Add = ({token}) => {
           <input onChange={() => setBestseller(prev => !prev)} checked={bestseller} type="checkbox" id='bestseller' />
           <label className='cursor-pointer' htmlFor="bestseller">Add to bestseller</label>
         </div>
+
+        {/* Upload Progress Bar */}
+        {loading && uploadProgress > 0 && (
+          <div className='w-full max-w-[500px] mt-4'>
+            <div className='flex justify-between text-sm text-gray-600 mb-2'>
+              <span>Uploading...</span>
+              <span>{uploadProgress}%</span>
+            </div>
+            <div className='w-full bg-gray-200 rounded-full h-2'>
+              <div 
+                className='bg-[#4D1E64] h-2 rounded-full transition-all duration-300 ease-out'
+                style={{ width: `${uploadProgress}%` }}
+              ></div>
+            </div>
+          </div>
+        )}
 
         <button type="submit" className={`w-28 py-3 mt-4 bg-[#4D1E64] hover:bg-[#3a164d] transition-colors px-5 rounded-xl text-white flex items-center justify-center gap-2 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={loading}>
           {loading && (
