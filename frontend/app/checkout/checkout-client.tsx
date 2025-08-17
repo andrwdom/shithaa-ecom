@@ -15,88 +15,174 @@ import { useBuyNow } from "@/components/buy-now-context";
 import { useCheckoutFlow } from "@/components/checkout-flow-manager";
 import { getIdToken } from "firebase/auth";
 import { Gift } from "lucide-react";
+import Link from "next/link";
 
 export default function CheckoutClient() {
   const { cartItems, clearCart, cartTotal, offerDetails, openCartSidebar } = useCart();
-  const { buyNowItem, clearBuyNowItem, isLoading: buyNowLoading, restoreFromStorage } = useBuyNow();
-  const { currentFlow, isBuyNowMode, isCartMode, checkoutItems, totalAmount, isLoading: flowLoading, refreshCheckoutFlow } = useCheckoutFlow();
-  const searchParams = useSearchParams();
+  const { buyNowItem, clearBuyNowItem } = useBuyNow();
+  const { checkoutItems, isLoading, retryRestoreCart, isBuyNowMode, isCartMode } = useCheckoutFlow();
   
-  // Show loading state while checkout flow is loading
-  if (flowLoading || (searchParams.get("mode") === "buynow" && buyNowLoading)) {
+  const [form, setForm] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    address1: '',
+    address2: '',
+    city: '',
+    state: '',
+    pincode: '',
+    country: 'India',
+    paymentMethod: 'Online'
+  });
+  
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [token, setToken] = useState<string | null>(null);
+  const [user, setUser] = useState<any>(null);
+
+  // Calculate total from checkout items
+  const total = checkoutItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const userData = localStorage.getItem('user');
+    
+    if (token) {
+      setToken(token);
+    }
+    
+    if (userData) {
+      try {
+        const user = JSON.parse(userData);
+        setUser(user);
+        
+        // Pre-fill form with user data
+        setForm(prev => ({
+          ...prev,
+          firstName: user.displayName?.split(' ')[0] || '',
+          lastName: user.displayName?.split(' ').slice(1).join(' ') || '',
+          email: user.email || ''
+        }));
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+      }
+    }
+  }, []);
+
+  // Show loading state while checkout flow is initializing
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-[#473C66] mx-auto"></div>
-          <p className="text-lg text-gray-600">Loading your order...</p>
+          <p className="mt-4 text-lg text-gray-600">Loading checkout...</p>
         </div>
       </div>
     );
   }
-  
-  // Show error if no valid checkout flow
-  if (!currentFlow || checkoutItems.length === 0) {
-    const retryRestore = () => {
-      refreshCheckoutFlow();
-    };
 
+  // Show error state when no items are found
+  if (checkoutItems.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="max-w-md mx-auto text-center">
-          <div className="bg-white rounded-xl shadow-lg p-8">
-            <div className="text-red-500 text-6xl mb-4">⚠️</div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-4">Order Not Found</h1>
-            <p className="text-gray-600 mb-6">
-              It looks like your order details couldn't be restored. This might happen if you refreshed the page or cleared your browser data.
-            </p>
-            <div className="space-y-3">
-              <button
-                onClick={retryRestore}
-                className="w-full bg-[#473C66] hover:bg-[#3a3054] text-white font-semibold py-3 px-6 rounded-lg transition"
-              >
-                Retry Restore Order
+      <div className="min-h-screen bg-gray-50 py-8 px-4">
+        <div className="max-w-2xl mx-auto">
+          {/* Checkout Progress */}
+          <div className="mb-8">
+            <div className="flex items-center justify-center space-x-4 mb-4">
+              <div className="flex items-center">
+                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                  <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                  </svg>
+                </div>
+                <span className="ml-2 text-sm font-medium text-gray-500">Cart</span>
+              </div>
+              <div className="flex-1 h-0.5 bg-gray-200"></div>
+              <div className="flex items-center">
+                <div className="w-10 h-10 bg-[#473C66] rounded-full flex items-center justify-center">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <span className="ml-2 text-sm font-medium text-[#473C66]">Checkout</span>
+              </div>
+              <div className="flex-1 h-0.5 bg-gray-200"></div>
+              <div className="flex items-center">
+                <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
+                  <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                  </svg>
+                </div>
+                <span className="ml-2 text-sm font-medium text-gray-400">Payment</span>
+              </div>
+              <div className="flex-1 h-0.5 bg-gray-200"></div>
+              <div className="flex items-center">
+                <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
+                  <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <span className="ml-2 text-sm font-medium text-gray-400">Complete</span>
+              </div>
+            </div>
+            <div className="text-center">
+              <button className="bg-[#473C66] text-white px-6 py-2 rounded-lg font-semibold">
+                Step 2 of 4: Checkout
               </button>
-              <button
-                onClick={() => window.location.href = "/"}
-                className="w-full border border-gray-300 text-gray-700 font-semibold py-3 px-6 rounded-lg hover:bg-gray-50 transition"
-              >
-                Continue Shopping
-              </button>
-              <button
-                onClick={() => window.history.back()}
-                className="w-full border border-gray-300 text-gray-700 font-semibold py-3 px-6 rounded-lg hover:bg-gray-50 transition"
-              >
-                Go Back
-              </button>
+            </div>
+          </div>
+
+          {/* No Items Found */}
+          <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+            <div className="p-8 text-center">
+              <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-10 h-10 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+              </div>
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">No Items Found</h1>
+              <p className="text-gray-600 mb-6">
+                It looks like your cart is empty or the items couldn't be restored. This might happen if you refreshed the page or cleared your browser data.
+              </p>
+              
+              <div className="space-y-3">
+                <button
+                  onClick={retryRestoreCart}
+                  className="w-full bg-[#473C66] hover:bg-[#473C66]/90 text-white py-3 px-6 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Retry Restore Cart
+                </button>
+                
+                <Link
+                  href="/"
+                  className="w-full bg-gray-800 hover:bg-gray-700 text-white py-3 px-6 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                  </svg>
+                  Continue Shopping
+                </Link>
+                
+                <button
+                  onClick={openCartSidebar}
+                  className="w-full bg-white border-2 border-[#473C66] text-[#473C66] hover:bg-[#473C66] hover:text-white py-3 px-6 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                  </svg>
+                  View Cart
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </div>
     );
   }
-  const [form, setForm] = useState({
-    firstName: "",
-    lastName: "",
-    phone: "",
-    email: "",
-    street: "",
-    address: "",
-    address1: "",
-    address2: "",
-    line1: "",
-    line2: "",
-    city: "",
-    state: "",
-    country: "",
-    zipcode: "",
-    pincode: "",
-    zip: "",
-    paymentMethod: "Online",
-  });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
   const [showLogin, setShowLogin] = useState(false);
   const [coupon, setCoupon] = useState<string>("");
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discountPercentage: number } | null>(null);
@@ -155,7 +241,7 @@ export default function CheckoutClient() {
   // Calculate discounted total using cartTotal from context
   const subtotal = cartTotal || checkoutItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const discount = appliedCoupon ? Math.round((subtotal * appliedCoupon.discountPercentage) / 100) : 0;
-  const total = subtotal - discount;
+  const finalTotal = subtotal - discount;
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -271,11 +357,11 @@ export default function CheckoutClient() {
       !form.firstName ||
       !form.lastName ||
       !form.phone ||
-      !form.street ||
+      !form.address1 ||
       !form.city ||
       !form.state ||
       !form.country ||
-      !form.zipcode ||
+      !form.pincode ||
       !(form.email || user?.email)
     ) {
       setError("Please fill all required fields, including email.");
@@ -308,16 +394,16 @@ export default function CheckoutClient() {
 
       // Prepare order data for payment processing
       const orderData = {
-        amount: total,
+        amount: finalTotal,
         shipping: {
           fullName: `${form.firstName} ${form.lastName}`,
           email: form.email || user.email,
           phone: form.phone,
-          addressLine1: form.address1 || form.street || "",
+          addressLine1: form.address1 || "",
           addressLine2: form.address2 || "",
           city: form.city,
           state: form.state,
-          postalCode: form.pincode || form.zipcode || "",
+          postalCode: form.pincode || "",
           country: form.country || "India"
         },
         cartItems: itemsWithId,
@@ -428,8 +514,8 @@ export default function CheckoutClient() {
                   <Input id="email" name="email" value={form.email} onChange={handleChange} autoComplete="email" disabled={!!user} />
                 </div>
                 <div className="md:col-span-2">
-                  <Label htmlFor="street">Street Address</Label>
-                  <Input id="street" name="street" value={form.street} onChange={handleChange} required autoComplete="street-address" />
+                  <Label htmlFor="address1">Street Address</Label>
+                  <Input id="address1" name="address1" value={form.address1} onChange={handleChange} required autoComplete="street-address" />
                 </div>
                 <div>
                   <Label htmlFor="city">City</Label>
@@ -444,8 +530,8 @@ export default function CheckoutClient() {
                   <Input id="country" name="country" value={form.country} onChange={handleChange} required autoComplete="country" />
                 </div>
                 <div>
-                  <Label htmlFor="zipcode">Zipcode</Label>
-                  <Input id="zipcode" name="zipcode" value={form.zipcode} onChange={handleChange} required autoComplete="postal-code" />
+                  <Label htmlFor="pincode">Pincode</Label>
+                  <Input id="pincode" name="pincode" value={form.pincode} onChange={handleChange} required autoComplete="postal-code" />
                 </div>
               </div>
               <Separator />
@@ -535,7 +621,7 @@ export default function CheckoutClient() {
                   <div className="text-right text-green-700 font-semibold mt-2">Coupon Discount: -₹{discount}</div>
                 )}
                 
-                <div className="text-right font-bold mt-4 text-xl text-[rgb(71,60,102)]">Total: ₹{total}</div>
+                <div className="text-right font-bold mt-4 text-xl text-[rgb(71,60,102)]">Total: ₹{finalTotal}</div>
               </div>
               <Separator />
               

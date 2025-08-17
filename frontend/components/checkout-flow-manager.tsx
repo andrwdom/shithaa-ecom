@@ -18,9 +18,9 @@ export interface CheckoutItem {
 }
 
 export interface CheckoutFlow {
-  mode: 'buy-now' | 'cart';
+  mode: 'buy-now' | 'cart' | 'stored' | 'restored';
   items: CheckoutItem[];
-  source: 'buy-now' | 'cart';
+  source: 'buy-now' | 'cart' | 'stored' | 'restored';
   timestamp: number;
   sessionId: string;
 }
@@ -30,126 +30,143 @@ interface CheckoutFlowContextType {
   isBuyNowMode: boolean;
   isCartMode: boolean;
   checkoutItems: CheckoutItem[];
-  totalAmount: number;
-  setCheckoutFlow: (mode: 'buy-now' | 'cart') => void;
-  clearCheckoutFlow: () => void;
-  refreshCheckoutFlow: () => void;
   isLoading: boolean;
+  setCheckoutFlow: (mode: 'buy-now' | 'cart' | 'stored' | 'restored') => void;
+  clearCheckoutFlow: () => void;
+  restoreCheckoutItems: () => CheckoutItem[];
+  retryRestoreCart: () => void;
 }
 
 const CheckoutFlowContext = createContext<CheckoutFlowContextType | undefined>(undefined);
 
-// Inner component that uses useSearchParams
 function CheckoutFlowProviderInner({ children }: { children: ReactNode }) {
   const [currentFlow, setCurrentFlow] = useState<CheckoutFlow | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [checkoutItems, setCheckoutItems] = useState<CheckoutItem[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   
-  const { cartItems, cartTotal } = useCart();
-  const { buyNowItem, clearBuyNowItem } = useBuyNow();
-  const router = useRouter();
   const searchParams = useSearchParams();
+  const { cartItems } = useCart();
+  const { buyNowItem, clearBuyNowItem } = useBuyNow();
 
-  // Generate unique session ID for this checkout session
-  const generateSessionId = () => `checkout_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-  // Initialize checkout flow based on URL and context
+  // Initialize checkout flow and restore items
   useEffect(() => {
     const initializeFlow = () => {
       setIsLoading(true);
       
       try {
-        const urlMode = searchParams?.get('mode');
-        const isBuyNowRequested = urlMode === 'buynow';
+        // First, try to restore from existing flow data
+        const existingFlow = sessionStorage.getItem('checkoutFlow');
+        const existingItems = sessionStorage.getItem('checkoutItems');
         
-        // Check if we have a stored flow that matches the current request
-        const storedFlow = sessionStorage.getItem('checkoutFlow');
-        let flow: CheckoutFlow | null = null;
-        
-        if (storedFlow) {
+        if (existingFlow && existingItems) {
           try {
-            flow = JSON.parse(storedFlow);
-            // Validate stored flow
-            if (flow && flow.timestamp && (Date.now() - flow.timestamp) < 30 * 60 * 1000) { // 30 minutes
-              // Check if stored flow matches current request
-              if ((isBuyNowRequested && flow.mode === 'buy-now') || 
-                  (!isBuyNowRequested && flow.mode === 'cart')) {
-                console.log('CheckoutFlow: Using stored flow:', flow);
-                setCurrentFlow(flow);
-                setIsLoading(false);
-                return;
-              }
+            const flow = JSON.parse(existingFlow);
+            const items = JSON.parse(existingItems);
+            
+            // Check if flow is still valid (within 1 hour)
+            const flowAge = Date.now() - flow.timestamp;
+            if (flowAge < 3600000) { // 1 hour
+              setCurrentFlow(flow);
+              setCheckoutItems(items);
+              console.log('Restored existing checkout flow:', flow);
+              return;
             }
           } catch (error) {
-            console.error('CheckoutFlow: Error parsing stored flow:', error);
+            console.error('Error parsing existing flow data:', error);
           }
         }
-        
-        // Create new flow based on current context
-        if (isBuyNowRequested && buyNowItem) {
-          // Buy Now mode
-          flow = {
+
+        // Try to restore from buy-now context
+        if (buyNowItem) {
+          const flow: CheckoutFlow = {
             mode: 'buy-now',
             items: [buyNowItem],
             source: 'buy-now',
             timestamp: Date.now(),
-            sessionId: generateSessionId()
+            sessionId: `buy-now_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
           };
           
-          // Clear any cart-related data to prevent conflicts
-          sessionStorage.removeItem('cartCheckoutData');
-          localStorage.removeItem('cartCheckoutData');
+          setCurrentFlow(flow);
+          setCheckoutItems([buyNowItem]);
           
-          console.log('CheckoutFlow: Created Buy Now flow:', flow);
-        } else if (!isBuyNowRequested && cartItems.length > 0) {
-          // Cart mode
-          flow = {
-            mode: 'cart',
-            items: [...cartItems],
-            source: 'cart',
-            timestamp: Date.now(),
-            sessionId: generateSessionId()
-          };
+          // Store flow data
+          sessionStorage.setItem('checkoutFlow', JSON.stringify(flow));
+          sessionStorage.setItem('checkoutItems', JSON.stringify([buyNowItem]));
           
-          // Clear any buy-now data to prevent conflicts
-          sessionStorage.removeItem('buyNowCheckoutData');
-          localStorage.removeItem('buyNowCheckoutData');
-          clearBuyNowItem(); // Clear buy-now context when in cart mode
-          
-          console.log('CheckoutFlow: Created Cart flow:', flow);
-        } else {
-          // No valid flow possible
-          console.log('CheckoutFlow: No valid flow possible');
-          setCurrentFlow(null);
-          setIsLoading(false);
-          return;
-        }
-        
-        // Store the new flow
-        setCurrentFlow(flow);
-        sessionStorage.setItem('checkoutFlow', JSON.stringify(flow));
-        
-        // Store flow-specific data
-        if (flow.mode === 'buy-now') {
+          // Store flow-specific data
           const buyNowData = {
             flow: flow,
-            items: flow.items,
+            items: [buyNowItem],
             timestamp: Date.now()
           };
           sessionStorage.setItem('buyNowCheckoutData', JSON.stringify(buyNowData));
           localStorage.setItem('buyNowCheckoutData', JSON.stringify(buyNowData));
-        } else {
+          
+          console.log('Initialized buy-now checkout flow:', flow);
+          return;
+        }
+
+        // Try to restore from cart context
+        if (cartItems.length > 0) {
+          const flow: CheckoutFlow = {
+            mode: 'cart',
+            items: cartItems,
+            source: 'cart',
+            timestamp: Date.now(),
+            sessionId: `cart_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+          };
+          
+          setCurrentFlow(flow);
+          setCheckoutItems(cartItems);
+          
+          // Store flow data
+          sessionStorage.setItem('checkoutFlow', JSON.stringify(flow));
+          sessionStorage.setItem('checkoutItems', JSON.stringify(cartItems));
+          
+          // Store flow-specific data
           const cartData = {
             flow: flow,
-            items: flow.items,
+            items: cartItems,
             timestamp: Date.now()
           };
           sessionStorage.setItem('cartCheckoutData', JSON.stringify(cartData));
           localStorage.setItem('cartCheckoutData', JSON.stringify(cartData));
+          
+          console.log('Initialized cart checkout flow:', flow);
+          return;
         }
+
+        // Try to restore from stored checkout data
+        const storedCheckoutData = restoreFromStoredData();
+        if (storedCheckoutData.length > 0) {
+          const flow: CheckoutFlow = {
+            mode: 'cart', // Assume cart mode for stored data
+            items: storedCheckoutData,
+            source: 'stored',
+            timestamp: Date.now(),
+            sessionId: `stored_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+          };
+          
+          setCurrentFlow(flow);
+          setCheckoutItems(storedCheckoutData);
+          
+          // Store flow data
+          sessionStorage.setItem('checkoutFlow', JSON.stringify(flow));
+          sessionStorage.setItem('checkoutItems', JSON.stringify(storedCheckoutData));
+          
+          console.log('Restored checkout flow from stored data:', flow);
+          return;
+        }
+
+        // No items found - clear flow
+        setCurrentFlow(null);
+        setCheckoutItems([]);
+        console.log('No checkout items found to restore');
         
       } catch (error) {
         console.error('CheckoutFlow: Error initializing flow:', error);
         setCurrentFlow(null);
+        setCheckoutItems([]);
       } finally {
         setIsLoading(false);
       }
@@ -157,6 +174,86 @@ function CheckoutFlowProviderInner({ children }: { children: ReactNode }) {
 
     initializeFlow();
   }, [searchParams, buyNowItem, cartItems, clearBuyNowItem]);
+
+  // Function to restore items from stored data
+  const restoreFromStoredData = (): CheckoutItem[] => {
+    try {
+      // Try multiple storage locations
+      const sources = [
+        'pendingOrderData',
+        'phonepeOrderData',
+        'buyNowCheckoutData',
+        'cartCheckoutData',
+        'phonepeBuyNowItem',
+        'phonepeCartItems'
+      ];
+
+      for (const source of sources) {
+        const data = sessionStorage.getItem(source) || localStorage.getItem(source);
+        if (data) {
+          try {
+            const parsed = JSON.parse(data);
+            
+            // Extract items from different data structures
+            let items: CheckoutItem[] = [];
+            
+            if (parsed.cartItems && Array.isArray(parsed.cartItems)) {
+              items = parsed.cartItems;
+            } else if (parsed.items && Array.isArray(parsed.items)) {
+              items = parsed.items;
+            } else if (Array.isArray(parsed)) {
+              items = parsed;
+            }
+            
+            if (items.length > 0) {
+              console.log(`Restored ${items.length} items from ${source}`);
+              return items;
+            }
+          } catch (error) {
+            console.error(`Error parsing data from ${source}:`, error);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error restoring from stored data:', error);
+    }
+    
+    return [];
+  };
+
+  // Function to retry restoring cart items
+  const retryRestoreCart = () => {
+    console.log('Retrying to restore cart items...');
+    setIsLoading(true);
+    
+    try {
+      const restoredItems = restoreFromStoredData();
+      if (restoredItems.length > 0) {
+        const flow: CheckoutFlow = {
+          mode: 'cart',
+          items: restoredItems,
+          source: 'restored',
+          timestamp: Date.now(),
+          sessionId: `restored_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+        };
+        
+        setCurrentFlow(flow);
+        setCheckoutItems(restoredItems);
+        
+        // Store flow data
+        sessionStorage.setItem('checkoutFlow', JSON.stringify(flow));
+        sessionStorage.setItem('checkoutItems', JSON.stringify(restoredItems));
+        
+        console.log('Successfully restored checkout items:', restoredItems);
+      } else {
+        console.log('No items found to restore');
+      }
+    } catch (error) {
+      console.error('Error retrying restore:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Clear flow when navigating away from checkout
   useEffect(() => {
@@ -171,105 +268,106 @@ function CheckoutFlowProviderInner({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, []);
 
-  const setCheckoutFlow = (mode: 'buy-now' | 'cart') => {
-    if (mode === 'buy-now' && buyNowItem) {
+  const setCheckoutFlow = (mode: 'buy-now' | 'cart' | 'stored' | 'restored') => {
+    try {
+      let items: CheckoutItem[] = [];
+      let source: 'buy-now' | 'cart' = mode;
+
+      if (mode === 'buy-now' && buyNowItem) {
+        items = [buyNowItem];
+        source = 'buy-now';
+      } else if (mode === 'cart' && cartItems.length > 0) {
+        items = cartItems;
+        source = 'cart';
+      } else {
+        // Try to restore from stored data
+        items = restoreFromStoredData();
+        source = 'stored';
+      }
+
+      if (items.length === 0) {
+        console.warn('No items found for checkout flow:', mode);
+        return;
+      }
+
       const flow: CheckoutFlow = {
-        mode: 'buy-now',
-        items: [buyNowItem],
-        source: 'buy-now',
+        mode,
+        items,
+        source,
         timestamp: Date.now(),
-        sessionId: generateSessionId()
+        sessionId: `${mode}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
       };
+
       setCurrentFlow(flow);
+      setCheckoutItems(items);
+
+      // Store flow data
       sessionStorage.setItem('checkoutFlow', JSON.stringify(flow));
-      
-      // Store buy-now specific data
-      const buyNowData = { flow, items: flow.items, timestamp: Date.now() };
-      sessionStorage.setItem('buyNowCheckoutData', JSON.stringify(buyNowData));
-      localStorage.setItem('buyNowCheckoutData', JSON.stringify(buyNowData));
-      
-      // Clear cart data
-      sessionStorage.removeItem('cartCheckoutData');
-      localStorage.removeItem('cartCheckoutData');
-      
-      router.push('/checkout?mode=buynow');
-    } else if (mode === 'cart' && cartItems.length > 0) {
-      const flow: CheckoutFlow = {
-        mode: 'cart',
-        items: [...cartItems],
-        source: 'cart',
-        timestamp: Date.now(),
-        sessionId: generateSessionId()
-      };
-      setCurrentFlow(flow);
-      sessionStorage.setItem('checkoutFlow', JSON.stringify(flow));
-      
-      // Store cart specific data
-      const cartData = { flow, items: flow.items, timestamp: Date.now() };
-      sessionStorage.setItem('cartCheckoutData', JSON.stringify(cartData));
-      localStorage.setItem('cartCheckoutData', JSON.stringify(cartData));
-      
-      // Clear buy-now data
-      sessionStorage.removeItem('buyNowCheckoutData');
-      localStorage.removeItem('buyNowCheckoutData');
-      clearBuyNowItem();
-      
-      router.push('/checkout');
+      sessionStorage.setItem('checkoutItems', JSON.stringify(items));
+
+      // Store flow-specific data
+      if (mode === 'buy-now') {
+        const buyNowData = {
+          flow: flow,
+          items: items,
+          timestamp: Date.now()
+        };
+        sessionStorage.setItem('buyNowCheckoutData', JSON.stringify(buyNowData));
+        localStorage.setItem('buyNowCheckoutData', JSON.stringify(buyNowData));
+      } else {
+        const cartData = {
+          flow: flow,
+          items: items,
+          timestamp: Date.now()
+        };
+        sessionStorage.setItem('cartCheckoutData', JSON.stringify(cartData));
+        localStorage.setItem('cartCheckoutData', JSON.stringify(cartData));
+      }
+
+      console.log('Set checkout flow:', flow);
+    } catch (error) {
+      console.error('Error setting checkout flow:', error);
     }
   };
 
   const clearCheckoutFlow = () => {
     setCurrentFlow(null);
+    setCheckoutItems([]);
     sessionStorage.removeItem('checkoutFlow');
-    sessionStorage.removeItem('buyNowCheckoutData');
-    sessionStorage.removeItem('cartCheckoutData');
-    localStorage.removeItem('buyNowCheckoutData');
-    localStorage.removeItem('cartCheckoutData');
-    clearBuyNowItem();
+    sessionStorage.removeItem('checkoutItems');
+    console.log('Cleared checkout flow');
   };
 
-  const refreshCheckoutFlow = () => {
-    // Force re-initialization of the flow
-    setIsLoading(true);
-    setTimeout(() => {
-      const urlMode = searchParams?.get('mode');
-      if (urlMode === 'buynow' && buyNowItem) {
-        setCheckoutFlow('buy-now');
-      } else if (cartItems.length > 0) {
-        setCheckoutFlow('cart');
-      }
-      setIsLoading(false);
-    }, 100);
+  const restoreCheckoutItems = (): CheckoutItem[] => {
+    return restoreFromStoredData();
   };
 
-  const isBuyNowMode = currentFlow?.mode === 'buy-now';
-  const isCartMode = currentFlow?.mode === 'cart';
-  const checkoutItems = currentFlow?.items || [];
-  const totalAmount = checkoutItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-
-  const value: CheckoutFlowContextType = {
+  const contextValue: CheckoutFlowContextType = {
     currentFlow,
-    isBuyNowMode,
-    isCartMode,
+    isBuyNowMode: currentFlow?.mode === 'buy-now',
+    isCartMode: currentFlow?.mode === 'cart',
     checkoutItems,
-    totalAmount,
+    isLoading,
     setCheckoutFlow,
     clearCheckoutFlow,
-    refreshCheckoutFlow,
-    isLoading
+    restoreCheckoutItems,
+    retryRestoreCart
   };
 
   return (
-    <CheckoutFlowContext.Provider value={value}>
+    <CheckoutFlowContext.Provider value={contextValue}>
       {children}
     </CheckoutFlowContext.Provider>
   );
 }
 
-// Main provider component with Suspense boundary
 export function CheckoutFlowProvider({ children }: { children: ReactNode }) {
   return (
-    <Suspense fallback={<div>Loading checkout...</div>}>
+    <Suspense fallback={
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <div className="loading loading-spinner loading-lg text-[#473C66]"></div>
+      </div>
+    }>
       <CheckoutFlowProviderInner>
         {children}
       </CheckoutFlowProviderInner>
