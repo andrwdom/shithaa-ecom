@@ -332,7 +332,14 @@ export default function CartSidebar() {
                               size="sm"
                               onClick={() => {
                                 console.log("CartSidebar: Remove button clicked for item:", { _id: item._id, size: item.size })
+                                console.log("CartSidebar: Current cart items before removal:", cartItems)
+                                console.log("CartSidebar: Calling removeFromCart...")
                                 removeFromCart(item._id, item.size)
+                                console.log("CartSidebar: removeFromCart called, checking cart after removal...")
+                                // Add a small delay to check the cart state after removal
+                                setTimeout(() => {
+                                  console.log("CartSidebar: Cart items after removal (delayed check):", cartItems)
+                                }, 100)
                               }}
                               className="w-full text-red-500 hover:text-red-700 hover:bg-red-50 text-xs sm:text-sm py-2 h-auto border border-red-200 hover:border-red-300 rounded-lg"
                             >

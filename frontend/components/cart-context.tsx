@@ -48,6 +48,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [offerDetails, setOfferDetails] = useState<OfferDetails | null>(null)
   const [isLoadingOffer, setIsLoadingOffer] = useState(false)
   const [cartChangeCounter, setCartChangeCounter] = useState(0)
+  const [wasCartIntentionallyCleared, setWasCartIntentionallyCleared] = useState(false)
   
   // Simple refs for API call optimization
   const isCalculatingRef = useRef(false)
@@ -56,6 +57,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   // Load cart from storage ONLY on initial mount
   useEffect(() => {
+    if (wasCartIntentionallyCleared) {
+      console.log("CartProvider: Cart was intentionally cleared, not loading from storage")
+      return
+    }
+    
     try {
       const stored = localStorage.getItem("cartItems")
       if (stored) {
@@ -78,7 +84,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error("CartProvider: Error loading cart from storage:", error)
     }
-  }, []) // Empty dependency array - runs only once on mount
+  }, [wasCartIntentionallyCleared]) // Only run when wasCartIntentionallyCleared changes
 
   // Simple function to save cart to storage - called only after actions complete
   const saveCartToStorage = useCallback((items: CartItem[]) => {
@@ -206,8 +212,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         newCart = [...prev, item]
       }
       
-      // Save to storage AFTER the state update
-      setTimeout(() => saveCartToStorage(newCart), 0)
+      // Save to storage IMMEDIATELY to prevent race conditions
+      console.log("CartProvider: Saving to storage immediately:", newCart)
+      saveCartToStorage(newCart)
+      
+      // Reset the flag since we now have items in the cart
+      if (newCart.length > 0) {
+        setWasCartIntentionallyCleared(false)
+        console.log("CartProvider: Cart has items, allowing storage restoration")
+      }
       
       console.log("CartProvider: Added item, new cart:", newCart)
       return newCart
@@ -237,8 +250,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         item._id === _id && item.size === size ? { ...item, quantity } : item
       )
       
-      // Save to storage AFTER the state update
-      setTimeout(() => saveCartToStorage(newCart), 0)
+      // Save to storage IMMEDIATELY to prevent race conditions
+      console.log("CartProvider: Saving to storage immediately:", newCart)
+      saveCartToStorage(newCart)
       
       console.log("CartProvider: Updated item, new cart:", newCart)
       return newCart
@@ -247,17 +261,27 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const removeFromCart = useCallback((_id: string, size: string) => {
     console.log("CartProvider: removeFromCart called with:", { _id, size })
+    console.log("CartProvider: Current cart before removal:", cartItems)
     
     setCartItems((prev) => {
+      console.log("CartProvider: Previous cart state:", prev)
       const newCart = prev.filter((item) => !(item._id === _id && item.size === size))
+      console.log("CartProvider: Filtered cart after removal:", newCart)
       
-      // Save to storage AFTER the state update
-      setTimeout(() => saveCartToStorage(newCart), 0)
+      // Save to storage IMMEDIATELY to prevent race conditions
+      console.log("CartProvider: Saving to storage immediately:", newCart)
+      saveCartToStorage(newCart)
       
-      console.log("CartProvider: Removed item, new cart:", newCart)
+      // If cart becomes empty, set flag to prevent restoration from storage
+      if (newCart.length === 0) {
+        setWasCartIntentionallyCleared(true)
+        console.log("CartProvider: Cart is now empty, preventing restoration from storage")
+      }
+      
+      console.log("CartProvider: Removed item, returning new cart:", newCart)
       return newCart
     })
-  }, [saveCartToStorage])
+  }, [saveCartToStorage, cartItems])
 
   const openCartSidebar = useCallback(() => {
     setIsCartSidebarOpen(true)
@@ -271,6 +295,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     console.log("CartProvider: clearCart called")
     setCartItems([])
     saveCartToStorage([])
+    setWasCartIntentionallyCleared(true) // Set flag to prevent loading from storage
   }, [saveCartToStorage])
 
   const notifyCheckoutCartChanged = useCallback(() => {
