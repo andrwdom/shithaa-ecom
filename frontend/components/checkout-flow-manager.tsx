@@ -54,6 +54,10 @@ function CheckoutFlowProviderInner({ children }: { children: ReactNode }) {
       setIsLoading(true);
       
       try {
+        // Get the mode from URL parameters
+        const urlMode = searchParams?.get('mode');
+        console.log('CheckoutFlow: URL mode detected:', urlMode);
+        
         // First, try to restore from existing flow data
         const existingFlow = sessionStorage.getItem('checkoutFlow');
         const existingItems = sessionStorage.getItem('checkoutItems');
@@ -76,7 +80,100 @@ function CheckoutFlowProviderInner({ children }: { children: ReactNode }) {
           }
         }
 
-        // Try to restore from buy-now context
+        // If URL indicates buy-now mode, prioritize buy-now items
+        if (urlMode === 'buynow') {
+          console.log('CheckoutFlow: Buy-now mode detected from URL, checking for buy-now items...');
+          
+          // Try to restore from buy-now context first
+          if (buyNowItem) {
+            const flow: CheckoutFlow = {
+              mode: 'buy-now',
+              items: [buyNowItem],
+              source: 'buy-now',
+              timestamp: Date.now(),
+              sessionId: `buy-now_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+            };
+            
+            setCurrentFlow(flow);
+            setCheckoutItems([buyNowItem]);
+            
+            // Store flow data
+            sessionStorage.setItem('checkoutFlow', JSON.stringify(flow));
+            sessionStorage.setItem('checkoutItems', JSON.stringify([buyNowItem]));
+            
+            // Store flow-specific data
+            const buyNowData = {
+              flow: flow,
+              items: [buyNowItem],
+              timestamp: Date.now()
+            };
+            sessionStorage.setItem('buyNowCheckoutData', JSON.stringify(buyNowData));
+            localStorage.setItem('buyNowCheckoutData', JSON.stringify(buyNowData));
+            
+            console.log('Initialized buy-now checkout flow from context:', flow);
+            return;
+          }
+          
+          // If no buy-now item in context, try to restore from storage
+          const buyNowData = sessionStorage.getItem('buyNowCheckoutData') || localStorage.getItem('buyNowCheckoutData');
+          if (buyNowData) {
+            try {
+              const parsed = JSON.parse(buyNowData);
+              if (parsed.items && parsed.items.length > 0) {
+                const flow: CheckoutFlow = {
+                  mode: 'buy-now',
+                  items: parsed.items,
+                  source: 'stored',
+                  timestamp: Date.now(),
+                  sessionId: `buy-now_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+                };
+                
+                setCurrentFlow(flow);
+                setCheckoutItems(parsed.items);
+                
+                // Store flow data
+                sessionStorage.setItem('checkoutFlow', JSON.stringify(flow));
+                sessionStorage.setItem('checkoutItems', JSON.stringify(parsed.items));
+                
+                console.log('Restored buy-now checkout flow from storage:', flow);
+                return;
+              }
+            } catch (error) {
+              console.error('Error parsing buy-now data:', error);
+            }
+          }
+          
+          // If still no items, try to restore from regular buy-now storage
+          const storedBuyNowItem = sessionStorage.getItem('buyNowItem') || localStorage.getItem('buyNowItem');
+          if (storedBuyNowItem) {
+            try {
+              const parsed = JSON.parse(storedBuyNowItem);
+              if (parsed && parsed._id && parsed.name) {
+                const flow: CheckoutFlow = {
+                  mode: 'buy-now',
+                  items: [parsed],
+                  source: 'stored',
+                  timestamp: Date.now(),
+                  sessionId: `buy-now_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+                };
+                
+                setCurrentFlow(flow);
+                setCheckoutItems([parsed]);
+                
+                // Store flow data
+                sessionStorage.setItem('checkoutFlow', JSON.stringify(flow));
+                sessionStorage.setItem('checkoutItems', JSON.stringify([parsed]));
+                
+                console.log('Restored buy-now checkout flow from buy-now storage:', flow);
+                return;
+              }
+            } catch (error) {
+              console.error('Error parsing buy-now item:', error);
+            }
+          }
+        }
+
+        // Try to restore from buy-now context (for non-URL cases)
         if (buyNowItem) {
           const flow: CheckoutFlow = {
             mode: 'buy-now',
@@ -102,7 +199,7 @@ function CheckoutFlowProviderInner({ children }: { children: ReactNode }) {
           sessionStorage.setItem('buyNowCheckoutData', JSON.stringify(buyNowData));
           localStorage.setItem('buyNowCheckoutData', JSON.stringify(buyNowData));
           
-          console.log('Initialized buy-now checkout flow:', flow);
+          console.log('Initialized buy-now checkout flow from context:', flow);
           return;
         }
 
@@ -271,7 +368,7 @@ function CheckoutFlowProviderInner({ children }: { children: ReactNode }) {
   const setCheckoutFlow = (mode: 'buy-now' | 'cart' | 'stored' | 'restored') => {
     try {
       let items: CheckoutItem[] = [];
-      let source: 'buy-now' | 'cart' = mode;
+      let source: 'buy-now' | 'cart' | 'stored' | 'restored' = mode;
 
       if (mode === 'buy-now' && buyNowItem) {
         items = [buyNowItem];

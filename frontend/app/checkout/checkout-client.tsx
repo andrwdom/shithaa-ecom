@@ -22,6 +22,19 @@ export default function CheckoutClient() {
   const { buyNowItem, clearBuyNowItem } = useBuyNow();
   const { checkoutItems, isLoading, retryRestoreCart, isBuyNowMode, isCartMode } = useCheckoutFlow();
   
+  // Debug logging
+  useEffect(() => {
+    console.log('CheckoutClient: Debug info:', {
+      cartItems: cartItems.length,
+      buyNowItem: buyNowItem ? 'exists' : 'null',
+      checkoutItems: checkoutItems.length,
+      isLoading,
+      isBuyNowMode,
+      isCartMode,
+      url: window.location.href
+    });
+  }, [cartItems, buyNowItem, checkoutItems, isLoading, isBuyNowMode, isCartMode]);
+
   const [form, setForm] = useState({
     firstName: '',
     lastName: '',

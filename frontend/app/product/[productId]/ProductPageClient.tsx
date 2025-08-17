@@ -113,6 +113,9 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
     
     // Navigate to checkout using the checkout flow manager
     setCheckoutFlow('buy-now');
+    
+    // Navigate to checkout page
+    window.location.href = '/checkout?mode=buynow';
   }
 
   // Safety check - ensure product exists before rendering

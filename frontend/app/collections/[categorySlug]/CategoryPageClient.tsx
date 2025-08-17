@@ -317,6 +317,9 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
     
     // Navigate to checkout using the checkout flow manager
     setCheckoutFlow('buy-now');
+    
+    // Navigate to checkout page
+    router.push('/checkout?mode=buynow');
   };
 
   const handleCheckout = () => {
