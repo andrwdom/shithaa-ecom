@@ -24,7 +24,7 @@ export const config = {
   smtpPass: process.env.SMTP_PASS,
   
   // File Upload Configuration
-  maxFileSize: parseInt(process.env.MAX_FILE_SIZE) || 5242880,
+  maxFileSize: parseInt(process.env.MAX_FILE_SIZE) || 104857600, // 100MB in bytes
   uploadPath: process.env.UPLOAD_PATH || './uploads',
   
   // CORS Configuration
