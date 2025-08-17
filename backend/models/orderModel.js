@@ -83,7 +83,7 @@ const orderSchema = new mongoose.Schema({
     orderStatus: { type: String, default: 'pending' },
     placedAt: { type: Date, default: Date.now },
     isTestOrder: { type: Boolean, default: false },
-    orderId: { type: String, unique: true, required: true },
+    orderId: { type: String, required: true },
     // Payment gateway fields
     phonepeTransactionId: { type: String },
     // Refund tracking for PhonePe
@@ -109,6 +109,9 @@ const orderSchema = new mongoose.Schema({
     amount: { type: Number },
     date: { type: Date, default: Date.now }
 }, { timestamps: true });
+
+// Add explicit unique index for orderId
+orderSchema.index({ orderId: 1 }, { unique: true });
 
 const orderModel = mongoose.models.order || mongoose.model('order',orderSchema)
 export default orderModel;

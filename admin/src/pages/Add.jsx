@@ -44,21 +44,32 @@ const Add = ({token}) => {
 
    useEffect(() => {
      // Fetch categories from backend
-     axios.get(`${backendUrl}/api/categories`).then(res => {
-       if (res.data.success && Array.isArray(res.data.data)) {
-         setCategories(res.data.data);
-       }
-     });
-   }, []);
+     if (token && token !== 'undefined' && token.trim() !== '') {
+       axios.get(`${backendUrl}/api/categories`, {
+         headers: { token }
+       }).then(res => {
+         if (res.data.success && Array.isArray(res.data.data)) {
+           setCategories(res.data.data);
+         }
+       }).catch(error => {
+         console.error('Error fetching categories:', error);
+         if (error.response?.status === 401) {
+           toast.error("Authentication failed. Please log in again.");
+         }
+       });
+     }
+   }, [token]);
 
    // Check token validity on component mount
    useEffect(() => {
-     const storedToken = localStorage.getItem('token');
-     if (!storedToken || storedToken !== token) {
-       console.log('Token mismatch detected:');
-       console.log('Stored token:', storedToken);
-       console.log('Prop token:', token);
+     if (!token || token === 'undefined' || token.trim() === '') {
+       console.log('No valid token provided to Add component');
+       return;
      }
+     
+     console.log('Add component received token:', token);
+     console.log('Token type:', typeof token);
+     console.log('Token length:', token.length);
      
      // Test token validity
      testTokenValidity();
@@ -124,8 +135,8 @@ const Add = ({token}) => {
     console.log('Token type:', typeof token);
     console.log('Token length:', token ? token.length : 0);
     
-    // Check if token exists
-    if (!token || token.trim() === '') {
+    // Check if token exists and is valid
+    if (!token || token === 'undefined' || token.trim() === '') {
       toast.error("Authentication token is missing. Please log in again.");
       return;
     }

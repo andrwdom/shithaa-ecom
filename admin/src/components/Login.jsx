@@ -9,23 +9,37 @@ const Login = ({setToken}) => {
 
     const [email,setEmail] = useState('')
     const [password,setPassword] = useState('')
+    const [loading, setLoading] = useState(false)
 
     const onSubmitHandler = async (e) => {
         try {
             e.preventDefault();
+            setLoading(true);
+            
             console.log('Login attempt with:', { email, password });
-            const response = await axios.post(backendUrl + '/api/user/admin',{email,password})
+            
+            const response = await axios.post(backendUrl + '/api/user/admin', {email, password})
             console.log('Login response:', response.data);
+            
             if (response.data.success) {
                 console.log('Setting token:', response.data.data.token);
                 setToken(response.data.data.token)
+                toast.success('Login successful! Welcome to Admin Panel.')
             } else {
-                toast.error(response.data.message)
+                toast.error(response.data.message || 'Login failed')
             }
              
         } catch (error) {
             console.log('Login error:', error);
-            toast.error(error.message)
+            if (error.response?.status === 401) {
+                toast.error('Invalid email or password. Please try again.');
+            } else if (error.response?.status === 500) {
+                toast.error('Server error. Please try again later.');
+            } else {
+                toast.error(error.message || 'Login failed. Please check your connection.');
+            }
+        } finally {
+            setLoading(false);
         }
     }
 
@@ -36,6 +50,18 @@ const Login = ({setToken}) => {
                 <img src={shithaLogo} alt="Shitha Logo" className="w-32" />
             </div>
             <h1 className='text-2xl font-bold mb-6 text-theme-600 text-center'>Admin Panel</h1>
+            
+            {/* Admin Credentials Info */}
+            <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <p className="text-sm text-blue-800 mb-2">
+                    <strong>Admin Credentials:</strong>
+                </p>
+                <p className="text-xs text-blue-700">
+                    Email: info.shithaa@gmail.com<br/>
+                    Password: shithaaweb@14525!
+                </p>
+            </div>
+            
             <form onSubmit={onSubmitHandler} className="space-y-4">
                 <div className=''>
                     <p className='text-sm font-medium text-theme-700 mb-2'>Email Address</p>
@@ -60,10 +86,11 @@ const Login = ({setToken}) => {
                     />
                 </div>
                 <button 
-                    className='mt-6 w-full py-2.5 px-4 rounded-md text-white bg-theme-400 hover:bg-theme-500 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-theme-400 focus:ring-offset-2' 
+                    className={`mt-6 w-full py-2.5 px-4 rounded-md text-white bg-theme-400 hover:bg-theme-500 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-theme-400 focus:ring-offset-2 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`} 
                     type="submit"
+                    disabled={loading}
                 > 
-                    Login 
+                    {loading ? 'Logging in...' : 'Login'} 
                 </button>
             </form>
         </div>

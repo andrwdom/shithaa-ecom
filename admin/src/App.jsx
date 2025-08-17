@@ -20,13 +20,29 @@ export const currency = '₹'
 
 const App = () => {
 
-  const [token, setToken] = useState(localStorage.getItem('token') ? localStorage.getItem('token') : '');
+  const [token, setToken] = useState(() => {
+    const storedToken = localStorage.getItem('token');
+    return storedToken && storedToken !== 'undefined' ? storedToken : '';
+  });
 
-  useEffect(()=>{
+  useEffect(() => {
     console.log('App.jsx: Token changed to:', token);
     console.log('App.jsx: localStorage token:', localStorage.getItem('token'));
-    localStorage.setItem('token',token)
-  },[token])
+    
+    if (token && token !== 'undefined' && token.trim() !== '') {
+      localStorage.setItem('token', token);
+    } else {
+      localStorage.removeItem('token');
+    }
+  }, [token]);
+
+  // Check if token is valid on mount
+  useEffect(() => {
+    const storedToken = localStorage.getItem('token');
+    if (storedToken && storedToken !== 'undefined' && storedToken.trim() !== '') {
+      setToken(storedToken);
+    }
+  }, []);
 
   return (
     <WithClickSpark
@@ -41,7 +57,7 @@ const App = () => {
       <div className='bg-gray-50 min-h-screen'>
         <ToastContainer />
         <Toaster position="top-right" />
-        {token === ""
+        {!token || token === 'undefined' || token.trim() === ""
           ? (
             <Routes>
               <Route path="/" element={<Login setToken={setToken} />} />
@@ -57,32 +73,32 @@ const App = () => {
                 <div className='w-[70%] mx-auto ml-[max(5vw,25px)] my-8 text-gray-600 text-base'>
                   <Routes>
                     <Route path="/orders" element={
-                      <ProtectedRoute>
+                      <ProtectedRoute token={token}>
                         <Orders token={token} setToken={setToken} />
                       </ProtectedRoute>
                     } />
                     <Route path="/add" element={
-                      <ProtectedRoute>
+                      <ProtectedRoute token={token}>
                         <Add token={token} />
                       </ProtectedRoute>
                     } />
                     <Route path="/list" element={
-                      <ProtectedRoute>
+                      <ProtectedRoute token={token}>
                         <List token={token} />
                       </ProtectedRoute>
                     } />
                     <Route path="/coupons" element={
-                      <ProtectedRoute>
+                      <ProtectedRoute token={token}>
                         <CouponManagement token={token} />
                       </ProtectedRoute>
                     } />
                     <Route path="/carousel" element={
-                      <ProtectedRoute>
+                      <ProtectedRoute token={token}>
                         <CarouselManagement token={token} />
                       </ProtectedRoute>
                     } />
                     <Route path="/shipping-rules" element={
-                      <ProtectedRoute>
+                      <ProtectedRoute token={token}>
                         <ShippingRules token={token} />
                       </ProtectedRoute>
                     } />
