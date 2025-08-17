@@ -114,10 +114,14 @@ const isAdmin = async (req, res, next) => {
 
 const optionalVerifyToken = async (req, res, next) => {
     try {
-        // Check for token in both formats
-        let token = req.headers.token;
+        // Check for token in cookies first, then headers for backward compatibility
+        let token = req.cookies?.token;
         
-        // If not found in token header, check Authorization header
+        // Fallback to headers for backward compatibility
+        if (!token && req.headers.token) {
+            token = req.headers.token;
+        }
+        
         if (!token && req.headers.authorization) {
             const authHeader = req.headers.authorization;
             if (authHeader.startsWith('Bearer ')) {

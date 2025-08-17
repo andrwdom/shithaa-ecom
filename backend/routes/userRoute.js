@@ -11,7 +11,7 @@ import {
     refreshToken,
     logout
 } from '../controllers/userController.js';
-import { verifyToken } from '../middleware/auth.js';
+import { verifyToken, optionalVerifyToken } from '../middleware/auth.js';
 
 const userRouter = express.Router();
 
@@ -24,7 +24,7 @@ userRouter.post('/refresh-token', refreshToken)
 userRouter.post('/logout', logout)
 
 // Profile routes
-userRouter.get('/auth/profile', verifyToken, getProfile); // GET /api/auth/profile
+userRouter.get('/auth/profile', optionalVerifyToken, getProfile); // GET /api/auth/profile
 userRouter.put('/auth/profile', verifyToken, updateProfile); // PUT /api/auth/profile
 
 // Legacy route for backward compatibility

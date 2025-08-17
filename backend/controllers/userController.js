@@ -12,6 +12,15 @@ const createToken = (payload) => {
 // GET /api/auth/profile - Get current user profile
 export const getProfile = async (req, res) => {
     try {
+        // If no user is authenticated, return 200 with no data
+        if (!req.user) {
+            return res.status(200).json({
+                success: true,
+                data: null,
+                message: 'No user authenticated'
+            });
+        }
+        
         const user = await userModel.findById(req.user.id).select('-password');
         if (!user) {
             return errorResponse(res, 'User not found', 404);
@@ -351,10 +360,34 @@ export const firebaseLogin = async (req, res) => {
           });
         }
         
-        const token = createToken({ id: user._id, email: user.email, role: 'user' });
+        const accessToken = createToken({ id: user._id, email: user.email, role: 'user' });
+        const refreshToken = createToken({ 
+            id: user._id, 
+            email: user.email, 
+            role: 'user', 
+            type: 'refresh' 
+        }, '7d');
+        
+        // SECURITY: Set HttpOnly cookies for secure token storage
+        res.cookie('token', accessToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 15 * 60 * 1000, // 15 minutes
+            path: '/'
+        });
+        
+        res.cookie('refresh_token', refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+            path: '/'
+        });
+        
         return res.json({ 
           success: true, 
-          data: { user, token }, 
+          data: { user, token: accessToken }, 
           message: 'Development login successful (Firebase Admin not configured)' 
         });
       } else {
@@ -380,9 +413,34 @@ export const firebaseLogin = async (req, res) => {
       await user.save();
     }
 
-    // Create app JWT
-    const token = createToken({ id: user._id, email: user.email, role: 'user' });
-    res.json({ success: true, data: { user, token }, message: 'Login successful' });
+    // Create app JWT and refresh token
+    const accessToken = createToken({ id: user._id, email: user.email, role: 'user' });
+    const refreshToken = createToken({ 
+        id: user._id, 
+        email: user.email, 
+        role: 'user', 
+        type: 'refresh' 
+    }, '7d');
+    
+    // SECURITY: Set HttpOnly cookies for secure token storage
+    res.cookie('token', accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 15 * 60 * 1000, // 15 minutes
+        path: '/'
+    });
+    
+    res.cookie('refresh_token', refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        path: '/'
+    });
+    
+    // Return user data with token for backward compatibility
+    res.json({ success: true, data: { user, token: accessToken }, message: 'Login successful' });
   } catch (error) {
     console.error('Firebase login error:', error);
     res.status(500).json({ success: false, message: 'Firebase login failed: ' + error.message });

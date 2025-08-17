@@ -27,8 +27,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const data = await res.json();
           if (res.ok && data.data) {
             setMongoUser(data.data);
+          } else if (res.status === 200 && !data.data) {
+            // User not authenticated to backend (expected for new users)
+            setMongoUser(null);
           } else {
-            // Silently handle 401/403 errors - user might not be logged in to backend
+            // Handle other errors (but not 401/403 which are expected)
             if (res.status !== 401 && res.status !== 403) {
               console.warn('Profile fetch failed:', data.message);
             }
