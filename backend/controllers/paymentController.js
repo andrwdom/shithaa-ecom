@@ -8,36 +8,43 @@ import { StandardCheckoutClient, Env, StandardCheckoutPayRequest } from 'pg-sdk-
 import { randomUUID } from 'crypto';
 import { generateInvoiceBuffer, sendInvoiceEmail } from '../utils/invoiceGenerator.js';
 
-// PhonePe SDK configuration
-const PHONEPE_MERCHANT_ID = process.env.PHONEPE_MERCHANT_ID;
-const PHONEPE_API_KEY = process.env.PHONEPE_API_KEY;
-const PHONEPE_SALT_INDEX = parseInt(process.env.PHONEPE_SALT_INDEX || '1', 10);
-const PHONEPE_ENV = process.env.PHONEPE_ENV === 'PRODUCTION' ? Env.PRODUCTION : Env.SANDBOX;
-
-console.log('=== PhonePe SDK Initialization ===');
-console.log('Environment variables:');
-console.log('- PHONEPE_MERCHANT_ID:', PHONEPE_MERCHANT_ID);
-console.log('- PHONEPE_API_KEY:', PHONEPE_API_KEY ? 'SET (' + PHONEPE_API_KEY.substring(0, 8) + '...)' : 'NOT SET');
-console.log('- PHONEPE_SALT_INDEX:', PHONEPE_SALT_INDEX);
-console.log('- PHONEPE_ENV:', process.env.PHONEPE_ENV, '->', PHONEPE_ENV);
-
-let phonepeClient;
-try {
-  phonepeClient = StandardCheckoutClient.getInstance(
-    PHONEPE_MERCHANT_ID,
-    PHONEPE_API_KEY,
-    PHONEPE_SALT_INDEX,
-    PHONEPE_ENV
-  );
-  console.log('PhonePe client initialized successfully');
-} catch (initError) {
-  console.error('PhonePe client initialization failed:', initError);
-  phonepeClient = null;
-}
-
 // Helper function to get user email for orders
 const getOrderUserEmail = (req, email) => {
     return req.user?.email || email || `guest@${process.env.BASE_URL?.replace('https://', '').replace('http://', '') || 'shithaa.in'}`;
+};
+
+// Helper function to initialize PhonePe client
+const initializePhonePeClient = () => {
+    const PHONEPE_MERCHANT_ID = process.env.PHONEPE_MERCHANT_ID;
+    const PHONEPE_API_KEY = process.env.PHONEPE_API_KEY;
+    const PHONEPE_SALT_INDEX = parseInt(process.env.PHONEPE_SALT_INDEX || '1', 10);
+    const PHONEPE_ENV = process.env.PHONEPE_ENV === 'PRODUCTION' ? Env.PRODUCTION : Env.SANDBOX;
+
+    console.log('=== PhonePe SDK Initialization ===');
+    console.log('Environment variables:');
+    console.log('- PHONEPE_MERCHANT_ID:', PHONEPE_MERCHANT_ID);
+    console.log('- PHONEPE_API_KEY:', PHONEPE_API_KEY ? 'SET (' + PHONEPE_API_KEY.substring(0, 8) + '...)' : 'NOT SET');
+    console.log('- PHONEPE_SALT_INDEX:', PHONEPE_SALT_INDEX);
+    console.log('- PHONEPE_ENV:', process.env.PHONEPE_ENV, '->', PHONEPE_ENV);
+
+    if (!PHONEPE_MERCHANT_ID || !PHONEPE_API_KEY) {
+        console.error('PhonePe credentials missing, cannot initialize client');
+        return null;
+    }
+
+    try {
+        const client = StandardCheckoutClient.getInstance(
+            PHONEPE_MERCHANT_ID,
+            PHONEPE_API_KEY,
+            PHONEPE_SALT_INDEX,
+            PHONEPE_ENV
+        );
+        console.log('PhonePe client initialized successfully');
+        return client;
+    } catch (initError) {
+        console.error('PhonePe client initialization failed:', initError);
+        return null;
+    }
 };
 
 // Helper function to update product stock (reserve or restore)
@@ -197,14 +204,14 @@ export const createPhonePeSession = async (req, res) => {
     }
 
     console.log('PhonePe SDK configuration check:');
-    console.log('- Merchant ID:', PHONEPE_MERCHANT_ID);
-    console.log('- API Key:', PHONEPE_API_KEY ? 'SET' : 'NOT SET');
-    console.log('- Salt Index:', PHONEPE_SALT_INDEX);
-    console.log('- Environment:', PHONEPE_ENV);
-    console.log('- Client initialized:', !!phonepeClient);
+    console.log('- Merchant ID:', process.env.PHONEPE_MERCHANT_ID);
+    console.log('- API Key:', process.env.PHONEPE_API_KEY ? 'SET' : 'NOT SET');
+    console.log('- Salt Index:', process.env.PHONEPE_SALT_INDEX);
+    console.log('- Environment:', process.env.PHONEPE_ENV, '->', (process.env.PHONEPE_ENV === 'PRODUCTION' ? Env.PRODUCTION : Env.SANDBOX));
+    console.log('- Client initialized:', !!(process.env.PHONEPE_MERCHANT_ID && process.env.PHONEPE_API_KEY));
 
     // Check if PhonePe client is available
-    if (!phonepeClient) {
+    if (!(process.env.PHONEPE_MERCHANT_ID && process.env.PHONEPE_API_KEY)) {
       console.error('PhonePe client not initialized, cannot proceed');
       // Restore stock since we can't create payment
       await restoreProductStock(cartItems);
@@ -232,7 +239,12 @@ export const createPhonePeSession = async (req, res) => {
     console.log('PhonePe request built, calling phonepeClient.pay()...');
     console.log('Request details:', JSON.stringify(request, null, 2));
 
-    const response = await phonepeClient.pay(request);
+    const response = await StandardCheckoutClient.getInstance(
+      process.env.PHONEPE_MERCHANT_ID,
+      process.env.PHONEPE_API_KEY,
+      parseInt(process.env.PHONEPE_SALT_INDEX || '1', 10),
+      process.env.PHONEPE_ENV === 'PRODUCTION' ? Env.PRODUCTION : Env.SANDBOX
+    ).pay(request);
     console.log('PhonePe SDK response received:', response);
     
     if (response && response.redirectUrl) {
@@ -311,7 +323,12 @@ export const phonePeCallback = async (req, res) => {
     let state;
 
     try {
-      callbackResponse = phonepeClient.validateCallback(
+      callbackResponse = StandardCheckoutClient.getInstance(
+        process.env.PHONEPE_MERCHANT_ID,
+        process.env.PHONEPE_API_KEY,
+        parseInt(process.env.PHONEPE_SALT_INDEX || '1', 10),
+        process.env.PHONEPE_ENV === 'PRODUCTION' ? Env.PRODUCTION : Env.SANDBOX
+      ).validateCallback(
         usernameConfigured,
         passwordConfigured,
         authorizationHeaderData,
@@ -473,7 +490,12 @@ export const verifyPhonePePayment = async (req, res) => {
     let phonepeResponse;
     try {
       console.log('Attempting PhonePe SDK verification...');
-      phonepeResponse = await phonepeClient.getOrderStatus(merchantTransactionId);
+      phonepeResponse = await StandardCheckoutClient.getInstance(
+        process.env.PHONEPE_MERCHANT_ID,
+        process.env.PHONEPE_API_KEY,
+        parseInt(process.env.PHONEPE_SALT_INDEX || '1', 10),
+        process.env.PHONEPE_ENV === 'PRODUCTION' ? Env.PRODUCTION : Env.SANDBOX
+      ).getOrderStatus(merchantTransactionId);
       console.log('PhonePe SDK response:', phonepeResponse);
     } catch (sdkError) {
       console.error('PhonePe SDK Error:', sdkError);

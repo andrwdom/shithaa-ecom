@@ -84,33 +84,28 @@ export async function releaseStock(productId, size, quantity, options = {}) {
 }
 
 /**
- * Batch stock operations within a transaction
+ * Batch stock operations without transactions (for standalone MongoDB)
  * @param {Array} operations - Array of { productId, size, quantityChange } objects
  * @returns {Promise<Array>} - Results of all operations
  */
 export async function batchChangeStock(operations) {
-    const session = await mongoose.startSession();
-    
     try {
-        const results = await session.withTransaction(async () => {
-            const batchResults = [];
-            
-            for (const op of operations) {
-                const result = await changeStock(
-                    op.productId, 
-                    op.size, 
-                    op.quantityChange, 
-                    { session }
-                );
-                batchResults.push(result);
-            }
-            
-            return batchResults;
-        });
+        const batchResults = [];
         
-        return results;
-    } finally {
-        session.endSession();
+        // Process operations sequentially without transactions
+        for (const op of operations) {
+            const result = await changeStock(
+                op.productId, 
+                op.size, 
+                op.quantityChange
+            );
+            batchResults.push(result);
+        }
+        
+        return batchResults;
+    } catch (error) {
+        console.error('Batch stock operation failed:', error);
+        throw error;
     }
 }
 
