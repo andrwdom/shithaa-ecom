@@ -250,14 +250,14 @@ const ProductTableRow = ({ product, onEdit, onDelete, isDragging, onDragStart, o
         </div>
       </td>
 
-      {/* Left Section: Product Info (40%) */}
+      {/* Left Section: Product Info (35%) */}
       <td className="px-4 py-3 w-2/5">
         <div className="flex items-start space-x-3">
           <div className="flex-shrink-0">
             <img
               src={product.images?.[0] || '/placeholder.svg'}
               alt={product.name}
-              className="w-14 h-18 object-cover rounded-lg border border-gray-200"
+              className="w-16 h-20 object-cover rounded-lg border border-gray-200"
             />
           </div>
           <div className="flex-1 min-w-0">
@@ -271,17 +271,17 @@ const ProductTableRow = ({ product, onEdit, onDelete, isDragging, onDragStart, o
                 </span>
               )}
             </div>
-            <h3 className="text-sm font-medium text-gray-900 truncate max-w-xs" title={product.name}>
+            <h3 className="text-sm font-medium text-gray-900 truncate max-w-sm" title={product.name}>
               {product.name}
             </h3>
-            <p className="text-xs text-gray-500 mt-1 line-clamp-2 max-w-xs">
+            <p className="text-xs text-gray-500 mt-1 line-clamp-2 max-w-sm">
               {product.description}
             </p>
           </div>
         </div>
       </td>
 
-      {/* Right Section: Details & Actions (60%) */}
+      {/* Right Section: Details & Actions (65%) */}
       <td className="px-4 py-3 w-3/5">
         <div className="space-y-3">
           {/* Line 1: Category, Price, and Sleeve Type */}
@@ -1085,7 +1085,7 @@ const List = ({ token }) => {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="w-full px-6 lg:px-8 xl:px-12">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 py-8">
             <div className="space-y-2">
               <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
@@ -1154,7 +1154,7 @@ const List = ({ token }) => {
 
         {/* Category Tabs */}
         <div className="border-t border-gray-200 bg-gray-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="w-full px-6 lg:px-8 xl:px-12">
             <div className="flex items-center gap-3 py-4 overflow-x-auto">
               <button
                 onClick={() => setSelectedCategory('all')}
@@ -1219,13 +1219,13 @@ const List = ({ token }) => {
 
       {/* Filters - Desktop */}
       <div className="hidden lg:block bg-gray-50 border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="w-full px-6 lg:px-8 xl:px-12 py-6">
           <div className="space-y-6">
             {/* Search and Basic Filters */}
-            <FilterSection title="Search & Basic Filters" icon={Search}>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Search */}
-        <div className="lg:col-span-2">
+                         <FilterSection title="Search & Basic Filters" icon={Search}>
+               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                 {/* Search */}
+                 <div className="lg:col-span-2 xl:col-span-1">
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Search Products</label>
               <div className="relative">
                     <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -1275,9 +1275,9 @@ const List = ({ token }) => {
               </div>
             </FilterSection>
       
-            {/* Advanced Filters */}
-            <FilterSection title="Advanced Filters" icon={Settings}>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                         {/* Advanced Filters */}
+             <FilterSection title="Advanced Filters" icon={Settings}>
+               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {/* Stock Filter */}
       <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Stock Status</label>
@@ -1388,7 +1388,7 @@ const List = ({ token }) => {
       </div>
 
         {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="w-full px-6 lg:px-8 xl:px-12 py-8">
         {/* Drag & Drop Indicator */}
         {isDragging && (
           <div className="mb-6 p-6 bg-blue-600 text-white rounded-xl shadow-xl">
@@ -1415,7 +1415,7 @@ const List = ({ token }) => {
           {loading ? (
           /* Loading State */
           <div className={viewMode === 'card' 
-            ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 xl:gap-6"
+            ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-8 gap-4 xl:gap-6"
             : "space-y-4"
           }>
             {Array.from({ length: PRODUCTS_PER_PAGE }).map((_, index) => (
@@ -1437,7 +1437,7 @@ const List = ({ token }) => {
           /* Products Display */
             <>
                           {viewMode === 'card' ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 xl:gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-8 gap-4 xl:gap-6">
                 {products.map((product) => (
                   <ProductCard
                     key={product._id}
@@ -1457,7 +1457,7 @@ const List = ({ token }) => {
               ) : (
               <>
                                         {/* Desktop Table View */}
-        <div className="hidden lg:block bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+        <div className="hidden lg:block bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm w-full">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
