@@ -222,103 +222,317 @@ const ProductCard = ({ product, onEdit, onDelete, isDragging, onDragStart, onDra
   )
 }
 
-// Table Row Component
+// Enhanced Product Table Row Component
 const ProductTableRow = ({ product, onEdit, onDelete, isDragging, onDragStart, onDragOver, onDrop, onDragEnd, onMoveTop, onMoveBottom }) => {
   const totalStock = product.sizes?.reduce((sum, sizeObj) => {
     return sum + (typeof sizeObj === 'object' ? sizeObj.stock || 0 : 0)
   }, 0) || 0
 
+  const stockInfo = getStockStatus(totalStock)
+
   return (
     <tr 
-      className={`hover:bg-gray-50 ${isDragging ? 'opacity-50' : ''}`}
+      className={`group hover:bg-gray-50 transition-colors duration-200 ${
+        isDragging ? 'opacity-50' : ''
+      }`}
       draggable
       onDragStart={(e) => onDragStart(e, product)}
       onDragOver={onDragOver}
       onDrop={(e) => onDrop(e, product)}
       onDragEnd={onDragEnd}
     >
+      {/* Drag Handle Column */}
+      <td className="px-6 py-4 w-8">
+        <div className="flex items-center justify-center">
+          <div className="bg-blue-600 text-white rounded-full p-1.5 cursor-grab active:cursor-grabbing shadow-sm hover:shadow-md transition-all duration-200 opacity-0 group-hover:opacity-100">
+            <GripVertical className="h-3 w-3" />
+          </div>
+        </div>
+      </td>
+
+      {/* Product Column */}
       <td className="px-6 py-4">
-        <div className="flex items-center gap-3">
-          {/* Drag Handle */}
-          <div className="opacity-100">
-            <div className="bg-blue-600 text-white rounded-full p-1 cursor-grab active:cursor-grabbing">
-              <GripVertical className="h-3 w-3" />
+        <div className="flex items-start space-x-4">
+          <div className="flex-shrink-0">
+            <img
+              src={product.images?.[0] || '/placeholder.svg'}
+              alt={product.name}
+              className="w-16 h-20 object-cover rounded-lg border border-gray-200"
+            />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center space-x-2 mb-1">
+              <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                {product.customId}
+              </span>
+              {product.bestseller && (
+                <span className="text-xs font-medium text-amber-700 bg-amber-100 px-2 py-1 rounded-full">
+                  Bestseller
+                </span>
+              )}
             </div>
-          </div>
-          
-          <img
-            src={product.images?.[0] || '/placeholder.svg'}
-            alt={product.name}
-            className="w-12 h-12 rounded-lg object-cover"
-            loading="lazy"
-          />
-          <div>
-            <p className="font-medium text-gray-900">{product.name}</p>
-            <p className="text-sm text-gray-500">{product.customId || product._id}</p>
+            <h3 className="text-sm font-medium text-gray-900 truncate max-w-xs" title={product.name}>
+              {product.name}
+            </h3>
+            <p className="text-xs text-gray-500 mt-1 line-clamp-2 max-w-xs">
+              {product.description}
+            </p>
           </div>
         </div>
       </td>
-      <td className="px-6 py-4 text-sm text-gray-900">
-        <span className="bg-gray-100 px-2 py-1 rounded-md text-xs">
-          {product.category || 'Uncategorized'}
-        </span>
+
+      {/* Category Column */}
+      <td className="px-6 py-4">
+        <div className="text-sm text-gray-900">
+          {product.category}
+        </div>
+        {product.sleeveType && (
+          <div className="text-xs text-gray-500 mt-1">
+            {product.sleeveType}
+          </div>
+        )}
       </td>
-      <td className="px-6 py-4 text-sm text-gray-900">
-        <div className="flex items-center gap-2">
-          <span className="font-medium">{currency}{product.price}</span>
-          {product.originalPrice && product.originalPrice > product.price && (
-            <span className="text-gray-400 line-through text-xs">
-              {currency}{product.originalPrice}
-            </span>
-          )}
+
+      {/* Price Column */}
+      <td className="px-6 py-4">
+        <div className="text-sm font-semibold text-gray-900">
+          ₹{product.price}
         </div>
       </td>
+
+      {/* Stock by Size Column */}
       <td className="px-6 py-4">
         <div className="flex flex-wrap gap-1">
-          {product.sizes?.slice(0, 4).map((sizeObj, index) => {
+          {product.sizes?.map((sizeObj) => {
             const size = typeof sizeObj === 'object' ? sizeObj.size : sizeObj
-            const stock = typeof sizeObj === 'object' ? sizeObj.stock || 0 : 0
-            return <StockBadge key={index} size={size} stock={stock} />
+            const stock = typeof sizeObj === 'object' ? sizeObj.stock : 0
+            const stockInfo = getStockStatus(stock)
+            
+            return (
+              <span
+                key={size}
+                className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                  stockInfo.status === 'out' 
+                    ? 'bg-red-50 text-red-700 border border-red-200' 
+                    : stockInfo.status === 'low'
+                    ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                    : 'bg-green-50 text-green-700 border border-green-200'
+                }`}
+              >
+                {size}: {stock}
+              </span>
+            )
           })}
         </div>
       </td>
+
+      {/* Actions Column */}
       <td className="px-6 py-4">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center space-x-2">
+          {/* Edit Button */}
           <button
             onClick={() => onEdit(product)}
-            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors duration-200"
             title="Edit Product"
           >
             <Edit className="h-4 w-4" />
           </button>
+          
+          {/* Delete Button */}
           <button
             onClick={() => onDelete(product._id)}
-            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
             title="Delete Product"
           >
             <Trash2 className="h-4 w-4" />
           </button>
-          
-          {/* Move Buttons */}
-          <div className="flex items-center gap-1 ml-2">
+
+          {/* Reorder Actions Dropdown */}
+          <div className="relative">
             <button
-              onClick={() => onMoveTop(product._id)}
-              className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-              title="Move to top"
+              className="p-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors duration-200"
+              title="Reorder Options"
             >
-              <ChevronUp className="h-3 w-3" />
+              <GripVertical className="h-4 w-4" />
             </button>
-            <button
-              onClick={() => onMoveBottom(product._id)}
-              className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-              title="Move to bottom"
-            >
-              <ChevronDown className="h-3 w-3" />
-            </button>
+            <div className="absolute right-0 top-full mt-1 w-32 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
+              <button
+                onClick={() => onMoveTop(product._id)}
+                className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 rounded-t-lg transition-colors duration-200 flex items-center space-x-2"
+              >
+                <ChevronUp className="h-4 w-4" />
+                <span>Move to Top</span>
+              </button>
+              <button
+                onClick={() => onMoveBottom(product._id)}
+                className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 rounded-b-lg transition-colors duration-200 flex items-center space-x-2"
+              >
+                <ChevronDown className="h-4 w-4" />
+                <span>Move to Bottom</span>
+              </button>
+            </div>
           </div>
         </div>
       </td>
     </tr>
+  )
+}
+
+// Mobile Product Card Component
+const MobileProductCard = ({ product, onEdit, onDelete, onMoveTop, onMoveBottom, isExpanded, onToggle }) => {
+  const totalStock = product.sizes?.reduce((sum, sizeObj) => {
+    return sum + (typeof sizeObj === 'object' ? sizeObj.stock || 0 : 0)
+  }, 0) || 0
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      {/* Collapsed View */}
+      <div 
+        className="p-4 cursor-pointer hover:bg-gray-50 transition-colors duration-200"
+        onClick={onToggle}
+      >
+        <div className="flex items-center space-x-4">
+          <img
+            src={product.images?.[0] || '/placeholder.svg'}
+            alt={product.name}
+            className="w-16 h-20 object-cover rounded-lg border border-gray-200 flex-shrink-0"
+          />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center space-x-2 mb-1">
+              <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                {product.customId}
+              </span>
+              {product.bestseller && (
+                <span className="text-xs font-medium text-amber-700 bg-amber-100 px-2 py-1 rounded-full">
+                  Bestseller
+                </span>
+              )}
+            </div>
+            <h3 className="text-sm font-medium text-gray-900 truncate" title={product.name}>
+              {product.name}
+            </h3>
+            <div className="flex items-center justify-between mt-2">
+              <span className="text-lg font-semibold text-gray-900">₹{product.price}</span>
+              <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Expanded View */}
+      {isExpanded && (
+        <div className="border-t border-gray-100 p-4 bg-gray-50">
+          <div className="space-y-4">
+            {/* Category & Sleeve Type */}
+            <div>
+              <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Category</h4>
+              <div className="text-sm text-gray-900">{product.category}</div>
+              {product.sleeveType && (
+                <div className="text-xs text-gray-500 mt-1">{product.sleeveType}</div>
+              )}
+            </div>
+
+            {/* Stock by Size */}
+            <div>
+              <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Stock by Size</h4>
+              <div className="flex flex-wrap gap-2">
+                {product.sizes?.map((sizeObj) => {
+                  const size = typeof sizeObj === 'object' ? sizeObj.size : sizeObj
+                  const stock = typeof sizeObj === 'object' ? sizeObj.stock : 0
+                  const stockInfo = getStockStatus(stock)
+                  
+                  return (
+                    <span
+                      key={size}
+                      className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium ${
+                        stockInfo.status === 'out' 
+                          ? 'bg-red-50 text-red-700 border border-red-200' 
+                          : stockInfo.status === 'low'
+                          ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                          : 'bg-green-50 text-green-700 border border-green-200'
+                      }`}
+                    >
+                      {size}: {stock}
+                    </span>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div>
+              <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Actions</h4>
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={() => onEdit(product)}
+                  className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                >
+                  <Edit className="h-4 w-4" />
+                  <span className="text-sm font-medium">Edit</span>
+                </button>
+                
+                <button
+                  onClick={() => onDelete(product._id)}
+                  className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  <span className="text-sm font-medium">Delete</span>
+                </button>
+              </div>
+              
+              {/* Reorder Actions */}
+              <div className="flex items-center space-x-2 mt-3">
+                <button
+                  onClick={() => onMoveTop(product._id)}
+                  className="flex-1 flex items-center justify-center space-x-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors duration-200"
+                >
+                  <ChevronUp className="h-4 w-4" />
+                  <span className="text-sm">Move to Top</span>
+                </button>
+                <button
+                  onClick={() => onMoveBottom(product._id)}
+                  className="flex-1 flex items-center justify-center space-x-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors duration-200"
+                >
+                  <ChevronDown className="h-4 w-4" />
+                  <span className="text-sm">Move to Bottom</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Mobile Filters Drawer Component
+const MobileFiltersDrawer = ({ isOpen, onClose, children }) => {
+  if (!isOpen) return null
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div 
+        className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+        onClick={onClose}
+      />
+      
+      {/* Drawer */}
+      <div className="fixed right-0 top-0 h-full w-80 bg-white shadow-2xl z-50 lg:hidden transform transition-transform duration-300 ease-in-out">
+        <div className="flex items-center justify-between p-4 border-b border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900">Filters</h3>
+          <button
+            onClick={onClose}
+            className="p-2 text-gray-400 hover:text-gray-600 transition-colors duration-200"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <div className="p-4 overflow-y-auto h-full">
+          {children}
+        </div>
+      </div>
+    </>
   )
 }
 
@@ -465,6 +679,22 @@ const List = ({ token }) => {
   const [draggedProduct, setDraggedProduct] = useState(null)
   const [isReordering, setIsReordering] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState('all')
+
+  // Mobile state
+  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false)
+  const [expandedProducts, setExpandedProducts] = useState(new Set())
+
+  const toggleProductExpansion = (productId) => {
+    setExpandedProducts(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(productId)) {
+        newSet.delete(productId)
+      } else {
+        newSet.add(productId)
+      }
+      return newSet
+    })
+  }
 
   // Fetch categories
   useEffect(() => {
@@ -943,8 +1173,36 @@ const List = ({ token }) => {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="bg-gray-50 border-b border-gray-200">
+      {/* Sticky Search Bar - Mobile */}
+      <div className="lg:hidden bg-white border-b border-gray-200 sticky top-0 z-30">
+        <div className="p-4">
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search products..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+            />
+          </div>
+          <div className="flex items-center justify-between mt-3">
+            <button
+              onClick={() => setIsMobileFiltersOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors duration-200"
+            >
+              <Filter className="h-4 w-4" />
+              <span className="text-sm font-medium">Filters</span>
+            </button>
+            <span className="text-sm text-gray-500">
+              {activeFiltersCount > 0 && `${activeFiltersCount} active`}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Filters - Desktop */}
+      <div className="hidden lg:block bg-gray-50 border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="space-y-6">
             {/* Search and Basic Filters */}
@@ -1181,49 +1439,68 @@ const List = ({ token }) => {
                 ))}
               </div>
             ) : (
-              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-8">
-                        {/* Drag handle column */}
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Product
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Category
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Price
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Stock by Size
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {products.map((product) => (
-                      <ProductTableRow
-                        key={product._id}
-                        product={product}
-                        onEdit={setEditingProduct}
-                        onDelete={handleDeleteProduct}
-                        isDragging={draggedProduct?._id === product._id}
-                        onDragStart={handleDragStart}
-                        onDragOver={handleDragOver}
-                        onDrop={handleDrop}
-                        onDragEnd={handleDragEnd}
-                        onMoveTop={(productId) => handleMoveProduct(productId, 'top')}
-                        onMoveBottom={(productId) => handleMoveProduct(productId, 'bottom')}
-                      />
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <>
+                {/* Desktop Table View */}
+                <div className="hidden lg:block bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-8">
+                          {/* Drag handle column */}
+                        </th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                          Product
+                        </th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                          Category
+                        </th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                          Price
+                        </th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                          Stock by Size
+                        </th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {products.map((product, index) => (
+                        <ProductTableRow
+                          key={product._id}
+                          product={product}
+                          onEdit={setEditingProduct}
+                          onDelete={handleDeleteProduct}
+                          isDragging={draggedProduct?._id === product._id}
+                          onDragStart={handleDragStart}
+                          onDragOver={handleDragOver}
+                          onDrop={handleDrop}
+                          onDragEnd={handleDragEnd}
+                          onMoveTop={(productId) => handleMoveProduct(productId, 'top')}
+                          onMoveBottom={(productId) => handleMoveProduct(productId, 'bottom')}
+                        />
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile List View */}
+                <div className="lg:hidden space-y-4">
+                  {products.map((product) => (
+                    <MobileProductCard
+                      key={product._id}
+                      product={product}
+                      onEdit={setEditingProduct}
+                      onDelete={handleDeleteProduct}
+                      onMoveTop={(productId) => handleMoveProduct(productId, 'top')}
+                      onMoveBottom={(productId) => handleMoveProduct(productId, 'bottom')}
+                      isExpanded={expandedProducts.has(product._id)}
+                      onToggle={() => toggleProductExpansion(product._id)}
+                    />
+                  ))}
+                </div>
+              </>
             )}
 
             {/* Pagination */}
@@ -1239,6 +1516,136 @@ const List = ({ token }) => {
           </>
         )}
       </div>
+
+      {/* Mobile Filters Drawer */}
+      <MobileFiltersDrawer isOpen={isMobileFiltersOpen} onClose={() => setIsMobileFiltersOpen(false)}>
+        <div className="space-y-6">
+          {/* Search */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Search Products</label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search by name or ID..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+
+          {/* Category Filter */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Category</label>
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="">All Categories</option>
+              {categories.map((cat) => (
+                <option key={cat._id} value={cat.slug}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Size Filter */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Size</label>
+            <select
+              value={sizeFilter}
+              onChange={(e) => setSizeFilter(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="">All Sizes</option>
+              {ALL_SIZES.map((size) => (
+                <option key={size} value={size}>
+                  {size}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Stock Filter */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Stock Status</label>
+            <select
+              value={stockFilter}
+              onChange={(e) => setStockFilter(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="">All Stock</option>
+              <option value="low">Low Stock</option>
+              <option value="out">Out of Stock</option>
+            </select>
+          </div>
+
+          {/* Sort Filter */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Sort By</label>
+            <select
+              value={`${sortBy}-${sortOrder}`}
+              onChange={(e) => {
+                const [field, order] = e.target.value.split('-')
+                setSortBy(field)
+                setSortOrder(order)
+              }}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="displayOrder-asc">Order (Custom)</option>
+              <option value="createdAt-desc">Newest First</option>
+              <option value="createdAt-asc">Oldest First</option>
+              <option value="price-asc">Price: Low to High</option>
+              <option value="price-desc">Price: High to Low</option>
+              <option value="name-asc">Name: A to Z</option>
+              <option value="name-desc">Name: Z to A</option>
+            </select>
+          </div>
+
+          {/* Price Range */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Price Range</label>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Min</label>
+                <input
+                  type="number"
+                  placeholder="0"
+                  value={priceRange.min}
+                  onChange={(e) => setPriceRange(prev => ({ ...prev, min: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Max</label>
+                <input
+                  type="number"
+                  placeholder="1000"
+                  value={priceRange.max}
+                  onChange={(e) => setPriceRange(prev => ({ ...prev, max: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Clear Filters */}
+          <button
+            onClick={() => {
+              clearFilters()
+              setIsMobileFiltersOpen(false)
+            }}
+            disabled={activeFiltersCount === 0}
+            className="w-full px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 flex items-center justify-center gap-2 font-medium"
+          >
+            <Filter className="h-4 w-4" />
+            Clear Filters
+          </button>
+        </div>
+      </MobileFiltersDrawer>
 
       {/* Edit Product Modal */}
       {editingProduct && (
