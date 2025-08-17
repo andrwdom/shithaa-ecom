@@ -14,6 +14,7 @@ import { safeFetch } from "@/lib/api-health"
 import WishlistButton from "@/components/WishlistButton"
 import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
+import { toast } from "sonner"
 
 interface Product {
   id?: number
@@ -91,7 +92,7 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
 
   const handleBuyNow = async () => {
     if (!selectedSize) {
-      alert("Please select a size first!")
+      toast.error("Please select a size first!")
       return
     }
     if (!product) return;
@@ -422,22 +423,58 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
                   {/* Size grid */}
                   {sizeOptions.length > 0 ? (
                     <div className="grid grid-cols-4 gap-2 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-8 mb-2">
-                      {sizeOptions.map((size) => (
-                        <button
-                          key={size}
-                          type="button"
-                          onClick={() => setSelectedSize(size)}
-                          className={`border rounded-md px-3 py-2 text-sm font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-cyan-400
-                            ${selectedSize === size ? "border-gray-900 bg-gray-900 text-white" : "border-gray-300 bg-white text-gray-900 hover:border-cyan-400"}
-                          `}
-                        >
-                          {size}
-                        </button>
-                      ))}
+                      {sizeOptions.map((size) => {
+                        const sizeObj = product.sizes?.find(s => s.size === size);
+                        const sizeStock = sizeObj ? sizeObj.stock : 0;
+                        const isOutOfStock = sizeStock === 0;
+                        const isSelected = selectedSize === size;
+                        
+                        return (
+                          <button
+                            key={size}
+                            type="button"
+                            onClick={() => setSelectedSize(size)}
+                            disabled={isOutOfStock}
+                            className={`border rounded-md px-3 py-2 text-sm font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-cyan-400
+                              ${isSelected 
+                                ? "border-gray-900 bg-gray-900 text-white" 
+                                : isOutOfStock
+                                  ? "border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed opacity-50"
+                                  : "border-gray-300 bg-white text-gray-900 hover:border-cyan-400"
+                              }
+                            `}
+                            title={isOutOfStock ? "Out of Stock" : `Select size ${size}`}
+                          >
+                            {size}
+                          </button>
+                        );
+                      })}
                     </div>
                   ) : (
                     <div className="text-sm text-red-500 font-medium mb-2">Size not available</div>
                   )}
+                  
+                  {/* Size availability indicator */}
+                  {sizeOptions.length > 0 && (
+                    <div className="flex items-center gap-4 text-xs text-gray-600 mb-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                        <span>In Stock</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                        <span>Out of Stock</span>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Size selection guidance */}
+                  {!selectedSize && sizeOptions.length > 0 && (
+                    <div className="text-sm text-blue-600 bg-blue-50 border border-blue-200 rounded-md px-3 py-2 mb-2">
+                      💡 Please select a size to add this item to your cart
+                    </div>
+                  )}
+                  
                   {/* Quantity and Add to Cart */}
                   <div className="flex gap-2 items-center mb-2">
                     <div className="flex items-center border rounded-md overflow-hidden w-[110px]">
@@ -475,9 +512,21 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
                     
                     <button
                       type="button"
-                      className="flex-1 border border-gray-400 rounded-md h-10 text-gray-900 font-semibold bg-white hover:bg-gray-100 transition text-sm"
+                      className={`flex-1 border rounded-md h-10 font-semibold transition text-sm disabled:opacity-50 disabled:cursor-not-allowed
+                        ${!selectedSize 
+                          ? "border-orange-400 bg-orange-50 text-orange-700 hover:bg-orange-100" 
+                          : selectedSizeStock === 0 
+                            ? "border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed"
+                            : "border-gray-400 bg-white text-gray-900 hover:bg-gray-100"
+                        }
+                      `}
                       disabled={!selectedSize || selectedSizeStock === 0 || quantity > selectedSizeStock}
                       onClick={() => {
+                        if (!selectedSize) {
+                          // Show feedback when no size is selected
+                          toast.error("Please select a size first!");
+                          return;
+                        }
                         if (!product) return;
                         addToCart({
                           id: product.id?.toString() || product._id || productId,
@@ -491,7 +540,7 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
                         }, true);
                       }}
                     >
-                      ADD TO CART
+                      {!selectedSize ? "SELECT SIZE FIRST" : "ADD TO CART"}
                     </button>
                   </div>
                   {/* Buy it now */}
