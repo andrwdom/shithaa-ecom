@@ -38,7 +38,7 @@ export interface CheckoutItem {
 export interface CheckoutFlow {
   mode: 'buy-now' | 'cart';
   items: CheckoutItem[];
-  source: 'buy-now' | 'cart' | 'stored' | 'restored' | 'context' | 'raw-storage';
+  source: 'buy-now' | 'cart' | 'stored' | 'restored' | 'context' | 'raw-storage' | 'aggressive-storage';
   timestamp: number;
   sessionId: string;
 }
@@ -75,7 +75,7 @@ export function CheckoutFlowProviderInner({ children }: { children: React.ReactN
       if (urlMode === "buynow") {
         console.log("CheckoutFlow: Buy-now mode detected, initializing...");
 
-        // 1. Context item
+        // 1. Context item (if available)
         if (buyNowItem) {
           console.log('✅ Found buy-now item in context:', buyNowItem);
           const flow: CheckoutFlow = {
@@ -94,7 +94,7 @@ export function CheckoutFlowProviderInner({ children }: { children: React.ReactN
           return;
         }
 
-        // 2. Dedicated buy-now checkout data
+        // 2. Dedicated buy-now checkout data (prioritize this when URL mode is buynow)
         console.log('🔍 Checking buyNowCheckoutData storage...');
         const buyNowData = sessionStorage.getItem("buyNowCheckoutData") || localStorage.getItem("buyNowCheckoutData");
         if (buyNowData) {
@@ -122,7 +122,7 @@ export function CheckoutFlowProviderInner({ children }: { children: React.ReactN
           }
         }
 
-        // 3. Fallback to raw buyNowItem storage
+        // 3. Fallback to raw buyNowItem storage (aggressive check for buynow mode)
         console.log('🔍 Checking raw buyNowItem storage...');
         const storedBuyNowItem = sessionStorage.getItem("buyNowItem") || localStorage.getItem("buyNowItem");
         if (storedBuyNowItem) {
@@ -150,7 +150,49 @@ export function CheckoutFlowProviderInner({ children }: { children: React.ReactN
           }
         }
 
-        // 4. If everything failed → empty state
+        // 4. Additional aggressive check for any buy-now related storage when URL mode is buynow
+        console.log('🔍 Additional aggressive check for buy-now storage...');
+        const allStorageKeys = ['buyNowItem', 'buyNowCheckoutData', 'buyNowCheckoutFlow', 'buyNowCheckoutItems'];
+        for (const key of allStorageKeys) {
+          const stored = sessionStorage.getItem(key) || localStorage.getItem(key);
+          if (stored) {
+            try {
+              const parsed = JSON.parse(stored);
+              console.log(`📦 Found data in ${key}:`, parsed);
+              
+              // Extract items from various storage formats
+              let items = [];
+              if (parsed.items && Array.isArray(parsed.items)) {
+                items = parsed.items;
+              } else if (parsed._id && parsed.name) {
+                items = [parsed];
+              } else if (Array.isArray(parsed)) {
+                items = parsed;
+              }
+              
+              if (items.length > 0 && items[0]._id && items[0].name) {
+                const flow: CheckoutFlow = {
+                  mode: "buy-now",
+                  items: items,
+                  source: "aggressive-storage",
+                  timestamp: Date.now(),
+                  sessionId: `buy-now_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+                };
+                setCurrentFlow(flow);
+                setCheckoutItems(items);
+                sessionStorage.setItem("buyNowCheckoutFlow", JSON.stringify(flow));
+                sessionStorage.setItem("buyNowCheckoutItems", JSON.stringify(items));
+                console.log("✅ Restored buy-now checkout flow from aggressive storage check:", flow);
+                setIsLoading(false);
+                return;
+              }
+            } catch (err) {
+              console.error(`❌ Error parsing ${key}:`, err);
+            }
+          }
+        }
+
+        // 5. If everything failed → empty state
         console.warn("⚠️ No buy-now item found, showing empty state");
         console.log('🔍 Storage contents:');
         console.log('  - sessionStorage.buyNowItem:', sessionStorage.getItem('buyNowItem'));

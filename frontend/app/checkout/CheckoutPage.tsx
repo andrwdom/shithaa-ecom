@@ -6,6 +6,7 @@ import OrderSummary from './OrderSummary'
 import PlaceOrderButton from './PlaceOrderButton'
 import { useCart } from '@/components/cart-context'
 import { useBuyNow } from '@/components/buy-now-context'
+import { useCheckoutFlow } from '@/components/checkout-flow-manager'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import PageLoading from '@/components/page-loading';
@@ -46,19 +47,22 @@ export default function CheckoutPage() {
   const router = useRouter()
   const [processing, setProcessing] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
-  const [isCartLoaded, setIsCartLoaded] = useState(false);
   const { user } = useAuth();
 
-  const { cartItems: contextCartItems, cartTotal, cartSubtotal, offerDetails, notifyCheckoutCartChanged, openCartSidebar } = useCart()
-  const { buyNowItem, clearBuyNowItem, isLoading: buyNowLoading } = useBuyNow()
+  // Use the centralized checkout flow manager instead of individual contexts
+  const { 
+    currentFlow, 
+    isBuyNowMode, 
+    isCartMode, 
+    checkoutItems, 
+    isLoading: checkoutFlowLoading,
+    retryRestoreCart 
+  } = useCheckoutFlow();
 
-  // Determine which items to show based on current state
-  const cartItems = buyNowItem ? [{
-    ...buyNowItem,
-    id: buyNowItem.id.toString(), // Convert id to string to match CartItem type
-    categorySlug: undefined, // BuyNowItem doesn't have categorySlug
-    category: undefined // BuyNowItem doesn't have category
-  }] : contextCartItems;
+  const { cartTotal, cartSubtotal, offerDetails, notifyCheckoutCartChanged, openCartSidebar } = useCart()
+
+  // Use checkoutItems from the flow manager
+  const cartItems = checkoutItems || [];
 
   // Check if we have items to checkout
   const hasItems = cartItems && cartItems.length > 0;
@@ -66,47 +70,32 @@ export default function CheckoutPage() {
   // Debug logging
   useEffect(() => {
     console.log("Checkout Debug:", {
-      buyNowItem: !!buyNowItem,
-      buyNowLoading,
-      contextCartItems: contextCartItems.length,
+      currentFlow: !!currentFlow,
+      isBuyNowMode,
+      isCartMode,
+      checkoutItems: checkoutItems?.length || 0,
       cartItems: cartItems.length,
       hasItems,
-      isCartLoaded,
+      checkoutFlowLoading,
       localStorage: localStorage.getItem("cartItems") ? "has data" : "empty",
       sessionStorage: sessionStorage.getItem("buyNowItem") ? "has data" : "empty"
     });
-  }, [buyNowItem, buyNowLoading, contextCartItems, cartItems, hasItems, isCartLoaded]);
+  }, [currentFlow, isBuyNowMode, isCartMode, checkoutItems, cartItems, hasItems, checkoutFlowLoading]);
 
-  // Handle cart loading state with better buy now support
+  // Handle cart loading state with checkout flow manager
   useEffect(() => {
-    // If we have cart items or buy now item, mark as loaded
-    if (hasItems) {
-      setIsCartLoaded(true);
-    } else if (buyNowLoading) {
-      // Still loading buy now context, wait
-      console.log("Checkout: Buy now context still loading, waiting...");
-      return;
+    // The checkout flow manager handles all loading states
+    // We just need to wait for it to complete
+    if (checkoutFlowLoading) {
+      console.log("Checkout: Checkout flow still loading, waiting...");
     } else {
-      // Check if we're still loading from localStorage
-      const storedCart = localStorage.getItem("cartItems");
-      const storedBuyNow = sessionStorage.getItem("buyNowItem") || localStorage.getItem("buyNowItem");
-      
-      if (storedCart || storedBuyNow) {
-        // Still loading, wait a bit more
-        const timer = setTimeout(() => {
-          setIsCartLoaded(true);
-        }, 100);
-        return () => clearTimeout(timer);
-      } else {
-        // No items found, mark as loaded
-        setIsCartLoaded(true);
-      }
+      console.log("Checkout: Checkout flow loaded, items count:", checkoutItems?.length || 0);
     }
-  }, [hasItems, buyNowLoading, contextCartItems, buyNowItem]);
+  }, [checkoutFlowLoading, checkoutItems]);
 
   // Enhanced fallback: Direct localStorage check and force cart restoration
   useEffect(() => {
-    if (!hasItems && isCartLoaded && !buyNowLoading) {
+    if (!hasItems && !checkoutFlowLoading) {
       // Double-check localStorage directly as a fallback
       const checkLocalStorage = () => {
         const storedCart = localStorage.getItem("cartItems");
@@ -121,7 +110,7 @@ export default function CheckoutPage() {
               notifyCheckoutCartChanged();
               
               // Also try to manually restore the cart if context is still empty
-              if (contextCartItems.length === 0) {
+              if (checkoutItems?.length === 0) {
                 console.log("Checkout: Manually restoring cart from localStorage");
                 // This will trigger the cart context to reload
                 window.dispatchEvent(new StorageEvent('storage', {
@@ -156,11 +145,11 @@ export default function CheckoutPage() {
       const timer = setTimeout(checkLocalStorage, 200);
       return () => clearTimeout(timer);
     }
-  }, [hasItems, isCartLoaded, buyNowLoading, notifyCheckoutCartChanged, contextCartItems.length]);
+  }, [hasItems, checkoutFlowLoading, notifyCheckoutCartChanged, checkoutItems?.length]);
 
   // Additional cart restoration attempt with longer delay
   useEffect(() => {
-    if (!hasItems && isCartLoaded) {
+    if (!hasItems) {
       const delayedRestoration = () => {
         const storedCart = localStorage.getItem("cartItems");
         if (storedCart) {
@@ -181,21 +170,20 @@ export default function CheckoutPage() {
       const timer = setTimeout(delayedRestoration, 1000);
       return () => clearTimeout(timer);
     }
-  }, [hasItems, isCartLoaded, notifyCheckoutCartChanged]);
+  }, [hasItems, notifyCheckoutCartChanged]);
 
   // Clear buy-now when user navigates away or completes checkout
   useEffect(() => {
     const handleBeforeUnload = () => {
-      if (buyNowItem) {
-        clearBuyNowItem()
-      }
+      // The checkout flow manager will handle cleanup
+      console.log("Checkout: Page unload, checkout flow manager will handle cleanup");
     }
 
     window.addEventListener('beforeunload', handleBeforeUnload)
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload)
     }
-  }, [buyNowItem, clearBuyNowItem])
+  }, [])
 
   useEffect(() => {
     // Subtotal should be the original sum before offers
@@ -283,7 +271,7 @@ export default function CheckoutPage() {
                   </div>
                 </div>
                 <span className="mt-2 text-xs sm:text-sm font-medium text-[#473C66] hidden sm:block transition-colors duration-300">
-                  {buyNowItem ? 'Product' : 'Cart'}
+                  {isBuyNowMode ? 'Product' : 'Cart'}
                 </span>
               </div>
 
@@ -338,8 +326,8 @@ export default function CheckoutPage() {
           </div>
         </div>
 
-        {/* Show loading state while cart is being restored */}
-        {!isCartLoaded && (
+        {/* Show loading state while checkout flow is being restored */}
+        {checkoutFlowLoading && (
           <div className="max-w-5xl mx-auto px-4">
             <div className="bg-white rounded-xl shadow p-8 text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[rgb(71,60,102)] mx-auto mb-4"></div>
@@ -349,7 +337,7 @@ export default function CheckoutPage() {
         )}
 
         {/* Show error state if no items found after loading */}
-        {isCartLoaded && !hasItems && (
+        {!checkoutFlowLoading && !hasItems && (
           <div className="max-w-5xl mx-auto px-4">
             <div className="bg-white rounded-xl shadow p-8 text-center">
               <div className="text-red-500 mb-4">
@@ -365,21 +353,8 @@ export default function CheckoutPage() {
               <div className="space-y-3">
                 <button 
                   onClick={() => {
-                    // Force cart restoration
-                    const storedCart = localStorage.getItem("cartItems");
-                    if (storedCart) {
-                      try {
-                        const parsed = JSON.parse(storedCart);
-                        if (Array.isArray(parsed) && parsed.length > 0) {
-                          console.log("Checkout: Manual retry - Found items:", parsed);
-                          notifyCheckoutCartChanged();
-                          // Force a page refresh to restore cart context
-                          window.location.reload();
-                        }
-                      } catch (error) {
-                        console.error("Checkout: Error in manual retry:", error);
-                      }
-                    }
+                    console.log("Checkout: Manual retry - calling checkout flow retry function");
+                    retryRestoreCart();
                   }}
                   className="inline-block bg-[rgb(71,60,102)] hover:bg-[rgb(71,60,102)]/90 text-white px-6 py-3 rounded-xl font-semibold transition-colors"
                 >
@@ -408,7 +383,7 @@ export default function CheckoutPage() {
         )}
 
         {/* Show checkout form only when we have items */}
-        {isCartLoaded && hasItems && (
+        {!checkoutFlowLoading && hasItems && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto mt-10 px-4">
             {/* Left Section: Product Preview + Shipping Form Only */}
             <div className="space-y-6">
