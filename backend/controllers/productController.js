@@ -270,33 +270,29 @@ export const addProduct = async (req, res) => {
                 totalFiles: images.length,
                 successful: images.length,
                 failed: 0,
-                totalSizeReduction: '0 Bytes',
                 avgCompressionRatio: 0,
                 totalProcessingTime: 0
             };
         }
 
-        console.log('📊 Image Optimization Summary:');
+        console.log('📊 FAST Image Optimization Summary:');
         console.log(`   Total files: ${stats.totalFiles}`);
         console.log(`   Successful: ${stats.successful}`);
         console.log(`   Failed: ${stats.failed}`);
-        console.log(`   Total size reduction: ${imageOptimizer.formatFileSize(stats.totalSizeReduction)}`);
         console.log(`   Average compression: ${stats.avgCompressionRatio}%`);
         console.log(`   Total processing time: ${stats.totalProcessingTime}ms`);
 
-        // Build responsive image URLs for VPS using optimized filenames
+        // Build simple image URLs for VPS using optimized filenames
         const baseUrl = process.env.BASE_URL || 'https://shithaa.in';
         let imagesUrl;
         
         try {
             imagesUrl = optimizedFiles.map(img => {
                 const baseFilename = path.parse(img.filename).name;
-                const responsiveUrls = imageOptimizer.generateResponsiveUrls(baseFilename, baseUrl);
-                // Extract just the original/main image URL as a string
-                return responsiveUrls.original || `${baseUrl}/images/products/${img.filename}`;
+                return imageOptimizer.generateResponsiveUrls(baseFilename, baseUrl);
             });
         } catch (error) {
-            console.error('❌ Error generating responsive URLs:', error);
+            console.error('❌ Error generating image URLs:', error);
             // Fallback to simple URLs
             imagesUrl = optimizedFiles.map(img => {
                 return `${baseUrl}/images/products/${img.filename}`;
@@ -586,11 +582,10 @@ export const updateProduct = async (req, res) => {
                     const { optimizedFiles, results } = optimizationResult;
                     const stats = imageOptimizer.getOptimizationStats(results);
 
-                    console.log('📊 Image Optimization Summary (Update):');
+                    console.log('📊 FAST Image Optimization Summary (Update):');
                     console.log(`   Total files: ${stats.totalFiles}`);
                     console.log(`   Successful: ${stats.successful}`);
                     console.log(`   Failed: ${stats.failed}`);
-                    console.log(`   Total size reduction: ${imageOptimizer.formatFileSize(stats.totalSizeReduction)}`);
                     console.log(`   Average compression: ${stats.avgCompressionRatio}%`);
                     console.log(`   Total processing time: ${stats.totalProcessingTime}ms`);
 
