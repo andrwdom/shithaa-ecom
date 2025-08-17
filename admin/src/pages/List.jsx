@@ -64,7 +64,7 @@ const StockBadge = ({ size, stock }) => {
     <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium
       ${stockInfo.status === 'out' ? 'bg-red-50 text-red-700 border border-red-200' : ''}
       ${stockInfo.status === 'low' ? 'bg-amber-50 text-amber-700 border border-amber-200' : ''}
-      ${stockInfo.status === 'good' ? 'bg-green-50 text-green-700 border border-green-200' : ''}
+      ${stockInfo.status === 'good' ? 'bg-yellow-50 text-yellow-700 border border-yellow-200' : ''}
     `}>
       {size}: {stock}
     </span>
@@ -283,88 +283,86 @@ const ProductTableRow = ({ product, onEdit, onDelete, isDragging, onDragStart, o
 
       {/* Right Section: Details & Actions (60%) */}
       <td className="px-4 py-3 w-3/5">
-        <div className="grid grid-cols-4 gap-4 items-center">
-          {/* Category */}
-          <div className="col-span-1">
-            <div className="text-sm text-gray-900 font-medium">
-              {product.category}
-            </div>
-            {product.sleeveType && (
-              <div className="text-xs text-gray-500 mt-1">
-                {product.sleeveType}
+        <div className="space-y-3">
+          {/* Line 1: Category, Price, and Sleeve Type */}
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <div className="text-sm text-gray-900 font-medium">
+                {product.category}
               </div>
-            )}
-          </div>
-
-          {/* Price */}
-          <div className="col-span-1">
-            <div className="text-sm font-semibold text-gray-900">
-              ₹{product.price}
-            </div>
-          </div>
-
-          {/* Stock by Size */}
-          <div className="col-span-1">
-            <div className="flex flex-wrap gap-1 max-w-32">
-              {product.sizes?.slice(0, 4).map((sizeObj) => {
-                const size = typeof sizeObj === 'object' ? sizeObj.size : sizeObj
-                const stock = typeof sizeObj === 'object' ? sizeObj.stock : 0
-                const stockInfo = getStockStatus(stock)
-                
-                return (
-                  <span
-                    key={size}
-                    className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                      stockInfo.status === 'out' 
-                        ? 'bg-red-50 text-red-700 border border-red-200' 
-                        : stockInfo.status === 'low'
-                        ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                        : 'bg-green-50 text-green-700 border border-green-200'
-                    }`}
-                  >
-                    {size}: {stock}
-                  </span>
-                )
-              })}
-              {product.sizes && product.sizes.length > 4 && (
-                <span className="text-xs text-gray-500 px-2 py-1">
-                  +{product.sizes.length - 4} more
-                </span>
+              {product.sleeveType && (
+                <div className="text-xs text-gray-500 mt-1">
+                  {product.sleeveType}
+                </div>
               )}
             </div>
+            <div className="text-right">
+              <div className="text-sm font-semibold text-gray-900">
+                ₹{product.price}
+              </div>
+            </div>
           </div>
 
-          {/* Actions */}
-          <div className="col-span-1">
-            <div className="flex items-center justify-end space-x-2">
+          {/* Line 2: Stock Badges + Actions */}
+          <div className="flex items-center justify-between">
+            {/* Stock Badges - Horizontal Row */}
+            <div className="flex-1">
+              <div className="flex flex-wrap gap-2">
+                {product.sizes?.slice(0, 6).map((sizeObj) => {
+                  const size = typeof sizeObj === 'object' ? sizeObj.size : sizeObj
+                  const stock = typeof sizeObj === 'object' ? sizeObj.stock : 0
+                  const stockInfo = getStockStatus(stock)
+                  
+                  return (
+                    <span
+                      key={size}
+                      className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        stockInfo.status === 'out' 
+                          ? 'bg-red-50 text-red-700 border border-red-200' 
+                          : stockInfo.status === 'low'
+                          ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                          : 'bg-yellow-50 text-yellow-700 border border-yellow-200'
+                      }`}
+                    >
+                      {size}: {stock}
+                    </span>
+                  )
+                })}
+                {product.sizes && product.sizes.length > 6 && (
+                  <span className="text-xs text-gray-500 px-2 py-1">
+                    +{product.sizes.length - 6} more
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Actions - Horizontal Row, Right-Aligned */}
+            <div className="flex items-center space-x-2 ml-4">
               {/* Edit Button */}
               <button
                 onClick={() => onEdit(product)}
-                className="px-3 py-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors duration-200 text-sm font-medium"
+                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors duration-200"
                 title="Edit Product"
               >
-                <span className="hidden xl:inline">Edit</span>
-                <Edit className="h-4 w-4 xl:hidden" />
+                <Edit className="h-4 w-4" />
               </button>
               
               {/* Delete Button */}
               <button
                 onClick={() => onDelete(product._id)}
-                className="px-3 py-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200 text-sm font-medium"
+                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
                 title="Delete Product"
               >
-                <span className="hidden xl:inline">Delete</span>
-                <Trash2 className="h-4 w-4 xl:hidden" />
+                <Trash2 className="h-4 w-4" />
               </button>
 
               {/* Reorder Actions Dropdown */}
               <div className="relative">
                 <button
-                  className="px-3 py-1.5 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors duration-200 text-sm font-medium"
+                  className="p-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors duration-200"
                   title="Reorder Options"
                 >
-                  <span className="hidden xl:inline">Reorder</span>
-                  <GripVertical className="h-4 w-4 xl:hidden" />
+                  <GripVertical className="h-4 w-4" />
                 </button>
                 <div className="absolute right-0 top-full mt-1 w-36 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
                   <button
@@ -448,7 +446,7 @@ const MobileProductCard = ({ product, onEdit, onDelete, onMoveTop, onMoveBottom,
             {/* Stock by Size */}
             <div>
               <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Stock by Size</h4>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 mb-4">
                 {product.sizes?.map((sizeObj) => {
                   const size = typeof sizeObj === 'object' ? sizeObj.size : sizeObj
                   const stock = typeof sizeObj === 'object' ? sizeObj.stock : 0
@@ -457,12 +455,12 @@ const MobileProductCard = ({ product, onEdit, onDelete, onMoveTop, onMoveBottom,
                   return (
                     <span
                       key={size}
-                      className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium ${
+                      className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                         stockInfo.status === 'out' 
                           ? 'bg-red-50 text-red-700 border border-red-200' 
                           : stockInfo.status === 'low'
                           ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                          : 'bg-green-50 text-green-700 border border-green-200'
+                          : 'bg-yellow-50 text-yellow-700 border border-yellow-200'
                       }`}
                     >
                       {size}: {stock}
@@ -475,40 +473,43 @@ const MobileProductCard = ({ product, onEdit, onDelete, onMoveTop, onMoveBottom,
             {/* Actions */}
             <div>
               <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Actions</h4>
-              <div className="flex items-center space-x-3">
-                <button
-                  onClick={() => onEdit(product)}
-                  className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
-                >
-                  <Edit className="h-4 w-4" />
-                  <span className="text-sm font-medium">Edit</span>
-                </button>
+              <div className="space-y-3">
+                {/* Primary Actions */}
+                <div className="flex items-center space-x-3">
+                  <button
+                    onClick={() => onEdit(product)}
+                    className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                  >
+                    <Edit className="h-4 w-4" />
+                    <span className="text-sm font-medium">Edit</span>
+                  </button>
+                  
+                  <button
+                    onClick={() => onDelete(product._id)}
+                    className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    <span className="text-sm font-medium">Delete</span>
+                  </button>
+                </div>
                 
-                <button
-                  onClick={() => onDelete(product._id)}
-                  className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  <span className="text-sm font-medium">Delete</span>
-                </button>
-              </div>
-              
-              {/* Reorder Actions */}
-              <div className="flex items-center space-x-2 mt-3">
-                <button
-                  onClick={() => onMoveTop(product._id)}
-                  className="flex-1 flex items-center justify-center space-x-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors duration-200"
-                >
-                  <ChevronUp className="h-4 w-4" />
-                  <span className="text-sm">Move to Top</span>
-                </button>
-                <button
-                  onClick={() => onMoveBottom(product._id)}
-                  className="flex-1 flex items-center justify-center space-x-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors duration-200"
-                >
-                  <ChevronDown className="h-4 w-4" />
-                  <span className="text-sm">Move to Bottom</span>
-                </button>
+                {/* Reorder Actions */}
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => onMoveTop(product._id)}
+                    className="flex-1 flex items-center justify-center space-x-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors duration-200"
+                  >
+                    <ChevronUp className="h-4 w-4" />
+                    <span className="text-sm">Move to Top</span>
+                  </button>
+                  <button
+                    onClick={() => onMoveBottom(product._id)}
+                    className="flex-1 flex items-center justify-center space-x-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors duration-200"
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                    <span className="text-sm">Move to Bottom</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
