@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import { useCart } from "./cart-context";
 
 export interface BuyNowItem {
@@ -27,6 +27,9 @@ export function BuyNowProvider({ children }: { children: React.ReactNode }) {
   const [buyNowItem, setBuyNowItemState] = useState<BuyNowItem | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { cartItems } = useCart();
+  
+  // Add ref to prevent unnecessary operations
+  const lastCartLengthRef = useRef(0);
 
   // Enhanced persistence with both sessionStorage and localStorage for better reliability
   useEffect(() => {
@@ -102,12 +105,15 @@ export function BuyNowProvider({ children }: { children: React.ReactNode }) {
 
   // Auto-clear buy-now when cart operations occur (ensuring proper flow separation)
   useEffect(() => {
-    if (buyNowItem && cartItems.length > 0) {
+    // Only clear if cart length actually changed and we have a buy-now item
+    if (buyNowItem && cartItems.length > 0 && lastCartLengthRef.current !== cartItems.length) {
       // If user has items in cart and tries to buy now, clear buy-now to avoid confusion
       // This ensures checkout always shows the intended items
+      console.log("BuyNowProvider: Cart items detected, clearing buy-now item");
       clearBuyNowItem();
     }
-  }, [cartItems.length]);
+    lastCartLengthRef.current = cartItems.length;
+  }, [cartItems.length, buyNowItem]);
 
   function setBuyNowItem(item: BuyNowItem | null) {
     console.log("BuyNowProvider: Setting buy-now item:", item);

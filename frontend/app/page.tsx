@@ -89,9 +89,8 @@ export default function Home() {
       const stock = availableSize?.stock || 0
 
       await addToCart({
-        id: product.id,
-        _id: product._id,
         id: product.customId || product._id, // Use customId for routing
+        _id: product._id,
         name: product.name,
         price: product.price,
         quantity: 1,

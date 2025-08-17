@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import Image from "next/image"
 import { useCart, CartItem } from "@/components/cart-context"
 import { useBuyNow } from "@/components/buy-now-context"
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 
 export default function CartSidebar() {
@@ -26,6 +26,11 @@ export default function CartSidebar() {
   const [isLoadingStocks, setIsLoadingStocks] = useState(false);
   const [showEmptyState, setShowEmptyState] = useState(false);
   const router = useRouter();
+  
+  // Add refs to prevent excessive API calls
+  const stockFetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastCartItemsRef = useRef<string>('');
+  const isFetchingStocksRef = useRef(false);
 
   // Show empty state after a small delay to prevent flickering
   useEffect(() => {
@@ -45,19 +50,36 @@ export default function CartSidebar() {
     }
   }, [isCartSidebarOpen, cartItems.length, restoreCartFromStorage])
 
-  // Fetch stock info for all cart items on open
-  useEffect(() => {
-    async function fetchStocks() {
-      if (cartItems.length === 0) return;
+  // Optimized stock fetching with debouncing and caching
+  const fetchStocks = useCallback(async () => {
+    if (cartItems.length === 0 || isFetchingStocksRef.current) return;
+    
+    // Create a hash of cart items to check if they've changed
+    const cartHash = cartItems.map(item => `${item._id}-${item.size}-${item.quantity}`).join('|');
+    if (cartHash === lastCartItemsRef.current) return;
+    
+    // Clear any existing timeout
+    if (stockFetchTimeoutRef.current) {
+      clearTimeout(stockFetchTimeoutRef.current);
+    }
+    
+    // Debounce stock fetching to prevent rapid API calls
+    stockFetchTimeoutRef.current = setTimeout(async () => {
+      if (isFetchingStocksRef.current) return;
       
+      isFetchingStocksRef.current = true;
       setIsLoadingStocks(true);
+      
       const stocks: Record<string, Record<string, number>> = {};
       
       try {
         // Import the safeFetch function
         const { safeFetch } = await import('@/lib/api-utils')
         
-        for (const item of cartItems) {
+        // Only fetch stocks for items we don't already have
+        const itemsToFetch = cartItems.filter(item => !productStocks[item._id]);
+        
+        for (const item of itemsToFetch) {
           if (!stocks[item._id]) {
             try {
               const response = await safeFetch(
@@ -86,15 +108,35 @@ export default function CartSidebar() {
             }
           }
         }
+        
+        // Merge new stocks with existing ones
+        setProductStocks(prev => ({ ...prev, ...stocks }));
+        lastCartItemsRef.current = cartHash;
+        
       } catch (error) {
         console.error('Error importing safeFetch:', error);
+      } finally {
+        setIsLoadingStocks(false);
+        isFetchingStocksRef.current = false;
       }
-      
-      setProductStocks(stocks);
-      setIsLoadingStocks(false);
+    }, 500); // 500ms debounce delay
+  }, [cartItems, productStocks]);
+
+  // Fetch stock info for all cart items on open - with debouncing
+  useEffect(() => {
+    if (isCartSidebarOpen && cartItems.length > 0) {
+      fetchStocks();
     }
-    if (isCartSidebarOpen && cartItems.length > 0) fetchStocks();
-  }, [isCartSidebarOpen, cartItems]);
+  }, [isCartSidebarOpen, cartItems, fetchStocks]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (stockFetchTimeoutRef.current) {
+        clearTimeout(stockFetchTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Function to handle checkout from cart
   const handleProceedToCheckout = () => {

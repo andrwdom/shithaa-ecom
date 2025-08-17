@@ -1,6 +1,6 @@
 "use client"
 
-import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from "react"
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from "react"
 
 export interface CartItem {
   id: string; // for frontend logic
@@ -56,6 +56,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cartChangeCounter, setCartChangeCounter] = useState(0)
   // Add state to track if cart has been initialized
   const [isCartInitialized, setIsCartInitialized] = useState(false)
+  
+  // Add refs to prevent race conditions
+  const isCalculatingRef = useRef(false)
+  const calculationTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const lastCartHashRef = useRef<string>('')
 
   // Enhanced function to load cart from localStorage
   const loadCartFromStorage = useCallback(() => {
@@ -202,67 +207,103 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, [cartItems, isCartInitialized])
 
-  // Function to calculate cart total with offers - moved before useEffect
+  // Function to calculate cart total with offers - properly memoized and debounced
   const calculateCartTotalWithOffers = useCallback(async () => {
     if (cartItems.length === 0) return
 
-    setIsLoadingOffer(true)
-    try {
-      // Import the safeFetch function
-      const { safeFetch } = await import('@/lib/api-utils')
-      
-      const response = await safeFetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/cart/calculate-total`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ items: cartItems }),
-        },
-        `cart-total-${cartItems.map(item => `${item._id}-${item.size}-${item.quantity}`).join('-')}`,
-        2 * 60 * 1000 // 2 minutes cache
-      )
+    // Create a hash of the current cart to prevent unnecessary API calls
+    const cartHash = cartItems.map(item => `${item._id}-${item.size}-${item.quantity}`).join('|')
+    
+    // If cart hasn't changed, don't recalculate
+    if (cartHash === lastCartHashRef.current) {
+      return
+    }
+    
+    // If already calculating, don't start another calculation
+    if (isCalculatingRef.current) {
+      return
+    }
 
-      if (response.ok) {
-        const data = await response.json()
-        if (data.success) {
-          setCartTotal(data.data.total)
-          setCartSubtotal(data.data.subtotal)
-          setOfferDetails({
-            offerApplied: data.data.offerApplied,
-            offerDetails: data.data.offerDetails,
-            offerDiscount: data.data.offerDiscount,
-            loungewearCategoryCount: data.data.loungewearCategoryCount,
-            otherItemsCount: data.data.otherItemsCount,
-          })
+    // Clear any existing timeout
+    if (calculationTimeoutRef.current) {
+      clearTimeout(calculationTimeoutRef.current)
+    }
+
+    // Debounce the calculation to prevent excessive API calls
+    calculationTimeoutRef.current = setTimeout(async () => {
+      isCalculatingRef.current = true
+      lastCartHashRef.current = cartHash
+      
+      setIsLoadingOffer(true)
+      try {
+        // Import the safeFetch function
+        const { safeFetch } = await import('@/lib/api-utils')
+        
+        const response = await safeFetch(
+          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/cart/calculate-total`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ items: cartItems }),
+          },
+          `cart-total-${cartHash}`,
+          2 * 60 * 1000 // 2 minutes cache
+        )
+
+        if (response.ok) {
+          const data = await response.json()
+          if (data.success) {
+            setCartTotal(data.data.total)
+            setCartSubtotal(data.data.subtotal)
+            setOfferDetails({
+              offerApplied: data.data.offerApplied,
+              offerDetails: data.data.offerDetails,
+              offerDiscount: data.data.offerDiscount,
+              loungewearCategoryCount: data.data.loungewearCategoryCount,
+              otherItemsCount: data.data.otherItemsCount,
+            })
+          }
+        } else {
+          // Fallback to simple calculation if API fails
+          const fallbackTotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
+          setCartTotal(fallbackTotal)
+          setOfferDetails(null)
         }
-      } else {
-        // Fallback to simple calculation if API fails
+      } catch (error) {
+        console.error("Error calculating cart total:", error)
+        // Fallback to simple calculation
         const fallbackTotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
         setCartTotal(fallbackTotal)
         setOfferDetails(null)
+      } finally {
+        setIsLoadingOffer(false)
+        isCalculatingRef.current = false
       }
-    } catch (error) {
-      console.error("Error calculating cart total:", error)
-      // Fallback to simple calculation
-      const fallbackTotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
-      setCartTotal(fallbackTotal)
-      setOfferDetails(null)
-    } finally {
-      setIsLoadingOffer(false)
-    }
+    }, 300) // 300ms debounce delay
   }, [cartItems])
 
-  // Calculate cart total and check for offers when cart changes
+  // Calculate cart total and check for offers when cart changes - with proper dependency management
   useEffect(() => {
     if (cartItems.length > 0) {
       calculateCartTotalWithOffers()
     } else {
       setCartTotal(0)
       setOfferDetails(null)
+      // Clear the hash when cart is empty
+      lastCartHashRef.current = ''
     }
   }, [cartItems, calculateCartTotalWithOffers])
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (calculationTimeoutRef.current) {
+        clearTimeout(calculationTimeoutRef.current)
+      }
+    }
+  }, [])
 
   console.log("CartProvider: Rendering with cartItems:", cartItems)
 
