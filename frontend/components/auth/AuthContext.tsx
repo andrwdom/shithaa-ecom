@@ -27,6 +27,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const data = await res.json();
           if (res.ok && data.data) {
             setMongoUser(data.data);
+            // Show welcome message for new users
+            if (firebaseUser.metadata?.creationTime && 
+                new Date(firebaseUser.metadata.creationTime).getTime() > Date.now() - 60000) {
+              toast.success(`🎉 Welcome to Shithaa, ${data.data.name || firebaseUser.displayName || 'there'}!`, {
+                description: "You've been successfully signed in. Enjoy shopping!",
+                duration: 5000,
+                position: 'top-center',
+              });
+            }
           } else if (res.status === 200 && !data.data) {
             // User not authenticated to backend (expected for new users)
             setMongoUser(null);
@@ -58,6 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       toast.success(`👋 Goodbye, ${userName}!`, {
         description: "You've been logged out successfully. Please sign in again to continue.",
         duration: 4000,
+        position: 'top-center',
       });
 
       console.log("Logout toast notification should have been shown");

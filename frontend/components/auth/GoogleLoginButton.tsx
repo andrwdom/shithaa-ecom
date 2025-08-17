@@ -42,12 +42,14 @@ export default function GoogleLoginButton({ onSuccess }: { onSuccess: () => void
           toast.success(`🎉 Welcome to Shithaa, ${userName}!`, {
             description: "You've successfully signed up. Explore our elegant maternity wear collections now.",
             duration: 5000,
+            position: 'top-center',
           });
         } else {
           console.log("Showing returning user welcome toast");
           toast.success(`👋 Welcome back, ${userName}!`, {
             description: "You've successfully signed in to Shithaa.",
             duration: 5000,
+            position: 'top-center',
           });
         }
         
@@ -55,11 +57,15 @@ export default function GoogleLoginButton({ onSuccess }: { onSuccess: () => void
         onSuccess();
       } else {
         console.error("Backend Google login failed:", data.message);
-        toast.error(data.message || "Google login failed. Please try again.");
+        toast.error(data.message || "Google login failed. Please try again.", {
+          position: 'top-center',
+        });
       }
     } catch (err: any) {
       console.error('Google login error:', err);
-      toast.error(err.message || "Google login failed. Please try again.");
+      toast.error(err.message || "Google login failed. Please try again.", {
+        position: 'top-center',
+      });
     } finally {
       setLoading(false);
     }

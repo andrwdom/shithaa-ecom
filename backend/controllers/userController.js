@@ -345,17 +345,39 @@ export const firebaseLogin = async (req, res) => {
       decoded = await admin.auth().verifyIdToken(idToken);
     } catch (firebaseError) {
       console.error('Firebase token verification failed:', firebaseError.message);
+      console.error('Firebase error details:', firebaseError);
       
-      // For development, create a mock user if Firebase Admin isn't available
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Development mode: Creating mock user for testing');
+      // Check if Firebase Admin is properly initialized
+      if (!admin.apps.length) {
+        console.error('Firebase Admin SDK not initialized');
+        return res.status(500).json({ 
+          success: false, 
+          message: 'Firebase Admin SDK not configured. Please contact support.' 
+        });
+      }
+      
+      // For development or when Firebase Admin isn't available, create a mock user
+      if (process.env.NODE_ENV === 'development' || process.env.FIREBASE_ADMIN_DISABLED === 'true') {
+        console.log('Development/Fallback mode: Creating mock user for testing');
+        
+        // Extract email from the token if possible (basic JWT decode)
+        let email = 'test@example.com';
+        try {
+          const tokenParts = idToken.split('.');
+          if (tokenParts.length === 3) {
+            const payload = JSON.parse(Buffer.from(tokenParts[1], 'base64').toString());
+            email = payload.email || 'test@example.com';
+          }
+        } catch (e) {
+          console.log('Could not extract email from token, using default');
+        }
         
         // Create a test user for development
-        let user = await userModel.findOne({ email: 'test@example.com' });
+        let user = await userModel.findOne({ email });
         if (!user) {
           user = await userModel.create({
             name: 'Test User',
-            email: 'test@example.com',
+            email: email,
             password: '',
           });
         }
@@ -391,7 +413,10 @@ export const firebaseLogin = async (req, res) => {
           message: 'Development login successful (Firebase Admin not configured)' 
         });
       } else {
-        return res.status(401).json({ success: false, message: 'Invalid Firebase token' });
+        return res.status(401).json({ 
+          success: false, 
+          message: 'Firebase authentication failed. Please try again or contact support.' 
+        });
       }
     }
 
