@@ -18,8 +18,7 @@ export default function CartSidebar() {
     closeCartSidebar,
     cartTotal,
     offerDetails,
-    isLoadingOffer,
-    restoreCartFromStorage
+    isLoadingOffer
   } = useCart();
   const { clearBuyNowItem } = useBuyNow();
   const [productStocks, setProductStocks] = useState<Record<string, Record<string, number>>>({});
@@ -49,19 +48,6 @@ export default function CartSidebar() {
       setShowEmptyState(false);
     }
   }, [cartItemsCount]);
-
-  // Attempt to restore cart when sidebar opens and cart is empty - with conflict prevention
-  useEffect(() => {
-    if (isCartSidebarOpen && cartItemsCount === 0) {
-      // Add a small delay to prevent conflicts with storage operations
-      const timer = setTimeout(() => {
-        console.log("Cart sidebar: Cart is empty, attempting restoration")
-        restoreCartFromStorage()
-      }, 300)
-      
-      return () => clearTimeout(timer)
-    }
-  }, [isCartSidebarOpen, cartItemsCount, restoreCartFromStorage])
 
   // Optimized stock fetching with debouncing and caching
   const fetchStocks = useCallback(async () => {
