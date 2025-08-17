@@ -13,6 +13,7 @@ import { useAuth } from "@/components/auth/useAuth";
 import LoginModal from "@/components/auth/LoginModal";
 import { useBuyNow } from "@/components/buy-now-context";
 import { useCheckoutFlow } from "@/components/checkout-flow-manager";
+import { getCheckoutMode } from "@/components/checkout-flow-manager";
 import { getIdToken } from "firebase/auth";
 import { Gift } from "lucide-react";
 import Link from "next/link";
@@ -56,6 +57,32 @@ export default function CheckoutClient() {
 
   // Calculate total from checkout items
   const total = checkoutItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+  // ⚡ GUARD RAILS: Validate checkout items before payment
+  const currentMode = getCheckoutMode();
+  if (currentMode === 'buynow' && (!buyNowItem || checkoutItems.length === 0)) {
+    throw new Error("No buy-now item in session. Please try again.");
+  }
+  if (currentMode === 'cart' && cartItems.length === 0) {
+    throw new Error("No cart items in session. Please try again.");
+  }
+  if (checkoutItems.length === 0) {
+    throw new Error("No checkout items found. Please refresh and try again.");
+  }
+
+  // Validate all items have valid MongoDB ObjectIds
+  const validHex24 = /^[0-9a-fA-F]{24}$/;
+  const itemsWithId = checkoutItems
+    .map(item => ({
+      ...item,
+      _id: item._id || item.id
+    }))
+    .filter(item => item._id && validHex24.test(item._id));
+  if (itemsWithId.length !== checkoutItems.length) {
+    setError("Some items in your cart are invalid. Please remove and re-add them.");
+    setLoading(false);
+    return;
+  }
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -445,10 +472,14 @@ export default function CheckoutClient() {
         localStorage.setItem('phonepeBuyNowItem', JSON.stringify(checkoutItems[0]));
         // Store buy-now specific order data
         localStorage.setItem('buyNowOrderData', JSON.stringify(orderDataWithFlags));
+        // Also store in buy-now flow storage
+        sessionStorage.setItem('buyNowOrderData', JSON.stringify(orderDataWithFlags));
       } else {
         localStorage.setItem('phonepeCartItems', JSON.stringify(checkoutItems));
         // Store cart specific order data
         localStorage.setItem('cartOrderData', JSON.stringify(orderDataWithFlags));
+        // Also store in cart flow storage
+        sessionStorage.setItem('cartOrderData', JSON.stringify(orderDataWithFlags));
       }
       
       // Create PhonePe payment session
@@ -480,6 +511,28 @@ export default function CheckoutClient() {
             console.log('Stored order data with PhonePe transaction ID:', paymentData.data.phonepeTransactionId);
           }
           
+          // ⚡ CLEAN UP: Clear flow-specific storage before redirect to keep flows isolated
+          const currentMode = getCheckoutMode();
+          if (currentMode === 'buynow') {
+            // Clear only buy-now storage after successful payment
+            sessionStorage.removeItem('buyNowCheckoutFlow');
+            sessionStorage.removeItem('buyNowCheckoutItems');
+            sessionStorage.removeItem('buyNowCheckoutData');
+            localStorage.removeItem('buyNowCheckoutData');
+            localStorage.removeItem('buyNowOrderData');
+            sessionStorage.removeItem('buyNowOrderData');
+            console.log('Cleared buy-now storage after successful payment');
+          } else {
+            // Clear only cart storage after successful payment
+            sessionStorage.removeItem('cartCheckoutFlow');
+            sessionStorage.removeItem('cartCheckoutItems');
+            sessionStorage.removeItem('cartCheckoutData');
+            localStorage.removeItem('cartCheckoutData');
+            localStorage.removeItem('cartOrderData');
+            sessionStorage.removeItem('cartOrderData');
+            console.log('Cleared cart storage after successful payment');
+          }
+          
           // Redirect to PhonePe payment gateway
           window.location.href = paymentData.data.redirectUrl;
         } else {
@@ -492,7 +545,25 @@ export default function CheckoutClient() {
 
     } catch (err) {
       console.error('Payment error:', err);
-      const errorMessage = err instanceof Error ? err.message : "Payment failed. Please try again.";
+      
+      // ⚡ ENHANCED ERROR CONTEXT: Provide flow-specific error messages
+      const currentMode = getCheckoutMode();
+      let errorMessage = err instanceof Error ? err.message : "Payment failed. Please try again.";
+      
+      if (currentMode === 'buynow') {
+        if (errorMessage.includes('buy-now item')) {
+          errorMessage = "Buy-now item was lost. Please return to the product page and try again.";
+        } else if (errorMessage.includes('checkout items')) {
+          errorMessage = "Buy-now checkout items were lost. Please refresh and try again.";
+        }
+      } else {
+        if (errorMessage.includes('cart items')) {
+          errorMessage = "Cart items were lost. Please return to your cart and try again.";
+        } else if (errorMessage.includes('checkout items')) {
+          errorMessage = "Cart checkout items were lost. Please refresh and try again.";
+        }
+      }
+      
       setError(errorMessage);
     } finally {
       setLoading(false);

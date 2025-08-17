@@ -139,8 +139,9 @@ export function BuyNowProvider({ children }: { children: ReactNode }) {
     sessionStorage.removeItem("buyNowCheckoutData");
     localStorage.removeItem("buyNowCheckoutData");
     
-    // Also clear any checkout flow data
-    sessionStorage.removeItem("checkoutFlow");
+    // Clear flow-specific storage keys
+    sessionStorage.removeItem("buyNowCheckoutFlow");
+    sessionStorage.removeItem("buyNowCheckoutItems");
   }
 
   function restoreFromStorage() {

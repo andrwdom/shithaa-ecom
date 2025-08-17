@@ -5,6 +5,24 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useCart } from './cart-context';
 import { useBuyNow } from './buy-now-context';
 
+// Global utility for flow detection - can be used anywhere in checkout or gateway code
+export function getCheckoutMode(): 'buynow' | 'cart' {
+  if (typeof window === 'undefined') return 'cart'; // SSR fallback
+  
+  const params = new URLSearchParams(window.location.search);
+  return params.get("mode") === "buynow" ? "buynow" : "cart";
+}
+
+// Helper function to get checkout mode from URL string (for non-component usage)
+export function getCheckoutModeFromUrl(url: string): 'buynow' | 'cart' {
+  try {
+    const urlObj = new URL(url);
+    return urlObj.searchParams.get("mode") === "buynow" ? "buynow" : "cart";
+  } catch {
+    return 'cart'; // Fallback to cart if URL parsing fails
+  }
+}
+
 export interface CheckoutItem {
   _id: string;
   id: string;
@@ -55,8 +73,18 @@ function CheckoutFlowProviderInner({ children }: { children: ReactNode }) {
       
       try {
         // Get the mode from URL parameters
-        const urlMode = searchParams?.get('mode');
+        let urlMode = searchParams?.get('mode');
         console.log('CheckoutFlow: URL mode detected:', urlMode);
+        
+        // ⚡ FLOW VALIDATION: Ensure URL mode matches actual data availability
+        if (urlMode === 'buynow') {
+          // Validate buy-now flow data integrity
+          if (!buyNowItem && !sessionStorage.getItem('buyNowCheckoutData') && !localStorage.getItem('buyNowCheckoutData')) {
+            console.warn('CheckoutFlow: Buy-now mode detected but no buy-now data available');
+            // Fallback to cart if buy-now data is missing
+            urlMode = null;
+          }
+        }
         
         // CRITICAL: Check if we're in a buy-now flow first
         if (urlMode === 'buynow') {
@@ -202,8 +230,8 @@ function CheckoutFlowProviderInner({ children }: { children: ReactNode }) {
         }
         
         // Try to restore from existing flow data (legacy support)
-        const existingFlow = sessionStorage.getItem('checkoutFlow');
-        const existingItems = sessionStorage.getItem('checkoutItems');
+        const existingFlow = sessionStorage.getItem('buyNowCheckoutFlow') || sessionStorage.getItem('cartCheckoutFlow');
+        const existingItems = sessionStorage.getItem('buyNowCheckoutItems') || sessionStorage.getItem('cartCheckoutItems');
         
         if (existingFlow && existingItems) {
           try {
@@ -379,10 +407,19 @@ function CheckoutFlowProviderInner({ children }: { children: ReactNode }) {
       let items: CheckoutItem[] = [];
       let source: 'buy-now' | 'cart' | 'stored' | 'restored' = mode;
 
-      if (mode === 'buy-now' && buyNowItem) {
+      // ⚡ FLOW VALIDATION: Ensure mode matches available data
+      if (mode === 'buy-now') {
+        if (!buyNowItem) {
+          console.warn('setCheckoutFlow: Buy-now mode requested but no buy-now item available');
+          return;
+        }
         items = [buyNowItem];
         source = 'buy-now';
-      } else if (mode === 'cart' && cartItems.length > 0) {
+      } else if (mode === 'cart') {
+        if (cartItems.length === 0) {
+          console.warn('setCheckoutFlow: Cart mode requested but no cart items available');
+          return;
+        }
         items = cartItems;
         source = 'cart';
       } else {
@@ -393,6 +430,26 @@ function CheckoutFlowProviderInner({ children }: { children: ReactNode }) {
 
       if (items.length === 0) {
         console.warn('No items found for checkout flow:', mode);
+        return;
+      }
+
+      // ⚡ DATA INTEGRITY: Validate items before setting flow
+      const validItems = items.filter(item => 
+        item && 
+        item._id && 
+        item.name && 
+        typeof item.price === 'number' && 
+        typeof item.quantity === 'number' && 
+        item.size
+      );
+      
+      if (validItems.length !== items.length) {
+        console.warn('setCheckoutFlow: Some items are invalid, filtering out invalid items');
+        items = validItems;
+      }
+      
+      if (items.length === 0) {
+        console.warn('setCheckoutFlow: No valid items found after filtering');
         return;
       }
 
