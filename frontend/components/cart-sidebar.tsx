@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import Image from "next/image"
 import { useCart, CartItem } from "@/components/cart-context"
 import { useBuyNow } from "@/components/buy-now-context"
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 
 export default function CartSidebar() {
@@ -25,38 +25,49 @@ export default function CartSidebar() {
   const [productStocks, setProductStocks] = useState<Record<string, Record<string, number>>>({});
   const [isLoadingStocks, setIsLoadingStocks] = useState(false);
   const [showEmptyState, setShowEmptyState] = useState(false);
+  const [isCartUpdating, setIsCartUpdating] = useState(false);
   const router = useRouter();
   
-  // Add refs to prevent excessive API calls
+  // Add refs to prevent excessive API calls and improve performance
   const stockFetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastCartItemsRef = useRef<string>('');
   const isFetchingStocksRef = useRef(false);
+  const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const removeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Memoize cart items count to prevent unnecessary re-renders
+  const cartItemsCount = useMemo(() => cartItems.length, [cartItems.length]);
+  
+  // Memoize cart items hash for stock fetching optimization
+  const cartItemsHash = useMemo(() => 
+    cartItems.map(item => `${item._id}-${item.size}-${item.quantity}`).join('|'), 
+    [cartItems]
+  );
 
   // Show empty state after a small delay to prevent flickering
   useEffect(() => {
-    if (cartItems.length === 0) {
+    if (cartItemsCount === 0) {
       const timer = setTimeout(() => setShowEmptyState(true), 100);
       return () => clearTimeout(timer);
     } else {
       setShowEmptyState(false);
     }
-  }, [cartItems.length]);
+  }, [cartItemsCount]);
 
   // Attempt to restore cart when sidebar opens and cart is empty
   useEffect(() => {
-    if (isCartSidebarOpen && cartItems.length === 0) {
+    if (isCartSidebarOpen && cartItemsCount === 0) {
       console.log("Cart sidebar: Cart is empty, attempting restoration")
       restoreCartFromStorage()
     }
-  }, [isCartSidebarOpen, cartItems.length, restoreCartFromStorage])
+  }, [isCartSidebarOpen, cartItemsCount, restoreCartFromStorage])
 
   // Optimized stock fetching with debouncing and caching
   const fetchStocks = useCallback(async () => {
-    if (cartItems.length === 0 || isFetchingStocksRef.current) return;
+    if (cartItemsCount === 0 || isFetchingStocksRef.current) return;
     
     // Create a hash of cart items to check if they've changed
-    const cartHash = cartItems.map(item => `${item._id}-${item.size}-${item.quantity}`).join('|');
-    if (cartHash === lastCartItemsRef.current) return;
+    if (cartItemsHash === lastCartItemsRef.current) return;
     
     // Clear any existing timeout
     if (stockFetchTimeoutRef.current) {
@@ -111,7 +122,7 @@ export default function CartSidebar() {
         
         // Merge new stocks with existing ones
         setProductStocks(prev => ({ ...prev, ...stocks }));
-        lastCartItemsRef.current = cartHash;
+        lastCartItemsRef.current = cartItemsHash;
         
       } catch (error) {
         console.error('Error importing safeFetch:', error);
@@ -120,23 +131,65 @@ export default function CartSidebar() {
         isFetchingStocksRef.current = false;
       }
     }, 500); // 500ms debounce delay
-  }, [cartItems, productStocks]);
+  }, [cartItems, productStocks, cartItemsCount, cartItemsHash]);
 
   // Fetch stock info for all cart items on open - with debouncing
   useEffect(() => {
-    if (isCartSidebarOpen && cartItems.length > 0) {
+    if (isCartSidebarOpen && cartItemsCount > 0) {
       fetchStocks();
     }
-  }, [isCartSidebarOpen, cartItems, fetchStocks]);
+  }, [isCartSidebarOpen, cartItemsCount, fetchStocks]);
 
-  // Cleanup timeout on unmount
+  // Cleanup timeouts on unmount
   useEffect(() => {
     return () => {
       if (stockFetchTimeoutRef.current) {
         clearTimeout(stockFetchTimeoutRef.current);
       }
+      if (updateTimeoutRef.current) {
+        clearTimeout(updateTimeoutRef.current);
+      }
+      if (removeTimeoutRef.current) {
+        clearTimeout(removeTimeoutRef.current);
+      }
     };
   }, []);
+
+  // Optimized cart item update with debouncing
+  const handleUpdateCartItem = useCallback((_id: string, size: string, newQuantity: number, stock?: number) => {
+    // Clear any existing update timeout
+    if (updateTimeoutRef.current) {
+      clearTimeout(updateTimeoutRef.current);
+    }
+    
+    // Set loading state
+    setIsCartUpdating(true);
+    
+    // Debounce the update to prevent rapid state changes
+    updateTimeoutRef.current = setTimeout(() => {
+      updateCartItem(_id, size, newQuantity, stock);
+      // Clear loading state after a short delay
+      setTimeout(() => setIsCartUpdating(false), 200);
+    }, 150); // 150ms debounce for quantity updates
+  }, [updateCartItem]);
+
+  // Optimized cart item removal with debouncing
+  const handleRemoveFromCart = useCallback((_id: string, size: string) => {
+    // Clear any existing remove timeout
+    if (removeTimeoutRef.current) {
+      clearTimeout(removeTimeoutRef.current);
+    }
+    
+    // Set loading state
+    setIsCartUpdating(true);
+    
+    // Debounce the removal to prevent rapid state changes
+    removeTimeoutRef.current = setTimeout(() => {
+      removeFromCart(_id, size);
+      // Clear loading state after a short delay
+      setTimeout(() => setIsCartUpdating(false), 200);
+    }, 100); // 100ms debounce for removals
+  }, [removeFromCart]);
 
   // Function to handle checkout from cart
   const handleProceedToCheckout = () => {
@@ -171,14 +224,18 @@ export default function CartSidebar() {
             </Button>
           </div>
           <p className="text-sm text-gray-600">
-            {cartItems.length} item{cartItems.length !== 1 ? "s" : ""} in cart
+            {isCartUpdating ? (
+              <span className="text-gray-500">Updating cart...</span>
+            ) : (
+              `${cartItemsCount} item${cartItemsCount !== 1 ? "s" : ""} in cart`
+            )}
           </p>
         </div>
 
         {/* Cart Items */}
         <div className="flex-1 overflow-y-auto">
           {/* Show loading state while stocks are being fetched */}
-          {isLoadingStocks && cartItems.length > 0 ? (
+          {isLoadingStocks && cartItemsCount > 0 ? (
             <div className="text-center py-16 px-6">
               <div className="animate-pulse">
                 <div className="h-20 w-20 bg-gray-200 rounded-full mx-auto mb-4"></div>
@@ -186,13 +243,13 @@ export default function CartSidebar() {
                 <div className="h-3 bg-gray-200 rounded w-48 mx-auto"></div>
               </div>
             </div>
-          ) : cartItems.length === 0 && showEmptyState ? (
+          ) : cartItemsCount === 0 && showEmptyState ? (
             <div className="text-center py-16 px-6">
               <ShoppingBag className="h-20 w-20 text-gray-300 mx-auto mb-4" />
               <p className="text-gray-500 text-lg mb-2">Your cart is empty</p>
               <p className="text-gray-400 text-sm">Start shopping to add items to your cart</p>
             </div>
-          ) : cartItems.length > 0 ? (
+          ) : cartItemsCount > 0 ? (
             <div className="p-4 sm:p-6 space-y-5">
               {/* Special Offer Banner */}
               {offerDetails?.offerApplied && (
@@ -278,9 +335,9 @@ export default function CartSidebar() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => updateCartItem(item._id, item.size, Math.max(1, item.quantity - 1), stock)}
+                                onClick={() => handleUpdateCartItem(item._id, item.size, Math.max(1, item.quantity - 1), stock)}
                                 className="h-7 w-7 sm:h-8 sm:w-8 p-0 rounded-lg border-gray-300 hover:border-purple-400"
-                                disabled={item.quantity <= 1}
+                                disabled={item.quantity <= 1 || isCartUpdating}
                               >
                                 <Minus className="h-3 w-3" />
                               </Button>
@@ -288,7 +345,11 @@ export default function CartSidebar() {
                               <span className={`text-sm font-medium w-6 sm:w-8 text-center ${
                                 isMaxQuantity ? 'text-red-600' : 'text-gray-700'
                               }`}>
-                                {item.quantity}
+                                {isCartUpdating ? (
+                                  <span className="text-gray-400">...</span>
+                                ) : (
+                                  item.quantity
+                                )}
                               </span>
                               
                               <Button
@@ -299,9 +360,9 @@ export default function CartSidebar() {
                                     alert(`Cannot add more than ${stock} in stock for this size.`);
                                     return;
                                   }
-                                  updateCartItem(item._id, item.size, item.quantity + 1, stock);
+                                  handleUpdateCartItem(item._id, item.size, item.quantity + 1, stock);
                                 }}
-                                disabled={isMaxQuantity}
+                                disabled={isMaxQuantity || isCartUpdating}
                                 className="h-7 w-7 sm:h-8 sm:w-8 p-0 rounded-lg border-gray-300 hover:border-purple-400 disabled:opacity-50 disabled:cursor-not-allowed"
                               >
                                 <Plus className="h-3 w-3" />
@@ -332,10 +393,11 @@ export default function CartSidebar() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => removeFromCart(item._id, item.size)}
-                              className="w-full text-red-500 hover:text-red-700 hover:bg-red-50 text-xs sm:text-sm py-2 h-auto border border-red-200 hover:border-red-300 rounded-lg"
+                              onClick={() => handleRemoveFromCart(item._id, item.size)}
+                              disabled={isCartUpdating}
+                              className="w-full text-red-500 hover:text-red-700 hover:bg-red-50 text-xs sm:text-sm py-2 h-auto border border-red-200 hover:border-red-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                              Remove Item
+                              {isCartUpdating ? "Removing..." : "Remove Item"}
                             </Button>
                           </div>
                         </div>
@@ -349,7 +411,7 @@ export default function CartSidebar() {
         </div>
 
         {/* Footer */}
-        {cartItems.length > 0 && (
+        {cartItemsCount > 0 && (
           <div className="border-t border-gray-100 bg-gradient-to-r from-gray-50 to-white p-4 sm:p-6 space-y-4">
             {/* Total */}
             <div className="flex justify-between items-center">
@@ -376,6 +438,7 @@ export default function CartSidebar() {
               <Button 
                 className="w-full bg-[rgb(71,60,102)] hover:bg-[rgb(71,60,102)]/90 text-white py-3 sm:py-4 rounded-xl font-semibold text-sm sm:text-base shadow-lg" 
                 onClick={handleProceedToCheckout}
+                disabled={isCartUpdating}
               >
                 Proceed to Checkout
               </Button>
@@ -384,6 +447,7 @@ export default function CartSidebar() {
                 variant="outline"
                 className="w-full border-2 border-[rgb(71,60,102)] text-[rgb(71,60,102)] hover:bg-[rgb(71,60,102)] hover:text-white bg-transparent py-2.5 sm:py-3 rounded-xl font-medium"
                 onClick={closeCartSidebar}
+                disabled={isCartUpdating}
               >
                 Continue Shopping
               </Button>

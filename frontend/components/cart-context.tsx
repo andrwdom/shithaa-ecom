@@ -44,7 +44,7 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined)
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  console.log("CartProvider initializing...")
+  // console.log("CartProvider initializing...") // Reduced logging for performance
   
   const [cartItems, setCartItems] = useState<CartItem[]>([])
   const [isCartSidebarOpen, setIsCartSidebarOpen] = useState(false)
@@ -57,10 +57,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   // Add state to track if cart has been initialized
   const [isCartInitialized, setIsCartInitialized] = useState(false)
   
-  // Add refs to prevent race conditions
+  // Add refs to prevent race conditions and improve performance
   const isCalculatingRef = useRef(false)
   const calculationTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const lastCartHashRef = useRef<string>('')
+  const pendingCartUpdatesRef = useRef<CartItem[]>([])
+  const isUpdatingCartRef = useRef(false)
+  const storageUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Enhanced function to load cart from localStorage
   const loadCartFromStorage = useCallback(() => {
@@ -68,7 +71,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const stored = localStorage.getItem("cartItems")
       if (stored) {
         const parsed = JSON.parse(stored)
-        console.log("CartProvider: Loaded cart items from storage:", parsed)
+        // console.log("CartProvider: Loaded cart items from storage:", parsed) // Reduced logging
         if (Array.isArray(parsed) && parsed.length > 0) {
           // Validate each item has required fields
           const validItems = parsed.filter(item => 
@@ -84,13 +87,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             console.log("CartProvider: Successfully restored", validItems.length, "cart items")
             return true
           } else {
-            console.log("CartProvider: No valid items found in stored cart")
+            // console.log("CartProvider: No valid items found in stored cart") // Reduced logging
           }
         } else {
-          console.log("CartProvider: Stored cart is empty or invalid")
+          // console.log("CartProvider: Stored cart is empty or invalid") // Reduced logging
         }
       } else {
-        console.log("CartProvider: No stored cart found")
+        // console.log("CartProvider: No stored cart found") // Reduced logging
       }
     } catch (error) {
       console.error("CartProvider: Error parsing stored cart:", error)
@@ -114,7 +117,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     // Second attempt: if first failed, try again after a short delay
     if (!restored) {
       const timer = setTimeout(() => {
-        console.log("CartProvider: Retrying cart restoration...")
+        // console.log("CartProvider: Retrying cart restoration...") // Reduced logging
         restored = loadCartFromStorage()
         if (restored) {
           setIsCartInitialized(true)
@@ -129,7 +132,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     // Also listen for storage events (in case cart is updated in another tab)
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === "cartItems" && e.newValue) {
-        console.log("CartProvider: Storage event detected, reloading cart")
+        // console.log("CartProvider: Storage event detected, reloading cart") // Reduced logging
         loadCartFromStorage()
       }
     }
@@ -137,7 +140,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     // Additional restoration attempt for page refreshes
     const handlePageShow = (e: PageTransitionEvent) => {
       if (e.persisted) {
-        console.log("CartProvider: Page restored from cache, reloading cart")
+        // console.log("CartProvider: Page restored from cache, reloading cart") // Reduced logging
         loadCartFromStorage()
       }
     }
@@ -145,7 +148,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     // Listen for page visibility changes
     const handleVisibilityChange = () => {
       if (!document.hidden && cartItems.length === 0 && !isCartInitialized) {
-        console.log("CartProvider: Page became visible, checking for stored cart")
+        // console.log("CartProvider: Page became visible, checking for stored cart") // Reduced logging
         loadCartFromStorage()
       }
     }
@@ -153,7 +156,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     // Listen for focus events
     const handleFocus = () => {
       if (cartItems.length === 0 && !isCartInitialized) {
-        console.log("CartProvider: Window focused, checking for stored cart")
+        // console.log("CartProvider: Window focused, checking for stored cart") // Reduced logging
         loadCartFromStorage()
       }
     }
@@ -171,41 +174,54 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, [loadCartFromStorage, cartItems.length, isCartInitialized])
 
-  // Enhanced save cart to localStorage with error handling and backup
-  useEffect(() => {
-    if (cartItems.length > 0) {
-      console.log("CartProvider: Saving cart to localStorage:", cartItems)
+  // Batched and debounced cart storage updates
+  const updateCartStorage = useCallback((newCartItems: CartItem[]) => {
+    // Clear any existing timeout
+    if (storageUpdateTimeoutRef.current) {
+      clearTimeout(storageUpdateTimeoutRef.current)
+    }
+    
+    // Batch storage updates with debouncing
+    storageUpdateTimeoutRef.current = setTimeout(() => {
       try {
-        // Save to primary storage
-        localStorage.setItem("cartItems", JSON.stringify(cartItems))
-        
-        // Also save to sessionStorage as backup
-        sessionStorage.setItem("cartItems", JSON.stringify(cartItems))
-        
-        // Increment counter to notify checkout of cart changes
-        setCartChangeCounter(prev => prev + 1)
-        console.log("CartProvider: Cart saved successfully")
+        if (newCartItems.length > 0) {
+          // console.log("CartProvider: Saving cart to localStorage:", newCartItems) // Reduced logging
+          // Save to primary storage
+          localStorage.setItem("cartItems", JSON.stringify(newCartItems))
+          // Also save to sessionStorage as backup
+          sessionStorage.setItem("cartItems", JSON.stringify(newCartItems))
+          // Increment counter to notify checkout of cart changes
+          setCartChangeCounter(prev => prev + 1)
+          // console.log("CartProvider: Cart saved successfully") // Reduced logging
+        } else if (newCartItems.length === 0 && isCartInitialized) {
+          // Only clear storage if we're sure the cart should be empty
+          // console.log("CartProvider: Cart is empty, clearing storage") // Reduced logging
+          localStorage.removeItem("cartItems")
+          sessionStorage.removeItem("cartItems")
+        }
       } catch (error) {
         console.error("CartProvider: Error saving cart to localStorage:", error)
         // Try sessionStorage as fallback
         try {
-          sessionStorage.setItem("cartItems", JSON.stringify(cartItems))
-          console.log("CartProvider: Cart saved to sessionStorage as fallback")
+          if (newCartItems.length > 0) {
+            sessionStorage.setItem("cartItems", JSON.stringify(newCartItems))
+            // console.log("CartProvider: Cart saved to sessionStorage as fallback") // Reduced logging
+          } else {
+            sessionStorage.removeItem("cartItems")
+          }
         } catch (sessionError) {
           console.error("CartProvider: Failed to save cart to both storages:", sessionError)
         }
       }
-    } else if (cartItems.length === 0 && isCartInitialized) {
-      // Only clear storage if we're sure the cart should be empty
-      console.log("CartProvider: Cart is empty, clearing storage")
-      try {
-        localStorage.removeItem("cartItems")
-        sessionStorage.removeItem("cartItems")
-      } catch (error) {
-        console.error("CartProvider: Error clearing cart storage:", error)
-      }
+    }, 100) // 100ms debounce for storage updates
+  }, [isCartInitialized])
+
+  // Enhanced save cart to localStorage with batching and debouncing
+  useEffect(() => {
+    if (isCartInitialized) {
+      updateCartStorage(cartItems)
     }
-  }, [cartItems, isCartInitialized])
+  }, [cartItems, isCartInitialized, updateCartStorage])
 
   // Function to calculate cart total with offers - properly memoized and debounced
   const calculateCartTotalWithOffers = useCallback(async () => {
@@ -281,7 +297,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         setIsLoadingOffer(false)
         isCalculatingRef.current = false
       }
-    }, 300) // 300ms debounce delay
+    }, 500) // Increased to 500ms debounce delay for better stability
   }, [cartItems])
 
   // Calculate cart total and check for offers when cart changes - with proper dependency management
@@ -296,18 +312,24 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, [cartItems, calculateCartTotalWithOffers])
 
-  // Cleanup timeout on unmount
+  // Cleanup timeouts on unmount
   useEffect(() => {
     return () => {
       if (calculationTimeoutRef.current) {
         clearTimeout(calculationTimeoutRef.current)
       }
+      if (storageUpdateTimeoutRef.current) {
+        clearTimeout(storageUpdateTimeoutRef.current)
+      }
     }
   }, [])
 
-  console.log("CartProvider: Rendering with cartItems:", cartItems)
+  // console.log("CartProvider: Rendering with cartItems:", cartItems) // Reduced logging for performance
 
+  // Optimized cart operations with batching
   const addToCart = useCallback((item: CartItem, openSidebar: boolean = true, stock?: number) => {
+    if (isUpdatingCartRef.current) return
+    
     setCartItems((prev) => {
       const existing = prev.find((i) => i._id === item._id && i.size === item.size)
       const existingQty = existing ? existing.quantity : 0
@@ -329,14 +351,22 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const updateCartItem = useCallback((_id: string, size: string, quantity: number, stock?: number) => {
+    if (isUpdatingCartRef.current) return
+    
+    isUpdatingCartRef.current = true
+    
     setCartItems((prev) => {
       const existing = prev.find((i) => i._id === _id && i.size === size)
-      if (!existing) return prev;
+      if (!existing) {
+        isUpdatingCartRef.current = false
+        return prev;
+      }
       
       // Strict stock validation
       if (typeof stock === 'number' && stock > 0) {
         if (quantity > stock) {
           alert(`Cannot set quantity higher than ${stock} in stock for this size.`);
+          isUpdatingCartRef.current = false
           return prev;
         }
       }
@@ -346,14 +376,34 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         quantity = 1;
       }
       
-      return prev.map((item) =>
+      const updated = prev.map((item) =>
         item._id === _id && item.size === size ? { ...item, quantity } : item
       )
+      
+      // Reset the flag after a short delay to allow for state updates
+      setTimeout(() => {
+        isUpdatingCartRef.current = false
+      }, 50)
+      
+      return updated
     })
   }, [])
 
   const removeFromCart = useCallback((_id: string, size: string) => {
-    setCartItems((prev) => prev.filter((item) => !(item._id === _id && item.size === size)))
+    if (isUpdatingCartRef.current) return
+    
+    isUpdatingCartRef.current = true
+    
+    setCartItems((prev) => {
+      const filtered = prev.filter((item) => !(item._id === _id && item.size === size))
+      
+      // Reset the flag after a short delay to allow for state updates
+      setTimeout(() => {
+        isUpdatingCartRef.current = false
+      }, 50)
+      
+      return filtered
+    })
   }, [])
 
   const openCartSidebar = useCallback(() => {
@@ -427,7 +477,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     restoreCartFromStorage
   ])
 
-  console.log("CartProvider: Providing context value:", contextValue)
+  // console.log("CartProvider: Providing context value:", contextValue) // Reduced logging for performance
 
   return (
     <CartContext.Provider value={contextValue}>
@@ -437,15 +487,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 }
 
 export function useCart() {
-  console.log("useCart hook called")
+  // console.log("useCart hook called") // Reduced logging for performance
   const ctx = useContext(CartContext)
-  console.log("useCart: Context value:", ctx)
+  // console.log("useCart: Context value:", ctx) // Reduced logging for performance
   if (!ctx) {
     console.error("useCart hook called outside of CartProvider")
     console.error("Stack trace:", new Error().stack)
     throw new Error("useCart must be used within a CartProvider")
   }
-  console.log("useCart: Returning context:", ctx)
+  // console.log("useCart: Returning context:", ctx) // Reduced logging for performance
   return ctx
 }
 
