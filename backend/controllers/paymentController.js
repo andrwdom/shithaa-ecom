@@ -225,7 +225,15 @@ export const createPhonePeSession = async (req, res) => {
       });
     }
 
-    // Initialize PhonePe client ONCE
+    // Use SDK to create payment session
+    const redirectUrl = `${process.env.PHONEPE_REDIRECT_URL || process.env.BASE_URL || 'https://shithaa.in'}/payment/phonepe/callback?merchantTransactionId=${phonepeTransactionId}`;
+    const request = StandardCheckoutPayRequest.builder()
+      .merchantOrderId(phonepeTransactionId)
+      .amount(amount * 100) // paise
+      .redirectUrl(redirectUrl)
+      .build();
+
+    // Initialize PhonePe client ONCE to avoid singleton re-initialization error
     let phonepeClient;
     try {
       phonepeClient = StandardCheckoutClient.getInstance(
@@ -248,20 +256,6 @@ export const createPhonePeSession = async (req, res) => {
         error: 'PhonePe client initialization failed: ' + clientError.message
       });
     }
-
-    // Use SDK to create payment session
-    const redirectUrl = `${process.env.PHONEPE_REDIRECT_URL || process.env.BASE_URL || 'https://shithaa.in'}/payment/phonepe/callback?merchantTransactionId=${phonepeTransactionId}`;
-    console.log('Redirect URL:', redirectUrl);
-    
-    console.log('Building PhonePe payment request...');
-    const request = StandardCheckoutPayRequest.builder()
-      .merchantOrderId(phonepeTransactionId)
-      .amount(amount * 100) // paise
-      .redirectUrl(redirectUrl)
-      .build();
-    
-    console.log('PhonePe request built, calling phonepeClient.pay()...');
-    console.log('Request details:', JSON.stringify(request, null, 2));
 
     const response = await phonepeClient.pay(request);
     console.log('PhonePe SDK response received:', response);
