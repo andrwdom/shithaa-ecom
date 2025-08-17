@@ -227,6 +227,37 @@ app.get('/api/cart/health', (req, res) => {
   });
 });
 
+// Debug endpoint for troubleshooting checkout flow issues
+app.get('/api/debug/checkout-flow', (req, res) => {
+  res.json({ 
+    status: 'ok',
+    message: 'Checkout flow debug endpoint',
+    timestamp: new Date().toISOString(),
+    frontendEndpoints: {
+      'GET /checkout': 'Cart checkout (default)',
+      'GET /checkout?mode=buynow': 'Buy now checkout',
+      'GET /checkout?mode=cart': 'Cart checkout (explicit)'
+    },
+    backendEndpoints: {
+      'POST /api/cart/calculate-total': 'Calculate cart total with offers',
+      'POST /api/cart/get-items': 'Get cart items by userId (public)',
+      'POST /api/cart/get': 'Get cart data (protected)'
+    },
+    storageKeys: {
+      frontend: [
+        'buyNowItem',
+        'buyNowCheckoutData', 
+        'buyNowCheckoutFlow',
+        'buyNowCheckoutItems',
+        'cartItems',
+        'cartCheckoutData',
+        'cartCheckoutFlow',
+        'cartCheckoutItems'
+      ]
+    }
+  });
+});
+
 // SECURITY: CSRF token endpoint for state-changing operations
 app.get('/api/csrf-token', (req, res) => {
   try {

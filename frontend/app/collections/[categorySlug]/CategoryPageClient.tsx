@@ -311,15 +311,44 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
       quantity,
       size,
       image: product.image,
+      categorySlug: product.categorySlug,
+      category: product.category
     };
     
+    console.log('🛒 Setting buy-now item from category:', buyNowItem);
+    
+    // Set buy now item in context
     setBuyNowItem(buyNowItem);
+    
+    // Also manually save to storage to ensure persistence
+    const buyNowData = {
+      flow: {
+        mode: 'buy-now',
+        items: [buyNowItem],
+        source: 'buy-now',
+        timestamp: Date.now(),
+        sessionId: `buynow_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      },
+      items: [buyNowItem],
+      timestamp: Date.now()
+    };
+    
+    // Save to multiple storage locations for maximum persistence
+    sessionStorage.setItem('buyNowItem', JSON.stringify(buyNowItem));
+    localStorage.setItem('buyNowItem', JSON.stringify(buyNowItem));
+    sessionStorage.setItem('buyNowCheckoutData', JSON.stringify(buyNowData));
+    localStorage.setItem('buyNowCheckoutData', JSON.stringify(buyNowData));
+    
+    console.log('💾 Buy-now item saved to storage before navigation');
     
     // Navigate to checkout using the checkout flow manager
     setCheckoutFlow('buy-now');
     
-    // Navigate to checkout page
-    router.push('/checkout?mode=buynow');
+    // Small delay to ensure storage is written before navigation
+    setTimeout(() => {
+      console.log('🚀 Navigating to buy-now checkout from category');
+      router.push('/checkout?mode=buynow');
+    }, 100);
   };
 
   const handleCheckout = () => {

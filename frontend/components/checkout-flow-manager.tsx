@@ -69,12 +69,15 @@ export function CheckoutFlowProviderInner({ children }: { children: React.ReactN
   // 🔥 Move all flow detection + restoration into useEffect
   useEffect(() => {
     const initFlow = () => {
+      console.log('🔄 CheckoutFlow: initFlow called with:', { urlMode, buyNowItem: !!buyNowItem, cartItemsLength: cartItems?.length });
+      
       // --- BUY NOW MODE ---
       if (urlMode === "buynow") {
         console.log("CheckoutFlow: Buy-now mode detected, initializing...");
 
         // 1. Context item
         if (buyNowItem) {
+          console.log('✅ Found buy-now item in context:', buyNowItem);
           const flow: CheckoutFlow = {
             mode: "buy-now",
             items: [buyNowItem],
@@ -92,10 +95,12 @@ export function CheckoutFlowProviderInner({ children }: { children: React.ReactN
         }
 
         // 2. Dedicated buy-now checkout data
+        console.log('🔍 Checking buyNowCheckoutData storage...');
         const buyNowData = sessionStorage.getItem("buyNowCheckoutData") || localStorage.getItem("buyNowCheckoutData");
         if (buyNowData) {
           try {
             const parsed = JSON.parse(buyNowData);
+            console.log('📦 Parsed buyNowCheckoutData:', parsed);
             if (parsed.items?.length > 0) {
               const flow: CheckoutFlow = {
                 mode: "buy-now",
@@ -118,10 +123,12 @@ export function CheckoutFlowProviderInner({ children }: { children: React.ReactN
         }
 
         // 3. Fallback to raw buyNowItem storage
+        console.log('🔍 Checking raw buyNowItem storage...');
         const storedBuyNowItem = sessionStorage.getItem("buyNowItem") || localStorage.getItem("buyNowItem");
         if (storedBuyNowItem) {
           try {
             const parsed = JSON.parse(storedBuyNowItem);
+            console.log('📦 Parsed raw buyNowItem:', parsed);
             if (parsed && parsed._id && parsed.name) {
               const flow: CheckoutFlow = {
                 mode: "buy-now",
@@ -145,6 +152,11 @@ export function CheckoutFlowProviderInner({ children }: { children: React.ReactN
 
         // 4. If everything failed → empty state
         console.warn("⚠️ No buy-now item found, showing empty state");
+        console.log('🔍 Storage contents:');
+        console.log('  - sessionStorage.buyNowItem:', sessionStorage.getItem('buyNowItem'));
+        console.log('  - localStorage.buyNowItem:', localStorage.getItem('buyNowItem'));
+        console.log('  - sessionStorage.buyNowCheckoutData:', sessionStorage.getItem('buyNowCheckoutData'));
+        console.log('  - localStorage.buyNowCheckoutData:', localStorage.getItem('buyNowCheckoutData'));
         setCurrentFlow(null);
         setCheckoutItems([]);
         setIsLoading(false);
