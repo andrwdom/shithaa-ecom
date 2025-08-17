@@ -134,27 +134,27 @@ const ProductCard = ({ product, onEdit, onDelete, isDragging, onDragStart, onDra
       </div>
 
       {/* Product Info */}
-      <div className="p-4">
+      <div className="p-5">
         {/* Product Name */}
-        <h3 className="font-medium text-gray-900 text-sm line-clamp-2 mb-2 min-h-[2.5rem]">
+        <h3 className="font-medium text-gray-900 text-sm line-clamp-2 mb-3 min-h-[2.5rem]">
           {product.name}
         </h3>
 
         {/* Category */}
-        <p className="text-xs text-gray-600 mb-3 bg-gray-50 px-2 py-1 rounded-md inline-block">
+        <p className="text-xs text-gray-600 mb-3 bg-gray-50 px-3 py-1.5 rounded-md inline-block">
           {product.category || 'Uncategorized'}
         </p>
 
         {/* Size & Stock Info */}
-        <div className="flex flex-wrap gap-1 mb-3">
-          {product.sizes?.slice(0, 3).map((sizeObj, index) => {
+        <div className="flex flex-wrap gap-2 mb-4">
+          {product.sizes?.slice(0, 4).map((sizeObj, index) => {
             const size = typeof sizeObj === 'object' ? sizeObj.size : sizeObj
             const stock = typeof sizeObj === 'object' ? sizeObj.stock || 0 : 0
             return <StockBadge key={index} size={size} stock={stock} />
           })}
-          {product.sizes?.length > 3 && (
+          {product.sizes?.length > 4 && (
             <span className="text-xs text-gray-400 px-2 py-1">
-              +{product.sizes.length - 3} more
+              +{product.sizes.length - 4} more
             </span>
           )}
         </div>
@@ -242,7 +242,7 @@ const ProductTableRow = ({ product, onEdit, onDelete, isDragging, onDragStart, o
       onDragEnd={onDragEnd}
     >
       {/* Drag Handle Column */}
-      <td className="px-4 py-3 w-8">
+      <td className="px-3 py-3 w-6">
         <div className="flex items-center justify-center">
           <div className="bg-blue-600 text-white rounded-full p-1 cursor-grab active:cursor-grabbing shadow-sm hover:shadow-md transition-all duration-200 opacity-0 group-hover:opacity-100">
             <GripVertical className="h-3 w-3" />
@@ -250,18 +250,18 @@ const ProductTableRow = ({ product, onEdit, onDelete, isDragging, onDragStart, o
         </div>
       </td>
 
-      {/* Left Section: Product Info (35%) */}
-      <td className="px-4 py-3 w-2/5">
-        <div className="flex items-start space-x-3">
+      {/* Left Section: Product Info (expanded to use more space) */}
+      <td className="px-4 py-3 w-1/2">
+        <div className="flex items-start space-x-4">
           <div className="flex-shrink-0">
             <img
               src={product.images?.[0] || '/placeholder.svg'}
               alt={product.name}
-              className="w-16 h-20 object-cover rounded-lg border border-gray-200"
+              className="w-20 h-24 object-cover rounded-lg border border-gray-200"
             />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center space-x-2 mb-1">
+            <div className="flex items-center space-x-2 mb-2">
               <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
                 {product.customId}
               </span>
@@ -271,22 +271,22 @@ const ProductTableRow = ({ product, onEdit, onDelete, isDragging, onDragStart, o
                 </span>
               )}
             </div>
-            <h3 className="text-sm font-medium text-gray-900 truncate max-w-sm" title={product.name}>
+            <h3 className="text-sm font-medium text-gray-900 truncate max-w-md mb-2" title={product.name}>
               {product.name}
             </h3>
-            <p className="text-xs text-gray-500 mt-1 line-clamp-2 max-w-sm">
+            <p className="text-xs text-gray-500 line-clamp-2 max-w-md">
               {product.description}
             </p>
           </div>
         </div>
       </td>
 
-      {/* Right Section: Details & Actions (65%) */}
-      <td className="px-4 py-3 w-3/5">
-        <div className="space-y-3">
-          {/* Line 1: Category, Price, and Sleeve Type */}
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
+      {/* Right Section: Details & Actions (expanded to use more space) */}
+      <td className="px-4 py-3 w-1/2">
+        <div className="space-y-4">
+          {/* Line 1: Category, Price, and Sleeve Type - Better distributed */}
+          <div className="grid grid-cols-3 gap-6 items-center">
+            <div>
               <div className="text-sm text-gray-900 font-medium">
                 {product.category}
               </div>
@@ -296,19 +296,24 @@ const ProductTableRow = ({ product, onEdit, onDelete, isDragging, onDragStart, o
                 </div>
               )}
             </div>
-            <div className="text-right">
-              <div className="text-sm font-semibold text-gray-900">
+            <div className="text-center">
+              <div className="text-lg font-bold text-gray-900">
                 ₹{product.price}
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-xs text-gray-500">
+                Total Stock: {totalStock}
               </div>
             </div>
           </div>
 
-          {/* Line 2: Stock Badges + Actions */}
+          {/* Line 2: Stock Badges + Actions - Better spaced */}
           <div className="flex items-center justify-between">
-            {/* Stock Badges - Horizontal Row */}
+            {/* Stock Badges - Horizontal Row with more space */}
             <div className="flex-1">
-              <div className="flex flex-wrap gap-2">
-                {product.sizes?.slice(0, 6).map((sizeObj) => {
+              <div className="flex flex-wrap gap-3">
+                {product.sizes?.slice(0, 8).map((sizeObj) => {
                   const size = typeof sizeObj === 'object' ? sizeObj.size : sizeObj
                   const stock = typeof sizeObj === 'object' ? sizeObj.stock : 0
                   const stockInfo = getStockStatus(stock)
@@ -316,7 +321,7 @@ const ProductTableRow = ({ product, onEdit, onDelete, isDragging, onDragStart, o
                   return (
                     <span
                       key={size}
-                      className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                      className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium ${
                         stockInfo.status === 'out' 
                           ? 'bg-red-50 text-red-700 border border-red-200' 
                           : stockInfo.status === 'low'
@@ -328,20 +333,20 @@ const ProductTableRow = ({ product, onEdit, onDelete, isDragging, onDragStart, o
                     </span>
                   )
                 })}
-                {product.sizes && product.sizes.length > 6 && (
+                {product.sizes && product.sizes.length > 8 && (
                   <span className="text-xs text-gray-500 px-2 py-1">
-                    +{product.sizes.length - 6} more
+                    +{product.sizes.length - 8} more
                   </span>
                 )}
               </div>
             </div>
 
-            {/* Actions - Horizontal Row, Right-Aligned */}
-            <div className="flex items-center space-x-2 ml-4">
+            {/* Actions - Horizontal Row, Right-Aligned with better spacing */}
+            <div className="flex items-center space-x-3 ml-6">
               {/* Edit Button */}
               <button
                 onClick={() => onEdit(product)}
-                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors duration-200"
+                className="p-2.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors duration-200"
                 title="Edit Product"
               >
                 <Edit className="h-4 w-4" />
@@ -350,7 +355,7 @@ const ProductTableRow = ({ product, onEdit, onDelete, isDragging, onDragStart, o
               {/* Delete Button */}
               <button
                 onClick={() => onDelete(product._id)}
-                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
+                className="p-2.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
                 title="Delete Product"
               >
                 <Trash2 className="h-4 w-4" />
@@ -359,12 +364,12 @@ const ProductTableRow = ({ product, onEdit, onDelete, isDragging, onDragStart, o
               {/* Reorder Actions Dropdown */}
               <div className="relative">
                 <button
-                  className="p-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors duration-200"
+                  className="p-2.5 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors duration-200"
                   title="Reorder Options"
                 >
                   <GripVertical className="h-4 w-4" />
                 </button>
-                <div className="absolute right-0 top-full mt-1 w-36 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
+                <div className="absolute right-0 top-full mt-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
                   <button
                     onClick={() => onMoveTop(product._id)}
                     className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 rounded-t-lg transition-colors duration-200 flex items-center space-x-2"
@@ -1415,7 +1420,7 @@ const List = ({ token }) => {
           {loading ? (
           /* Loading State */
           <div className={viewMode === 'card' 
-            ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-8 gap-4 xl:gap-6"
+            ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-7 2xl:grid-cols-9 gap-4 xl:gap-6"
             : "space-y-4"
           }>
             {Array.from({ length: PRODUCTS_PER_PAGE }).map((_, index) => (
@@ -1437,7 +1442,7 @@ const List = ({ token }) => {
           /* Products Display */
             <>
                           {viewMode === 'card' ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-8 gap-4 xl:gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-7 2xl:grid-cols-9 gap-4 xl:gap-6">
                 {products.map((product) => (
                   <ProductCard
                     key={product._id}
@@ -1461,15 +1466,15 @@ const List = ({ token }) => {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-8">
-                  {/* Drag handle column */}
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-2/5">
-                  Product Information
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-3/5">
-                  Details & Actions
-                </th>
+                                        <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-6">
+                          {/* Drag handle column */}
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-1/2">
+                          Product Information
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-1/2">
+                          Details & Actions
+                        </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
