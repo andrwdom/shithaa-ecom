@@ -386,7 +386,7 @@ export default function CheckoutClient() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          token
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
         body: JSON.stringify(orderData),
       });
