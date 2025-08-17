@@ -31,6 +31,7 @@ interface CartContextType {
   openCartSidebar: () => void
   closeCartSidebar: () => void
   clearCart: () => void
+  clearCartAfterSuccessfulCheckout: () => void
   cartTotal: number
   cartSubtotal: number
   offerDetails: OfferDetails | null
@@ -55,40 +56,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const calculationTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const lastCartHashRef = useRef<string>('')
 
-  // Enhanced persistence - save to both storages for better reliability
-  useEffect(() => {
-    if (cartItems.length > 0) {
-      const cartData = JSON.stringify(cartItems);
-      sessionStorage.setItem("cartItems", cartData);
-      localStorage.setItem("cartItems", cartData); // Backup in localStorage
-      console.log("CartProvider: Saved cart items to both storages");
-      
-      // Store in checkout flow specific storage with unique key
-      const cartCheckoutData = {
-        flow: {
-          mode: 'cart',
-          items: cartItems,
-          source: 'cart',
-          timestamp: Date.now(),
-          sessionId: `cart_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-        },
-        items: cartItems,
-        timestamp: Date.now()
-      };
-      sessionStorage.setItem("cartCheckoutData", JSON.stringify(cartCheckoutData));
-      localStorage.setItem("cartCheckoutData", JSON.stringify(cartCheckoutData));
-    } else {
-      sessionStorage.removeItem("cartItems");
-      localStorage.removeItem("cartItems");
-      console.log("CartProvider: Cleared cart items from both storages");
-      
-      // Also clear checkout flow data
-      sessionStorage.removeItem("cartCheckoutData");
-      localStorage.removeItem("cartCheckoutData");
-    }
-  }, [cartItems]);
-
-  // Load cart from storage ONLY on initial mount
+  // 🔧 RELIABLE CART PERSISTENCE: Load cart from localStorage on mount
   useEffect(() => {
     if (wasCartIntentionallyCleared) {
       console.log("CartProvider: Cart was intentionally cleared, not loading from storage")
@@ -110,14 +78,48 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           )
           if (validItems.length > 0) {
             setCartItems(validItems)
-            console.log("CartProvider: Loaded", validItems.length, "items from storage")
+            console.log("CartProvider: Loaded", validItems.length, "items from localStorage")
           }
         }
       }
     } catch (error) {
       console.error("CartProvider: Error loading cart from storage:", error)
     }
-  }, [wasCartIntentionallyCleared]) // Only run when wasCartIntentionallyCleared changes
+  }, [wasCartIntentionallyCleared])
+
+  // 🔧 RELIABLE CART PERSISTENCE: Save cart to localStorage whenever it changes
+  useEffect(() => {
+    if (cartItems.length > 0) {
+      const cartData = JSON.stringify(cartItems);
+      localStorage.setItem("cartItems", cartData);
+      console.log("CartProvider: Saved cart items to localStorage");
+      
+      // Store in checkout flow specific storage with unique key
+      const cartCheckoutData = {
+        flow: {
+          mode: 'cart',
+          items: cartItems,
+          source: 'cart',
+          timestamp: Date.now(),
+          sessionId: `cart_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+        },
+        items: cartItems,
+        timestamp: Date.now()
+      };
+      sessionStorage.setItem("cartCheckoutData", JSON.stringify(cartCheckoutData));
+      localStorage.setItem("cartCheckoutData", JSON.stringify(cartCheckoutData));
+    } else {
+      // Only clear localStorage if cart is intentionally empty (not on mount)
+      if (wasCartIntentionallyCleared) {
+        localStorage.removeItem("cartItems");
+        console.log("CartProvider: Cleared cart items from localStorage after successful checkout");
+      }
+      
+      // Clear checkout flow data
+      sessionStorage.removeItem("cartCheckoutData");
+      localStorage.removeItem("cartCheckoutData");
+    }
+  }, [cartItems, wasCartIntentionallyCleared]);
 
   // Simple function to save cart to storage - called only after actions complete
   const saveCartToStorage = useCallback((items: CartItem[]) => {
@@ -324,12 +326,47 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setIsCartSidebarOpen(false)
   }, [])
 
-  const clearCart = useCallback(() => {
-    console.log("CartProvider: clearCart called")
-    setCartItems([])
-    saveCartToStorage([])
-    setWasCartIntentionallyCleared(true) // Set flag to prevent loading from storage
-  }, [saveCartToStorage])
+  const clearCart = () => {
+    console.log("CartProvider: Clearing cart");
+    setCartItems([]);
+    setCartTotal(0);
+    setCartSubtotal(0);
+    setOfferDetails(null);
+    setWasCartIntentionallyCleared(true);
+    
+    // Clear from localStorage after successful checkout
+    localStorage.removeItem("cartItems");
+    sessionStorage.removeItem("cartItems");
+    
+    // Clear checkout flow data
+    sessionStorage.removeItem("cartCheckoutData");
+    localStorage.removeItem("cartCheckoutData");
+    
+    console.log("CartProvider: Cart cleared and marked as intentionally cleared");
+  }
+
+  // 🔧 NEW FUNCTION: Clear cart after successful checkout (keeps buy-now intact)
+  const clearCartAfterSuccessfulCheckout = () => {
+    console.log("CartProvider: Clearing cart after successful checkout");
+    setCartItems([]);
+    setCartTotal(0);
+    setCartSubtotal(0);
+    setOfferDetails(null);
+    setWasCartIntentionallyCleared(true);
+    
+    // Clear cart items from localStorage
+    localStorage.removeItem("cartItems");
+    
+    // Clear cart checkout flow data
+    sessionStorage.removeItem("cartCheckoutData");
+    localStorage.removeItem("cartCheckoutData");
+    sessionStorage.removeItem("cartCheckoutFlow");
+    sessionStorage.removeItem("cartCheckoutItems");
+    localStorage.removeItem("cartOrderData");
+    sessionStorage.removeItem("cartOrderData");
+    
+    console.log("CartProvider: Cart cleared after successful checkout");
+  }
 
   const notifyCheckoutCartChanged = useCallback(() => {
     setCartChangeCounter(prev => prev + 1)
@@ -355,6 +392,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     openCartSidebar, 
     closeCartSidebar, 
     clearCart,
+    clearCartAfterSuccessfulCheckout,
     cartTotal,
     cartSubtotal,
     offerDetails,
@@ -369,6 +407,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     openCartSidebar, 
     closeCartSidebar, 
     clearCart,
+    clearCartAfterSuccessfulCheckout,
     cartTotal,
     cartSubtotal,
     offerDetails,

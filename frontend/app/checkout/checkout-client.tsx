@@ -19,8 +19,8 @@ import { Gift } from "lucide-react";
 import Link from "next/link";
 
 export default function CheckoutClient() {
-  const { cartItems, clearCart, cartTotal, offerDetails, openCartSidebar } = useCart();
-  const { buyNowItem, clearBuyNowItem } = useBuyNow();
+  const { cartItems, clearCartAfterSuccessfulCheckout, cartTotal, offerDetails, openCartSidebar } = useCart();
+  const { buyNowItem, clearBuyNowAfterSuccessfulCheckout } = useBuyNow();
   const { checkoutItems, isLoading, retryRestoreCart, isBuyNowMode, isCartMode } = useCheckoutFlow();
   
   // Debug logging
@@ -276,7 +276,7 @@ export default function CheckoutClient() {
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, [buyNowItem, clearBuyNowItem]);
+  }, [buyNowItem, clearBuyNowAfterSuccessfulCheckout]);
 
   // Calculate discounted total using cartTotal from context
   const subtotal = cartTotal || checkoutItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -515,21 +515,11 @@ export default function CheckoutClient() {
           const currentMode = getCheckoutMode();
           if (currentMode === 'buynow') {
             // Clear only buy-now storage after successful payment
-            sessionStorage.removeItem('buyNowCheckoutFlow');
-            sessionStorage.removeItem('buyNowCheckoutItems');
-            sessionStorage.removeItem('buyNowCheckoutData');
-            localStorage.removeItem('buyNowCheckoutData');
-            localStorage.removeItem('buyNowOrderData');
-            sessionStorage.removeItem('buyNowOrderData');
+            clearBuyNowAfterSuccessfulCheckout();
             console.log('Cleared buy-now storage after successful payment');
           } else {
             // Clear only cart storage after successful payment
-            sessionStorage.removeItem('cartCheckoutFlow');
-            sessionStorage.removeItem('cartCheckoutItems');
-            sessionStorage.removeItem('cartCheckoutData');
-            localStorage.removeItem('cartCheckoutData');
-            localStorage.removeItem('cartOrderData');
-            sessionStorage.removeItem('cartOrderData');
+            clearCartAfterSuccessfulCheckout();
             console.log('Cleared cart storage after successful payment');
           }
           
@@ -546,7 +536,7 @@ export default function CheckoutClient() {
     } catch (err) {
       console.error('Payment error:', err);
       
-      // ⚡ ENHANCED ERROR CONTEXT: Provide flow-specific error messages
+      // ⚡ FAILURE HANDLING: Preserve items for retry (don't clear storage)
       const currentMode = getCheckoutMode();
       let errorMessage = err instanceof Error ? err.message : "Payment failed. Please try again.";
       
@@ -555,16 +545,23 @@ export default function CheckoutClient() {
           errorMessage = "Buy-now item was lost. Please return to the product page and try again.";
         } else if (errorMessage.includes('checkout items')) {
           errorMessage = "Buy-now checkout items were lost. Please refresh and try again.";
+        } else {
+          errorMessage = "Buy-now payment failed. Your item is still saved - please try again.";
         }
       } else {
         if (errorMessage.includes('cart items')) {
           errorMessage = "Cart items were lost. Please return to your cart and try again.";
         } else if (errorMessage.includes('checkout items')) {
           errorMessage = "Cart checkout items were lost. Please refresh and try again.";
+        } else {
+          errorMessage = "Cart payment failed. Your items are still saved - please try again.";
         }
       }
       
       setError(errorMessage);
+      
+      // 🔧 IMPORTANT: On failure, DO NOT clear storage - items remain for retry
+      console.log('Payment failed - items preserved for retry');
     } finally {
       setLoading(false);
     }
