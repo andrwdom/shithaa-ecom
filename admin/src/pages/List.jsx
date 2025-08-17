@@ -61,7 +61,7 @@ const ProductSkeleton = () => (
 const StockBadge = ({ size, stock }) => {
   const stockInfo = getStockStatus(stock)
   return (
-    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium
+    <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium
       ${stockInfo.status === 'out' ? 'bg-red-50 text-red-700 border border-red-200' : ''}
       ${stockInfo.status === 'low' ? 'bg-amber-50 text-amber-700 border border-amber-200' : ''}
       ${stockInfo.status === 'good' ? 'bg-green-50 text-green-700 border border-green-200' : ''}
@@ -90,22 +90,22 @@ const ProductCard = ({ product, onEdit, onDelete, isDragging, onDragStart, onDra
       onDrop={(e) => onDrop(e, product)}
       onDragEnd={onDragEnd}
     >
-              {/* Product Image */}
-        <div className="relative aspect-[4/5] bg-gray-50">
-          {/* Drag Handle */}
-          <div className="absolute top-2 left-2 z-10 opacity-100">
-            <div className="bg-blue-600 text-white rounded-full p-1.5 cursor-grab active:cursor-grabbing shadow-lg">
-              <GripVertical className="h-3 w-3" />
-            </div>
+      {/* Product Image */}
+      <div className="relative aspect-[4/5] bg-gray-50">
+        {/* Drag Handle */}
+        <div className="absolute top-2 left-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+          <div className="bg-blue-600 text-white rounded-full p-1.5 cursor-grab active:cursor-grabbing shadow-lg">
+            <GripVertical className="h-3 w-3" />
           </div>
-          
-          <img
-            src={product.images?.[0] || '/placeholder.svg'}
-            alt={product.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-            loading="lazy"
-          />
+        </div>
         
+        <img
+          src={product.images?.[0] || '/placeholder.svg'}
+          alt={product.name}
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          loading="lazy"
+        />
+      
         {/* Quick Stock Status */}
         <div className="absolute top-2 right-2">
           {stockInfo.status === 'out' && (
@@ -126,27 +126,27 @@ const ProductCard = ({ product, onEdit, onDelete, isDragging, onDragStart, onDra
             <img
               src={product.images[1]}
               alt={product.name}
-            className="w-full h-full object-cover"
-            loading="lazy"
-          />
-        </div>
+              className="w-full h-full object-cover"
+              loading="lazy"
+            />
+          </div>
         )}
       </div>
 
       {/* Product Info */}
-      <div className="p-5">
+      <div className="p-4">
         {/* Product Name */}
         <h3 className="font-medium text-gray-900 text-sm line-clamp-2 mb-2 min-h-[2.5rem]">
           {product.name}
         </h3>
 
         {/* Category */}
-        <p className="text-xs text-gray-600 mb-4 bg-gray-50 px-3 py-1 rounded-md inline-block">
+        <p className="text-xs text-gray-600 mb-3 bg-gray-50 px-2 py-1 rounded-md inline-block">
           {product.category || 'Uncategorized'}
         </p>
 
         {/* Size & Stock Info */}
-        <div className="flex flex-wrap gap-2 mb-4">
+        <div className="flex flex-wrap gap-1 mb-3">
           {product.sizes?.slice(0, 3).map((sizeObj, index) => {
             const size = typeof sizeObj === 'object' ? sizeObj.size : sizeObj
             const stock = typeof sizeObj === 'object' ? sizeObj.stock || 0 : 0
@@ -160,7 +160,7 @@ const ProductCard = ({ product, onEdit, onDelete, isDragging, onDragStart, onDra
         </div>
 
         {/* Price */}
-        <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <span className="text-lg font-semibold text-gray-900">
               {currency}{product.price}
@@ -169,8 +169,8 @@ const ProductCard = ({ product, onEdit, onDelete, isDragging, onDragStart, onDra
               <span className="text-sm text-gray-400 line-through">
                 {currency}{product.originalPrice}
               </span>
-          )}
-        </div>
+            )}
+          </div>
 
           {/* Stock Status Icon */}
           <div className="flex items-center">
@@ -185,32 +185,32 @@ const ProductCard = ({ product, onEdit, onDelete, isDragging, onDragStart, onDra
           <div className="flex items-center gap-2">
             <button
               onClick={() => onEdit(product)}
-              className="flex items-center gap-2 px-3 py-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors text-sm font-medium"
+              className="flex items-center gap-1 px-2 py-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors text-xs font-medium"
             >
               <Edit className="h-3 w-3" />
-              Edit
+              <span className="hidden sm:inline">Edit</span>
             </button>
             <button
               onClick={() => onDelete(product._id)}
-              className="flex items-center gap-2 px-3 py-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors text-sm font-medium"
+              className="flex items-center gap-1 px-2 py-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors text-xs font-medium"
             >
               <Trash2 className="h-3 w-3" />
-              Delete
+              <span className="hidden sm:inline">Delete</span>
             </button>
           </div>
           
           {/* Move Buttons */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <button
               onClick={() => onMoveTop(product._id)}
-              className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors"
+              className="p-1 text-green-600 hover:bg-green-50 rounded-md transition-colors"
               title="Move to top"
             >
               <ChevronUp className="h-3 w-3" />
             </button>
             <button
               onClick={() => onMoveBottom(product._id)}
-              className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors"
+              className="p-1 text-green-600 hover:bg-green-50 rounded-md transition-colors"
               title="Move to bottom"
             >
               <ChevronDown className="h-3 w-3" />
@@ -242,22 +242,22 @@ const ProductTableRow = ({ product, onEdit, onDelete, isDragging, onDragStart, o
       onDragEnd={onDragEnd}
     >
       {/* Drag Handle Column */}
-      <td className="px-6 py-4 w-8">
+      <td className="px-4 py-3 w-8">
         <div className="flex items-center justify-center">
-          <div className="bg-blue-600 text-white rounded-full p-1.5 cursor-grab active:cursor-grabbing shadow-sm hover:shadow-md transition-all duration-200 opacity-0 group-hover:opacity-100">
+          <div className="bg-blue-600 text-white rounded-full p-1 cursor-grab active:cursor-grabbing shadow-sm hover:shadow-md transition-all duration-200 opacity-0 group-hover:opacity-100">
             <GripVertical className="h-3 w-3" />
           </div>
         </div>
       </td>
 
-      {/* Product Column */}
-      <td className="px-6 py-4">
-        <div className="flex items-start space-x-4">
+      {/* Left Section: Product Info (40%) */}
+      <td className="px-4 py-3 w-2/5">
+        <div className="flex items-start space-x-3">
           <div className="flex-shrink-0">
             <img
               src={product.images?.[0] || '/placeholder.svg'}
               alt={product.name}
-              className="w-16 h-20 object-cover rounded-lg border border-gray-200"
+              className="w-14 h-18 object-cover rounded-lg border border-gray-200"
             />
           </div>
           <div className="flex-1 min-w-0">
@@ -281,95 +281,108 @@ const ProductTableRow = ({ product, onEdit, onDelete, isDragging, onDragStart, o
         </div>
       </td>
 
-      {/* Category Column */}
-      <td className="px-6 py-4">
-        <div className="text-sm text-gray-900">
-          {product.category}
-        </div>
-        {product.sleeveType && (
-          <div className="text-xs text-gray-500 mt-1">
-            {product.sleeveType}
+      {/* Right Section: Details & Actions (60%) */}
+      <td className="px-4 py-3 w-3/5">
+        <div className="grid grid-cols-4 gap-4 items-center">
+          {/* Category */}
+          <div className="col-span-1">
+            <div className="text-sm text-gray-900 font-medium">
+              {product.category}
+            </div>
+            {product.sleeveType && (
+              <div className="text-xs text-gray-500 mt-1">
+                {product.sleeveType}
+              </div>
+            )}
           </div>
-        )}
-      </td>
 
-      {/* Price Column */}
-      <td className="px-6 py-4">
-        <div className="text-sm font-semibold text-gray-900">
-          ₹{product.price}
-        </div>
-      </td>
+          {/* Price */}
+          <div className="col-span-1">
+            <div className="text-sm font-semibold text-gray-900">
+              ₹{product.price}
+            </div>
+          </div>
 
-      {/* Stock by Size Column */}
-      <td className="px-6 py-4">
-        <div className="flex flex-wrap gap-1">
-          {product.sizes?.map((sizeObj) => {
-            const size = typeof sizeObj === 'object' ? sizeObj.size : sizeObj
-            const stock = typeof sizeObj === 'object' ? sizeObj.stock : 0
-            const stockInfo = getStockStatus(stock)
-            
-            return (
-              <span
-                key={size}
-                className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                  stockInfo.status === 'out' 
-                    ? 'bg-red-50 text-red-700 border border-red-200' 
-                    : stockInfo.status === 'low'
-                    ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                    : 'bg-green-50 text-green-700 border border-green-200'
-                }`}
-              >
-                {size}: {stock}
-              </span>
-            )
-          })}
-        </div>
-      </td>
+          {/* Stock by Size */}
+          <div className="col-span-1">
+            <div className="flex flex-wrap gap-1 max-w-32">
+              {product.sizes?.slice(0, 4).map((sizeObj) => {
+                const size = typeof sizeObj === 'object' ? sizeObj.size : sizeObj
+                const stock = typeof sizeObj === 'object' ? sizeObj.stock : 0
+                const stockInfo = getStockStatus(stock)
+                
+                return (
+                  <span
+                    key={size}
+                    className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                      stockInfo.status === 'out' 
+                        ? 'bg-red-50 text-red-700 border border-red-200' 
+                        : stockInfo.status === 'low'
+                        ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                        : 'bg-green-50 text-green-700 border border-green-200'
+                    }`}
+                  >
+                    {size}: {stock}
+                  </span>
+                )
+              })}
+              {product.sizes && product.sizes.length > 4 && (
+                <span className="text-xs text-gray-500 px-2 py-1">
+                  +{product.sizes.length - 4} more
+                </span>
+              )}
+            </div>
+          </div>
 
-      {/* Actions Column */}
-      <td className="px-6 py-4">
-        <div className="flex items-center space-x-2">
-          {/* Edit Button */}
-          <button
-            onClick={() => onEdit(product)}
-            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors duration-200"
-            title="Edit Product"
-          >
-            <Edit className="h-4 w-4" />
-          </button>
-          
-          {/* Delete Button */}
-          <button
-            onClick={() => onDelete(product._id)}
-            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
-            title="Delete Product"
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
-
-          {/* Reorder Actions Dropdown */}
-          <div className="relative">
-            <button
-              className="p-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors duration-200"
-              title="Reorder Options"
-            >
-              <GripVertical className="h-4 w-4" />
-            </button>
-            <div className="absolute right-0 top-full mt-1 w-32 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
+          {/* Actions */}
+          <div className="col-span-1">
+            <div className="flex items-center justify-end space-x-2">
+              {/* Edit Button */}
               <button
-                onClick={() => onMoveTop(product._id)}
-                className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 rounded-t-lg transition-colors duration-200 flex items-center space-x-2"
+                onClick={() => onEdit(product)}
+                className="px-3 py-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors duration-200 text-sm font-medium"
+                title="Edit Product"
               >
-                <ChevronUp className="h-4 w-4" />
-                <span>Move to Top</span>
+                <span className="hidden xl:inline">Edit</span>
+                <Edit className="h-4 w-4 xl:hidden" />
               </button>
+              
+              {/* Delete Button */}
               <button
-                onClick={() => onMoveBottom(product._id)}
-                className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 rounded-b-lg transition-colors duration-200 flex items-center space-x-2"
+                onClick={() => onDelete(product._id)}
+                className="px-3 py-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200 text-sm font-medium"
+                title="Delete Product"
               >
-                <ChevronDown className="h-4 w-4" />
-                <span>Move to Bottom</span>
+                <span className="hidden xl:inline">Delete</span>
+                <Trash2 className="h-4 w-4 xl:hidden" />
               </button>
+
+              {/* Reorder Actions Dropdown */}
+              <div className="relative">
+                <button
+                  className="px-3 py-1.5 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors duration-200 text-sm font-medium"
+                  title="Reorder Options"
+                >
+                  <span className="hidden xl:inline">Reorder</span>
+                  <GripVertical className="h-4 w-4 xl:hidden" />
+                </button>
+                <div className="absolute right-0 top-full mt-1 w-36 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
+                  <button
+                    onClick={() => onMoveTop(product._id)}
+                    className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 rounded-t-lg transition-colors duration-200 flex items-center space-x-2"
+                  >
+                    <ChevronUp className="h-4 w-4" />
+                    <span>Move to Top</span>
+                  </button>
+                  <button
+                    onClick={() => onMoveBottom(product._id)}
+                    className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 rounded-b-lg transition-colors duration-200 flex items-center space-x-2"
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                    <span>Move to Bottom</span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1118,6 +1131,7 @@ const List = ({ token }) => {
                       ? 'bg-white text-gray-900 shadow-md transform scale-105'
                       : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
                   }`}
+                  title="Grid View"
                 >
                   <Grid className="h-5 w-5" />
                 </button>
@@ -1128,6 +1142,7 @@ const List = ({ token }) => {
                       ? 'bg-white text-gray-900 shadow-md transform scale-105'
                       : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
                   }`}
+                  title="List View"
                 >
                   <ListIcon className="h-5 w-5" />
                 </button>
@@ -1208,170 +1223,170 @@ const List = ({ token }) => {
             {/* Search and Basic Filters */}
             <FilterSection title="Search & Basic Filters" icon={Search}>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {/* Search */}
-                <div className="lg:col-span-2">
+        {/* Search */}
+        <div className="lg:col-span-2">
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Search Products</label>
-                  <div className="relative">
+              <div className="relative">
                     <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                    <input
-                      type="text"
-                      placeholder="Search by name or ID..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
+          <input
+            type="text"
+                  placeholder="Search by name or ID..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
                       className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-gray-400"
-                    />
-                  </div>
-                </div>
+          />
+              </div>
+        </div>
 
-                {/* Category Filter */}
-                <div>
+        {/* Category Filter */}
+        <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Category</label>
-                  <select
-                    value={categoryFilter}
-                    onChange={(e) => setCategoryFilter(e.target.value)}
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-gray-400"
-                  >
-                    <option value="">All Categories</option>
-                    {categories.map((cat) => (
-                      <option key={cat._id} value={cat.slug}>
-                        {cat.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+          >
+            <option value="">All Categories</option>
+            {categories.map((cat) => (
+              <option key={cat._id} value={cat.slug}>
+                {cat.name}
+              </option>
+            ))}
+          </select>
+        </div>
 
-                {/* Size Filter */}
-                <div>
+            {/* Size Filter */}
+        <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Size</label>
-                  <select
-                    value={sizeFilter}
-                    onChange={(e) => setSizeFilter(e.target.value)}
+            <select
+              value={sizeFilter}
+              onChange={(e) => setSizeFilter(e.target.value)}
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-gray-400"
-                  >
-                    <option value="">All Sizes</option>
-                    {ALL_SIZES.map((size) => (
-                      <option key={size} value={size}>
-                        {size}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+            >
+              <option value="">All Sizes</option>
+              {ALL_SIZES.map((size) => (
+                <option key={size} value={size}>
+                  {size}
+                </option>
+              ))}
+            </select>
+      </div>
               </div>
             </FilterSection>
-
+      
             {/* Advanced Filters */}
             <FilterSection title="Advanced Filters" icon={Settings}>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {/* Stock Filter */}
-                <div>
+            {/* Stock Filter */}
+      <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Stock Status</label>
-                  <select
-                    value={stockFilter}
-                    onChange={(e) => setStockFilter(e.target.value)}
+        <select
+                value={stockFilter}
+                onChange={(e) => setStockFilter(e.target.value)}
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-gray-400"
-                  >
-                    <option value="">All Stock</option>
-                    <option value="low">Low Stock</option>
-                    <option value="out">Out of Stock</option>
-                  </select>
-                </div>
+        >
+                <option value="">All Stock</option>
+                <option value="low">Low Stock</option>
+                <option value="out">Out of Stock</option>
+        </select>
+      </div>
 
-                {/* Sort Filter */}
-                <div>
+            {/* Sort Filter */}
+      <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Sort By</label>
-                  <select
-                    value={`${sortBy}-${sortOrder}`}
-                    onChange={(e) => {
-                      const [field, order] = e.target.value.split('-')
-                      setSortBy(field)
-                      setSortOrder(order)
-                    }}
+        <select
+                value={`${sortBy}-${sortOrder}`}
+                onChange={(e) => {
+                  const [field, order] = e.target.value.split('-')
+                  setSortBy(field)
+                  setSortOrder(order)
+                }}
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-gray-400"
-                  >
-                    <option value="displayOrder-asc">Order (Custom)</option>
-                    <option value="createdAt-desc">Newest First</option>
-                    <option value="createdAt-asc">Oldest First</option>
-                    <option value="price-asc">Price: Low to High</option>
-                    <option value="price-desc">Price: High to Low</option>
-                    <option value="name-asc">Name: A to Z</option>
-                    <option value="name-desc">Name: Z to A</option>
-                  </select>
-                </div>
+        >
+                <option value="displayOrder-asc">Order (Custom)</option>
+                <option value="createdAt-desc">Newest First</option>
+                <option value="createdAt-asc">Oldest First</option>
+                <option value="price-asc">Price: Low to High</option>
+                <option value="price-desc">Price: High to Low</option>
+                <option value="name-asc">Name: A to Z</option>
+                <option value="name-desc">Name: Z to A</option>
+        </select>
+      </div>
 
-                {/* Clear Filters */}
-                <div className="flex items-end">
-                  <button
-                    onClick={clearFilters}
-                    disabled={activeFiltersCount === 0}
+            {/* Clear Filters */}
+            <div className="flex items-end">
+              <button
+                onClick={clearFilters}
+                disabled={activeFiltersCount === 0}
                     className="w-full px-6 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 active:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2 font-medium"
-                  >
-                    <Filter className="h-4 w-4" />
-                    Clear {activeFiltersCount > 0 && `(${activeFiltersCount})`}
-                  </button>
-                </div>
-              </div>
+              >
+                <Filter className="h-4 w-4" />
+                Clear {activeFiltersCount > 0 && `(${activeFiltersCount})`}
+              </button>
+            </div>
+          </div>
             </FilterSection>
 
-            {/* Price Range Filter */}
+          {/* Price Range Filter */}
             <FilterSection title="Price Range" icon={DollarSign}>
               <div className="max-w-md">
                 <label className="block text-sm font-semibold text-gray-700 mb-3">Set Price Range</label>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Min Price</label>
-                    <input
-                      type="number"
+          <input
+            type="number"
                       placeholder="0"
-                      value={priceRange.min}
-                      onChange={(e) => setPriceRange(prev => ({ ...prev, min: e.target.value }))}
+                  value={priceRange.min}
+                  onChange={(e) => setPriceRange(prev => ({ ...prev, min: e.target.value }))}
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-gray-400"
-                    />
+          />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Max Price</label>
-                    <input
-                      type="number"
+          <input
+            type="number"
                       placeholder="1000"
-                      value={priceRange.max}
-                      onChange={(e) => setPriceRange(prev => ({ ...prev, max: e.target.value }))}
+                  value={priceRange.max}
+                  onChange={(e) => setPriceRange(prev => ({ ...prev, max: e.target.value }))}
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-gray-400"
-                    />
-                  </div>
-                </div>
-              </div>
+          />
+        </div>
+      </div>
+      </div>
             </FilterSection>
 
-            {/* Active Filters Tags */}
-            {activeFilters.length > 0 && (
+          {/* Active Filters Tags */}
+          {activeFilters.length > 0 && (
               <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
                 <div className="flex items-center gap-3 mb-4">
                   <Tag className="h-5 w-5 text-gray-600" />
                   <h3 className="text-sm font-semibold text-gray-700">Active Filters</h3>
                 </div>
                 <div className="flex items-center gap-3 flex-wrap">
-                  {activeFilters.map((filter, index) => (
-                    <span
-                      key={index}
+                {activeFilters.map((filter, index) => (
+                  <span
+                    key={index}
                       className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 text-sm rounded-full border border-blue-200 hover:bg-blue-100 transition-colors"
-                    >
-                      {filter.label}
-                      <button
-                        onClick={() => removeFilter(filter.type)}
+                  >
+                    {filter.label}
+    <button
+                      onClick={() => removeFilter(filter.type)}
                         className="hover:bg-blue-200 rounded-full p-1 transition-colors"
-                        title={`Remove ${filter.label}`}
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
+                      title={`Remove ${filter.label}`}
+                    >
+                      <X className="h-3 w-3" />
+    </button>
+                  </span>
+                ))}
+            </div>
+            </div>
+          )}
           </div>
         </div>
       </div>
 
-      {/* Main Content */}
+        {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Drag & Drop Indicator */}
         {isDragging && (
@@ -1396,16 +1411,16 @@ const List = ({ token }) => {
           </div>
         )}
 
-        {loading ? (
+          {loading ? (
           /* Loading State */
           <div className={viewMode === 'card' 
-            ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 xl:gap-8"
+            ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 xl:gap-6"
             : "space-y-4"
           }>
             {Array.from({ length: PRODUCTS_PER_PAGE }).map((_, index) => (
               <ProductSkeleton key={index} />
-            ))}
-          </div>
+              ))}
+            </div>
         ) : products.length === 0 ? (
           /* Empty State */
           <div className="text-center py-16">
@@ -1416,12 +1431,12 @@ const List = ({ token }) => {
             <p className="text-gray-500 max-w-md mx-auto">
               Try adjusting your search or filters to find what you're looking for
             </p>
-          </div>
-        ) : (
+            </div>
+          ) : (
           /* Products Display */
-          <>
-            {viewMode === 'card' ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 xl:gap-8">
+            <>
+                          {viewMode === 'card' ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 xl:gap-6">
                 {products.map((product) => (
                   <ProductCard
                     key={product._id}
@@ -1438,52 +1453,43 @@ const List = ({ token }) => {
                   />
                 ))}
               </div>
-            ) : (
+              ) : (
               <>
-                {/* Desktop Table View */}
-                <div className="hidden lg:block bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-8">
-                          {/* Drag handle column */}
-                        </th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Product
-                        </th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Category
-                        </th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Price
-                        </th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Stock by Size
-                        </th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {products.map((product, index) => (
-                        <ProductTableRow
-                          key={product._id}
-                          product={product}
-                          onEdit={setEditingProduct}
-                          onDelete={handleDeleteProduct}
-                          isDragging={draggedProduct?._id === product._id}
-                          onDragStart={handleDragStart}
-                          onDragOver={handleDragOver}
-                          onDrop={handleDrop}
-                          onDragEnd={handleDragEnd}
-                          onMoveTop={(productId) => handleMoveProduct(productId, 'top')}
-                          onMoveBottom={(productId) => handleMoveProduct(productId, 'bottom')}
-                        />
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                                        {/* Desktop Table View */}
+        <div className="hidden lg:block bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-8">
+                  {/* Drag handle column */}
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-2/5">
+                  Product Information
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-3/5">
+                  Details & Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {products.map((product, index) => (
+                <ProductTableRow
+                  key={product._id}
+                  product={product}
+                  onEdit={setEditingProduct}
+                  onDelete={handleDeleteProduct}
+                  isDragging={draggedProduct?._id === product._id}
+                  onDragStart={handleDragStart}
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop}
+                  onDragEnd={handleDragEnd}
+                  onMoveTop={(productId) => handleMoveProduct(productId, 'top')}
+                  onMoveBottom={(productId) => handleMoveProduct(productId, 'bottom')}
+                />
+              ))}
+            </tbody>
+          </table>
+        </div>
 
                 {/* Mobile List View */}
                 <div className="lg:hidden space-y-4">
@@ -1501,20 +1507,20 @@ const List = ({ token }) => {
                   ))}
                 </div>
               </>
-            )}
+                )}
 
-            {/* Pagination */}
-            {totalPages > 1 && (
+              {/* Pagination */}
+              {totalPages > 1 && (
               <div className="mt-8">
                 <Pagination
                   currentPage={currentPage}
                   totalPages={totalPages}
-                  onPageChange={setCurrentPage}
+                onPageChange={setCurrentPage}
                 />
               </div>
-            )}
-          </>
-        )}
+              )}
+            </>
+          )}
       </div>
 
       {/* Mobile Filters Drawer */}
