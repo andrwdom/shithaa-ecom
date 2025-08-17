@@ -60,9 +60,17 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const calculationTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const lastCartHashRef = useRef<string>('')
   const storageUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const isStorageUpdatingRef = useRef(false)
+  const lastStorageHashRef = useRef<string>('')
 
-  // Enhanced function to load cart from localStorage
+  // Enhanced function to load cart from localStorage - with conflict prevention
   const loadCartFromStorage = useCallback(() => {
+    // Prevent loading if we're currently updating storage
+    if (isStorageUpdatingRef.current) {
+      console.log("CartProvider: Skipping storage load - storage update in progress")
+      return false
+    }
+
     try {
       const stored = localStorage.getItem("cartItems")
       if (stored) {
@@ -78,9 +86,17 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             item.size
           )
           if (validItems.length > 0) {
-            setCartItems(validItems)
-            console.log("CartProvider: Successfully restored", validItems.length, "cart items")
-            return true
+            // Create hash to check if storage actually changed
+            const storageHash = validItems.map(item => `${item._id}-${item.size}-${item.quantity}`).join('|')
+            if (storageHash !== lastStorageHashRef.current) {
+              setCartItems(validItems)
+              lastStorageHashRef.current = storageHash
+              console.log("CartProvider: Successfully restored", validItems.length, "cart items")
+              return true
+            } else {
+              console.log("CartProvider: Storage unchanged, skipping restoration")
+              return false
+            }
           }
         }
       }
@@ -110,7 +126,24 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, [loadCartFromStorage, isCartInitialized])
 
-  // Batched and debounced cart storage updates
+  // Listen for storage events from other tabs only
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      // Only handle cart changes from other tabs
+      if (e.key === "cartItems" && e.newValue && !isStorageUpdatingRef.current) {
+        console.log("CartProvider: Storage event from other tab detected")
+        // Small delay to ensure our storage operations are complete
+        setTimeout(() => {
+          loadCartFromStorage()
+        }, 100)
+      }
+    }
+
+    window.addEventListener('storage', handleStorageChange)
+    return () => window.removeEventListener('storage', handleStorageChange)
+  }, [loadCartFromStorage])
+
+  // Batched and debounced cart storage updates - with conflict prevention
   const updateCartStorage = useCallback((newCartItems: CartItem[]) => {
     // Clear any existing timeout
     if (storageUpdateTimeoutRef.current) {
@@ -119,18 +152,36 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     
     // Batch storage updates with debouncing
     storageUpdateTimeoutRef.current = setTimeout(() => {
+      // Prevent storage updates if we're currently loading
+      if (isStorageUpdatingRef.current) {
+        console.log("CartProvider: Skipping storage update - storage operation in progress")
+        return
+      }
+
       try {
+        isStorageUpdatingRef.current = true
+        
         if (newCartItems.length > 0) {
-          // Save to primary storage
-          localStorage.setItem("cartItems", JSON.stringify(newCartItems))
-          // Also save to sessionStorage as backup
-          sessionStorage.setItem("cartItems", JSON.stringify(newCartItems))
-          // Increment counter to notify checkout of cart changes
-          setCartChangeCounter(prev => prev + 1)
+          // Create hash to check if we actually need to update storage
+          const newHash = newCartItems.map(item => `${item._id}-${item.size}-${item.quantity}`).join('|')
+          if (newHash !== lastStorageHashRef.current) {
+            // Save to primary storage
+            localStorage.setItem("cartItems", JSON.stringify(newCartItems))
+            // Also save to sessionStorage as backup
+            sessionStorage.setItem("cartItems", JSON.stringify(newCartItems))
+            // Update hash and increment counter
+            lastStorageHashRef.current = newHash
+            setCartChangeCounter(prev => prev + 1)
+            console.log("CartProvider: Cart saved successfully")
+          } else {
+            console.log("CartProvider: Cart unchanged, skipping storage update")
+          }
         } else if (newCartItems.length === 0 && isCartInitialized) {
           // Only clear storage if we're sure the cart should be empty
           localStorage.removeItem("cartItems")
           sessionStorage.removeItem("cartItems")
+          lastStorageHashRef.current = ''
+          console.log("CartProvider: Cart cleared from storage")
         }
       } catch (error) {
         console.error("CartProvider: Error saving cart to localStorage:", error)
@@ -144,8 +195,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         } catch (sessionError) {
           console.error("CartProvider: Failed to save cart to both storages:", sessionError)
         }
+      } finally {
+        isStorageUpdatingRef.current = false
       }
-    }, 100) // 100ms debounce for storage updates
+    }, 200) // Increased to 200ms debounce for storage updates
   }, [isCartInitialized])
 
   // Enhanced save cart to localStorage with batching and debouncing

@@ -50,11 +50,16 @@ export default function CartSidebar() {
     }
   }, [cartItemsCount]);
 
-  // Attempt to restore cart when sidebar opens and cart is empty
+  // Attempt to restore cart when sidebar opens and cart is empty - with conflict prevention
   useEffect(() => {
     if (isCartSidebarOpen && cartItemsCount === 0) {
-      console.log("Cart sidebar: Cart is empty, attempting restoration")
-      restoreCartFromStorage()
+      // Add a small delay to prevent conflicts with storage operations
+      const timer = setTimeout(() => {
+        console.log("Cart sidebar: Cart is empty, attempting restoration")
+        restoreCartFromStorage()
+      }, 300)
+      
+      return () => clearTimeout(timer)
     }
   }, [isCartSidebarOpen, cartItemsCount, restoreCartFromStorage])
 
