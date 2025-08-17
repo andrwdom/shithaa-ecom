@@ -210,6 +210,23 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Cart system health check endpoint
+app.get('/api/cart/health', (req, res) => {
+  res.json({ 
+    status: 'ok',
+    cartSystem: 'operational',
+    timestamp: new Date().toISOString(),
+    endpoints: {
+      'POST /api/cart/calculate-total': 'public - no auth required',
+      'POST /api/cart/get-items': 'public - no auth required',
+      'POST /api/cart/get': 'protected - requires auth',
+      'POST /api/cart/add': 'protected - requires auth',
+      'POST /api/cart/update': 'protected - requires auth',
+      'POST /api/cart/remove': 'protected - requires auth'
+    }
+  });
+});
+
 // SECURITY: CSRF token endpoint for state-changing operations
 app.get('/api/csrf-token', (req, res) => {
   try {

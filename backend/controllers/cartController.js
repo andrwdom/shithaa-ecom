@@ -4,29 +4,51 @@ import productModel from "../models/productModel.js"
 // Add products to user cart
 const addToCart = async (req, res) => {
     try {
+        console.log('🔍 addToCart called with:', req.body);
         const { userId, itemId, size } = req.body
 
+        if (!userId || !itemId || !size) {
+            console.log('❌ Missing required fields:', { userId: !!userId, itemId: !!itemId, size: !!size });
+            return res.status(400).json({ 
+                success: false, 
+                message: "Missing required fields: userId, itemId, size" 
+            });
+        }
+
         const userData = await userModel.findById(userId)
+        if (!userData) {
+            console.log('❌ User not found:', userId);
+            return res.status(404).json({ 
+                success: false, 
+                message: "User not found" 
+            });
+        }
+
         let cartData = userData.cartData;
+        console.log('🔍 Current cart data:', cartData);
 
         if (cartData[itemId]) {
             if (cartData[itemId][size]) {
                 cartData[itemId][size] += 1
+                console.log(`✅ Updated quantity for ${itemId} size ${size} to ${cartData[itemId][size]}`);
             } else {
                 cartData[itemId][size] = 1
+                console.log(`✅ Added new size ${size} for ${itemId}`);
             }
         } else {
             cartData[itemId] = {}
             cartData[itemId][size] = 1
+            console.log(`✅ Added new item ${itemId} with size ${size}`);
         }
 
         await userModel.findByIdAndUpdate(userId, {cartData})
+        console.log('✅ Cart updated successfully');
 
         res.json({ success: true, message: "Added To Cart" })
 
     } catch (error) {
-        console.log(error)
-        res.json({ success: false, message: error.message })
+        console.error('❌ addToCart error:', error);
+        res.status(500).json({ success: false, message: error.message })
     }
 }
 
@@ -52,16 +74,58 @@ const updateCart = async (req, res) => {
 // Get user cart data
 const getUserCart = async (req, res) => {
     try {
+        console.log('🔍 getUserCart called with:', req.body);
         const { userId } = req.body
         
+        if (!userId) {
+            console.log('❌ No userId provided');
+            return res.status(400).json({ success: false, message: 'userId required' });
+        }
+        
         const userData = await userModel.findById(userId)
+        console.log('🔍 User found:', !!userData);
+        
+        if (!userData) {
+            console.log('❌ User not found');
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+        
         let cartData = userData.cartData;
+        console.log('🔍 Raw cart data:', cartData);
 
-        res.json({ success: true, cartData })
+        // Convert cartData object to array format that frontend expects
+        const cartItems = [];
+        for (const [itemId, sizes] of Object.entries(cartData)) {
+            for (const [size, quantity] of Object.entries(sizes)) {
+                try {
+                    // Fetch product details
+                    const product = await productModel.findById(itemId);
+                    if (product) {
+                        cartItems.push({
+                            _id: itemId,
+                            id: itemId, // Frontend expects both _id and id
+                            name: product.name,
+                            price: product.price,
+                            quantity: quantity,
+                            size: size,
+                            image: product.images?.[0] || '',
+                            categorySlug: product.categorySlug,
+                            category: product.category
+                        });
+                    } else {
+                        console.log(`⚠️ Product not found for itemId: ${itemId}`);
+                    }
+                } catch (error) {
+                    console.error(`❌ Error fetching product ${itemId}:`, error);
+                }
+            }
+        }
 
+        console.log('✅ Converted cart items:', cartItems.length);
+        res.json({ success: true, cartItems, cartData })
     } catch (error) {
-        console.log(error)
-        res.json({ success: false, message: error.message })
+        console.error('❌ getUserCart error:', error);
+        res.status(500).json({ success: false, message: error.message })
     }
 }
 
@@ -267,4 +331,70 @@ const removeFromCart = async (req, res) => {
     }
 };
 
-export { addToCart, updateCart, getUserCart, calculateCartTotal, getBulkStock, removeFromCart } 
+// Get cart items by userId without authentication (for frontend restoration)
+const getCartItemsByUserId = async (req, res) => {
+    try {
+        console.log('🔍 getCartItemsByUserId called with:', req.body);
+        const { userId } = req.body
+        
+        if (!userId) {
+            console.log('❌ No userId provided');
+            return res.status(400).json({ success: false, message: 'userId required' });
+        }
+        
+        const userData = await userModel.findById(userId)
+        console.log('🔍 User found:', !!userData);
+        
+        if (!userData) {
+            console.log('❌ User not found');
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+        
+        let cartData = userData.cartData;
+        console.log('🔍 Raw cart data:', cartData);
+
+        // Convert cartData object to array format that frontend expects
+        const cartItems = [];
+        for (const [itemId, sizes] of Object.entries(cartData)) {
+            for (const [size, quantity] of Object.entries(sizes)) {
+                try {
+                    // Fetch product details
+                    const product = await productModel.findById(itemId);
+                    if (product) {
+                        cartItems.push({
+                            _id: itemId,
+                            id: itemId, // Frontend expects both _id and id
+                            name: product.name,
+                            price: product.price,
+                            quantity: quantity,
+                            size: size,
+                            image: product.images?.[0] || '',
+                            categorySlug: product.categorySlug,
+                            category: product.category
+                        });
+                    } else {
+                        console.log(`⚠️ Product not found for itemId: ${itemId}`);
+                    }
+                } catch (error) {
+                    console.error(`❌ Error fetching product ${itemId}:`, error);
+                }
+            }
+        }
+
+        console.log('✅ Converted cart items:', cartItems.length);
+        res.json({ success: true, cartItems })
+    } catch (error) {
+        console.error('❌ getCartItemsByUserId error:', error);
+        res.status(500).json({ success: false, message: error.message })
+    }
+};
+
+export {
+    addToCart,
+    getUserCart,
+    updateCart,
+    removeFromCart,
+    calculateCartTotal,
+    getBulkStock,
+    getCartItemsByUserId
+} 
