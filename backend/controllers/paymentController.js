@@ -225,6 +225,30 @@ export const createPhonePeSession = async (req, res) => {
       });
     }
 
+    // Initialize PhonePe client ONCE
+    let phonepeClient;
+    try {
+      phonepeClient = StandardCheckoutClient.getInstance(
+        process.env.PHONEPE_MERCHANT_ID,
+        process.env.PHONEPE_API_KEY,
+        parseInt(process.env.PHONEPE_SALT_INDEX || '1', 10),
+        process.env.PHONEPE_ENV === 'PRODUCTION' ? Env.PRODUCTION : Env.SANDBOX
+      );
+      console.log('PhonePe client initialized successfully for this request');
+    } catch (clientError) {
+      console.error('PhonePe client initialization failed:', clientError);
+      // Restore stock since we can't create payment
+      await restoreProductStock(cartItems);
+      // Delete payment session
+      await PaymentSession.findByIdAndDelete(paymentSession._id);
+      
+      return res.status(500).json({
+        success: false,
+        message: 'Payment service not available',
+        error: 'PhonePe client initialization failed: ' + clientError.message
+      });
+    }
+
     // Use SDK to create payment session
     const redirectUrl = `${process.env.PHONEPE_REDIRECT_URL || process.env.BASE_URL || 'https://shithaa.in'}/payment/phonepe/callback?merchantTransactionId=${phonepeTransactionId}`;
     console.log('Redirect URL:', redirectUrl);
@@ -239,12 +263,7 @@ export const createPhonePeSession = async (req, res) => {
     console.log('PhonePe request built, calling phonepeClient.pay()...');
     console.log('Request details:', JSON.stringify(request, null, 2));
 
-    const response = await StandardCheckoutClient.getInstance(
-      process.env.PHONEPE_MERCHANT_ID,
-      process.env.PHONEPE_API_KEY,
-      parseInt(process.env.PHONEPE_SALT_INDEX || '1', 10),
-      process.env.PHONEPE_ENV === 'PRODUCTION' ? Env.PRODUCTION : Env.SANDBOX
-    ).pay(request);
+    const response = await phonepeClient.pay(request);
     console.log('PhonePe SDK response received:', response);
     
     if (response && response.redirectUrl) {
@@ -322,13 +341,27 @@ export const phonePeCallback = async (req, res) => {
     let merchantOrderId;
     let state;
 
+    // Initialize PhonePe client ONCE for callback validation
+    let phonepeClient;
     try {
-      callbackResponse = StandardCheckoutClient.getInstance(
+      phonepeClient = StandardCheckoutClient.getInstance(
         process.env.PHONEPE_MERCHANT_ID,
         process.env.PHONEPE_API_KEY,
         parseInt(process.env.PHONEPE_SALT_INDEX || '1', 10),
         process.env.PHONEPE_ENV === 'PRODUCTION' ? Env.PRODUCTION : Env.SANDBOX
-      ).validateCallback(
+      );
+      console.log('PhonePe client initialized successfully for callback validation');
+    } catch (clientError) {
+      console.error('PhonePe client initialization failed for callback validation:', clientError);
+      return res.status(500).json({
+        success: false,
+        message: 'Payment service not available',
+        error: 'PhonePe client initialization failed: ' + clientError.message
+      });
+    }
+
+    try {
+      callbackResponse = phonepeClient.validateCallback(
         usernameConfigured,
         passwordConfigured,
         authorizationHeaderData,
@@ -463,24 +496,40 @@ export const phonePeCallback = async (req, res) => {
 export const verifyPhonePePayment = async (req, res) => {
   try {
     const { merchantTransactionId } = req.params;
-    console.log('Verification request for transaction:', merchantTransactionId);
-    
+    console.log('Verifying PhonePe payment for transaction:', merchantTransactionId);
+
     if (!merchantTransactionId) {
       return res.status(400).json({
         success: false,
-        message: 'Transaction ID is required'
+        message: 'Merchant transaction ID is required'
       });
     }
 
-    // First check if we have the payment session in our database
+    // Initialize PhonePe client ONCE for verification
+    let phonepeClient;
+    try {
+      phonepeClient = StandardCheckoutClient.getInstance(
+        process.env.PHONEPE_MERCHANT_ID,
+        process.env.PHONEPE_API_KEY,
+        parseInt(process.env.PHONEPE_SALT_INDEX || '1', 10),
+        process.env.PHONEPE_ENV === 'PRODUCTION' ? Env.PRODUCTION : Env.SANDBOX
+      );
+      console.log('PhonePe client initialized successfully for verification');
+    } catch (clientError) {
+      console.error('PhonePe client initialization failed for verification:', clientError);
+      return res.status(500).json({
+        success: false,
+        message: 'Payment service not available',
+        error: 'PhonePe client initialization failed: ' + clientError.message
+      });
+    }
+
+    // Check if we have a payment session for this transaction
     const paymentSession = await PaymentSession.findOne({ phonepeTransactionId: merchantTransactionId });
-    console.log('Payment session found:', paymentSession ? paymentSession._id : 'Not found');
-    
     if (!paymentSession) {
-      console.log('Payment session not found for transaction:', merchantTransactionId);
       return res.status(404).json({
         success: false,
-        message: 'Payment session not found for this transaction'
+        message: 'Payment session not found'
       });
     }
 
@@ -490,54 +539,11 @@ export const verifyPhonePePayment = async (req, res) => {
     let phonepeResponse;
     try {
       console.log('Attempting PhonePe SDK verification...');
-      phonepeResponse = await StandardCheckoutClient.getInstance(
-        process.env.PHONEPE_MERCHANT_ID,
-        process.env.PHONEPE_API_KEY,
-        parseInt(process.env.PHONEPE_SALT_INDEX || '1', 10),
-        process.env.PHONEPE_ENV === 'PRODUCTION' ? Env.PRODUCTION : Env.SANDBOX
-      ).getOrderStatus(merchantTransactionId);
+      phonepeResponse = await phonepeClient.getOrderStatus(merchantTransactionId);
       console.log('PhonePe SDK response:', phonepeResponse);
     } catch (sdkError) {
       console.error('PhonePe SDK Error:', sdkError);
-      
-      // If SDK fails, check our database status
-      console.log('Using database fallback for transaction:', merchantTransactionId);
-      
-      // Check if payment session was marked as successful
-      if (paymentSession.status === 'success') {
-        console.log('Database shows payment successful');
-        return res.json({
-          success: true,
-          data: {
-            code: 'PAYMENT_SUCCESS',
-            paymentState: 'COMPLETED',
-            merchantTransactionId: merchantTransactionId,
-            state: 'COMPLETED'
-          }
-        });
-      } else if (paymentSession.status === 'failed') {
-        console.log('Database shows payment failed');
-        return res.json({
-          success: true,
-          data: {
-            code: 'PAYMENT_FAILED',
-            paymentState: 'FAILED',
-            merchantTransactionId: merchantTransactionId,
-            state: 'FAILED'
-          }
-        });
-      } else {
-        console.log('Database shows payment pending');
-        return res.json({
-          success: true,
-          data: {
-            code: 'PAYMENT_PENDING',
-            paymentState: 'PENDING',
-            merchantTransactionId: merchantTransactionId,
-            state: 'PENDING'
-          }
-        });
-      }
+      phonepeResponse = null;
     }
 
     // If we got response from PhonePe, use it
