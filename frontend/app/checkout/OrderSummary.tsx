@@ -36,6 +36,17 @@ export default function OrderSummary({ cartItems, coupon, offerDetails, mode = '
     displayItemsFinal: displayItems
   });
   
+  // 🔑 DEBUG: Log calculation details right before rendering totals
+  console.log("[OrderSummary] DEBUG calculation:", {
+    cartItems,
+    mode,
+    subtotal: cartItems?.reduce((s, i) => s + i.price * i.quantity, 0),
+    displayItemsSubtotal: displayItems?.reduce((s, i) => s + i.price * i.quantity, 0),
+    itemSubtotal,
+    shipping,
+    total
+  });
+  
   return (
     <div className="bg-white p-4 rounded-xl shadow-sm border md:sticky md:top-20">
       <h3 className="text-lg font-semibold mb-4">

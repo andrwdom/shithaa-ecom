@@ -84,6 +84,20 @@ export default function CheckoutPage() {
       displayItemsTotal: displayItems?.reduce((sum, item) => sum + (item.price * item.quantity), 0) || 0
     });
   }, [isBuyNowMode, isCartMode, checkoutItems, cartItems, displayItems, displayMode]);
+  
+  // 🔑 DEBUG: Additional logging to see raw data sources
+  useEffect(() => {
+    console.log('[CheckoutPage] 🔍 DEBUG: Raw Data Sources:', {
+      checkoutItemsRaw: checkoutItems,
+      cartItemsRaw: cartItems,
+      displayItemsRaw: displayItems,
+      isBuyNowMode,
+      displayMode,
+      checkoutItemsTotal: checkoutItems?.reduce((sum, item) => sum + (item.price * item.quantity), 0) || 0,
+      cartItemsTotal: cartItems?.reduce((sum, item) => sum + (item.price * item.quantity), 0) || 0,
+      displayItemsTotal: displayItems?.reduce((sum, item) => sum + (item.price * item.quantity), 0) || 0
+    });
+  }, [checkoutItems, cartItems, displayItems, isBuyNowMode, displayMode]);
 
   // Debug logging
   useEffect(() => {
@@ -436,7 +450,21 @@ export default function CheckoutPage() {
                 return null;
               })()}
               
+              {/* 🔑 DEBUG: Log specific data being passed to OrderSummary */}
+              {(() => {
+                console.log("[CheckoutPage] DEBUG passing to OrderSummary:", {
+                  mode: displayMode,
+                  displayItems,
+                  displayItemsTotal: displayItems?.reduce((s, i) => s + i.price * i.quantity, 0),
+                  displayItemsSource: isBuyNowMode ? 'checkoutItems (buy-now)' : 'cartItems (cart)',
+                  checkoutItemsCount: checkoutItems?.length || 0,
+                  cartItemsCount: cartItems?.length || 0
+                });
+                return null;
+              })()}
+              
               <OrderSummary 
+                key={`${displayMode}-${displayItems.length}-${displayItems?.[0]?.id || "none"}`}
                 cartItems={displayItems} 
                 coupon={coupon} 
                 offerDetails={offerDetails}
