@@ -71,45 +71,19 @@ export default function CheckoutPage() {
   const displayItems = isBuyNowMode ? checkoutItems : cartItems;
   const displayMode = isBuyNowMode ? 'buy-now' : 'cart';
 
-  // 🔑 FIXED: Recalculate orderSummary when displayItems change to prevent data contamination
+  // 🔑 FIXED: Enhanced debug logging to track data flow and prevent contamination
   useEffect(() => {
-    if (displayItems && displayItems.length > 0) {
-      const rawSubtotal = displayItems.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
-      
-      // Offer discount from backend calculation
-      const offerDiscount = offerDetails?.offerDiscount || 0;
-
-      // Apply coupon on the amount after offer discount
-      const amountAfterOffer = rawSubtotal - offerDiscount;
-      const couponDiscount = coupon ? Math.round((amountAfterOffer * coupon.discountPercentage) / 100) : 0;
-
-      // Calculate shipping using new shipping logic
-      const shippingCalculation = calculateShippingCost(displayItems, shipping as ShippingInfo);
-      const shippingCost = shippingCalculation.shippingCost;
-
-      // Final total: use computed values to avoid drift
-      const total = amountAfterOffer - couponDiscount + shippingCost;
-
-      setOrderSummary({ 
-        subtotal: rawSubtotal, 
-        discount: couponDiscount, 
-        shipping: shippingCost, 
-        total,
-        shippingMessage: shippingCalculation.shippingMessage,
-        isFreeShipping: shippingCalculation.isFreeShipping
-      });
-      
-      console.log('[CheckoutPage] ✅ Recalculated orderSummary from displayItems:', {
-        displayMode,
-        displayItemsCount: displayItems.length,
-        rawSubtotal,
-        offerDiscount,
-        couponDiscount,
-        shippingCost,
-        total
-      });
-    }
-  }, [displayItems, coupon, shipping, offerDetails, displayMode]);
+    console.log('[CheckoutPage] 🔍 DEBUG: Data Flow Analysis:', {
+      isBuyNowMode,
+      isCartMode,
+      checkoutItems: checkoutItems?.map(item => ({ name: item.name, price: item.price, quantity: item.quantity, subtotal: item.price * item.quantity })),
+      cartItems: cartItems?.map(item => ({ name: item.name, price: item.price, quantity: item.quantity, subtotal: item.price * item.quantity })),
+      displayItems: displayItems?.map(item => ({ name: item.name, price: item.price, quantity: item.quantity, subtotal: item.price * item.quantity })),
+      displayMode,
+      displayItemsSource: isBuyNowMode ? 'checkoutItems (buy-now)' : 'cartItems (cart)',
+      displayItemsTotal: displayItems?.reduce((sum, item) => sum + (item.price * item.quantity), 0) || 0
+    });
+  }, [isBuyNowMode, isCartMode, checkoutItems, cartItems, displayItems, displayMode]);
 
   // Debug logging
   useEffect(() => {
@@ -403,6 +377,22 @@ export default function CheckoutPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto mt-10 px-4">
             {/* Left Section: Product Preview + Shipping Form Only */}
             <div className="space-y-6">
+              {/* 🔑 DEBUG: Log data being passed to ProductPreviewSection to ensure consistency */}
+              {(() => {
+                console.log('[CheckoutPage] 🔍 DEBUG: Data being passed to ProductPreviewSection:', {
+                  displayItems: displayItems?.map(item => ({ 
+                    name: item.name, 
+                    price: item.price, 
+                    quantity: item.quantity, 
+                    subtotal: item.price * item.quantity 
+                  })),
+                  displayMode,
+                  displayItemsTotal: displayItems?.reduce((sum, item) => sum + (item.price * item.quantity), 0) || 0,
+                  displayItemsSource: isBuyNowMode ? 'checkoutItems (buy-now)' : 'cartItems (cart)'
+                });
+                return null;
+              })()}
+              
               <ProductPreviewSection items={displayItems} />
               <ShippingForm value={shipping} onChange={setShipping} errors={errors.shipping} />
               {/* CouponInput: show only on mobile/tablet */}
@@ -429,6 +419,23 @@ export default function CheckoutPage() {
               <div className="hidden md:block">
                 <CouponInput value={coupon} onApply={setCoupon} />
               </div>
+              
+              {/* 🔑 DEBUG: Log data being passed to OrderSummary to ensure consistency */}
+              {(() => {
+                console.log('[CheckoutPage] 🔍 DEBUG: Data being passed to OrderSummary:', {
+                  displayItems: displayItems?.map(item => ({ 
+                    name: item.name, 
+                    price: item.price, 
+                    quantity: item.quantity, 
+                    subtotal: item.price * item.quantity 
+                  })),
+                  displayMode,
+                  displayItemsTotal: displayItems?.reduce((sum, item) => sum + (item.price * item.quantity), 0) || 0,
+                  displayItemsSource: isBuyNowMode ? 'checkoutItems (buy-now)' : 'cartItems (cart)'
+                });
+                return null;
+              })()}
+              
               <OrderSummary 
                 cartItems={displayItems} 
                 coupon={coupon} 

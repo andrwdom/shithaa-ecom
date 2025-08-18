@@ -2,7 +2,7 @@
 import React, { useState } from 'react'
 import { Gift } from 'lucide-react'
 
-export default function OrderSummary({ cartItems, coupon, summary, offerDetails, mode = 'cart' }: any) {
+export default function OrderSummary({ cartItems, coupon, offerDetails, mode = 'cart' }: any) {
   const [open, setOpen] = useState(true)
   
   // 🔑 FIXED: Ensure strict data separation based on checkout mode
@@ -14,8 +14,8 @@ export default function OrderSummary({ cartItems, coupon, summary, offerDetails,
   const shipping = 0; // Free shipping for now, or calculate based on shipping rules
   const total = itemSubtotal + shipping;
   
-  // Debug logging for data source verification
-  console.log(`[OrderSummary] Mode: ${mode}, Items count: ${displayItems.length}`, {
+  // 🔑 FIXED: Enhanced debug logging to confirm data source and prevent contamination
+  console.log(`[OrderSummary] 🔍 DEBUG: Mode: ${mode}, Items count: ${displayItems.length}`, {
     mode,
     isBuyNowMode,
     itemsCount: displayItems.length,
@@ -30,7 +30,10 @@ export default function OrderSummary({ cartItems, coupon, summary, offerDetails,
       shipping,
       total
     },
-    summaryProp: summary // Log the summary prop to see if it's contaminated
+    // ✅ NO MORE SUMMARY PROP - Single source of truth
+    dataSource: 'displayItems only',
+    cartItemsProp: cartItems,
+    displayItemsFinal: displayItems
   });
   
   return (
@@ -64,7 +67,7 @@ export default function OrderSummary({ cartItems, coupon, summary, offerDetails,
         {coupon && (
           <div className="flex justify-between text-green-700 font-semibold">
             <span>Coupon Discount ({coupon.discountPercentage}%)</span>
-            <span>-₹{summary?.discount || 0}</span>
+            <span>-₹{Math.round((itemSubtotal * coupon.discountPercentage) / 100)}</span>
           </div>
         )}
         
