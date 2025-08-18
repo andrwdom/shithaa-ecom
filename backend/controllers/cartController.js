@@ -141,6 +141,18 @@ const calculateCartTotal = async (req, res) => {
             });
         }
 
+        // 🔧 FIX: Create a stable hash for caching
+        const itemsHash = items.map(item => `${item._id}-${item.size}-${item.quantity}`).join('|');
+        
+        // 🔧 FIX: Add request deduplication to prevent multiple calculations
+        if (global.cartCalculationCache && global.cartCalculationCache[itemsHash]) {
+            const cached = global.cartCalculationCache[itemsHash];
+            if (Date.now() - cached.timestamp < 5000) { // 5 second cache
+                console.log('🔧 Using cached cart calculation result');
+                return res.json(cached.result);
+            }
+        }
+
         // Fetch product details for all items to get category information
         const productIds = [...new Set(items.map(item => item._id))];
         const products = await productModel.find({ _id: { $in: productIds } });
@@ -202,6 +214,22 @@ const calculateCartTotal = async (req, res) => {
                 otherItemsCount: otherItems.length
             }
         };
+
+        // 🔧 FIX: Cache the result to prevent recalculation
+        if (!global.cartCalculationCache) {
+            global.cartCalculationCache = {};
+        }
+        global.cartCalculationCache[itemsHash] = {
+            result: response,
+            timestamp: Date.now()
+        };
+
+        // 🔧 FIX: Clean up old cache entries (keep only last 10)
+        const cacheKeys = Object.keys(global.cartCalculationCache);
+        if (cacheKeys.length > 10) {
+            const oldestKey = cacheKeys[0];
+            delete global.cartCalculationCache[oldestKey];
+        }
 
         res.json(response);
 

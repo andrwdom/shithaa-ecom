@@ -368,7 +368,10 @@ export default function CartSidebar() {
                 {isLoadingOffer ? (
                   <div className="text-sm text-gray-500">Calculating...</div>
                 ) : (
-                  <span className="text-xl sm:text-2xl font-bold text-[rgb(71,60,102)]">
+                  <span 
+                    className="text-xl sm:text-2xl font-bold text-[rgb(71,60,102)] transition-all duration-300 ease-in-out"
+                    key={`total-${cartTotal}`} // 🔧 FIX: Key for smooth transitions
+                  >
                     ₹{cartTotal.toLocaleString()}
                   </span>
                 )}

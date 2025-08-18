@@ -157,23 +157,36 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
-  // Calculate cart total with offers - optimized
+  // Calculate cart total with offers - optimized and stable
   const calculateCartTotalWithOffers = useCallback(async () => {
     if (cartItems.length === 0) return
 
     const cartHash = cartItems.map(item => `${item._id}-${item.size}-${item.quantity}`).join('|')
     
-    if (cartHash === lastCartHashRef.current) return
-    if (isCalculatingRef.current) return
+    if (cartHash === lastCartHashRef.current) {
+      console.log("[CartContext] 🔧 Skipping calculation - cart hash unchanged")
+      return
+    }
+    if (isCalculatingRef.current) {
+      console.log("[CartContext] 🔧 Skipping calculation - already in progress")
+      return
+    }
 
     if (calculationTimeoutRef.current) {
       clearTimeout(calculationTimeoutRef.current)
     }
 
+    // 🔧 FIX: Set initial total immediately to prevent fluctuation
+    const initialTotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
+    console.log("[CartContext] 🔧 Setting initial total:", initialTotal, "for", cartItems.length, "items")
+    setCartTotal(initialTotal)
+    setCartSubtotal(initialTotal)
+
     calculationTimeoutRef.current = setTimeout(async () => {
       isCalculatingRef.current = true
       lastCartHashRef.current = cartHash
       
+      console.log("[CartContext] 🔧 Starting offer calculation for cart hash:", cartHash)
       setIsLoadingOffer(true)
       try {
         const { safeFetch } = await import('@/lib/api-utils')
@@ -194,37 +207,52 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         if (response.ok) {
           const data = await response.json()
           if (data.success) {
-            setCartTotal(data.data.total)
-            setCartSubtotal(data.data.subtotal)
-            setOfferDetails({
-              offerApplied: data.data.offerApplied,
-              offerDetails: data.data.offerDetails,
-              offerDiscount: data.data.offerDiscount,
-              loungewearCategoryCount: data.data.loungewearCategoryCount,
-              otherItemsCount: data.data.otherItemsCount,
-            })
+            // 🔧 FIX: Only update if the cart hasn't changed during calculation
+            if (cartHash === lastCartHashRef.current) {
+              console.log("[CartContext] 🔧 Updating total with offer:", data.data.total, "discount:", data.data.offerDiscount)
+              setCartTotal(data.data.total)
+              setCartSubtotal(data.data.subtotal)
+              setOfferDetails({
+                offerApplied: data.data.offerApplied,
+                offerDetails: data.data.offerDetails,
+                offerDiscount: data.data.offerDiscount,
+                loungewearCategoryCount: data.data.loungewearCategoryCount,
+                otherItemsCount: data.data.otherItemsCount,
+              })
+            } else {
+              console.log("[CartContext] 🔧 Cart changed during calculation, skipping update")
+            }
           }
         } else {
-          const fallbackTotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
-          setCartTotal(fallbackTotal)
-          setOfferDetails(null)
+          // 🔧 FIX: Only update if cart hasn't changed and we need fallback
+          if (cartHash === lastCartHashRef.current) {
+            console.log("[CartContext] 🔧 API error, keeping initial total")
+            setOfferDetails(null)
+          }
         }
       } catch (error) {
-        console.error("Error calculating cart total:", error)
-        const fallbackTotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
-        setCartTotal(fallbackTotal)
-        setOfferDetails(null)
+        console.error("[CartContext] ❌ Error calculating cart total:", error)
+        // 🔧 FIX: Only update if cart hasn't changed and we need fallback
+        if (cartHash === lastCartHashRef.current) {
+          console.log("[CartContext] 🔧 Error occurred, keeping initial total")
+          setOfferDetails(null)
+        }
       } finally {
         setIsLoadingOffer(false)
         isCalculatingRef.current = false
+        console.log("[CartContext] 🔧 Offer calculation completed")
       }
-    }, 300) // Reduced debounce for faster response
+    }, 100) // 🔧 FIX: Reduced debounce for faster response and less fluctuation
   }, [cartItems])
 
   // Calculate total when cart changes
   useEffect(() => {
     if (cartItems.length > 0) {
-      calculateCartTotalWithOffers()
+      // 🔧 FIX: Add small delay to prevent rapid recalculations
+      const timer = setTimeout(() => {
+        calculateCartTotalWithOffers()
+      }, 50)
+      return () => clearTimeout(timer)
     } else {
       setCartTotal(0)
       setOfferDetails(null)
