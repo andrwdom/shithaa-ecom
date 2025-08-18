@@ -1,7 +1,7 @@
 {
   "name": "Shithaa - Elegant Maternity & Feeding Wear",
   "short_name": "Shithaa",
-  "description": "Premium maternity wear and feeding essentials designed for comfort and style. Shop our collection of maternity dresses, feeding wear, and zipless lounge wear.",
+  "description": "Premium maternity wear and feeding essentials designed for comfort and style",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
@@ -11,20 +11,17 @@
     {
       "src": "/shithaa-logo.jpg",
       "sizes": "192x192",
-      "type": "image/jpeg",
-      "purpose": "any maskable"
+      "type": "image/jpeg"
     },
     {
       "src": "/shithaa-logo.jpg",
       "sizes": "512x512",
-      "type": "image/jpeg",
-      "purpose": "any maskable"
+      "type": "image/jpeg"
     },
     {
       "src": "/shithaa-logo.jpg",
       "sizes": "180x180",
-      "type": "image/jpeg",
-      "purpose": "any"
+      "type": "image/jpeg"
     }
   ],
   "categories": ["fashion", "shopping", "maternity", "baby", "women's clothing"],

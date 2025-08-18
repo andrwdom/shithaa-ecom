@@ -479,6 +479,8 @@ import { sendShippingNotification, sendOrderStatusUpdate } from '../utils/emailS
 const updateStatus = async (req,res) => {
     try {
         const { orderId, status, cancelledBy, shippingPartner, trackingId } = req.body;
+        
+        console.log('UpdateStatus called with:', { orderId, status, shippingPartner, trackingId });
 
         if (!orderId || !status) {
             return res.json({ success: false, message: "Order ID and status are required" });
@@ -496,8 +498,11 @@ const updateStatus = async (req,res) => {
         if (status === 'Delivered') updateData.paymentStatus = 'paid';
 
         // Handle shipping tracking data when status is 'Shipped'
+        console.log('Checking status:', status, 'shippingPartner:', shippingPartner, 'trackingId:', trackingId);
         if (status === 'Shipped') {
+            console.log('Status is Shipped, checking shipping details...');
             if (!shippingPartner || !trackingId) {
+                console.log('Missing shipping details, returning error');
                 return res.json({ 
                     success: false, 
                     message: "Shipping partner and tracking ID are required when marking order as shipped" 
@@ -567,6 +572,7 @@ const updateStatus = async (req,res) => {
             // Don't fail the request if email fails
         }
 
+        console.log('Order status updated successfully, sending response');
         res.json({ success: true, message: "Order status updated successfully" });
 
     } catch (error) {

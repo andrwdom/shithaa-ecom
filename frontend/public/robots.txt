@@ -10,6 +10,10 @@ Disallow: /api/
 Disallow: /_next/
 Disallow: /checkout/
 Disallow: /account/
+Disallow: /payment/
+Disallow: /order-success/
+Disallow: /confirmation/
+Disallow: /debug/
 
 # Allow important pages
 Allow: /collections/
