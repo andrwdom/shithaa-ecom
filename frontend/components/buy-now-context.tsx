@@ -3,6 +3,15 @@
 import { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { useCart } from './cart-context';
 
+// Import CheckoutFlow type for flow-specific storage
+interface CheckoutFlow {
+  mode: 'buy-now' | 'cart';
+  items: BuyNowItem[];
+  source: string;
+  timestamp: number;
+  sessionId: string;
+}
+
 export interface BuyNowItem {
   id: string;
   _id: string;
@@ -55,21 +64,21 @@ export function BuyNowProvider({ children }: { children: ReactNode }) {
         
         if (stored) {
           const parsed = JSON.parse(stored);
-          console.log("BuyNowProvider: Loaded buy-now item:", parsed);
+          console.log("[BuyNowContext] 📦 Loaded buy-now item:", parsed);
           if (parsed && parsed._id && parsed.name) {
             setBuyNowItemState(parsed);
           } else {
-            console.log("BuyNowProvider: Stored buy-now item is invalid, clearing");
+            console.log("[BuyNowContext] ❌ Stored buy-now item is invalid, clearing");
             sessionStorage.removeItem("buyNowItem");
             localStorage.removeItem("buyNowItem");
             setBuyNowItemState(null);
           }
         } else {
-          console.log("BuyNowProvider: No stored buy-now item found");
+          console.log("[BuyNowContext] 📭 No stored buy-now item found");
           setBuyNowItemState(null);
         }
       } catch (error) {
-        console.error("BuyNowProvider: Error parsing stored buy-now item:", error);
+        console.error("[BuyNowContext] ❌ Error parsing stored buy-now item:", error);
         sessionStorage.removeItem("buyNowItem");
         localStorage.removeItem("buyNowItem");
         setBuyNowItemState(null);
@@ -84,7 +93,7 @@ export function BuyNowProvider({ children }: { children: ReactNode }) {
     // Also listen for storage events
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === "buyNowItem") {
-        console.log("BuyNowProvider: Storage event detected, reloading buy-now item");
+        console.log("[BuyNowContext] 🔄 Storage event detected, reloading buy-now item");
         loadBuyNowItem();
       }
     };
@@ -99,7 +108,7 @@ export function BuyNowProvider({ children }: { children: ReactNode }) {
       const itemData = JSON.stringify(buyNowItem);
       sessionStorage.setItem("buyNowItem", itemData);
       localStorage.setItem("buyNowItem", itemData); // Backup in localStorage
-      console.log("BuyNowProvider: Saved buy-now item to both storages");
+      console.log("[BuyNowContext] 💾 Saved buy-now item to both storages");
       
       // Store in checkout flow specific storage with unique key
       const buyNowData = {
@@ -115,12 +124,33 @@ export function BuyNowProvider({ children }: { children: ReactNode }) {
       };
       sessionStorage.setItem("buyNowCheckoutData", JSON.stringify(buyNowData));
       localStorage.setItem("buyNowCheckoutData", JSON.stringify(buyNowData));
+      
+      // Also store in flow-specific storage for immediate checkout access
+      const flow: CheckoutFlow = {
+        mode: 'buy-now',
+        items: [buyNowItem],
+        source: 'buy-now',
+        timestamp: Date.now(),
+        sessionId: `buynow_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      };
+      sessionStorage.setItem("buyNowCheckoutFlow", JSON.stringify(flow));
+      sessionStorage.setItem("buyNowCheckoutItems", JSON.stringify([buyNowItem]));
+      localStorage.setItem("buyNowCheckoutFlow", JSON.stringify(flow));
+      localStorage.setItem("buyNowCheckoutItems", JSON.stringify([buyNowItem]));
+      
+      console.log("[BuyNowContext] 💾 Saved buy-now checkout flow data to all storage locations");
     } else {
       // Only clear if buy-now was intentionally cleared (not on mount)
       if (wasBuyNowIntentionallyCleared) {
         sessionStorage.removeItem("buyNowItem");
         localStorage.removeItem("buyNowItem");
-        console.log("BuyNowProvider: Cleared buy-now item from both storages after successful checkout");
+        sessionStorage.removeItem("buyNowCheckoutData");
+        localStorage.removeItem("buyNowCheckoutData");
+        sessionStorage.removeItem("buyNowCheckoutFlow");
+        localStorage.removeItem("buyNowCheckoutFlow");
+        sessionStorage.removeItem("buyNowCheckoutItems");
+        localStorage.removeItem("buyNowCheckoutItems");
+        console.log("[BuyNowContext] 🗑️ Cleared buy-now item from all storages after successful checkout");
       }
     }
   }, [buyNowItem, wasBuyNowIntentionallyCleared]);
@@ -130,12 +160,12 @@ export function BuyNowProvider({ children }: { children: ReactNode }) {
   // Buy-now and cart should be completely independent
 
   function setBuyNowItem(item: BuyNowItem | null) {
-    console.log("BuyNowProvider: Setting buy-now item:", item);
+    console.log("[BuyNowContext] 🔄 Setting buy-now item:", item);
     setBuyNowItemState(item);
   }
 
   function clearBuyNowItem() {
-    console.log("BuyNowProvider: Clearing buy-now item");
+    console.log("[BuyNowContext] 🗑️ Clearing buy-now item");
     setBuyNowItemState(null);
     
     // Clear from all storage locations
@@ -147,11 +177,13 @@ export function BuyNowProvider({ children }: { children: ReactNode }) {
     // Clear flow-specific storage keys
     sessionStorage.removeItem("buyNowCheckoutFlow");
     sessionStorage.removeItem("buyNowCheckoutItems");
+    localStorage.removeItem("buyNowCheckoutFlow");
+    localStorage.removeItem("buyNowCheckoutItems");
   }
 
   // 🔧 NEW FUNCTION: Clear buy-now after successful checkout (keeps cart intact)
   function clearBuyNowAfterSuccessfulCheckout() {
-    console.log("BuyNowProvider: Clearing buy-now after successful checkout");
+    console.log("[BuyNowContext] 🗑️ Clearing buy-now after successful checkout");
     setBuyNowItemState(null);
     setWasBuyNowIntentionallyCleared(true);
     
@@ -164,14 +196,16 @@ export function BuyNowProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem("buyNowCheckoutData");
     sessionStorage.removeItem("buyNowCheckoutFlow");
     sessionStorage.removeItem("buyNowCheckoutItems");
+    localStorage.removeItem("buyNowCheckoutFlow");
+    localStorage.removeItem("buyNowCheckoutItems");
     localStorage.removeItem("buyNowOrderData");
     sessionStorage.removeItem("buyNowOrderData");
     
-    console.log("BuyNowProvider: Buy-now cleared after successful checkout");
+    console.log("[BuyNowContext] 🗑️ Buy-now cleared after successful checkout - all storage locations cleaned");
   }
 
   function restoreFromStorage() {
-    console.log("BuyNowProvider: Attempting to restore from storage");
+    console.log("[BuyNowContext] 🔄 Attempting to restore from storage");
     setIsLoading(true);
     
     try {
@@ -182,7 +216,7 @@ export function BuyNowProvider({ children }: { children: ReactNode }) {
         if (parsed.items && parsed.items.length > 0) {
           const item = parsed.items[0];
           if (item && item._id && item.name) {
-            console.log("BuyNowProvider: Restored from checkout flow data:", item);
+            console.log("[BuyNowContext] ✅ Restored from checkout flow data:", item);
             setBuyNowItemState(item);
             setIsLoading(false);
             return;
@@ -195,17 +229,17 @@ export function BuyNowProvider({ children }: { children: ReactNode }) {
       if (stored) {
         const parsed = JSON.parse(stored);
         if (parsed && parsed._id && parsed.name) {
-          console.log("BuyNowProvider: Restored from regular storage:", parsed);
+          console.log("[BuyNowContext] ✅ Restored from regular storage:", parsed);
           setBuyNowItemState(parsed);
         } else {
-          console.log("BuyNowProvider: Stored item is invalid, clearing");
+          console.log("[BuyNowContext] ❌ Stored item is invalid, clearing");
           clearBuyNowItem();
         }
       } else {
-        console.log("BuyNowProvider: No stored item found");
+        console.log("[BuyNowContext] 📭 No stored item found");
       }
     } catch (error) {
-      console.error("BuyNowProvider: Error restoring from storage:", error);
+      console.error("[BuyNowContext] ❌ Error restoring from storage:", error);
       clearBuyNowItem();
     } finally {
       setIsLoading(false);

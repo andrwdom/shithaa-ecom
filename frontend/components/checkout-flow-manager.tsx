@@ -69,15 +69,30 @@ export function CheckoutFlowProviderInner({ children }: { children: React.ReactN
   // 🔥 Move all flow detection + restoration into useEffect
   useEffect(() => {
     const initFlow = () => {
-      console.log('🔄 CheckoutFlow: initFlow called with:', { urlMode, buyNowItem: !!buyNowItem, cartItemsLength: cartItems?.length });
+      console.log('[CheckoutFlowManager] 🔄 initFlow called with:', { 
+        urlMode, 
+        buyNowItem: !!buyNowItem, 
+        cartItemsLength: cartItems?.length 
+      });
       
       // --- BUY NOW MODE ---
       if (urlMode === "buynow") {
-        console.log("CheckoutFlow: Buy-now mode detected, initializing...");
+        console.log("[CheckoutFlowManager] 🛒 Buy-now mode detected, initializing...");
 
-        // 1. Context item (if available)
-        if (buyNowItem) {
-          console.log('✅ Found buy-now item in context:', buyNowItem);
+        // 1. Context item (if available) - HIGHEST PRIORITY
+        if (buyNowItem && buyNowItem._id && buyNowItem.name) {
+          console.log('[CheckoutFlowManager] ✅ Found buy-now item in context:', buyNowItem);
+          
+          // Validate MongoDB ObjectId format
+          const validHex24 = /^[0-9a-fA-F]{24}$/;
+          if (!validHex24.test(buyNowItem._id)) {
+            console.error('[CheckoutFlowManager] ❌ Invalid MongoDB ObjectId in buy-now item:', buyNowItem._id);
+            setCurrentFlow(null);
+            setCheckoutItems([]);
+            setIsLoading(false);
+            return;
+          }
+          
           const flow: CheckoutFlow = {
             mode: "buy-now",
             items: [buyNowItem],
@@ -87,118 +102,114 @@ export function CheckoutFlowProviderInner({ children }: { children: React.ReactN
           };
           setCurrentFlow(flow);
           setCheckoutItems([buyNowItem]);
+          
+          // Store in flow-specific storage
           sessionStorage.setItem("buyNowCheckoutFlow", JSON.stringify(flow));
           sessionStorage.setItem("buyNowCheckoutItems", JSON.stringify([buyNowItem]));
-          console.log("✅ Buy-now checkout flow initialized from context:", flow);
+          localStorage.setItem("buyNowCheckoutFlow", JSON.stringify(flow));
+          localStorage.setItem("buyNowCheckoutItems", JSON.stringify([buyNowItem]));
+          
+          console.log("[CheckoutFlowManager] ✅ Buy-now checkout flow initialized from context:", flow);
           setIsLoading(false);
           return;
         }
 
         // 2. Dedicated buy-now checkout data (prioritize this when URL mode is buynow)
-        console.log('🔍 Checking buyNowCheckoutData storage...');
+        console.log('[CheckoutFlowManager] 🔍 Checking buyNowCheckoutData storage...');
         const buyNowData = sessionStorage.getItem("buyNowCheckoutData") || localStorage.getItem("buyNowCheckoutData");
         if (buyNowData) {
           try {
             const parsed = JSON.parse(buyNowData);
-            console.log('📦 Parsed buyNowCheckoutData:', parsed);
-            if (parsed.items?.length > 0) {
-              const flow: CheckoutFlow = {
-                mode: "buy-now",
-                items: parsed.items,
-                source: "stored",
-                timestamp: Date.now(),
-                sessionId: `buy-now_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-              };
-              setCurrentFlow(flow);
-              setCheckoutItems(parsed.items);
-              sessionStorage.setItem("buyNowCheckoutFlow", JSON.stringify(flow));
-              sessionStorage.setItem("buyNowCheckoutItems", JSON.stringify(parsed.items));
-              console.log("✅ Restored buy-now checkout flow from storage:", flow);
-              setIsLoading(false);
-              return;
-            }
-          } catch (err) {
-            console.error("❌ Error parsing buy-now checkout data:", err);
-          }
-        }
-
-        // 3. Fallback to raw buyNowItem storage (aggressive check for buynow mode)
-        console.log('🔍 Checking raw buyNowItem storage...');
-        const storedBuyNowItem = sessionStorage.getItem("buyNowItem") || localStorage.getItem("buyNowItem");
-        if (storedBuyNowItem) {
-          try {
-            const parsed = JSON.parse(storedBuyNowItem);
-            console.log('📦 Parsed raw buyNowItem:', parsed);
-            if (parsed && parsed._id && parsed.name) {
-              const flow: CheckoutFlow = {
-                mode: "buy-now",
-                items: [parsed],
-                source: "raw-storage",
-                timestamp: Date.now(),
-                sessionId: `buy-now_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-              };
-              setCurrentFlow(flow);
-              setCheckoutItems([parsed]);
-              sessionStorage.setItem("buyNowCheckoutFlow", JSON.stringify(flow));
-              sessionStorage.setItem("buyNowCheckoutItems", JSON.stringify([parsed]));
-              console.log("✅ Restored buy-now checkout flow from raw storage:", flow);
-              setIsLoading(false);
-              return;
-            }
-          } catch (err) {
-            console.error("❌ Error parsing raw buy-now item:", err);
-          }
-        }
-
-        // 4. Additional aggressive check for any buy-now related storage when URL mode is buynow
-        console.log('🔍 Additional aggressive check for buy-now storage...');
-        const allStorageKeys = ['buyNowItem', 'buyNowCheckoutData', 'buyNowCheckoutFlow', 'buyNowCheckoutItems'];
-        for (const key of allStorageKeys) {
-          const stored = sessionStorage.getItem(key) || localStorage.getItem(key);
-          if (stored) {
-            try {
-              const parsed = JSON.parse(stored);
-              console.log(`📦 Found data in ${key}:`, parsed);
-              
-              // Extract items from various storage formats
-              let items = [];
-              if (parsed.items && Array.isArray(parsed.items)) {
-                items = parsed.items;
-              } else if (parsed._id && parsed.name) {
-                items = [parsed];
-              } else if (Array.isArray(parsed)) {
-                items = parsed;
-              }
-              
-              if (items.length > 0 && items[0]._id && items[0].name) {
+            console.log('[CheckoutFlowManager] 📦 Parsed buyNowCheckoutData:', parsed);
+            
+            if (parsed?.items?.length === 1 && parsed.items[0]._id && parsed.items[0].name) {
+              // Validate MongoDB ObjectId format
+              const validHex24 = /^[0-9a-fA-F]{24}$/;
+              if (!validHex24.test(parsed.items[0]._id)) {
+                console.error('[CheckoutFlowManager] ❌ Invalid MongoDB ObjectId in stored buy-now data:', parsed.items[0]._id);
+                // Continue to next fallback
+              } else {
                 const flow: CheckoutFlow = {
                   mode: "buy-now",
-                  items: items,
-                  source: "aggressive-storage",
+                  items: parsed.items,
+                  source: "stored",
                   timestamp: Date.now(),
                   sessionId: `buy-now_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
                 };
                 setCurrentFlow(flow);
-                setCheckoutItems(items);
+                setCheckoutItems(parsed.items);
+                
+                // Store in flow-specific storage
                 sessionStorage.setItem("buyNowCheckoutFlow", JSON.stringify(flow));
-                sessionStorage.setItem("buyNowCheckoutItems", JSON.stringify(items));
-                console.log("✅ Restored buy-now checkout flow from aggressive storage check:", flow);
+                sessionStorage.setItem("buyNowCheckoutItems", JSON.stringify(parsed.items));
+                localStorage.setItem("buyNowCheckoutFlow", JSON.stringify(flow));
+                localStorage.setItem("buyNowCheckoutItems", JSON.stringify(parsed.items));
+                
+                console.log("[CheckoutFlowManager] ✅ Restored buy-now checkout flow from storage:", flow);
                 setIsLoading(false);
                 return;
               }
-            } catch (err) {
-              console.error(`❌ Error parsing ${key}:`, err);
             }
+          } catch (err) {
+            console.error("[CheckoutFlowManager] ❌ Error parsing buy-now checkout data:", err);
           }
         }
 
-        // 5. If everything failed → empty state
-        console.warn("⚠️ No buy-now item found, showing empty state");
-        console.log('🔍 Storage contents:');
+        // 3. Fallback to raw buyNowItem storage (aggressive check for buynow mode)
+        console.log('[CheckoutFlowManager] 🔍 Checking raw buyNowItem storage...');
+        const storedBuyNowItem = sessionStorage.getItem("buyNowItem") || localStorage.getItem("buyNowItem");
+        if (storedBuyNowItem) {
+          try {
+            const parsed = JSON.parse(storedBuyNowItem);
+            console.log('[CheckoutFlowManager] 📦 Parsed raw buyNowItem:', parsed);
+            
+            if (parsed && parsed._id && parsed.name) {
+              // Validate MongoDB ObjectId format
+              const validHex24 = /^[0-9a-fA-F]{24}$/;
+              if (!validHex24.test(parsed._id)) {
+                console.error('[CheckoutFlowManager] ❌ Invalid MongoDB ObjectId in raw buy-now item:', parsed._id);
+                // Continue to next fallback
+              } else {
+                const flow: CheckoutFlow = {
+                  mode: "buy-now",
+                  items: [parsed],
+                  source: "raw-storage",
+                  timestamp: Date.now(),
+                  sessionId: `buy-now_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+                };
+                setCurrentFlow(flow);
+                setCheckoutItems([parsed]);
+                
+                // Store in flow-specific storage
+                sessionStorage.setItem("buyNowCheckoutFlow", JSON.stringify(flow));
+                sessionStorage.setItem("buyNowCheckoutItems", JSON.stringify([parsed]));
+                localStorage.setItem("buyNowCheckoutFlow", JSON.stringify(flow));
+                localStorage.setItem("buyNowCheckoutItems", JSON.stringify([parsed]));
+                
+                console.log("[CheckoutFlowManager] ✅ Restored buy-now checkout flow from raw storage:", flow);
+                setIsLoading(false);
+                return;
+              }
+            }
+          } catch (err) {
+            console.error("[CheckoutFlowManager] ❌ Error parsing raw buy-now item:", err);
+          }
+        }
+
+        // 4. If everything failed → empty state
+        console.warn("[CheckoutFlowManager] ⚠️ No buy-now item found, showing empty state");
+        console.log('[CheckoutFlowManager] 🔍 Storage contents:');
         console.log('  - sessionStorage.buyNowItem:', sessionStorage.getItem('buyNowItem'));
         console.log('  - localStorage.buyNowItem:', localStorage.getItem('buyNowItem'));
         console.log('  - sessionStorage.buyNowCheckoutData:', sessionStorage.getItem('buyNowCheckoutData'));
         console.log('  - localStorage.buyNowCheckoutData:', localStorage.getItem('buyNowCheckoutData'));
+        
+        // Clear any stale buy-now data
+        sessionStorage.removeItem("buyNowCheckoutFlow");
+        sessionStorage.removeItem("buyNowCheckoutItems");
+        localStorage.removeItem("buyNowCheckoutFlow");
+        localStorage.removeItem("buyNowCheckoutItems");
+        
         setCurrentFlow(null);
         setCheckoutItems([]);
         setIsLoading(false);
@@ -206,21 +217,41 @@ export function CheckoutFlowProviderInner({ children }: { children: React.ReactN
       }
 
       // --- CART MODE ---
+      console.log("[CheckoutFlowManager] 🛒 Cart mode detected, initializing...");
+      
+      // For cart mode, ONLY use cart context or cart-specific storage
       if (cartItems?.length > 0) {
-        const flow: CheckoutFlow = {
-          mode: "cart",
-          items: cartItems,
-          source: "cart",
-          timestamp: Date.now(),
-          sessionId: `cart_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-        };
-        setCurrentFlow(flow);
-        setCheckoutItems(cartItems);
-        sessionStorage.setItem("cartCheckoutFlow", JSON.stringify(flow));
-        sessionStorage.setItem("cartCheckoutItems", JSON.stringify(cartItems));
-        console.log("✅ Cart checkout flow initialized:", flow);
+        // Validate all cart items have valid MongoDB ObjectIds
+        const validHex24 = /^[0-9a-fA-F]{24}$/;
+        const validCartItems = cartItems.filter(item => 
+          item && item._id && validHex24.test(item._id) && item.name && typeof item.price === 'number'
+        );
+        
+        if (validCartItems.length > 0) {
+          const flow: CheckoutFlow = {
+            mode: "cart",
+            items: validCartItems,
+            source: "cart",
+            timestamp: Date.now(),
+            sessionId: `cart_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+          };
+          setCurrentFlow(flow);
+          setCheckoutItems(validCartItems);
+          
+          // Store in flow-specific storage
+          sessionStorage.setItem("cartCheckoutFlow", JSON.stringify(flow));
+          sessionStorage.setItem("cartCheckoutItems", JSON.stringify(validCartItems));
+          localStorage.setItem("cartCheckoutFlow", JSON.stringify(flow));
+          localStorage.setItem("cartCheckoutItems", JSON.stringify(validCartItems));
+          
+          console.log("[CheckoutFlowManager] ✅ Cart checkout flow initialized:", flow);
+        } else {
+          console.warn("[CheckoutFlowManager] ⚠️ Cart items failed validation, showing empty state");
+          setCurrentFlow(null);
+          setCheckoutItems([]);
+        }
       } else {
-        console.warn("⚠️ No cart items found, showing empty state");
+        console.warn("[CheckoutFlowManager] ⚠️ No cart items found, showing empty state");
         setCurrentFlow(null);
         setCheckoutItems([]);
       }
@@ -238,7 +269,16 @@ export function CheckoutFlowProviderInner({ children }: { children: React.ReactN
 
   // Helper functions
   const setCheckoutFlow = (mode: 'buy-now' | 'cart') => {
+    console.log('[CheckoutFlowManager] 🔄 setCheckoutFlow called with mode:', mode);
+    
     if (mode === 'buy-now' && buyNowItem) {
+      // Validate MongoDB ObjectId format
+      const validHex24 = /^[0-9a-fA-F]{24}$/;
+      if (!validHex24.test(buyNowItem._id)) {
+        console.error('[CheckoutFlowManager] ❌ Invalid MongoDB ObjectId in buy-now item:', buyNowItem._id);
+        return;
+      }
+      
       const flow: CheckoutFlow = {
         mode: 'buy-now',
         items: [buyNowItem],
@@ -248,35 +288,67 @@ export function CheckoutFlowProviderInner({ children }: { children: React.ReactN
       };
       setCurrentFlow(flow);
       setCheckoutItems([buyNowItem]);
+      
+      // Store in flow-specific storage
       sessionStorage.setItem('buyNowCheckoutFlow', JSON.stringify(flow));
       sessionStorage.setItem('buyNowCheckoutItems', JSON.stringify([buyNowItem]));
+      localStorage.setItem('buyNowCheckoutFlow', JSON.stringify(flow));
+      localStorage.setItem('buyNowCheckoutItems', JSON.stringify([buyNowItem]));
+      
+      console.log('[CheckoutFlowManager] ✅ Buy-now flow set:', flow);
     } else if (mode === 'cart' && cartItems.length > 0) {
-      const flow: CheckoutFlow = {
-        mode: 'cart',
-        items: cartItems,
-        source: 'cart',
-        timestamp: Date.now(),
-        sessionId: `cart_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-      };
-      setCurrentFlow(flow);
-      setCheckoutItems(cartItems);
-      sessionStorage.setItem('cartCheckoutFlow', JSON.stringify(flow));
-      sessionStorage.setItem('cartCheckoutItems', JSON.stringify(cartItems));
+      // Validate all cart items have valid MongoDB ObjectIds
+      const validHex24 = /^[0-9a-fA-F]{24}$/;
+      const validCartItems = cartItems.filter(item => 
+        item && item._id && validHex24.test(item._id) && item.name && typeof item.price === 'number'
+      );
+      
+      if (validCartItems.length > 0) {
+        const flow: CheckoutFlow = {
+          mode: 'cart',
+          items: validCartItems,
+          source: 'cart',
+          timestamp: Date.now(),
+          sessionId: `cart_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+        };
+        setCurrentFlow(flow);
+        setCheckoutItems(validCartItems);
+        
+        // Store in flow-specific storage
+        sessionStorage.setItem('cartCheckoutFlow', JSON.stringify(flow));
+        sessionStorage.setItem('cartCheckoutItems', JSON.stringify(validCartItems));
+        localStorage.setItem('cartCheckoutFlow', JSON.stringify(flow));
+        localStorage.setItem('cartCheckoutItems', JSON.stringify(validCartItems));
+        
+        console.log('[CheckoutFlowManager] ✅ Cart flow set:', flow);
+      } else {
+        console.error('[CheckoutFlowManager] ❌ Cart items failed validation');
+      }
+    } else {
+      console.warn('[CheckoutFlowManager] ⚠️ Cannot set checkout flow - invalid mode or missing items');
     }
   };
 
   const clearCheckoutFlow = () => {
+    console.log('[CheckoutFlowManager] 🗑️ Clearing checkout flow');
     setCurrentFlow(null);
     setCheckoutItems([]);
+    
+    // Clear all flow-specific storage
     sessionStorage.removeItem('buyNowCheckoutFlow');
     sessionStorage.removeItem('buyNowCheckoutItems');
     sessionStorage.removeItem('cartCheckoutFlow');
     sessionStorage.removeItem('cartCheckoutItems');
+    localStorage.removeItem('buyNowCheckoutFlow');
+    localStorage.removeItem('buyNowCheckoutItems');
+    localStorage.removeItem('cartCheckoutFlow');
+    localStorage.removeItem('cartCheckoutItems');
   };
 
   const retryRestoreCart = () => {
-    console.log('Retrying to restore checkout items...');
+    console.log('[CheckoutFlowManager] 🔄 Retrying to restore checkout items...');
     setIsLoading(true);
+    
     // Re-run the flow initialization
     setTimeout(() => {
       const initFlow = () => {
@@ -287,40 +359,62 @@ export function CheckoutFlowProviderInner({ children }: { children: React.ReactN
             try {
               const parsed = JSON.parse(storedBuyNowItem);
               if (parsed && parsed._id && parsed.name) {
-                const flow: CheckoutFlow = {
-                  mode: "buy-now",
-                  items: [parsed],
-                  source: "raw-storage",
-                  timestamp: Date.now(),
-                  sessionId: `buy-now_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-                };
-                setCurrentFlow(flow);
-                setCheckoutItems([parsed]);
-                sessionStorage.setItem("buyNowCheckoutFlow", JSON.stringify(flow));
-                sessionStorage.setItem("buyNowCheckoutItems", JSON.stringify([parsed]));
-                console.log("✅ Retry: Restored buy-now checkout flow:", flow);
-                setIsLoading(false);
-                return;
+                // Validate MongoDB ObjectId format
+                const validHex24 = /^[0-9a-fA-F]{24}$/;
+                if (validHex24.test(parsed._id)) {
+                  const flow: CheckoutFlow = {
+                    mode: "buy-now",
+                    items: [parsed],
+                    source: "raw-storage",
+                    timestamp: Date.now(),
+                    sessionId: `buy-now_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+                  };
+                  setCurrentFlow(flow);
+                  setCheckoutItems([parsed]);
+                  
+                  // Store in flow-specific storage
+                  sessionStorage.setItem("buyNowCheckoutFlow", JSON.stringify(flow));
+                  sessionStorage.setItem("buyNowCheckoutItems", JSON.stringify([parsed]));
+                  localStorage.setItem("buyNowCheckoutFlow", JSON.stringify(flow));
+                  localStorage.setItem("buyNowCheckoutItems", JSON.stringify([parsed]));
+                  
+                  console.log("[CheckoutFlowManager] ✅ Retry: Restored buy-now checkout flow:", flow);
+                  setIsLoading(false);
+                  return;
+                }
               }
             } catch (err) {
-              console.error("❌ Error parsing buy-now item during retry:", err);
+              console.error("[CheckoutFlowManager] ❌ Error parsing buy-now item during retry:", err);
             }
           }
         } else {
           // Try to restore cart items
           if (cartItems.length > 0) {
-            const flow: CheckoutFlow = {
-              mode: "cart",
-              items: cartItems,
-              source: "cart",
-              timestamp: Date.now(),
-              sessionId: `cart_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-            };
-            setCurrentFlow(flow);
-            setCheckoutItems(cartItems);
-            sessionStorage.setItem("cartCheckoutFlow", JSON.stringify(flow));
-            sessionStorage.setItem("cartCheckoutItems", JSON.stringify(cartItems));
-            console.log("✅ Retry: Restored cart checkout flow:", flow);
+            // Validate all cart items have valid MongoDB ObjectIds
+            const validHex24 = /^[0-9a-fA-F]{24}$/;
+            const validCartItems = cartItems.filter(item => 
+              item && item._id && validHex24.test(item._id) && item.name && typeof item.price === 'number'
+            );
+            
+            if (validCartItems.length > 0) {
+              const flow: CheckoutFlow = {
+                mode: "cart",
+                items: validCartItems,
+                source: "cart",
+                timestamp: Date.now(),
+                sessionId: `cart_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+              };
+              setCurrentFlow(flow);
+              setCheckoutItems(validCartItems);
+              
+              // Store in flow-specific storage
+              sessionStorage.setItem("cartCheckoutFlow", JSON.stringify(flow));
+              sessionStorage.setItem("cartCheckoutItems", JSON.stringify(validCartItems));
+              localStorage.setItem("cartCheckoutFlow", JSON.stringify(flow));
+              localStorage.setItem("cartCheckoutItems", JSON.stringify(validCartItems));
+              
+              console.log("[CheckoutFlowManager] ✅ Retry: Restored cart checkout flow:", flow);
+            }
           }
         }
         setIsLoading(false);

@@ -59,7 +59,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   // 🔧 RELIABLE CART PERSISTENCE: Load cart from localStorage on mount
   useEffect(() => {
     if (wasCartIntentionallyCleared) {
-      console.log("CartProvider: Cart was intentionally cleared, not loading from storage")
+      console.log("[CartContext] 🚫 Cart was intentionally cleared, not loading from storage")
       return
     }
     
@@ -78,12 +78,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           )
           if (validItems.length > 0) {
             setCartItems(validItems)
-            console.log("CartProvider: Loaded", validItems.length, "items from localStorage")
+            console.log("[CartContext] ✅ Loaded", validItems.length, "items from localStorage")
           }
         }
       }
     } catch (error) {
-      console.error("CartProvider: Error loading cart from storage:", error)
+      console.error("[CartContext] ❌ Error loading cart from storage:", error)
     }
   }, [wasCartIntentionallyCleared])
 
@@ -92,7 +92,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     if (cartItems.length > 0) {
       const cartData = JSON.stringify(cartItems);
       localStorage.setItem("cartItems", cartData);
-      console.log("CartProvider: Saved cart items to localStorage");
+      console.log("[CartContext] 💾 Saved cart items to localStorage");
       
       // Store in checkout flow specific storage with unique key
       const cartCheckoutData = {
@@ -108,16 +108,35 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       };
       sessionStorage.setItem("cartCheckoutData", JSON.stringify(cartCheckoutData));
       localStorage.setItem("cartCheckoutData", JSON.stringify(cartCheckoutData));
+      
+      // Also store in flow-specific storage for immediate checkout access
+      const flow = {
+        mode: 'cart',
+        items: cartItems,
+        source: 'cart',
+        timestamp: Date.now(),
+        sessionId: `cart_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      };
+      sessionStorage.setItem("cartCheckoutFlow", JSON.stringify(flow));
+      sessionStorage.setItem("cartCheckoutItems", JSON.stringify(cartItems));
+      localStorage.setItem("cartCheckoutFlow", JSON.stringify(flow));
+      localStorage.setItem("cartCheckoutItems", JSON.stringify(cartItems));
+      
+      console.log("[CartContext] 💾 Saved cart checkout flow data to all storage locations");
     } else {
       // Only clear localStorage if cart is intentionally empty (not on mount)
       if (wasCartIntentionallyCleared) {
         localStorage.removeItem("cartItems");
-        console.log("CartProvider: Cleared cart items from localStorage after successful checkout");
+        console.log("[CartContext] 🗑️ Cleared cart items from localStorage after successful checkout");
       }
       
       // Clear checkout flow data
       sessionStorage.removeItem("cartCheckoutData");
       localStorage.removeItem("cartCheckoutData");
+      sessionStorage.removeItem("cartCheckoutFlow");
+      localStorage.removeItem("cartCheckoutFlow");
+      sessionStorage.removeItem("cartCheckoutItems");
+      localStorage.removeItem("cartCheckoutItems");
     }
   }, [cartItems, wasCartIntentionallyCleared]);
 
@@ -127,14 +146,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       if (items.length > 0) {
         localStorage.setItem("cartItems", JSON.stringify(items))
         sessionStorage.setItem("cartItems", JSON.stringify(items))
-        console.log("CartProvider: Cart saved to storage")
+        console.log("[CartContext] 💾 Cart saved to both storages")
       } else {
         localStorage.removeItem("cartItems")
         sessionStorage.removeItem("cartItems")
-        console.log("CartProvider: Cart cleared from storage")
+        console.log("[CartContext] 🗑️ Cart cleared from both storages")
       }
     } catch (error) {
-      console.error("CartProvider: Error saving cart to storage:", error)
+      console.error("[CartContext] ❌ Error saving cart to storage:", error)
     }
   }, [])
 
@@ -224,7 +243,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   // SIMPLE CART OPERATIONS - Save to storage only after action completes
   const addToCart = useCallback((item: CartItem, openSidebar: boolean = true, stock?: number) => {
-    console.log("CartProvider: addToCart called with:", item)
+    console.log("[CartContext] 🛒 addToCart called with:", item)
     
     setCartItems((prev) => {
       const existing = prev.find((i) => i._id === item._id && i.size === item.size)
@@ -248,16 +267,16 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
       
       // Save to storage IMMEDIATELY to prevent race conditions
-      console.log("CartProvider: Saving to storage immediately:", newCart)
+      console.log("[CartContext] 💾 Saving to storage immediately:", newCart)
       saveCartToStorage(newCart)
       
       // Reset the flag since we now have items in the cart
       if (newCart.length > 0) {
         setWasCartIntentionallyCleared(false)
-        console.log("CartProvider: Cart has items, allowing storage restoration")
+        console.log("[CartContext] ✅ Cart has items, allowing storage restoration")
       }
       
-      console.log("CartProvider: Added item, new cart:", newCart)
+      console.log("[CartContext] ✅ Added item, new cart:", newCart)
       return newCart
     })
     
@@ -265,12 +284,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [saveCartToStorage])
 
   const updateCartItem = useCallback((_id: string, size: string, quantity: number, stock?: number) => {
-    console.log("CartProvider: updateCartItem called with:", { _id, size, quantity, stock })
+    console.log("[CartContext] 🔄 updateCartItem called with:", { _id, size, quantity, stock })
     
     setCartItems((prev) => {
       const existing = prev.find((i) => i._id === _id && i.size === size)
       if (!existing) {
-        console.log("CartProvider: Item not found for update:", { _id, size })
+        console.log("[CartContext] ❌ Item not found for update:", { _id, size })
         return prev
       }
       
@@ -286,34 +305,34 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       )
       
       // Save to storage IMMEDIATELY to prevent race conditions
-      console.log("CartProvider: Saving to storage immediately:", newCart)
+      console.log("[CartContext] 💾 Saving to storage immediately:", newCart)
       saveCartToStorage(newCart)
       
-      console.log("CartProvider: Updated item, new cart:", newCart)
+      console.log("[CartContext] ✅ Updated item, new cart:", newCart)
       return newCart
     })
   }, [saveCartToStorage])
 
   const removeFromCart = useCallback((_id: string, size: string) => {
-    console.log("CartProvider: removeFromCart called with:", { _id, size })
-    console.log("CartProvider: Current cart before removal:", cartItems)
+    console.log("[CartContext] 🗑️ removeFromCart called with:", { _id, size })
+    console.log("[CartContext] 📦 Current cart before removal:", cartItems)
     
     setCartItems((prev) => {
-      console.log("CartProvider: Previous cart state:", prev)
+      console.log("[CartContext] 📦 Previous cart state:", prev)
       const newCart = prev.filter((item) => !(item._id === _id && item.size === size))
-      console.log("CartProvider: Filtered cart after removal:", newCart)
+      console.log("[CartContext] 📦 Filtered cart after removal:", newCart)
       
       // Save to storage IMMEDIATELY to prevent race conditions
-      console.log("CartProvider: Saving to storage immediately:", newCart)
+      console.log("[CartContext] 💾 Saving to storage immediately:", newCart)
       saveCartToStorage(newCart)
       
       // If cart becomes empty, set flag to prevent restoration from storage
       if (newCart.length === 0) {
         setWasCartIntentionallyCleared(true)
-        console.log("CartProvider: Cart is now empty, preventing restoration from storage")
+        console.log("[CartContext] 🚫 Cart is now empty, preventing restoration from storage")
       }
       
-      console.log("CartProvider: Removed item, returning new cart:", newCart)
+      console.log("[CartContext] ✅ Removed item, returning new cart:", newCart)
       return newCart
     })
   }, [saveCartToStorage, cartItems])
@@ -347,7 +366,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   // 🔧 NEW FUNCTION: Clear cart after successful checkout (keeps buy-now intact)
   const clearCartAfterSuccessfulCheckout = () => {
-    console.log("CartProvider: Clearing cart after successful checkout");
+    console.log("[CartContext] 🗑️ Clearing cart after successful checkout");
     setCartItems([]);
     setCartTotal(0);
     setCartSubtotal(0);
@@ -356,16 +375,19 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     
     // Clear cart items from localStorage
     localStorage.removeItem("cartItems");
+    sessionStorage.removeItem("cartItems");
     
     // Clear cart checkout flow data
     sessionStorage.removeItem("cartCheckoutData");
     localStorage.removeItem("cartCheckoutData");
     sessionStorage.removeItem("cartCheckoutFlow");
     sessionStorage.removeItem("cartCheckoutItems");
+    localStorage.removeItem("cartCheckoutFlow");
+    localStorage.removeItem("cartCheckoutItems");
     localStorage.removeItem("cartOrderData");
     sessionStorage.removeItem("cartOrderData");
     
-    console.log("CartProvider: Cart cleared after successful checkout");
+    console.log("[CartContext] 🗑️ Cart cleared after successful checkout - all storage locations cleaned");
   }
 
   const notifyCheckoutCartChanged = useCallback(() => {
