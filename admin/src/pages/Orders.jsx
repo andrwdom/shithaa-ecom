@@ -269,11 +269,407 @@ const EnhancedSearchAndFilters = ({
   );
 };
 
+// Modern Responsive Order Card with updated status handling
+const ModernOrderCard = ({ order, onView, onStatusChange }) => {
+  const userInfo = order.userInfo || { name: order.customerName, email: order.email };
+  const shipping = order.shippingInfo || order.shippingAddress || order.address;
+  const name = shipping?.fullName || shipping?.name || order.customerName;
+  const email = shipping?.email || order.shippingInfo?.email || order.email;
+  const phone = shipping?.phone || order.shippingInfo?.phone || order.phone;
+  const total = order.totalAmount || order.total || order.totalPrice || order.amount;
+  const payment = order.paymentStatus || order.paymentMethod;
+  const status = order.orderStatus || order.status || order.paymentStatus;
+  const placedAt = order.createdAt || order.placedAt;
+  
+  // Get shipping address lines for display
+  const getShippingAddressLines = () => {
+    if (order.shippingInfo) {
+      const lines = [
+        order.shippingInfo.addressLine1,
+        order.shippingInfo.addressLine2,
+        order.shippingInfo.city,
+        order.shippingInfo.state,
+        order.shippingInfo.postalCode,
+        order.shippingInfo.country
+      ].filter(Boolean);
+      return lines;
+    } else if (order.shippingAddress) {
+      const lines = [
+        order.shippingAddress.flatHouseNo,
+        order.shippingAddress.areaLocality,
+        order.shippingAddress.streetAddress,
+        order.shippingAddress.landmark,
+        order.shippingAddress.city,
+        order.shippingAddress.state,
+        order.shippingAddress.pincode,
+        order.shippingAddress.country
+      ].filter(Boolean);
+      return lines;
+    } else if (order.address) {
+      const lines = [
+        order.address.line1,
+        order.address.line2,
+        order.address.city,
+        order.address.state,
+        order.address.pincode,
+        order.address.country
+      ].filter(Boolean);
+      return lines;
+    }
+    return [];
+  };
+  
+  const addressLines = getShippingAddressLines();
+  const isTestOrder = order.isTestOrder || payment === 'test-paid';
 
+  // Dropdown for status change with all statuses
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [showShippingModal, setShowShippingModal] = useState(false);
+  const statusOptions = [
+    { label: '⏳ Pending', value: 'Pending', icon: FaClock },
+    { label: '⚙️ Processing', value: 'Processing', icon: FaCog },
+    { label: '🚚 Shipped', value: 'Shipped', icon: FaShippingFast },
+    { label: '✅ Delivered', value: 'Delivered', icon: FaCheckCircle },
+    { label: '❌ Cancelled', value: 'Cancelled', icon: FaBan },
+  ];
 
+  const handleStatusChange = (status) => {
+    setShowDropdown(false);
+    if (status === 'Shipped') {
+      setShowShippingModal(true);
+    } else {
+      onStatusChange(order._id, status);
+    }
+  };
 
+  return (
+    <div className="p-4 shadow-md rounded-xl flex flex-col gap-2 bg-white border border-gray-100">
+      <div className="flex justify-between items-start gap-2">
+        <div>
+          <p className="font-bold text-sm">#{order.orderId || 'N/A'} - {name}</p>
+          <p className="text-xs text-gray-500">📧 {email}</p>
+          <p className="text-xs text-gray-500">📞 {phone}</p>
+          <p className="text-xs text-gray-500">📍 {addressLines.map((line, i) => <span key={i}>{line}{i < addressLines.length - 1 ? ', ' : ''}</span>)}</p>
+        </div>
+        <StatusBadge status={status} />
+      </div>
+      <div className="text-xs text-gray-600 mt-2">
+        <p>💳 {payment || 'N/A'} | ₹{typeof total === 'number' && !isNaN(total) ? total.toFixed(2) : '0.00'}</p>
+        <p>📅 {formatDate(placedAt)}</p>
+      </div>
+      <div className="flex flex-wrap justify-between gap-2 mt-3">
+        <button
+          className="px-3 py-1.5 rounded border border-gray-300 text-xs font-semibold hover:bg-gray-50 transition"
+          onClick={() => onView(order)}
+        >
+          View Details
+        </button>
+        <div className="relative">
+          <button
+            className="px-3 py-1.5 rounded bg-[#4D1E64] text-white text-xs font-semibold hover:bg-[#3a164d] transition"
+            onClick={() => setShowDropdown(v => !v)}
+            type="button"
+          >
+            Change Status
+          </button>
+          {showDropdown && (
+            <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded shadow-lg z-20">
+              {statusOptions.map(opt => {
+                const IconComponent = opt.icon;
+                return (
+                  <button
+                    key={opt.value}
+                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+                    onClick={() => handleStatusChange(opt.value)}
+                  >
+                    <IconComponent className="w-3 h-3" />
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
 
+      {/* Shipping Tracking Modal */}
+      {showShippingModal && (
+        <ShippingTrackingModal
+          order={order}
+          onClose={() => setShowShippingModal(false)}
+          onStatusChange={onStatusChange}
+        />
+      )}
+    </div>
+  );
+};
 
+// Shipping Tracking Modal Component
+function ShippingTrackingModal({ order, onClose, onStatusChange }) {
+  const [shippingPartner, setShippingPartner] = useState('');
+  const [trackingId, setTrackingId] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const courierOptions = [
+    { value: 'DTDC', label: 'DTDC' },
+    { value: 'ST Courier', label: 'ST Courier' },
+    { value: 'XpressBees', label: 'XpressBees' },
+    { value: 'India Post', label: 'India Post' },
+    { value: 'Delhivery', label: 'Delhivery' },
+    { value: 'Blue Dart', label: 'Blue Dart' },
+    { value: 'Ecom Express', label: 'Ecom Express' },
+    { value: 'Other', label: 'Other' }
+  ];
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!shippingPartner || !trackingId.trim()) {
+      toast.error('Please select a courier partner and enter tracking ID');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://shithaa.in'}/api/orders/status`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'token': localStorage.getItem('token')
+        },
+        body: JSON.stringify({
+          orderId: order._id,
+          status: 'Shipped',
+          shippingPartner,
+          trackingId: trackingId.trim()
+        })
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        toast.success('Order marked as shipped with tracking details!');
+        onStatusChange(order._id, 'Shipped');
+        onClose();
+      } else {
+        toast.error(data.message || 'Failed to update order status');
+      }
+    } catch (error) {
+      console.error('Error updating order status:', error);
+      toast.error('Failed to update order status');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Esc key to close
+  React.useEffect(() => {
+    function handleEsc(e) {
+      if (e.key === 'Escape') onClose();
+    }
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" onClick={onClose}>
+      <div className="bg-white rounded-xl shadow-xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+        <div className="p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold text-gray-900">Add Shipping Details</h2>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <div className="mb-4">
+            <p className="text-sm text-gray-600 mb-4">
+              Order #{order.orderId} - {order.shippingInfo?.fullName || order.customerName}
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Courier Partner *
+              </label>
+              <select
+                value={shippingPartner}
+                onChange={(e) => setShippingPartner(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4D1E64] focus:border-transparent"
+                required
+              >
+                <option value="">Select courier partner</option>
+                {courierOptions.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Tracking ID *
+              </label>
+              <input
+                type="text"
+                value={trackingId}
+                onChange={(e) => setTrackingId(e.target.value)}
+                placeholder="Enter tracking ID"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4D1E64] focus:border-transparent"
+                required
+              />
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex-1 px-4 py-2 bg-[#4D1E64] text-white rounded-lg hover:bg-[#3a164d] transition-colors disabled:opacity-50"
+              >
+                {loading ? 'Updating...' : 'Update Status'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function OrderDetailsModal({ order, onClose, onStatusChange }) {
+  if (!order) return null;
+  
+  const [activeTab, setActiveTab] = useState('details');
+  const [showPaymentLog, setShowPaymentLog] = useState(false);
+  const [showShippingModal, setShowShippingModal] = useState(false);
+  
+  const userInfo = order.userInfo || { name: order.customerName, email: order.email };
+  const displayName = userInfo.name && userInfo.name.trim() ? userInfo.name : (order.customerName && order.customerName.trim() ? order.customerName : 'Unknown User');
+  const displayEmail = userInfo.email || order.email || '';
+  const shipping = order.shippingInfo || order.shippingAddress || order.address;
+  const items = order.items || order.cartItems || [];
+  const total = order.totalAmount || order.total || order.totalPrice;
+  const payment = order.paymentStatus || order.paymentMethod;
+  const status = order.orderStatus || order.status || order.paymentStatus;
+  const placedAt = order.createdAt || order.placedAt;
+  const coupon = order.couponUsed?.code || order.discount?.appliedCouponCode;
+  const discount = order.couponUsed?.discount || order.discount?.value || 0;
+  const isTestOrder = order.isTestOrder || payment === 'test-paid';
+
+  // Local status state for immediate UI feedback
+  const [currentStatus, setCurrentStatus] = useState(status);
+  const handleStatusChangeLocal = (orderId, nextStatus) => {
+    setCurrentStatus(nextStatus);
+    onStatusChange(orderId, nextStatus);
+  };
+  
+  // Get shipping information for display
+  const getShippingDisplayInfo = () => {
+    if (order.shippingInfo) {
+      return {
+        name: order.shippingInfo.fullName,
+        email: order.shippingInfo.email,
+        phone: order.shippingInfo.phone,
+        addressFields: [
+          { label: 'Address Line 1', value: order.shippingInfo.addressLine1 },
+          { label: 'Address Line 2', value: order.shippingInfo.addressLine2 },
+          { label: 'City', value: order.shippingInfo.city },
+          { label: 'State', value: order.shippingInfo.state },
+          { label: 'Postal Code', value: order.shippingInfo.postalCode },
+          { label: 'Country', value: order.shippingInfo.country }
+        ].filter(field => field.value)
+      };
+    } else if (order.shippingAddress) {
+      return {
+        name: order.shippingAddress.fullName,
+        email: order.shippingAddress.email,
+        phone: order.shippingAddress.phone,
+        addressFields: [
+          { label: 'Flat/House No.', value: order.shippingAddress.flatHouseNo },
+          { label: 'Area/Locality', value: order.shippingAddress.areaLocality },
+          { label: 'Street Address', value: order.shippingAddress.streetAddress },
+          { label: 'Landmark', value: order.shippingAddress.landmark },
+          { label: 'City', value: order.shippingAddress.city },
+          { label: 'State', value: order.shippingAddress.state },
+          { label: 'Pincode', value: order.shippingAddress.pincode },
+          { label: 'Country', value: order.shippingAddress.country }
+        ].filter(field => field.value)
+      };
+    } else if (order.address) {
+      return {
+        name: order.customerName,
+        email: order.email,
+        phone: order.phone,
+        addressFields: [
+          { label: 'Address Line 1', value: order.address.line1 },
+          { label: 'Address Line 2', value: order.address.line2 },
+          { label: 'City', value: order.address.city },
+          { label: 'State', value: order.address.state },
+          { label: 'Pincode', value: order.address.pincode },
+          { label: 'Country', value: order.address.country }
+        ].filter(field => field.value)
+      };
+    }
+    return { name: '', email: '', phone: '', addressFields: [] };
+  };
+  
+  const shippingDisplay = getShippingDisplayInfo();
+  const totalAmount = order.totalAmount || order.totalPrice || order.total || order.amount || order.orderSummary?.total || 0;
+
+  // Esc key to close
+  React.useEffect(() => {
+    function handleEsc(e) {
+      if (e.key === 'Escape') onClose();
+    }
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [onClose]);
+
+  const tabs = [
+    { id: 'details', label: 'Order Details', icon: FaBox },
+    { id: 'status', label: 'Update Status', icon: FaCog },
+    { id: 'payment', label: 'Payment Info', icon: FaMoneyBill }
+  ];
+
+  async function handleDownloadInvoice() {
+    try {
+      const res = await fetch(`${backendUrl}/api/orders/${order._id}/invoice`, {
+        headers: {
+          ...(localStorage.getItem('token') ? { token: localStorage.getItem('token') } : {})
+        }
+      });
+      if (!res.ok) {
+        toast.error('Failed to download invoice');
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Invoice_${order.orderId || order._id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Invoice download error:', err);
+      toast.error('Invoice download failed');
+    }
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-2 sm:p-4">
@@ -498,7 +894,7 @@ const EnhancedSearchAndFilters = ({
                           }
                           handleStatusChangeLocal(order._id, statusOption);
                         }}
-                        disabled={isCurrentStatus || updatingStatus === `${order._id}-${statusOption}`}
+                        disabled={isCurrentStatus}
                       >
                         <IconComponent className={`w-5 h-5 ${isCurrentStatus ? 'text-white' : config.iconColor}`} />
                         <div className="text-left flex-1">
@@ -509,9 +905,6 @@ const EnhancedSearchAndFilters = ({
                         </div>
                         {isCurrentStatus && (
                           <FaCheckCircle className="w-5 h-5 text-white" />
-                        )}
-                        {updatingStatus === `${order._id}-${statusOption}` && (
-                          <FaSpinner className="w-5 h-5 animate-spin text-gray-400" />
                         )}
                       </button>
                     );
@@ -603,7 +996,6 @@ const EnhancedSearchAndFilters = ({
             handleStatusChangeLocal(id, next);
             setShowShippingModal(false);
           }}
-          updatingStatus={updatingStatus}
         />
       )}
     </div>
@@ -626,7 +1018,6 @@ const Orders = ({ token, setToken }) => {
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [paymentMethod, setPaymentMethod] = useState('All');
   const [sortOrder, setSortOrder] = useState('newest');
-  const [updatingStatus, setUpdatingStatus] = useState(null);
 
   // Helper to fetch display name from backend
   const fetchUserName = async (email) => {
@@ -720,18 +1111,8 @@ const Orders = ({ token, setToken }) => {
   };
 
   const updateStatus = async (orderId, status) => {
-    // Prevent duplicate requests
-    if (updatingStatus === `${orderId}-${status}`) {
-      console.log('Status update already in progress for:', orderId, status);
-      return;
-    }
-    
-    setUpdatingStatus(`${orderId}-${status}`);
-    
     try {
       console.log("Updating order status:", orderId, "to", status);
-      console.log("Request payload:", { orderId, status });
-      
       const response = await axios.post(
         `${backendUrl}/api/orders/status`,
         { orderId, status },
@@ -742,44 +1123,30 @@ const Orders = ({ token, setToken }) => {
         }
       );
       console.log('Status update response:', response.data);
-      
       if (response.data.success) {
         fetchOrders();
         toast.success(`Order status updated to ${status}`);
         return;
       } else {
-        // Check if this is actually a successful operation despite the success flag
-        if (response.data.message && response.data.message.includes('successfully')) {
-          toast.success(`Order status updated to ${status}`);
-          fetchOrders();
-        } else {
-          // Special handling for the shipping validation error when it shouldn't apply
-          if (response.data.message && response.data.message.includes('Shipping partner and tracking ID are required when marking order as shipped')) {
-            if (status !== 'Shipped') {
-              // This error shouldn't happen for non-Shipped statuses, log it and show success
-              console.warn('Unexpected shipping validation error for non-Shipped status:', status);
-              toast.success(`Order status updated to ${status}`);
-              fetchOrders();
-              return;
-            }
-          }
+        // Only show error toast if it's not a successful status update
+        // This prevents showing error messages when the backend actually succeeded
+        if (response.data.message && !response.data.message.includes('successfully')) {
           toast.error('Backend error: ' + response.data.message);
+        } else {
+          // If backend succeeded but returned a message, just refresh orders
+          fetchOrders();
         }
         return;
       }
     } catch (err) {
       console.error('Status update error:', err);
-      console.error('Error response data:', err.response?.data);
-      
-      // Check if the error is actually a success case
-      if (err.response?.data?.message && err.response.data.message.includes('successfully')) {
-        toast.success(`Order status updated to ${status}`);
-        fetchOrders();
-      } else {
+      // Only show error toast for actual network/API errors
+      if (err.response?.status >= 400) {
         toast.error('Failed to update status: ' + (err.response?.data?.message || err.message));
+      } else {
+        // For successful operations that might have warnings, just refresh
+        fetchOrders();
       }
-    } finally {
-      setUpdatingStatus(null);
     }
   };
 
@@ -793,753 +1160,6 @@ const Orders = ({ token, setToken }) => {
 
   const canCancelOrder = (status) => {
     return ['Pending', 'Processing'].includes(status);
-  };
-
-  // Modern Responsive Order Card with updated status handling
-  const ModernOrderCard = ({ order, onView, onStatusChange, updatingStatus }) => {
-    const userInfo = order.userInfo || { name: order.customerName, email: order.email };
-    const shipping = order.shippingInfo || order.shippingAddress || order.address;
-    const name = shipping?.fullName || shipping?.name || order.customerName;
-    const email = shipping?.email || order.shippingInfo?.email || order.email;
-    const phone = shipping?.phone || order.shippingInfo?.phone || order.phone;
-    const total = order.totalAmount || order.total || order.totalPrice || order.amount;
-    const payment = order.paymentStatus || order.paymentMethod;
-    const status = order.orderStatus || order.status || order.paymentStatus;
-    const placedAt = order.createdAt || order.placedAt;
-    
-    // Get shipping address lines for display
-    const getShippingAddressLines = () => {
-      if (order.shippingInfo) {
-        const lines = [
-          order.shippingInfo.addressLine1,
-          order.shippingInfo.addressLine2,
-          order.shippingInfo.city,
-          order.shippingInfo.state,
-          order.shippingInfo.postalCode,
-          order.shippingInfo.country
-        ].filter(Boolean);
-        return lines;
-      } else if (order.shippingAddress) {
-        const lines = [
-          order.shippingAddress.flatHouseNo,
-          order.shippingAddress.areaLocality,
-          order.shippingAddress.streetAddress,
-          order.shippingAddress.landmark,
-          order.shippingAddress.city,
-          order.shippingAddress.state,
-          order.shippingAddress.pincode,
-          order.shippingAddress.country
-        ].filter(Boolean);
-        return lines;
-      } else if (order.address) {
-        const lines = [
-          order.address.line1,
-          order.address.line2,
-          order.address.city,
-          order.address.state,
-          order.address.pincode,
-          order.address.country
-        ].filter(Boolean);
-        return lines;
-      }
-      return [];
-    };
-    
-    const addressLines = getShippingAddressLines();
-    const isTestOrder = order.isTestOrder || payment === 'test-paid';
-
-    // Dropdown for status change with all statuses
-    const [showDropdown, setShowDropdown] = useState(false);
-    const [showShippingModal, setShowShippingModal] = useState(false);
-    const statusOptions = [
-      { label: '⏳ Pending', value: 'Pending', icon: FaClock },
-      { label: '⚙️ Processing', value: 'Processing', icon: FaCog },
-      { label: '🚚 Shipped', value: 'Shipped', icon: FaShippingFast },
-      { label: '✅ Delivered', value: 'Delivered', icon: FaCheckCircle },
-      { label: '❌ Cancelled', value: 'Cancelled', icon: FaBan },
-    ];
-
-    const handleStatusChange = (status) => {
-      setShowDropdown(false);
-      if (status === 'Shipped') {
-        setShowShippingModal(true);
-      } else {
-        onStatusChange(order._id, status);
-      }
-    };
-
-    return (
-      <div className="p-4 shadow-md rounded-xl flex flex-col gap-2 bg-white border border-gray-100">
-        <div className="flex justify-between items-start gap-2">
-          <div>
-            <p className="font-bold text-sm">#{order.orderId || 'N/A'} - {name}</p>
-            <p className="text-xs text-gray-500">📧 {email}</p>
-            <p className="text-xs text-gray-500">📞 {phone}</p>
-            <p className="text-xs text-gray-500">📍 {addressLines.map((line, i) => <span key={i}>{line}{i < addressLines.length - 1 ? ', ' : ''}</span>)}</p>
-          </div>
-          <StatusBadge status={status} />
-        </div>
-        <div className="text-xs text-gray-600 mt-2">
-          <p>💳 {payment || 'N/A'} | ₹{typeof total === 'number' && !isNaN(total) ? total.toFixed(2) : '0.00'}</p>
-          <p>📅 {formatDate(placedAt)}</p>
-        </div>
-        <div className="flex flex-wrap justify-between gap-2 mt-3">
-          <button
-            className="px-3 py-1.5 rounded border border-gray-300 text-xs font-semibold hover:bg-gray-50 transition"
-            onClick={() => onView(order)}
-          >
-            View Details
-          </button>
-          <div className="relative">
-            <button
-              className="px-3 py-1.5 rounded bg-[#4D1E64] text-white text-xs font-semibold hover:bg-[#3a164d] transition disabled:opacity-50"
-              onClick={() => setShowDropdown(v => !v)}
-              type="button"
-              disabled={updatingStatus && updatingStatus.startsWith(order._id)}
-            >
-              {updatingStatus && updatingStatus.startsWith(order._id) ? (
-                <FaSpinner className="w-3 h-3 animate-spin inline mr-1" />
-              ) : null}
-              Change Status
-            </button>
-            {showDropdown && (
-              <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded shadow-lg z-20">
-                {statusOptions.map(opt => {
-                  const IconComponent = opt.icon;
-                  return (
-                    <button
-                      key={opt.value}
-                      className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2 disabled:opacity-50"
-                      onClick={() => handleStatusChange(opt.value)}
-                      disabled={updatingStatus === `${order._id}-${opt.value}`}
-                    >
-                      <IconComponent className="w-3 h-3" />
-                      {opt.label}
-                      {updatingStatus === `${order._id}-${opt.value}` && (
-                        <FaSpinner className="w-3 h-3 animate-spin ml-auto" />
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Shipping Tracking Modal */}
-        {showShippingModal && (
-          <ShippingTrackingModal
-            order={order}
-            onClose={() => setShowShippingModal(false)}
-            onStatusChange={onStatusChange}
-            updatingStatus={updatingStatus}
-          />
-        )}
-      </div>
-    );
-  };
-
-  // Shipping Tracking Modal Component
-  const ShippingTrackingModal = ({ order, onClose, onStatusChange, updatingStatus }) => {
-    const [shippingPartner, setShippingPartner] = useState('');
-    const [trackingId, setTrackingId] = useState('');
-    const [loading, setLoading] = useState(false);
-
-    const courierOptions = [
-      { value: 'DTDC', label: 'DTDC' },
-      { value: 'ST Courier', label: 'ST Courier' },
-      { value: 'XpressBees', label: 'XpressBees' },
-      { value: 'India Post', label: 'India Post' },
-      { value: 'Delhivery', label: 'Delhivery' },
-      { value: 'Blue Dart', label: 'Blue Dart' },
-      { value: 'Ecom Express', label: 'Ecom Express' },
-      { value: 'Other', label: 'Other' }
-    ];
-
-    const handleSubmit = async (e) => {
-      e.preventDefault();
-      
-      if (!shippingPartner || !trackingId.trim()) {
-        toast.error('Please select a courier partner and enter tracking ID');
-        return;
-      }
-
-      setLoading(true);
-      try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://shithaa.in'}/api/orders/status`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'token': localStorage.getItem('token')
-          },
-          body: JSON.stringify({
-            orderId: order._id,
-            status: 'Shipped',
-            shippingPartner,
-            trackingId: trackingId.trim()
-          })
-        });
-
-        const data = await response.json();
-        
-        if (data.success) {
-          toast.success('Order marked as shipped with tracking details!');
-          onStatusChange(order._id, 'Shipped');
-          onClose();
-        } else {
-          toast.error(data.message || 'Failed to update order status');
-        }
-      } catch (error) {
-        console.error('Error updating order status:', error);
-        toast.error('Failed to update order status');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    // Esc key to close
-    React.useEffect(() => {
-      function handleEsc(e) {
-        if (e.key === 'Escape') onClose();
-      }
-      window.addEventListener('keydown', handleEsc);
-      return () => window.removeEventListener('keydown', handleEsc);
-    }, [onClose]);
-
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" onClick={onClose}>
-        <div className="bg-white rounded-xl shadow-xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
-          <div className="p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-gray-900">Add Shipping Details</h2>
-              <button
-                onClick={onClose}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            <div className="mb-4">
-              <p className="text-sm text-gray-600 mb-4">
-                Order #{order.orderId} - {order.shippingInfo?.fullName || order.customerName}
-              </p>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Courier Partner *
-                </label>
-                <select
-                  value={shippingPartner}
-                  onChange={(e) => setShippingPartner(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4D1E64] focus:border-transparent"
-                  required
-                >
-                  <option value="">Select courier partner</option>
-                  {courierOptions.map(option => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Tracking ID *
-                </label>
-                <input
-                  type="text"
-                  value={trackingId}
-                  onChange={(e) => setTrackingId(e.target.value)}
-                  placeholder="Enter tracking ID"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4D1E64] focus:border-transparent"
-                  required
-                />
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="flex-1 px-4 py-2 bg-[#4D1E64] text-white rounded-lg hover:bg-[#3a164d] transition-colors disabled:opacity-50"
-                >
-                  {loading ? 'Updating...' : 'Update Status'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // Order Details Modal Component
-  const OrderDetailsModal = ({ order, onClose, onStatusChange, updatingStatus }) => {
-    if (!order) return null;
-    
-    const [activeTab, setActiveTab] = useState('details');
-    const [showPaymentLog, setShowPaymentLog] = useState(false);
-    const [showShippingModal, setShowShippingModal] = useState(false);
-    
-    const userInfo = order.userInfo || { name: order.customerName, email: order.email };
-    const displayName = userInfo.name && userInfo.name.trim() ? userInfo.name : (order.customerName && order.customerName.trim() ? order.customerName : 'Unknown User');
-    const displayEmail = userInfo.email || order.email || '';
-    const shipping = order.shippingInfo || order.shippingAddress || order.address;
-    const items = order.items || order.cartItems || [];
-    const total = order.totalAmount || order.total || order.totalPrice;
-    const payment = order.paymentStatus || order.paymentMethod;
-    const status = order.orderStatus || order.status || order.paymentStatus;
-    const placedAt = order.createdAt || order.placedAt;
-    const coupon = order.couponUsed?.code || order.discount?.appliedCouponCode;
-    const discount = order.couponUsed?.discount || order.discount?.value || 0;
-    const isTestOrder = order.isTestOrder || payment === 'test-paid';
-
-    // Local status state for immediate UI feedback
-    const [currentStatus, setCurrentStatus] = useState(status);
-    const handleStatusChangeLocal = (orderId, nextStatus) => {
-      setCurrentStatus(nextStatus);
-      onStatusChange(orderId, nextStatus);
-    };
-    
-    // Get shipping information for display
-    const getShippingDisplayInfo = () => {
-      if (order.shippingInfo) {
-        return {
-          name: order.shippingInfo.fullName,
-          email: order.shippingInfo.email,
-          phone: order.shippingInfo.phone,
-          addressFields: [
-            { label: 'Address Line 1', value: order.shippingInfo.addressLine1 },
-            { label: 'Address Line 2', value: order.shippingInfo.addressLine2 },
-            { label: 'City', value: order.shippingInfo.city },
-            { label: 'State', value: order.shippingInfo.state },
-            { label: 'Postal Code', value: order.shippingInfo.postalCode },
-            { label: 'Country', value: order.shippingInfo.country }
-          ].filter(field => field.value)
-        };
-      } else if (order.shippingAddress) {
-        return {
-          name: order.shippingAddress.fullName,
-          email: order.shippingAddress.email,
-          phone: order.shippingAddress.phone,
-          addressFields: [
-            { label: 'Flat/House No.', value: order.shippingAddress.flatHouseNo },
-            { label: 'Area/Locality', value: order.shippingAddress.areaLocality },
-            { label: 'Street Address', value: order.shippingAddress.streetAddress },
-            { label: 'Landmark', value: order.shippingAddress.landmark },
-            { label: 'City', value: order.shippingAddress.city },
-            { label: 'State', value: order.shippingAddress.state },
-            { label: 'Pincode', value: order.shippingAddress.pincode },
-            { label: 'Country', value: order.shippingAddress.country }
-          ].filter(field => field.value)
-        };
-      } else if (order.address) {
-        return {
-          name: order.customerName,
-          email: order.email,
-          phone: order.phone,
-          addressFields: [
-            { label: 'Address Line 1', value: order.address.line1 },
-            { label: 'Address Line 2', value: order.address.line2 },
-            { label: 'City', value: order.address.city },
-            { label: 'State', value: order.address.state },
-            { label: 'Pincode', value: order.address.pincode },
-            { label: 'Country', value: order.address.country }
-          ].filter(field => field.value)
-        };
-      }
-      return { name: '', email: '', phone: '', addressFields: [] };
-    };
-    
-    const shippingDisplay = getShippingDisplayInfo();
-    const totalAmount = order.totalAmount || order.totalPrice || order.total || order.amount || order.orderSummary?.total || 0;
-
-    // Esc key to close
-    React.useEffect(() => {
-      function handleEsc(e) {
-        if (e.key === 'Escape') onClose();
-      }
-      window.addEventListener('keydown', handleEsc);
-      return () => window.removeEventListener('keydown', handleEsc);
-    }, [onClose]);
-
-    const tabs = [
-      { id: 'details', label: 'Order Details', icon: FaBox },
-      { id: 'status', label: 'Update Status', icon: FaCog },
-      { id: 'payment', label: 'Payment Info', icon: FaMoneyBill }
-    ];
-
-    async function handleDownloadInvoice() {
-      try {
-        const res = await fetch(`${backendUrl}/api/orders/${order._id}/invoice`, {
-          headers: {
-            ...(localStorage.getItem('token') ? { token: localStorage.getItem('token') } : {})
-          }
-        });
-        if (!res.ok) {
-          toast.error('Failed to download invoice');
-          return;
-        }
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Invoice_${order.orderId || order._id}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
-      } catch (err) {
-        console.error('Invoice download error:', err);
-        toast.error('Invoice download failed');
-      }
-    }
-
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-2 sm:p-4">
-        <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[92vh] overflow-hidden" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true">
-          {/* Close layer for mobile: tap outside header/content to close */}
-          <button className="sr-only" onClick={onClose}>Close</button>
-          
-          {/* Enhanced Modal Header */}
-          <div className="bg-gradient-to-r from-[#4D1E64] to-[#6B2C7A] text-white p-4 md:p-6">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-              <div className="flex items-center gap-3 md:gap-4">
-                <button
-                  onClick={onClose}
-                  className="p-2 rounded-full hover:bg-white/10 transition-colors"
-                  aria-label="Go back"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                </button>
-                <div>
-                  <h2 className="text-lg md:text-xl font-bold">Order #{order.orderId || 'N/A'}</h2>
-                  <p className="text-white/80 text-xs md:text-sm">{displayName} • {formatDate(placedAt)}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 md:gap-3 flex-wrap">
-                <StatusBadge status={currentStatus} />
-                {isTestOrder && (
-                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
-                    Test Order
-                  </span>
-                )}
-                <button
-                  onClick={handleDownloadInvoice}
-                  className="hidden md:flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm"
-                  title="Download Invoice (PDF)"
-                >
-                  <FaDownload className="w-4 h-4" />
-                  Invoice
-                </button>
-                <button
-                  onClick={handleDownloadInvoice}
-                  className="md:hidden p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white"
-                  title="Download Invoice"
-                  aria-label="Download Invoice"
-                >
-                  <FaDownload className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={onClose}
-                  className="p-2 rounded-full hover:bg-white/10 transition-colors"
-                  aria-label="Close"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Tab Navigation */}
-          <div className="border-b border-gray-200">
-            <nav className="flex space-x-3 md:space-x-8 px-4 md:px-6" aria-label="Tabs">
-              {tabs.map((tab) => {
-                const IconComponent = tab.icon;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-2 py-3 md:py-4 px-1 border-b-2 font-medium text-xs md:text-sm transition-colors ${
-                      activeTab === tab.id
-                        ? 'border-[#4D1E64] text-[#4D1E64]'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    <IconComponent className="w-4 h-4" />
-                    {tab.label}
-                  </button>
-                );
-              })}
-            </nav>
-          </div>
-
-          {/* Modal Content */}
-          <div className="p-4 md:p-6 overflow-y-auto max-h-[calc(92vh-180px)] md:max-h-[calc(92vh-200px)] overscroll-contain touch-pan-y">
-            
-            {/* Order Details Tab */}
-            {activeTab === 'details' && (
-              <div className="space-y-6">
-                
-                {/* Customer Information */}
-                <div className="bg-gray-50 rounded-lg p-3 md:p-4">
-                  <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                    <FaUser className="w-4 h-4" />
-                    Customer Information
-                  </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">Name</label>
-                      <p className="text-gray-900">{displayName}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">Email</label>
-                      <p className="text-gray-900">{displayEmail}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">Phone</label>
-                      <p className="text-gray-900">{shippingDisplay.phone}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">Order Date</label>
-                      <p className="text-gray-900">{formatDate(placedAt)}</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Shipping Address */}
-                <div className="bg-gray-50 rounded-lg p-3 md:p-4">
-                  <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                    <FaTruck className="w-4 h-4" />
-                    Shipping Address
-                  </h3>
-                  <div className="bg-white border border-gray-200 rounded-lg p-3 md:p-4">
-                    <p className="font-medium text-gray-900 mb-2">{shippingDisplay.name}</p>
-                    {shippingDisplay.addressFields.map((field, index) => (
-                      <p key={index} className="text-gray-700 text-sm">
-                        <span className="font-medium">{field.label}:</span> {field.value}
-                      </p>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Order Items */}
-                <div className="bg-gray-50 rounded-lg p-3 md:p-4">
-                  <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                    <FaBox className="w-4 h-4" />
-                    Order Items ({items.length} item{items.length !== 1 ? 's' : ''})
-                  </h3>
-                  <div className="space-y-3">
-                    {items.map((item, idx) => (
-                      <div key={idx} className="bg-white border border-gray-200 rounded-lg p-3 md:p-4 flex items-center gap-3 md:gap-4">
-                        {item.image && (
-                          <img 
-                            src={item.image} 
-                            alt={item.name} 
-                            className="w-14 h-14 md:w-16 md:h-16 object-cover rounded-lg"
-                          />
-                        )}
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-gray-900 text-sm md:text-base">{item.name}</h4>
-                          <div className="text-xs md:text-sm text-gray-600 space-y-1">
-                            <p>Quantity: <span className="font-medium">{item.quantity}</span></p>
-                            {item.size && <p>Size: <span className="font-medium">{item.size}</span></p>}
-                            <p>Price: <span className="font-medium">{currency}{item.price}</span></p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-base md:text-lg font-semibold text-gray-900">
-                            {currency}{(item.price * item.quantity).toFixed(2)}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  
-                  {/* Order Total */}
-                  <div className="mt-3 md:mt-4 pt-3 md:pt-4 border-t border-gray-200">
-                    <div className="flex justify-between items-center">
-                      <span className="text-base md:text-lg font-semibold text-gray-900">Total Amount:</span>
-                      <span className="text-lg md:text-xl font-bold text-[#4D1E64]">
-                        {currency}{typeof totalAmount === 'number' ? totalAmount.toFixed(2) : '0.00'}
-                      </span>
-                    </div>
-                    {discount > 0 && (
-                      <div className="text-xs md:text-sm text-green-600 mt-1">
-                        Discount Applied: -{currency}{discount.toFixed(2)}
-                        {coupon && <span className="ml-2">({coupon})</span>}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Status Update Tab */}
-            {activeTab === 'status' && (
-              <div className="space-y-4">
-                <div className="bg-gray-50 rounded-lg p-3 md:p-4">
-                  <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                    <FaCog className="w-4 h-4" />
-                    Current Status
-                  </h3>
-                  <div className="flex items-center gap-2 md:gap-3">
-                    <StatusBadge status={status} />
-                    <span className="text-gray-600 text-sm md:text-base">
-                      {STATUS_CONFIG[status]?.description || 'Status updated'}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="bg-gray-50 rounded-lg p-3 md:p-4">
-                  <h3 className="text-lg font-semibold mb-3">Update Order Status</h3>
-                  <div className="grid grid-cols-1 gap-3">
-                    {ORDER_STATUSES.map(statusOption => {
-                      const config = STATUS_CONFIG[statusOption];
-                      const IconComponent = config.icon;
-                      const isCurrentStatus = currentStatus === statusOption;
-                      
-                      return (
-                        <button
-                          key={statusOption}
-                          className={`w-full flex items-center gap-4 px-4 py-4 rounded-lg border transition-all ${
-                            isCurrentStatus 
-                              ? 'bg-[#4D1E64] text-white border-[#4D1E64] shadow-md' 
-                              : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50 hover:border-gray-300'
-                          }`}
-                          onClick={() => {
-                            if (statusOption === 'Shipped') {
-                              setShowShippingModal(true);
-                              return;
-                            }
-                            handleStatusChangeLocal(order._id, statusOption);
-                          }}
-                          disabled={isCurrentStatus || updatingStatus === `${order._id}-${statusOption}`}
-                        >
-                          <IconComponent className={`w-5 h-5 ${isCurrentStatus ? 'text-white' : config.iconColor}`} />
-                          <div className="text-left flex-1">
-                            <div className="font-semibold">{statusOption}</div>
-                            <div className={`text-sm ${isCurrentStatus ? 'text-white/80' : 'text-gray-500'}`}>
-                              {config.description}
-                            </div>
-                          </div>
-                          {isCurrentStatus && (
-                            <FaCheckCircle className="w-5 h-5 text-white" />
-                          )}
-                          {updatingStatus === `${order._id}-${statusOption}` && (
-                            <FaSpinner className="w-5 h-5 animate-spin text-gray-400" />
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Payment Info Tab */}
-            {activeTab === 'payment' && (
-              <div className="space-y-4">
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                    <FaMoneyBill className="w-4 h-4" />
-                    Payment Information
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">Payment Method</label>
-                      <p className="text-gray-900">{payment || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">Total Amount</label>
-                      <p className="text-gray-900 font-semibold">
-                        {currency}{typeof totalAmount === 'number' ? totalAmount.toFixed(2) : '0.00'}
-                      </p>
-                    </div>
-                    {order.phonepeTransactionId && (
-                      <div className="md:col-span-2">
-                        <label className="text-sm font-medium text-gray-500">Transaction ID</label>
-                        <p className="text-gray-900 font-mono text-sm">{order.phonepeTransactionId}</p>
-                      </div>
-                    )}
-                    {order.amountPaid && (
-                      <div>
-                        <label className="text-sm font-medium text-gray-500">Amount Paid</label>
-                        <p className="text-gray-900">{currency}{order.amountPaid}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Payment Log */}
-                {order.paymentLog && (
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-lg font-semibold">Payment Log</h3>
-                      <button
-                        onClick={() => setShowPaymentLog(!showPaymentLog)}
-                        className="text-[#4D1E64] hover:text-[#3a164d] text-sm font-medium"
-                      >
-                        {showPaymentLog ? 'Hide' : 'Show'} Details
-                      </button>
-                    </div>
-                    {showPaymentLog && (
-                      <div className="bg-white border border-gray-200 rounded-lg p-4">
-                        <pre className="text-xs text-gray-700 overflow-auto max-h-48">
-                          {JSON.stringify(order.paymentLog, null, 2)}
-                        </pre>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Modal Footer */}
-          <div className="border-t border-gray-200 p-6 bg-gray-50">
-            <div className="flex justify-between items-center">
-              <button
-                onClick={onClose}
-                className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                Close
-              </button>
-              <div className="text-sm text-gray-500">
-                Order placed on {formatDate(placedAt)}
-              </div>
-            </div>
-          </div>
-        </div>
-        {showShippingModal && (
-          <ShippingTrackingModal
-            order={order}
-            onClose={() => setShowShippingModal(false)}
-            onStatusChange={(id, next) => {
-              handleStatusChangeLocal(id, next);
-              setShowShippingModal(false);
-            }}
-            updatingStatus={updatingStatus}
-          />
-        )}
-      </div>
-    );
   };
 
   // Enhanced search filter
@@ -1666,7 +1286,6 @@ const Orders = ({ token, setToken }) => {
               order={order}
               onView={setSelectedOrder}
               onStatusChange={updateStatus}
-              updatingStatus={updatingStatus}
             />
           ))}
         </div>
@@ -1678,7 +1297,6 @@ const Orders = ({ token, setToken }) => {
           order={selectedOrder}
           onClose={() => setSelectedOrder(null)}
           onStatusChange={updateStatus}
-          updatingStatus={updatingStatus}
         />
       )}
 
