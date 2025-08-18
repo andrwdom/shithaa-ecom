@@ -92,8 +92,21 @@ export default function CheckoutPage() {
       const couponDiscount = coupon ? Math.round((amountAfterOffer * coupon.discountPercentage) / 100) : 0;
 
       // Calculate shipping using new shipping logic
-      const shippingCalculation = calculateShippingCost(displayItems, shipping as ShippingInfo);
-      const shippingCost = shippingCalculation.shippingCost;
+      // Only calculate shipping if we have valid shipping information
+      let shippingCalculation;
+      let shippingCost = 0;
+      
+      if (shipping && shipping.state && shipping.state.trim()) {
+        shippingCalculation = calculateShippingCost(displayItems, shipping as ShippingInfo);
+        shippingCost = shippingCalculation.shippingCost;
+      } else {
+        // No shipping info available yet
+        shippingCalculation = {
+          shippingCost: 0,
+          isFreeShipping: false,
+          shippingMessage: "Shipping location not set"
+        };
+      }
 
       // Final total: use computed values to avoid drift
       const total = amountAfterOffer - couponDiscount + shippingCost;
@@ -138,6 +151,17 @@ export default function CheckoutPage() {
       displayItemsTotal: displayItems?.reduce((sum, item) => sum + (item.price * item.quantity), 0) || 0
     });
   }, [checkoutItems, cartItems, displayItems, isBuyNowMode, displayMode]);
+
+  // 🔑 DEBUG: Log shipping state changes
+  useEffect(() => {
+    console.log('[CheckoutPage] 🚚 Shipping State Changed:', {
+      shipping,
+      hasState: !!shipping?.state,
+      stateValue: shipping?.state,
+      shippingKeys: Object.keys(shipping || {}),
+      shippingCalculation: shipping?.state ? calculateShippingCost(displayItems, shipping as ShippingInfo) : null
+    });
+  }, [shipping, displayItems]);
 
   // Debug logging
   useEffect(() => {
@@ -555,6 +579,7 @@ export default function CheckoutPage() {
                 coupon={coupon} 
                 offerDetails={offerDetails}
                 mode={displayMode}
+                shippingInfo={shipping}
               />
               {/* Payment Buttons */}
               <button

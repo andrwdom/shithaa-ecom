@@ -1,8 +1,9 @@
 "use client";
 import React, { useState } from 'react'
 import { Gift } from 'lucide-react'
+import { calculateShippingCost, ShippingInfo } from '@/lib/shipping-calculator'
 
-export default function OrderSummary({ cartItems, coupon, offerDetails, mode = 'cart' }: any) {
+export default function OrderSummary({ cartItems, coupon, offerDetails, mode = 'cart', shippingInfo }: any) {
   const [open, setOpen] = useState(true)
   
   // 🔑 FIXED: Ensure strict data separation based on checkout mode
@@ -11,7 +12,23 @@ export default function OrderSummary({ cartItems, coupon, offerDetails, mode = '
   
   // 🔑 FIXED: Calculate all values fresh from displayItems instead of using potentially contaminated summary
   const itemSubtotal = displayItems.reduce((acc: number, item: any) => acc + (item.price * item.quantity), 0);
-  const shipping = 0; // Free shipping for now, or calculate based on shipping rules
+  
+  // 🔑 FIXED: Calculate actual shipping cost using shipping rules instead of hardcoded values
+  let shippingCalculation;
+  let shipping = 0;
+  
+  if (shippingInfo && shippingInfo.state && shippingInfo.state.trim()) {
+    shippingCalculation = calculateShippingCost(displayItems, shippingInfo);
+    shipping = shippingCalculation.shippingCost;
+  } else {
+    // No shipping info available yet
+    shippingCalculation = {
+      shippingCost: 0,
+      isFreeShipping: false,
+      shippingMessage: "Shipping location not set"
+    };
+  }
+  
   const total = itemSubtotal + shipping;
   
   // 🔑 FIXED: Enhanced debug logging to confirm data source and prevent contamination
@@ -30,8 +47,10 @@ export default function OrderSummary({ cartItems, coupon, offerDetails, mode = '
       shipping,
       total
     },
+    shippingCalculation,
+    shippingInfo,
     // ✅ NO MORE SUMMARY PROP - Single source of truth
-    dataSource: 'displayItems only',
+    dataSource: 'displayItems + shipping calculation',
     cartItemsProp: cartItems,
     displayItemsFinal: displayItems
   });
@@ -44,7 +63,8 @@ export default function OrderSummary({ cartItems, coupon, offerDetails, mode = '
     displayItemsSubtotal: displayItems?.reduce((s, i) => s + i.price * i.quantity, 0),
     itemSubtotal,
     shipping,
-    total
+    total,
+    shippingCalculation
   });
   
   return (
@@ -82,12 +102,27 @@ export default function OrderSummary({ cartItems, coupon, offerDetails, mode = '
           </div>
         )}
         
+        {/* 🔑 FIXED: Dynamic shipping display based on actual calculation */}
         <div className="flex justify-between items-center">
           <span>Shipping</span>
           <span className="flex flex-col items-end">
-            <span className="text-green-700 font-semibold text-sm">Free shipping within Tamil Nadu!</span>
+            {!shippingInfo?.state ? (
+              <span className="text-gray-500 text-sm">Set shipping location</span>
+            ) : shippingCalculation.isFreeShipping ? (
+              <span className="text-green-700 font-semibold text-sm">{shippingCalculation.shippingMessage}</span>
+            ) : (
+              <span className="text-gray-700 font-semibold text-sm">₹{shipping}</span>
+            )}
           </span>
         </div>
+        
+        {/* 🔑 FIXED: Show shipping message below the cost */}
+        {shippingCalculation.shippingMessage && shippingInfo?.state && (
+          <div className="text-xs text-gray-600 text-right">
+            {shippingCalculation.shippingMessage}
+          </div>
+        )}
+        
         <div className="border-t pt-2 font-semibold text-base flex justify-between">
           <span>Total</span><span>₹{total}</span>
         </div>

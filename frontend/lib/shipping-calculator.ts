@@ -64,6 +64,19 @@ export function calculateShippingCost(
 
   const isTamilNadu = shippingInfo.state.trim().toLowerCase() === 'tamil nadu'
   
+  // 🔑 DEBUG: Log shipping calculation inputs
+  console.log('[ShippingCalculator] 🔍 Inputs:', {
+    state: shippingInfo.state,
+    isTamilNadu,
+    cartItemsCount: cartItems.length,
+    cartItems: cartItems.map(item => ({
+      name: item.name,
+      category: item.category,
+      categorySlug: item.categorySlug,
+      quantity: item.quantity
+    }))
+  });
+  
   // Helper function to identify free shipping categories in Tamil Nadu
   const isFreeShippingCategory = (category: string, categorySlug: string): boolean => {
     if (!isTamilNadu) return false; // Only free in Tamil Nadu
@@ -140,6 +153,9 @@ export function calculateShippingCost(
       if (totalFreeShippingItems > 0) {
         shippingMessage += `, ${totalFreeShippingItems} lounge wear item${totalFreeShippingItems > 1 ? 's' : ''} free`;
       }
+      
+      // Set isFreeShipping based on whether there are any paid shipping items
+      isFreeShipping = totalDressesForShipping === 0;
     } else {
       // Other states rules - all items count
       if (totalDressesForShipping === 1) {
@@ -155,6 +171,9 @@ export function calculateShippingCost(
         shippingCost = 109;
         shippingMessage = "₹109 shipping for 4+ items";
       }
+      
+      // Other states are never free shipping for maternity feeding wear
+      isFreeShipping = false;
     }
   } else {
     // Regular categories
@@ -182,9 +201,23 @@ export function calculateShippingCost(
         shippingCost = 105;
         shippingMessage = "₹105 shipping for 4+ items";
       }
+      
+      // Other states are never free shipping for regular categories
+      isFreeShipping = false;
     }
   }
 
+  // 🔑 DEBUG: Log final calculation result
+  console.log('[ShippingCalculator] ✅ Final Result:', {
+    shippingCost,
+    isFreeShipping,
+    shippingMessage,
+    totalDressesForShipping,
+    totalFreeShippingItems,
+    hasMaternityFeedingWear,
+    isTamilNadu
+  });
+  
   return {
     shippingCost,
     isFreeShipping,
