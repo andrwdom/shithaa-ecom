@@ -58,7 +58,7 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
       <div className="bg-[rgb(71,60,102)] text-white py-3 overflow-hidden relative">
         <div className="banner-ticker">
           <div className="banner-message">
-        FREE DELIVERY WITHIN TAMIL NADU.
+        ‼ FREE DELIVERY FOR LOUNGE WEAR WITHIN TAMIL NADU ‼
           </div>
           <div className="banner-message">
             🔥 BUY 3 LOUNGE WEAR @1299RS 🔥
