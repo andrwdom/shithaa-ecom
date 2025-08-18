@@ -67,6 +67,10 @@ export default function CheckoutPage() {
   // Check if we have items to checkout
   const hasItems = cartItems && cartItems.length > 0;
 
+  // 🔑 FIXED: Ensure strict data separation based on checkout mode
+  const displayItems = isBuyNowMode ? checkoutItems : cartItems;
+  const displayMode = isBuyNowMode ? 'buy-now' : 'cart';
+
   // Debug logging
   useEffect(() => {
     console.log("Checkout Debug:", {
@@ -75,12 +79,14 @@ export default function CheckoutPage() {
       isCartMode,
       checkoutItems: checkoutItems?.length || 0,
       cartItems: cartItems.length,
+      displayItems: displayItems?.length || 0,
+      displayMode,
       hasItems,
       checkoutFlowLoading,
       localStorage: localStorage.getItem("cartItems") ? "has data" : "empty",
       sessionStorage: sessionStorage.getItem("buyNowItem") ? "has data" : "empty"
     });
-  }, [currentFlow, isBuyNowMode, isCartMode, checkoutItems, cartItems, hasItems, checkoutFlowLoading]);
+  }, [currentFlow, isBuyNowMode, isCartMode, checkoutItems, cartItems, displayItems, displayMode, hasItems, checkoutFlowLoading]);
 
   // Handle cart loading state with checkout flow manager
   useEffect(() => {
@@ -387,7 +393,7 @@ export default function CheckoutPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto mt-10 px-4">
             {/* Left Section: Product Preview + Shipping Form Only */}
             <div className="space-y-6">
-              <ProductPreviewSection items={cartItems} />
+              <ProductPreviewSection items={displayItems} />
               <ShippingForm value={shipping} onChange={setShipping} errors={errors.shipping} />
               {/* CouponInput: show only on mobile/tablet */}
               <div className="block md:hidden">
@@ -413,7 +419,13 @@ export default function CheckoutPage() {
               <div className="hidden md:block">
                 <CouponInput value={coupon} onApply={setCoupon} />
               </div>
-              <OrderSummary cartItems={cartItems} coupon={coupon} summary={orderSummary} offerDetails={offerDetails} />
+              <OrderSummary 
+                cartItems={displayItems} 
+                coupon={coupon} 
+                summary={orderSummary} 
+                offerDetails={offerDetails}
+                mode={displayMode}
+              />
               {/* Payment Buttons */}
               <button
                 type="button"

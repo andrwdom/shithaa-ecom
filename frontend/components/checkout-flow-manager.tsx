@@ -66,6 +66,40 @@ export function CheckoutFlowProviderInner({ children }: { children: React.ReactN
   const { cartItems } = useCart();
   const { buyNowItem } = useBuyNow();
 
+  // 🔑 FIXED: Validation guard to ensure strict flow separation
+  const validateFlowSeparation = (flow: CheckoutFlow | null, items: CheckoutItem[]) => {
+    if (!flow || !items || items.length === 0) return true;
+    
+    // Ensure buy-now mode only has buy-now items and flow source
+    if (flow.mode === 'buy-now') {
+      // Check if flow source is buy-now related
+      const isValidBuyNowSource = flow.source === 'buy-now' || 
+                                 flow.source === 'context' || 
+                                 flow.source === 'stored' || 
+                                 flow.source === 'raw-storage';
+      
+      if (!isValidBuyNowSource) {
+        console.error('[CheckoutFlowManager] ❌ Cross-contamination detected: buy-now flow has invalid source:', flow.source);
+        return false;
+      }
+    }
+    
+    // Ensure cart mode only has cart items and flow source
+    if (flow.mode === 'cart') {
+      // Check if flow source is cart related
+      const isValidCartSource = flow.source === 'cart' || 
+                               flow.source === 'stored' || 
+                               flow.source === 'restored';
+      
+      if (!isValidCartSource) {
+        console.error('[CheckoutFlowManager] ❌ Cross-contamination detected: cart flow has invalid source:', flow.source);
+        return false;
+      }
+    }
+    
+    return true;
+  };
+
   // 🔥 Move all flow detection + restoration into useEffect
   useEffect(() => {
     const initFlow = () => {
@@ -74,6 +108,23 @@ export function CheckoutFlowProviderInner({ children }: { children: React.ReactN
         buyNowItem: !!buyNowItem, 
         cartItemsLength: cartItems?.length 
       });
+      
+      // 🔑 FIXED: Clear any cross-contaminated data before initializing flow
+      if (urlMode === "buynow") {
+        // Clear any cart-related checkout data when in buy-now mode
+        console.log('[CheckoutFlowManager] 🧹 Clearing cart checkout data for buy-now mode');
+        sessionStorage.removeItem("cartCheckoutFlow");
+        sessionStorage.removeItem("cartCheckoutItems");
+        localStorage.removeItem("cartCheckoutFlow");
+        localStorage.removeItem("cartCheckoutItems");
+      } else {
+        // Clear any buy-now checkout data when in cart mode
+        console.log('[CheckoutFlowManager] 🧹 Clearing buy-now checkout data for cart mode');
+        sessionStorage.removeItem("buyNowCheckoutFlow");
+        sessionStorage.removeItem("buyNowCheckoutItems");
+        localStorage.removeItem("buyNowCheckoutFlow");
+        localStorage.removeItem("buyNowCheckoutItems");
+      }
       
       // --- BUY NOW MODE ---
       if (urlMode === "buynow") {
@@ -100,6 +151,16 @@ export function CheckoutFlowProviderInner({ children }: { children: React.ReactN
             timestamp: Date.now(),
             sessionId: `buy-now_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
           };
+          
+          // 🔑 FIXED: Validate flow separation before setting state
+          if (!validateFlowSeparation(flow, [buyNowItem])) {
+            console.error('[CheckoutFlowManager] ❌ Flow separation validation failed, clearing state');
+            setCurrentFlow(null);
+            setCheckoutItems([]);
+            setIsLoading(false);
+            return;
+          }
+          
           setCurrentFlow(flow);
           setCheckoutItems([buyNowItem]);
           
@@ -235,6 +296,16 @@ export function CheckoutFlowProviderInner({ children }: { children: React.ReactN
             timestamp: Date.now(),
             sessionId: `cart_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
           };
+          
+          // 🔑 FIXED: Validate flow separation before setting state
+          if (!validateFlowSeparation(flow, validCartItems)) {
+            console.error('[CheckoutFlowManager] ❌ Flow separation validation failed, clearing state');
+            setCurrentFlow(null);
+            setCheckoutItems([]);
+            setIsLoading(false);
+            return;
+          }
+          
           setCurrentFlow(flow);
           setCheckoutItems(validCartItems);
           

@@ -2,13 +2,33 @@
 import React, { useState } from 'react'
 import { Gift } from 'lucide-react'
 
-export default function OrderSummary({ cartItems, coupon, summary, offerDetails }: any) {
+export default function OrderSummary({ cartItems, coupon, summary, offerDetails, mode = 'cart' }: any) {
   const [open, setOpen] = useState(true)
+  
+  // 🔑 FIXED: Ensure strict data separation based on checkout mode
+  const isBuyNowMode = mode === 'buy-now';
+  const displayItems = cartItems || [];
+  
+  // Debug logging for data source verification
+  console.log(`[OrderSummary] Mode: ${mode}, Items count: ${displayItems.length}`, {
+    mode,
+    isBuyNowMode,
+    itemsCount: displayItems.length,
+    firstItem: displayItems[0] ? {
+      name: displayItems[0].name,
+      price: displayItems[0].price,
+      quantity: displayItems[0].quantity,
+      size: displayItems[0].size
+    } : null
+  });
+  
   return (
     <div className="bg-white p-4 rounded-xl shadow-sm border md:sticky md:top-20">
-      <h3 className="text-lg font-semibold mb-4">Order Summary</h3>
+      <h3 className="text-lg font-semibold mb-4">
+        Order Summary {isBuyNowMode && <span className="text-sm text-blue-600">(Buy Now)</span>}
+      </h3>
       <div className="space-y-2 text-sm">
-        {cartItems.map((item: any) => (
+        {displayItems.map((item: any) => (
           <div key={item.id + item.size} className="flex justify-between">
             <span>{item.name} <span className="text-xs text-gray-500">({item.size})</span> x {item.quantity}</span>
             <span>₹{item.price * item.quantity}</span>
