@@ -412,17 +412,6 @@ export default function CartSidebar() {
             
             {/* Action Buttons */}
             <div className="space-y-3">
-              {/* Test button for debugging */}
-              <Button 
-                className="w-full bg-red-500 hover:bg-red-600 text-white py-2 rounded-lg text-xs" 
-                onClick={() => {
-                  console.log('🔴 [CartSidebar] TEST BUTTON CLICKED!');
-                  alert('Test button works!');
-                }}
-              >
-                🧪 TEST BUTTON (Debug)
-              </Button>
-              
               <Button 
                 className="w-full bg-[rgb(71,60,102)] hover:bg-[rgb(71,60,102)]/90 text-white py-3 sm:py-4 rounded-xl font-semibold text-sm sm:text-base shadow-lg" 
                 onClick={handleProceedToCheckout}

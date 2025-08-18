@@ -71,19 +71,59 @@ export default function CheckoutPage() {
   const displayItems = isBuyNowMode ? checkoutItems : cartItems;
   const displayMode = isBuyNowMode ? 'buy-now' : 'cart';
 
-  // 🔑 FIXED: Enhanced debug logging to track data flow and prevent contamination
+  // 🔑 FIXED: Recalculate orderSummary when displayItems change to prevent data contamination
   useEffect(() => {
-    console.log('[CheckoutPage] 🔍 DEBUG: Data Flow Analysis:', {
-      isBuyNowMode,
-      isCartMode,
-      checkoutItems: checkoutItems?.map(item => ({ name: item.name, price: item.price, quantity: item.quantity, subtotal: item.price * item.quantity })),
-      cartItems: cartItems?.map(item => ({ name: item.name, price: item.price, quantity: item.quantity, subtotal: item.price * item.quantity })),
-      displayItems: displayItems?.map(item => ({ name: item.name, price: item.price, quantity: item.quantity, subtotal: item.price * item.quantity })),
+    console.log('[CheckoutPage] 🔄 orderSummary calculation triggered:', {
+      displayItems: displayItems?.map(item => ({ name: item.name, price: item.price, quantity: item.quantity })),
       displayMode,
-      displayItemsSource: isBuyNowMode ? 'checkoutItems (buy-now)' : 'cartItems (cart)',
-      displayItemsTotal: displayItems?.reduce((sum, item) => sum + (item.price * item.quantity), 0) || 0
+      hasOfferDetails: !!offerDetails,
+      hasCoupon: !!coupon,
+      hasShipping: !!shipping
     });
-  }, [isBuyNowMode, isCartMode, checkoutItems, cartItems, displayItems, displayMode]);
+    
+    if (displayItems && displayItems.length > 0) {
+      const rawSubtotal = displayItems.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
+      
+      // Offer discount from backend calculation
+      const offerDiscount = offerDetails?.offerDiscount || 0;
+
+      // Apply coupon on the amount after offer discount
+      const amountAfterOffer = rawSubtotal - offerDiscount;
+      const couponDiscount = coupon ? Math.round((amountAfterOffer * coupon.discountPercentage) / 100) : 0;
+
+      // Calculate shipping using new shipping logic
+      const shippingCalculation = calculateShippingCost(displayItems, shipping as ShippingInfo);
+      const shippingCost = shippingCalculation.shippingCost;
+
+      // Final total: use computed values to avoid drift
+      const total = amountAfterOffer - couponDiscount + shippingCost;
+
+      const newOrderSummary = { 
+        subtotal: rawSubtotal, 
+        discount: couponDiscount, 
+        shipping: shippingCost, 
+        total,
+        shippingMessage: shippingCalculation.shippingMessage,
+        isFreeShipping: shippingCalculation.isFreeShipping
+      };
+
+      setOrderSummary(newOrderSummary);
+      
+      console.log('[CheckoutPage] ✅ Recalculated orderSummary from displayItems:', {
+        displayMode,
+        displayItemsCount: displayItems.length,
+        rawSubtotal,
+        offerDiscount,
+        amountAfterOffer,
+        couponDiscount,
+        shippingCost,
+        total,
+        newOrderSummary
+      });
+    } else {
+      console.log('[CheckoutPage] ⚠️ No displayItems available for orderSummary calculation');
+    }
+  }, [displayItems, coupon, shipping, offerDetails, displayMode]);
   
   // 🔑 DEBUG: Additional logging to see raw data sources
   useEffect(() => {
@@ -221,33 +261,79 @@ export default function CheckoutPage() {
 
   // PhonePe payment handler
   async function handlePhonePePayment() {
+    console.log('[CheckoutPage] 🚀 Starting PhonePe payment process...');
+    console.log('[CheckoutPage] 📊 Payment data:', {
+      orderSummary,
+      displayItems,
+      displayMode,
+      shipping,
+      coupon,
+      user: user?.mongoId ? 'authenticated' : 'guest'
+    });
+    
     setProcessing(true);
     setPaymentError(null);
+    
     try {
+      // Validate required data
+      if (!orderSummary || !orderSummary.total || orderSummary.total <= 0) {
+        throw new Error('Invalid order total. Please check your order summary.');
+      }
+      
+      if (!displayItems || displayItems.length === 0) {
+        throw new Error('No items found for checkout. Please refresh the page.');
+      }
+      
+      if (!shipping || !shipping.fullName || !shipping.email || !shipping.phone) {
+        throw new Error('Please complete your shipping information before proceeding.');
+      }
+      
+      console.log('[CheckoutPage] ✅ Data validation passed, creating payment session...');
+      
       // 1. Create PhonePe payment session on backend
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
       const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + '/api/payment/phonepe/create-session';
+      
+      const paymentData = {
+        amount: orderSummary.total,
+        shipping,
+        cartItems: displayItems, // Use displayItems instead of cartItems
+        coupon,
+        userId: user?.mongoId,
+        email: user?.email || shipping.email,
+        checkoutMode: displayMode, // Add checkout mode for backend
+        orderSummary: {
+          subtotal: orderSummary.subtotal,
+          discount: orderSummary.discount,
+          shipping: orderSummary.shipping,
+          total: orderSummary.total
+        }
+      };
+      
+      console.log('[CheckoutPage] 📤 Sending payment data to backend:', paymentData);
+      
       const res = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
-        body: JSON.stringify({
-          amount: orderSummary.total,
-          shipping,
-          cartItems,
-          coupon,
-          userId: user?.mongoId,
-          email: user?.email,
-        })
+        body: JSON.stringify(paymentData)
       });
+      
       const data = await res.json();
-      if (!res.ok || !data.redirectUrl) throw new Error(data.message || 'Failed to create payment session');
+      console.log('[CheckoutPage] 📥 Backend response:', data);
+      
+      if (!res.ok || !data.redirectUrl) {
+        throw new Error(data.message || 'Failed to create payment session');
+      }
 
+      console.log('[CheckoutPage] ✅ Payment session created, redirecting to PhonePe...');
+      
       // 2. Redirect to PhonePe payment page
       window.location.href = data.redirectUrl;
     } catch (err: any) {
+      console.error('[CheckoutPage] ❌ Payment error:', err);
       setPaymentError(err.message || 'Payment failed. Try again.');
       setProcessing(false);
     }
@@ -475,10 +561,30 @@ export default function CheckoutPage() {
                 type="button"
                 className="w-full bg-[rgb(71,60,102)] hover:bg-[rgb(71,60,102)]/90 text-white text-lg font-semibold rounded-xl py-3 mt-4 transition disabled:opacity-60 disabled:cursor-not-allowed"
                 onClick={handlePhonePePayment}
-                disabled={processing}
+                disabled={processing || !orderSummary?.total || orderSummary.total <= 0 || !shipping?.fullName || !shipping?.email || !shipping?.phone}
               >
-                {processing ? <span className="loading loading-spinner loading-md"></span> : 'Confirm Order'}
+                {processing ? (
+                  <span className="loading loading-spinner loading-md"></span>
+                ) : !orderSummary?.total || orderSummary.total <= 0 ? (
+                  'Complete Order Details'
+                ) : !shipping?.fullName || !shipping?.email || !shipping?.phone ? (
+                  'Complete Shipping Info'
+                ) : (
+                  'Confirm Order'
+                )}
               </button>
+              
+              {/* Help text when button is disabled */}
+              {(!orderSummary?.total || orderSummary.total <= 0) && (
+                <p className="text-xs text-gray-500 text-center mt-2">
+                  Please wait for order details to load...
+                </p>
+              )}
+              {orderSummary?.total && orderSummary.total > 0 && (!shipping?.fullName || !shipping?.email || !shipping?.phone) && (
+                <p className="text-xs text-gray-500 text-center mt-2">
+                  Please complete your shipping information above
+                </p>
+              )}
             </div>
           </div>
         )}
