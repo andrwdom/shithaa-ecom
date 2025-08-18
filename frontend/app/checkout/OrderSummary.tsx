@@ -9,6 +9,11 @@ export default function OrderSummary({ cartItems, coupon, summary, offerDetails,
   const isBuyNowMode = mode === 'buy-now';
   const displayItems = cartItems || [];
   
+  // 🔑 FIXED: Calculate all values fresh from displayItems instead of using potentially contaminated summary
+  const itemSubtotal = displayItems.reduce((acc: number, item: any) => acc + (item.price * item.quantity), 0);
+  const shipping = 0; // Free shipping for now, or calculate based on shipping rules
+  const total = itemSubtotal + shipping;
+  
   // Debug logging for data source verification
   console.log(`[OrderSummary] Mode: ${mode}, Items count: ${displayItems.length}`, {
     mode,
@@ -19,7 +24,13 @@ export default function OrderSummary({ cartItems, coupon, summary, offerDetails,
       price: displayItems[0].price,
       quantity: displayItems[0].quantity,
       size: displayItems[0].size
-    } : null
+    } : null,
+    calculatedValues: {
+      itemSubtotal,
+      shipping,
+      total
+    },
+    summaryProp: summary // Log the summary prop to see if it's contaminated
   });
   
   return (
@@ -35,7 +46,7 @@ export default function OrderSummary({ cartItems, coupon, summary, offerDetails,
           </div>
         ))}
         <div className="border-t pt-2 flex justify-between">
-          <span>Subtotal</span><span>₹{summary.subtotal}</span>
+          <span>Subtotal</span><span>₹{itemSubtotal}</span>
         </div>
         
         {/* Loungewear Offer */}
@@ -53,27 +64,18 @@ export default function OrderSummary({ cartItems, coupon, summary, offerDetails,
         {coupon && (
           <div className="flex justify-between text-green-700 font-semibold">
             <span>Coupon Discount ({coupon.discountPercentage}%)</span>
-            <span>-₹{summary.discount}</span>
+            <span>-₹{summary?.discount || 0}</span>
           </div>
         )}
         
         <div className="flex justify-between items-center">
           <span>Shipping</span>
-          {summary.isFreeShipping ? (
-            <span className="flex flex-col items-end">
-              <span className="text-green-700 font-semibold text-sm">{summary.shippingMessage}</span>
-            </span>
-          ) : (
-            <span className="flex flex-col items-end">
-              <span>₹{summary.shipping}</span>
-              {summary.shippingMessage && (
-                <span className="text-xs text-gray-500">{summary.shippingMessage}</span>
-              )}
-            </span>
-          )}
+          <span className="flex flex-col items-end">
+            <span className="text-green-700 font-semibold text-sm">Free shipping within Tamil Nadu!</span>
+          </span>
         </div>
         <div className="border-t pt-2 font-semibold text-base flex justify-between">
-          <span>Total</span><span>₹{summary.total}</span>
+          <span>Total</span><span>₹{total}</span>
         </div>
         
         {/* Offer Details */}

@@ -71,6 +71,46 @@ export default function CheckoutPage() {
   const displayItems = isBuyNowMode ? checkoutItems : cartItems;
   const displayMode = isBuyNowMode ? 'buy-now' : 'cart';
 
+  // 🔑 FIXED: Recalculate orderSummary when displayItems change to prevent data contamination
+  useEffect(() => {
+    if (displayItems && displayItems.length > 0) {
+      const rawSubtotal = displayItems.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
+      
+      // Offer discount from backend calculation
+      const offerDiscount = offerDetails?.offerDiscount || 0;
+
+      // Apply coupon on the amount after offer discount
+      const amountAfterOffer = rawSubtotal - offerDiscount;
+      const couponDiscount = coupon ? Math.round((amountAfterOffer * coupon.discountPercentage) / 100) : 0;
+
+      // Calculate shipping using new shipping logic
+      const shippingCalculation = calculateShippingCost(displayItems, shipping as ShippingInfo);
+      const shippingCost = shippingCalculation.shippingCost;
+
+      // Final total: use computed values to avoid drift
+      const total = amountAfterOffer - couponDiscount + shippingCost;
+
+      setOrderSummary({ 
+        subtotal: rawSubtotal, 
+        discount: couponDiscount, 
+        shipping: shippingCost, 
+        total,
+        shippingMessage: shippingCalculation.shippingMessage,
+        isFreeShipping: shippingCalculation.isFreeShipping
+      });
+      
+      console.log('[CheckoutPage] ✅ Recalculated orderSummary from displayItems:', {
+        displayMode,
+        displayItemsCount: displayItems.length,
+        rawSubtotal,
+        offerDiscount,
+        couponDiscount,
+        shippingCost,
+        total
+      });
+    }
+  }, [displayItems, coupon, shipping, offerDetails, displayMode]);
+
   // Debug logging
   useEffect(() => {
     console.log("Checkout Debug:", {
@@ -190,36 +230,6 @@ export default function CheckoutPage() {
       window.removeEventListener('beforeunload', handleBeforeUnload)
     }
   }, [])
-
-  useEffect(() => {
-    // Subtotal should be the original sum before offers
-    const rawSubtotal = (typeof cartSubtotal === 'number' && cartSubtotal > 0)
-      ? cartSubtotal
-      : cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-
-    // Offer discount from backend calculation
-    const offerDiscount = offerDetails?.offerDiscount || 0;
-
-    // Apply coupon on the amount after offer discount
-    const amountAfterOffer = rawSubtotal - offerDiscount;
-    const couponDiscount = coupon ? Math.round((amountAfterOffer * coupon.discountPercentage) / 100) : 0;
-
-    // Calculate shipping using new shipping logic
-    const shippingCalculation = calculateShippingCost(cartItems, shipping as ShippingInfo);
-    const shippingCost = shippingCalculation.shippingCost;
-
-    // Final total: use computed values to avoid drift
-    const total = amountAfterOffer - couponDiscount + shippingCost;
-
-    setOrderSummary({ 
-      subtotal: rawSubtotal, 
-      discount: couponDiscount, 
-      shipping: shippingCost, 
-      total,
-      shippingMessage: shippingCalculation.shippingMessage,
-      isFreeShipping: shippingCalculation.isFreeShipping
-    });
-  }, [cartItems, coupon, shipping, cartSubtotal, offerDetails]);
 
   // PhonePe payment handler
   async function handlePhonePePayment() {
@@ -422,7 +432,6 @@ export default function CheckoutPage() {
               <OrderSummary 
                 cartItems={displayItems} 
                 coupon={coupon} 
-                summary={orderSummary} 
                 offerDetails={offerDetails}
                 mode={displayMode}
               />
