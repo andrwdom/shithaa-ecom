@@ -85,10 +85,10 @@ const TestimonialCard = ({ testimonial, index, isActive }: TestimonialCardProps)
       className="flex-shrink-0 w-64 md:w-80 lg:w-96 mx-4 md:mx-6 relative"
       initial={{ opacity: 0, y: 50, rotateY: -15 }}
       animate={{
-        opacity: isActive ? 1 : 0.7,
+        opacity: 1, // Remove opacity reduction to prevent white tint
         y: 0,
         rotateY: 0,
-        scale: isActive ? 1 : 0.95,
+        scale: isActive ? 1 : 0.98, // Reduce scale difference instead of opacity
       }}
       transition={{ duration: 0.8, ease: "easeOut" }}
       style={{ transform: `rotate(${rotation}deg)` }}
@@ -97,7 +97,7 @@ const TestimonialCard = ({ testimonial, index, isActive }: TestimonialCardProps)
     >
       {/* Container without overlay */}
       <motion.div
-        className="relative rounded-2xl md:rounded-3xl p-4 md:p-6"
+        className="relative rounded-2xl md:rounded-3xl p-4 md:p-6 bg-white/90 backdrop-blur-sm shadow-lg"
         whileHover={{
           scale: 1.02,
           rotateZ: 0,
@@ -121,24 +121,21 @@ const TestimonialCard = ({ testimonial, index, isActive }: TestimonialCardProps)
         </AnimatePresence>
 
         {/* Instagram DM Screenshot */}
-        <div className="relative rounded-xl md:rounded-2xl overflow-hidden">
+        <div className="relative rounded-xl md:rounded-2xl overflow-hidden bg-white">
           <Image
             src={testimonial.image}
             alt={`Customer testimonial ${index + 1} - Instagram DM screenshot`}
             width={400}
             height={600}
             className="w-full h-[300px] md:h-[400px] lg:h-[500px] object-cover"
+            style={{ filter: 'none' }} // Ensure no filters are applied
           />
-
-
 
           {/* Instagram indicator */}
           <div className="absolute top-3 md:top-4 right-3 md:right-4 bg-black/80 rounded-full p-1.5 md:p-2 shadow-lg">
             <Instagram className="w-3 h-3 md:w-4 md:h-4 text-white" />
           </div>
         </div>
-
-
       </motion.div>
     </motion.div>
   )
