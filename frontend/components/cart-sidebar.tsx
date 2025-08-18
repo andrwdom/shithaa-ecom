@@ -136,9 +136,35 @@ export default function CartSidebar() {
 
   // Function to handle checkout from cart
   const handleProceedToCheckout = () => {
-    clearBuyNowItem();
-    closeCartSidebar();
-    setCheckoutFlow('cart');
+    console.log('🔴 [CartSidebar] BUTTON CLICKED - handleProceedToCheckout function called!');
+    console.log('[CartSidebar] 🚀 Proceeding to checkout from cart...');
+    console.log('[CartSidebar] 📊 Cart items count:', cartItems.length);
+    console.log('[CartSidebar] 📊 Cart total:', cartTotal);
+    
+    try {
+      // Clear any buy-now items to prevent contamination
+      clearBuyNowItem();
+      console.log('[CartSidebar] ✅ Buy-now items cleared');
+      
+      // Set the checkout flow to cart mode
+      setCheckoutFlow('cart');
+      console.log('[CartSidebar] ✅ Checkout flow set to cart mode');
+      
+      // Close the cart sidebar
+      closeCartSidebar();
+      console.log('[CartSidebar] ✅ Cart sidebar closed');
+      
+      // Navigate to checkout page
+      console.log('[CartSidebar] 🔄 Navigating to checkout page...');
+      router.push('/checkout');
+      console.log('[CartSidebar] ✅ Navigation initiated');
+    } catch (error) {
+      console.error('[CartSidebar] ❌ Error during checkout process:', error);
+      
+      // Fallback navigation
+      console.log('[CartSidebar] 🔄 Attempting fallback navigation...');
+      window.location.href = '/checkout';
+    }
   };
 
   if (!isCartSidebarOpen) return null;
@@ -386,6 +412,17 @@ export default function CartSidebar() {
             
             {/* Action Buttons */}
             <div className="space-y-3">
+              {/* Test button for debugging */}
+              <Button 
+                className="w-full bg-red-500 hover:bg-red-600 text-white py-2 rounded-lg text-xs" 
+                onClick={() => {
+                  console.log('🔴 [CartSidebar] TEST BUTTON CLICKED!');
+                  alert('Test button works!');
+                }}
+              >
+                🧪 TEST BUTTON (Debug)
+              </Button>
+              
               <Button 
                 className="w-full bg-[rgb(71,60,102)] hover:bg-[rgb(71,60,102)]/90 text-white py-3 sm:py-4 rounded-xl font-semibold text-sm sm:text-base shadow-lg" 
                 onClick={handleProceedToCheckout}
