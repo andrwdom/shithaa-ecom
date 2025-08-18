@@ -51,17 +51,6 @@ const Login = ({setToken}) => {
             </div>
             <h1 className='text-2xl font-bold mb-6 text-theme-600 text-center'>Admin Panel</h1>
             
-            {/* Admin Credentials Info */}
-            <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <p className="text-sm text-blue-800 mb-2">
-                    <strong>Admin Credentials:</strong>
-                </p>
-                <p className="text-xs text-blue-700">
-                    Email: info.shithaa@gmail.com<br/>
-                    Password: shithaaweb@14525!
-                </p>
-            </div>
-            
             <form onSubmit={onSubmitHandler} className="space-y-4">
                 <div className=''>
                     <p className='text-sm font-medium text-theme-700 mb-2'>Email Address</p>
