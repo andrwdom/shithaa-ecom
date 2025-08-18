@@ -78,12 +78,6 @@ export default async function CategoryPage({ params }: { params: Promise<{ categ
               {
                 "@type": "ListItem",
                 "position": 2,
-                "name": "Collections",
-                "item": "https://shithaa.in/collections"
-              },
-              {
-                "@type": "ListItem",
-                "position": 3,
                 "name": categoryName,
                 "item": `https://shithaa.in/collections/${categorySlug}`
               }

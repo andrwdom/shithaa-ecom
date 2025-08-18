@@ -210,10 +210,6 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
                   Home
                 </Button>
                 <ChevronRight className="h-4 w-4" />
-                <Button variant="link" size="sm" className="p-0 h-auto" onClick={() => (window.location.href = "/collections")}>
-                  Collections
-                </Button>
-                <ChevronRight className="h-4 w-4" />
                 <Button 
                   variant="link" 
                   size="sm" 
@@ -332,18 +328,12 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
                     {
                       "@type": "ListItem",
                       "position": 2,
-                      "name": "Collections",
-                      "item": "https://shithaa.in/collections"
-                    },
-                    {
-                      "@type": "ListItem",
-                      "position": 3,
                       "name": product.category || "Product",
                       "item": `https://shithaa.in/collections/${(product.category || "product").toLowerCase().replace(/ /g, '-')}`
                     },
                     {
                       "@type": "ListItem",
-                      "position": 4,
+                      "position": 3,
                       "name": product.name,
                       "item": `https://shithaa.in/product/${productId}`
                     }

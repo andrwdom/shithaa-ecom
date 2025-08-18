@@ -480,10 +480,6 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
                   Home
                 </Button>
                 <ChevronRight className="h-4 w-4" />
-                <Button variant="ghost" size="sm" onClick={() => (window.location.href = "/collections")}>
-                  Collections
-                </Button>
-                <ChevronRight className="h-4 w-4" />
                 <span className="text-gray-900 font-medium">{categoryName}</span>
               </div>
             </div>
