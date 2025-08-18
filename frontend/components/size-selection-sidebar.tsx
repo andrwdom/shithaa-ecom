@@ -5,15 +5,19 @@ import { X, Plus, Minus, ShoppingBag } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
 import { useCart } from "@/components/cart-context"
+import { useBuyNow } from "@/components/buy-now-context"
+import { useCheckoutFlow } from "@/components/checkout-flow-manager"
 
 interface Product {
   id: number
+  _id: string
   name: string
   price: number
   originalPrice: number
   image: string
   images?: string[]
   category: string
+  categorySlug?: string
   description: string
   sizes: { size: string; stock: number }[]
   availableSizes?: string[]
@@ -34,9 +38,12 @@ export default function SizeSelectionSidebar({
   onAddToCart,
   onBuyNow,
 }: SizeSelectionSidebarProps) {
+  
   const [selectedSize, setSelectedSize] = useState("")
   const [quantity, setQuantity] = useState(1)
   const { cartItems } = useCart()
+  const { setBuyNowItem } = useBuyNow()
+  const { setCheckoutFlow } = useCheckoutFlow()
 
   // Reset state when sidebar opens
   useEffect(() => {
@@ -119,7 +126,54 @@ export default function SizeSelectionSidebar({
       return
     }
     
-    onBuyNow(product, selectedSize, quantity)
+    // 🔑 FIXED: Implement proper Buy Now logic matching product page exactly
+    const buyNowItem = {
+      id: (product._id || product.id)?.toString() || product._id,
+      _id: (product._id || product.id)?.toString() || product._id,
+      name: product.name,
+      price: product.price,
+      quantity,
+      size: selectedSize,
+      image: product.images?.[0] || product.image || "/placeholder.svg",
+      categorySlug: product.categorySlug,
+      category: product.category
+    };
+    
+    console.log('🛒 [SizeSelectionSidebar] Setting buy-now item:', buyNowItem);
+    
+    // Set buy now item in context
+    setBuyNowItem(buyNowItem);
+    
+    // Also manually save to storage to ensure persistence (EXACTLY like product page)
+    const buyNowData = {
+      flow: {
+        mode: 'buy-now',
+        items: [buyNowItem],
+        source: 'buy-now',
+        timestamp: Date.now(),
+        sessionId: `buynow_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      },
+      items: [buyNowItem],
+      timestamp: Date.now()
+    };
+    
+    // Save to multiple storage locations for maximum persistence
+    sessionStorage.setItem('buyNowItem', JSON.stringify(buyNowItem));
+    localStorage.setItem('buyNowItem', JSON.stringify(buyNowItem));
+    sessionStorage.setItem('buyNowCheckoutData', JSON.stringify(buyNowData));
+    localStorage.setItem('buyNowCheckoutData', JSON.stringify(buyNowData));
+    
+    console.log('💾 [SizeSelectionSidebar] Buy-now item saved to storage before navigation');
+    
+    // Navigate to checkout using the checkout flow manager
+    setCheckoutFlow('buy-now');
+    
+    // Small delay to ensure storage is written before navigation
+    setTimeout(() => {
+      console.log('🚀 [SizeSelectionSidebar] Navigating to buy-now checkout');
+      window.location.href = '/checkout?mode=buynow';
+    }, 100);
+    
     onClose()
   }
 
