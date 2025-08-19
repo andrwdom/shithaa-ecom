@@ -175,17 +175,21 @@ export default function Footer() {
 
         <div className="border-t border-gray-800 mt-16 pt-8 text-center">
           <p className="text-gray-400">&copy; 2024 Shithaa. All rights reserved. Made with 💕 for mothers everywhere.</p>
-          <p className="text-gray-400 mt-2 text-sm">
-            Site by{' '}
-            <a
-              href="https://www.instagram.com/elev8max/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-semibold hover:underline transition-all duration-200 elev8max-gold"
-            >
-              Elev8Max
-            </a>
-          </p>
+          
+          {/* Agency Credit with Better Spacing and Styling */}
+          <div className="mt-8 pt-6 border-t border-gray-700">
+            <p className="text-gray-500 text-sm">
+              Site by{' '}
+              <a
+                href="https://www.instagram.com/elev8max/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center font-bold hover:opacity-80 transition-all duration-300 elev8max-gold text-base tracking-wide"
+              >
+                Elev8Max
+              </a>
+            </p>
+          </div>
         </div>
       </div>
     </footer>
