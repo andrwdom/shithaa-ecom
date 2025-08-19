@@ -149,32 +149,49 @@ function PhonePeCallbackInner() {
             console.log('Payment successful, creating order from payment session')
             
             try {
-              // Try to get order data from multiple storage locations
+              // Try to get order data from multiple storage locations with priority
               let pendingOrderData = storedOrderData || 
-                                   sessionStorage.getItem('pendingOrderData') ||
                                    localStorage.getItem('pendingOrderData') ||
+                                   sessionStorage.getItem('pendingOrderData') ||
                                    localStorage.getItem('phonepeOrderData')
               
+              console.log('🔍 ORDER DATA RETRIEVAL DEBUG:')
+              console.log('- storedOrderData:', !!storedOrderData)
+              console.log('- pendingOrderData (localStorage):', !!localStorage.getItem('pendingOrderData'))
+              console.log('- pendingOrderData (sessionStorage):', !!sessionStorage.getItem('pendingOrderData'))
+              console.log('- phonepeOrderData:', !!localStorage.getItem('phonepeOrderData'))
+              console.log('- buyNowItem:', !!localStorage.getItem('phonepeBuyNowItem'))
+              console.log('- cartItems:', !!localStorage.getItem('phonepeCartItems'))
+              
               if (!pendingOrderData) {
-                console.log('Order data not found in storage, trying to reconstruct...')
+                console.log('Order data not found in primary storage, trying to reconstruct...')
                 pendingOrderData = reconstructOrderData()
+                console.log('Reconstruction result:', !!pendingOrderData)
               }
               
               if (pendingOrderData) {
                 const orderData = JSON.parse(pendingOrderData)
-                console.log('Parsed order data:', orderData)
+                console.log('✅ Parsed order data successfully:', {
+                  hasShipping: !!orderData.shipping,
+                  hasCartItems: !!orderData.cartItems,
+                  cartItemsCount: orderData.cartItems?.length || 0,
+                  hasAmount: !!orderData.amount,
+                  amount: orderData.amount,
+                  email: orderData.email || orderData.shipping?.email
+                })
                 
                 // Validate that we have the basic data needed
                 if (!orderData.shipping?.fullName) {
-                  throw new Error('Shipping name is missing')
+                  throw new Error('Shipping name is missing from order data')
                 }
                 if (!orderData.cartItems || orderData.cartItems.length === 0) {
-                  throw new Error('Order items are missing')
+                  throw new Error('Order items are missing from order data')
                 }
-                if (!orderData.amount) {
-                  throw new Error('Total amount is missing')
+                if (!orderData.amount || orderData.amount <= 0) {
+                  throw new Error('Total amount is missing or invalid from order data')
                 }
                 
+                console.log('✅ Order data validation passed, proceeding with order creation')
                 console.log('Creating order from payment session for transaction:', transactionId)
                 
                 const createOrderRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/payment/phonepe/create-order`, {
@@ -190,7 +207,7 @@ function PhonePeCallbackInner() {
                 
                 if (createOrderRes.ok) {
                   const orderResult = await createOrderRes.json()
-                  console.log('Order creation response data:', orderResult)
+                  console.log('✅ Order creation successful:', orderResult)
                   
                   if (orderResult.success && orderResult.order) {
                     setStatus('success')
@@ -221,10 +238,17 @@ function PhonePeCallbackInner() {
                   throw new Error('Order creation failed: ' + (errorData.message || `HTTP ${createOrderRes.status}`))
                 }
               } else {
-                throw new Error('Could not retrieve order data for order creation')
+                console.error('❌ CRITICAL: No order data available for order creation')
+                console.error('Available storage keys:', Object.keys(localStorage).filter(key => key.includes('phonepe') || key.includes('order')))
+                throw new Error('Could not retrieve order data for order creation - no data found in any storage location')
               }
             } catch (orderError: any) {
-              console.error('Order creation error:', orderError)
+              console.error('❌ Order creation error:', orderError)
+              console.error('Order error details:', {
+                message: orderError.message,
+                stack: orderError.stack,
+                transactionId: transactionId
+              })
               // Order creation failed - redirect to PaymentFailed page
               redirectToPaymentFailed(transactionId, `Order creation failed: ${orderError.message}`, null, storedOrderData)
               return
@@ -280,31 +304,61 @@ function PhonePeCallbackInner() {
       // Try to reconstruct from cart/buy-now items
       const buyNowItem = localStorage.getItem('phonepeBuyNowItem')
       const cartItems = localStorage.getItem('phonepeCartItems')
+      const pendingOrderData = localStorage.getItem('pendingOrderData')
       
+      // PRIORITY 1: Use pendingOrderData if available (most complete)
+      if (pendingOrderData) {
+        try {
+          const parsed = JSON.parse(pendingOrderData)
+          console.log('Using pendingOrderData for reconstruction:', parsed)
+          return pendingOrderData
+        } catch (error) {
+          console.error('Error parsing pendingOrderData:', error)
+        }
+      }
+      
+      // PRIORITY 2: Use phonepeOrderData if available
+      const phonepeOrderData = localStorage.getItem('phonepeOrderData')
+      if (phonepeOrderData) {
+        try {
+          const parsed = JSON.parse(phonepeOrderData)
+          console.log('Using phonepeOrderData for reconstruction:', parsed)
+          return phonepeOrderData
+        } catch (error) {
+          console.error('Error parsing phonepeOrderData:', error)
+        }
+      }
+      
+      // PRIORITY 3: Reconstruct from buy-now item
       if (buyNowItem) {
         const buyNow = JSON.parse(buyNowItem)
+        console.log('Reconstructing from buy-now item:', buyNow)
         return JSON.stringify({
           isBuyNow: true,
           cartItems: [buyNow],
           amount: buyNow.price * buyNow.quantity,
           email: buyNow.email || 'guest@example.com',
           shipping: {
-            fullName: 'Guest User',
+            fullName: buyNow.shipping?.fullName || 'Guest User',
             email: buyNow.email || 'guest@example.com',
-            phone: '0000000000',
-            addressLine1: 'Guest Address',
-            addressLine2: '',
-            city: 'Guest City',
-            state: 'Guest State',
-            postalCode: '000000',
-            country: 'India'
+            phone: buyNow.shipping?.phone || '0000000000',
+            addressLine1: buyNow.shipping?.addressLine1 || 'Guest Address',
+            addressLine2: buyNow.shipping?.addressLine2 || '',
+            city: buyNow.shipping?.city || 'Guest City',
+            state: buyNow.shipping?.state || 'Guest State',
+            postalCode: buyNow.shipping?.postalCode || '000000',
+            country: buyNow.shipping?.country || 'India'
           },
-          userId: null,
+          userId: buyNow.userId || null,
           timestamp: Date.now()
         })
-      } else if (cartItems) {
+      } 
+      
+      // PRIORITY 4: Reconstruct from cart items
+      if (cartItems) {
         const cart = JSON.parse(cartItems)
         const total = cart.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0)
+        console.log('Reconstructing from cart items:', cart)
         return JSON.stringify({
           isBuyNow: false,
           cartItems: cart,
@@ -325,10 +379,13 @@ function PhonePeCallbackInner() {
           timestamp: Date.now()
         })
       }
+      
+      console.log('No order data found in any storage location')
+      return null
     } catch (error) {
       console.error('Error reconstructing order data:', error)
+      return null
     }
-    return null
   }
 
   // Function to redirect to payment failed page with proper data
