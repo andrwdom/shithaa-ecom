@@ -59,7 +59,7 @@ export const metadata: Metadata = {
     "nursing dresses",
     "maternity fashion India"
   ],
-  authors: [{ name: "Shithaa" }],
+  authors: [{ name: "Shithaa" }, { name: "Elev8Max" }],
   creator: "Shithaa",
   publisher: "Shithaa",
   formatDetection: {
@@ -164,6 +164,11 @@ export default function RootLayout({
               "sameAs": [
                 "https://instagram.com/shithaa.in"
               ],
+              "creator": {
+                "@type": "Organization",
+                "name": "Elev8Max",
+                "url": "https://www.instagram.com/elev8max/"
+              },
               "foundingDate": "2023",
               "industry": "Fashion & Apparel",
               "numberOfEmployees": "10-50"

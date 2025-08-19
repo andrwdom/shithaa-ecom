@@ -97,6 +97,23 @@ const App = () => {
                   </Routes>
                 </div>
               </div>
+              
+              {/* Admin Panel Footer */}
+              <footer className="mt-auto py-6 bg-gray-800 text-white text-center">
+                <div className="max-w-7xl mx-auto px-4">
+                  <p className="text-gray-400 text-sm">
+                    Site by{' '}
+                    <a
+                      href="https://www.instagram.com/elev8max/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-semibold hover:underline transition-all duration-200 elev8max-gold"
+                    >
+                      Elev8Max
+                    </a>
+                  </p>
+                </div>
+              </footer>
             </>
           )
         }

@@ -98,6 +98,14 @@
     @apply py-12 lg:py-16 xl:py-20;
   }
 
+  .elev8max-gold {
+    color: #F4CE01 !important;
+  }
+
+  .elev8max-gold:hover {
+    color: #E6C200 !important;
+  }
+
   .spacing-component {
     @apply mb-8 lg:mb-12 xl:mb-16;
   }
