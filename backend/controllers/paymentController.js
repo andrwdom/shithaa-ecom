@@ -171,8 +171,23 @@ export const createPhonePeSession = async (req, res) => {
       
       // Reserve stock for each item atomically
       for (const item of cartItems) {
-        await reserveStock(item._id, item.size, item.quantity);
-        console.log(`Stock reserved: ${item.name} ${item.size} x${item.quantity}`);
+        try {
+          await reserveStock(item._id, item.size, item.quantity);
+          console.log(`Stock reserved: ${item.name} ${item.size} x${item.quantity}`);
+        } catch (itemStockError) {
+          console.error(`Stock reservation failed for ${item.name} ${item.size}:`, itemStockError);
+          // Check if it's a stock availability issue
+          const { checkStockAvailability } = await import('../utils/stock.js');
+          const stockCheck = await checkStockAvailability(item._id, item.size, item.quantity);
+          console.log('Stock availability check:', stockCheck);
+          
+          return res.status(400).json({
+            success: false,
+            message: `Stock reservation failed for ${item.name} ${item.size}`,
+            error: stockCheck.error || itemStockError.message,
+            stockInfo: stockCheck
+          });
+        }
       }
       console.log('Stock reservation successful');
     } catch (stockError) {
@@ -220,15 +235,36 @@ export const createPhonePeSession = async (req, res) => {
     // Check if PhonePe client is available
     if (!(process.env.PHONEPE_MERCHANT_ID && process.env.PHONEPE_API_KEY)) {
       console.error('PhonePe client not initialized, cannot proceed');
+      console.error('Missing environment variables:');
+      console.error('- PHONEPE_MERCHANT_ID:', process.env.PHONEPE_MERCHANT_ID ? 'SET' : 'NOT SET');
+      console.error('- PHONEPE_API_KEY:', process.env.PHONEPE_API_KEY ? 'SET' : 'NOT SET');
+      
       // Restore stock since we can't create payment
-      await restoreProductStock(cartItems);
+      try {
+        await restoreProductStock(cartItems);
+        console.log('Stock restored after PhonePe initialization failure');
+      } catch (restoreError) {
+        console.error('Failed to restore stock after PhonePe failure:', restoreError);
+      }
+      
       // Delete payment session
-      await PaymentSession.findByIdAndDelete(paymentSession._id);
+      try {
+        await PaymentSession.findByIdAndDelete(paymentSession._id);
+        console.log('Payment session deleted after PhonePe failure');
+      } catch (deleteError) {
+        console.error('Failed to delete payment session:', deleteError);
+      }
       
       return res.status(500).json({
         success: false,
         message: 'Payment service not available',
-        error: 'PhonePe client initialization failed'
+        error: 'PhonePe client initialization failed - check environment variables',
+        details: {
+          merchantId: !!process.env.PHONEPE_MERCHANT_ID,
+          apiKey: !!process.env.PHONEPE_API_KEY,
+          saltIndex: !!process.env.PHONEPE_SALT_INDEX,
+          environment: process.env.PHONEPE_ENV
+        }
       });
     }
 

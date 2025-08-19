@@ -137,7 +137,7 @@ export default function RootLayout({
         <meta name="format-detection" content="telephone=no" />
         
         {/* Preload critical images */}
-        <link rel="preload" as="image" href="/shithaa-logo.jpg" type="image/jpeg" />
+        <link rel="preload" as="image" href="/shithaa-logo.jpg" type="image/jpeg" fetchpriority="high" />
         
         {/* WebP preloads will be added after running the optimization script */}
         
