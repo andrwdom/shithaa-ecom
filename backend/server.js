@@ -24,6 +24,7 @@ import productRouter from './routes/productRoute.js'
 import cartRouter from './routes/cartRoute.js'
 import orderRouter from './routes/orderRoute.js'
 import paymentRouter from './routes/paymentRoute.js'
+import checkoutRouter from './routes/checkoutRoute.js'
 import couponRouter from './routes/couponRoutes.js'
 import carouselRouter from './routes/carouselRoutes.js'
 import categoryRouter from './routes/categoryRoute.js'
@@ -182,6 +183,7 @@ app.use('/api/products', productRouter)
 app.use('/api/cart', cartRouter)
 app.use('/api/orders', orderRouter)
 app.use('/api/payment', paymentRouter)
+app.use('/api/checkout', checkoutRouter)
 app.use('/api/coupons', couponRouter)
 app.use('/api/carousel', carouselRouter)
 app.use('/api/categories', categoryRouter)
