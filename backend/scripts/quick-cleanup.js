@@ -19,7 +19,6 @@ dotenv.config({ path: join(__dirname, '..', '.env') });
 // Import models
 import orderModel from '../models/orderModel.js';
 import userModel from '../models/userModel.js';
-import cartModel from '../models/cartModel.js';
 import wishlistModel from '../models/Wishlist.js';
 
 async function connectDB() {
@@ -45,11 +44,7 @@ async function quickCleanup() {
     const userResult = await userModel.deleteMany({});
     console.log(`🗑️  Deleted ${userResult.deletedCount} users`);
     
-    // 3. Delete all carts
-    const cartResult = await cartModel.deleteMany({});
-    console.log(`🗑️  Deleted ${cartResult.deletedCount} carts`);
-    
-    // 4. Delete all wishlists
+    // 3. Delete all wishlists
     const wishlistResult = await wishlistModel.deleteMany({});
     console.log(`🗑️  Deleted ${wishlistResult.deletedCount} wishlists`);
     

@@ -22,7 +22,7 @@ echo ""
 echo "🚀 Starting safe cleanup..."
 
 cd backend
-node scripts/safe-orders-cleanup.js
+node scripts/simple-orders-cleanup.js
 
 echo ""
 echo "✅ Orders cleaned! Users can still login and order normally."

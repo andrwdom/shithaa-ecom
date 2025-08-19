@@ -28,10 +28,9 @@ if (existsSync(envPath)) {
   dotenv.config({ path: envPath });
 }
 
-// Import models
+// Import models (only the ones that actually exist)
 import orderModel from '../models/orderModel.js';
 import userModel from '../models/userModel.js';
-import cartModel from '../models/cartModel.js';
 import wishlistModel from '../models/Wishlist.js';
 
 async function connectDB() {
@@ -59,15 +58,13 @@ async function showCurrentStats() {
   
   const orderCount = await orderModel.countDocuments();
   const userCount = await userModel.countDocuments();
-  const cartCount = await cartModel.countDocuments();
   const wishlistCount = await wishlistModel.countDocuments();
   
   console.log(`   - Orders: ${orderCount}`);
   console.log(`   - Users: ${userCount}`);
-  console.log(`   - Carts: ${cartCount}`);
   console.log(`   - Wishlists: ${wishlistCount}`);
   
-  return { orderCount, userCount, cartCount, wishlistCount };
+  return { orderCount, userCount, wishlistCount };
 }
 
 async function safeOrderCleanup() {
@@ -80,17 +77,12 @@ async function safeOrderCleanup() {
     const orderResult = await orderModel.deleteMany({});
     console.log(`✅ Deleted ${orderResult.deletedCount} orders`);
     
-    // 2. Clear empty carts (orders are gone, so carts might be empty)
-    console.log('\n🛒 Cleaning up empty carts...');
-    const emptyCarts = await cartModel.deleteMany({ items: { $size: 0 } });
-    console.log(`✅ Cleaned up ${emptyCarts.deletedCount} empty carts`);
-    
-    // 3. Clear empty wishlists (orders are gone, so wishlists might be empty)
+    // 2. Clear empty wishlists (orders are gone, so wishlists might be empty)
     console.log('\n❤️ Cleaning up empty wishlists...');
     const emptyWishlists = await wishlistModel.deleteMany({ items: { $size: 0 } });
     console.log(`✅ Cleaned up ${emptyWishlists.deletedCount} empty wishlists`);
     
-    // 4. IMPORTANT: Keep all user accounts intact
+    // 3. IMPORTANT: Keep all user accounts intact
     console.log('\n👤 Preserving all user accounts (Google accounts, etc.)...');
     const userCount = await userModel.countDocuments();
     console.log(`✅ Kept ${userCount} user accounts intact`);
@@ -124,17 +116,13 @@ async function verifyFunctionality() {
       console.log(`⚠️  Warning: ${orderCount} orders still exist`);
     }
     
-    // Check if carts are clean
-    const cartCount = await cartModel.countDocuments();
-    console.log(`✅ Cart system ready: ${cartCount} active carts`);
-    
     // Check if wishlists are clean
     const wishlistCount = await wishlistModel.countDocuments();
     console.log(`✅ Wishlist system ready: ${wishlistCount} active wishlists`);
     
     console.log('\n🎯 System Status: READY FOR NEW ORDERS');
     console.log('   - Users can login with their Google accounts');
-    console.log('   - Cart functionality preserved');
+    console.log('   - Cart functionality preserved (handled by controller)');
     console.log('   - Wishlist functionality preserved');
     console.log('   - Order placement will work normally');
     console.log('   - All previous test orders removed');
@@ -165,7 +153,7 @@ async function main() {
     console.log('\n⚠️  CONFIRMATION REQUIRED:');
     console.log('   This will delete ALL orders but keep:');
     console.log('   ✅ User accounts (Google accounts)');
-    console.log('   ✅ Cart functionality');
+    console.log('   ✅ Cart functionality (handled by controller)');
     console.log('   ✅ Wishlist functionality');
     console.log('   ✅ All other system features');
     console.log('');

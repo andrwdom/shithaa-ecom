@@ -27,7 +27,6 @@ if (existsSync(envPath)) {
 // Import models
 import orderModel from '../models/orderModel.js';
 import userModel from '../models/userModel.js';
-import cartModel from '../models/cartModel.js';
 import wishlistModel from '../models/Wishlist.js';
 
 // Test order identifiers
@@ -261,7 +260,6 @@ async function cleanupTestData() {
       const userIds = testUsers.map(user => user._id);
       
       // Delete related data first
-      await cartModel.deleteMany({ userId: { $in: userIds } });
       await wishlistModel.deleteMany({ userId: { $in: userIds } });
       
       // Delete users
@@ -271,13 +269,11 @@ async function cleanupTestData() {
       console.log('✅ No test users found');
     }
     
-    // 3. Clean up empty carts and wishlists
-    const emptyCarts = await cartModel.deleteMany({ items: { $size: 0 } });
+    // 3. Clean up empty wishlists
     const emptyWishlists = await wishlistModel.deleteMany({ items: { $size: 0 } });
     
-    if (emptyCarts.deletedCount > 0 || emptyWishlists.deletedCount > 0) {
+    if (emptyWishlists.deletedCount > 0) {
       console.log(`\n🗑️ Cleaned up empty data:`);
-      console.log(`   - Empty carts: ${emptyCarts.deletedCount}`);
       console.log(`   - Empty wishlists: ${emptyWishlists.deletedCount}`);
     }
     
@@ -294,12 +290,10 @@ async function showDatabaseStats() {
   
   const orderCount = await orderModel.countDocuments();
   const userCount = await userModel.countDocuments();
-  const cartCount = await cartModel.countDocuments();
   const wishlistCount = await wishlistModel.countDocuments();
   
   console.log(`   - Orders: ${orderCount}`);
   console.log(`   - Users: ${userCount}`);
-  console.log(`   - Carts: ${cartCount}`);
   console.log(`   - Wishlists: ${wishlistCount}`);
 }
 
