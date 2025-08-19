@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import Image from "next/image"
 import { useCart } from "./cart-context";
 import { useBuyNow } from "./buy-now-context";
+import OutOfStockWarning from "./out-of-stock-warning";
 import { useCheckoutFlow } from "./checkout-flow-manager";
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
@@ -19,7 +20,8 @@ export default function CartSidebar() {
     closeCartSidebar,
     cartTotal,
     offerDetails,
-    isLoadingOffer
+    isLoadingOffer,
+    outOfStockItems
   } = useCart();
   const { clearBuyNowItem } = useBuyNow();
   const { setCheckoutFlow } = useCheckoutFlow();
@@ -154,16 +156,19 @@ export default function CartSidebar() {
       closeCartSidebar();
       console.log('[CartSidebar] ✅ Cart sidebar closed');
       
-      // Navigate to checkout page
+      // Navigate to checkout page using proper Next.js routing
       console.log('[CartSidebar] 🔄 Navigating to checkout page...');
-      router.push('/checkout');
+      
+      // Use replace instead of push to avoid navigation stack issues
+      router.replace('/checkout');
       console.log('[CartSidebar] ✅ Navigation initiated');
     } catch (error) {
       console.error('[CartSidebar] ❌ Error during checkout process:', error);
       
-      // Fallback navigation
+      // Fallback navigation with proper URL construction
       console.log('[CartSidebar] 🔄 Attempting fallback navigation...');
-      window.location.href = '/checkout';
+      const baseUrl = window.location.origin;
+      window.location.href = `${baseUrl}/checkout`;
     }
   };
 
@@ -199,6 +204,9 @@ export default function CartSidebar() {
 
         {/* Cart Items */}
         <div className="flex-1 overflow-y-auto">
+          {/* Out of Stock Warning */}
+          <OutOfStockWarning className="mx-4 sm:mx-6 mt-4" />
+          
           {/* Show loading state while stocks are being fetched */}
           {isLoadingStocks && cartItemsCount > 0 ? (
             <div className="text-center py-16 px-6">
@@ -413,10 +421,18 @@ export default function CartSidebar() {
             {/* Action Buttons */}
             <div className="space-y-3">
               <Button 
-                className="w-full bg-[rgb(71,60,102)] hover:bg-[rgb(71,60,102)]/90 text-white py-3 sm:py-4 rounded-xl font-semibold text-sm sm:text-base shadow-lg" 
+                className={`w-full py-3 sm:py-4 rounded-xl font-semibold text-sm sm:text-base shadow-lg ${
+                  outOfStockItems.length > 0
+                    ? 'bg-gray-400 cursor-not-allowed text-gray-600'
+                    : 'bg-[rgb(71,60,102)] hover:bg-[rgb(71,60,102)]/90 text-white'
+                }`}
                 onClick={handleProceedToCheckout}
+                disabled={outOfStockItems.length > 0}
               >
-                Proceed to Checkout
+                {outOfStockItems.length > 0 
+                  ? `Remove Out-of-Stock Items (${outOfStockItems.length})` 
+                  : 'Proceed to Checkout'
+                }
               </Button>
               
               <Button

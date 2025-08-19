@@ -54,6 +54,8 @@ const nextConfig = {
   },
   // Enable static optimization
   trailingSlash: false,
+  // Fix static asset loading issues
+  assetPrefix: process.env.NODE_ENV === 'production' ? 'https://shithaa.in' : '',
   // Optimize bundle size
   webpack: (config, { dev, isServer }) => {
     if (!dev && !isServer) {
@@ -104,6 +106,20 @@ const nextConfig = {
           {
             key: 'Cache-Control',
             value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      // Fix static asset MIME type issues
+      {
+        source: '/_next/static/(.*)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
           },
         ],
       },

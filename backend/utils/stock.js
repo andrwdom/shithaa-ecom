@@ -64,7 +64,24 @@ export async function reserveStock(productId, size, quantity, options = {}) {
         throw new Error('Quantity must be positive for reservation');
     }
     
-    return await changeStock(productId, size, -quantity, options);
+    // First check if stock is available before attempting reservation
+    const stockCheck = await checkStockAvailability(productId, size, quantity);
+    if (!stockCheck.available) {
+        throw new Error(`Stock reservation failed: ${stockCheck.error}`);
+    }
+    
+    // Additional validation: ensure stock is not negative
+    if (stockCheck.currentStock < 0) {
+        throw new Error(`Stock reservation failed: Product ${stockCheck.productName} size ${size} has corrupted stock (${stockCheck.currentStock}). Please contact admin.`);
+    }
+    
+    try {
+        return await changeStock(productId, size, -quantity, options);
+    } catch (error) {
+        // Enhanced error message with stock details
+        const currentStock = await checkStockAvailability(productId, size, 1);
+        throw new Error(`Stock reservation failed for ${currentStock.productName} size ${size}: ${error.message}. Current stock: ${currentStock.currentStock}, Requested: ${quantity}`);
+    }
 }
 
 /**

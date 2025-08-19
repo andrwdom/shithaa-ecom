@@ -70,6 +70,120 @@ export default function CheckoutClient() {
     throw new Error("No checkout items found. Please refresh and try again.");
   }
 
+  // 🚨 STOCK VALIDATION: Check for out-of-stock items before allowing checkout
+  const [outOfStockItems, setOutOfStockItems] = useState<any[]>([]);
+  const [isCheckingStock, setIsCheckingStock] = useState(true);
+  const [assetLoadError, setAssetLoadError] = useState(false);
+  
+  // Check for asset loading errors
+  useEffect(() => {
+    const checkAssetErrors = () => {
+      // Check if CSS and JS files loaded properly
+      const styleSheets = Array.from(document.styleSheets);
+      const hasErrors = styleSheets.some(sheet => {
+        try {
+          return sheet.href && sheet.href.includes('_next/static') && sheet.cssRules.length === 0;
+        } catch {
+          return true; // CORS error or other issue
+        }
+      });
+      
+      if (hasErrors) {
+        console.warn('Asset loading issues detected, attempting recovery...');
+        setAssetLoadError(true);
+        
+        // Attempt to reload the page after a short delay
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      }
+    };
+    
+    // Check after a short delay to allow assets to load
+    const timer = setTimeout(checkAssetErrors, 2000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    const checkStock = async () => {
+      try {
+        const response = await fetch('/api/cart/validate-stock', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ items: checkoutItems })
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setOutOfStockItems(data.outOfStockItems || []);
+        }
+      } catch (error) {
+        console.error('Error checking stock:', error);
+      } finally {
+        setIsCheckingStock(false);
+      }
+    };
+    
+    if (checkoutItems.length > 0) {
+      checkStock();
+    }
+  }, [checkoutItems]);
+
+  // Block checkout if there are out-of-stock items
+  if (isCheckingStock) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Checking stock availability...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (outOfStockItems.length > 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <Card className="max-w-md w-full">
+          <CardHeader>
+            <CardTitle className="text-red-600 flex items-center gap-2">
+              ⚠️ Out of Stock Items Detected
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3 mb-4">
+              {outOfStockItems.map((item, index) => (
+                <div key={index} className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="font-medium text-gray-900">{item.name}</p>
+                  <p className="text-sm text-gray-600">Size: {item.size}</p>
+                  <p className="text-xs text-red-600 mt-1">{item.reason}</p>
+                </div>
+              ))}
+            </div>
+            <p className="text-sm text-gray-600 mb-4">
+              Please remove out-of-stock items from your cart before proceeding to checkout.
+            </p>
+          </CardContent>
+          <CardFooter className="flex gap-3">
+            <Button 
+              variant="outline" 
+              onClick={() => window.history.back()}
+              className="flex-1"
+            >
+              Go Back
+            </Button>
+            <Button 
+              onClick={() => openCartSidebar()}
+              className="flex-1 bg-purple-600 hover:bg-purple-700"
+            >
+              Open Cart
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
+
   // Validate all items have valid MongoDB ObjectIds
   const validHex24 = /^[0-9a-fA-F]{24}$/;
   const itemsWithId = checkoutItems

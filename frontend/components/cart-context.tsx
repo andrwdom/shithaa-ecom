@@ -36,6 +36,7 @@ interface CartContextType {
   cartSubtotal: number
   offerDetails: OfferDetails | null
   isLoadingOffer: boolean
+  outOfStockItems: CartItem[]
   notifyCheckoutCartChanged: () => void
 }
 
@@ -48,6 +49,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cartSubtotal, setCartSubtotal] = useState(0)
   const [offerDetails, setOfferDetails] = useState<OfferDetails | null>(null)
   const [isLoadingOffer, setIsLoadingOffer] = useState(false)
+  const [outOfStockItems, setOutOfStockItems] = useState<CartItem[]>([])
   const [cartChangeCounter, setCartChangeCounter] = useState(0)
   const [wasCartIntentionallyCleared, setWasCartIntentionallyCleared] = useState(false)
   
@@ -156,6 +158,34 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       console.error("[CartContext] ❌ Error saving cart to storage:", error)
     }
   }, [])
+
+  // Check for out-of-stock items
+  const checkOutOfStockItems = useCallback(async () => {
+    if (cartItems.length === 0) return [];
+    
+    try {
+      const { safeFetch } = await import('@/lib/api-utils')
+      
+      const response = await safeFetch(
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/cart/validate-stock`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ items: cartItems })
+        },
+        `stock-validation-${cartItems.length}`,
+        30 * 1000 // 30 second cache
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        return data.outOfStockItems || [];
+      }
+    } catch (error) {
+      console.error('[CartContext] ❌ Error checking stock:', error);
+    }
+    return [];
+  }, [cartItems]);
 
   // Calculate cart total with offers - optimized and stable
   const calculateCartTotalWithOffers = useCallback(async () => {
@@ -269,14 +299,23 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       // 🔧 FIX: Add small delay to prevent rapid recalculations
       const timer = setTimeout(() => {
         calculateCartTotalWithOffers()
+        
+        // Check for out-of-stock items when cart changes
+        checkOutOfStockItems().then(items => {
+          setOutOfStockItems(items);
+          if (items.length > 0) {
+            console.log('[CartContext] ⚠️ Out of stock items detected:', items.map(item => `${item.name} (${item.size})`));
+          }
+        });
       }, 50)
       return () => clearTimeout(timer)
     } else {
       setCartTotal(0)
       setOfferDetails(null)
+      setOutOfStockItems([])
       lastCartHashRef.current = ''
     }
-  }, [cartItems, calculateCartTotalWithOffers])
+  }, [cartItems, calculateCartTotalWithOffers, checkOutOfStockItems])
 
   // Cleanup on unmount - PRODUCTION OPTIMIZED
   useEffect(() => {
@@ -470,6 +509,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     cartSubtotal,
     offerDetails,
     isLoadingOffer,
+    outOfStockItems,
     notifyCheckoutCartChanged
   }), [
     cartItems, 
@@ -485,6 +525,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     cartSubtotal,
     offerDetails,
     isLoadingOffer,
+    outOfStockItems,
     notifyCheckoutCartChanged
   ])
 
