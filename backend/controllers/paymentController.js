@@ -583,36 +583,47 @@ export const verifyPhonePePayment = async (req, res) => {
       phonepeResponse = null;
     }
 
-    // If we got response from PhonePe, use it
-    if (phonepeResponse) {
-      console.log('Using PhonePe SDK response');
+          // If we got response from PhonePe, use it
+      if (phonepeResponse) {
+        console.log('Using PhonePe SDK response');
+        console.log('🔍 DEBUG: PhonePe Response Structure:', {
+          state: phonepeResponse.state,
+          paymentState: phonepeResponse.paymentState,
+          code: phonepeResponse.code,
+          orderId: phonepeResponse.orderId
+        });
       
-      // Determine payment status from PhonePe response
+            // Determine payment status from PhonePe response - FIXED LOGIC
       const isSuccess = (
-        (phonepeResponse.code === 'PAYMENT_SUCCESS' && phonepeResponse.paymentState === 'COMPLETED') ||
-        (phonepeResponse.code === 'PAYMENT_SUCCESS' && phonepeResponse.state === 'COMPLETED') ||
-        (phonepeResponse.paymentState === 'COMPLETED') ||
-        (phonepeResponse.state === 'COMPLETED')
+        phonepeResponse.state === 'COMPLETED' ||
+        phonepeResponse.paymentState === 'COMPLETED' ||
+        phonepeResponse.code === 'PAYMENT_SUCCESS'
       );
-      
+
       const isFailed = (
-        (phonepeResponse.code === 'PAYMENT_FAILED' && phonepeResponse.paymentState === 'FAILED') ||
-        (phonepeResponse.code === 'PAYMENT_FAILED' && phonepeResponse.state === 'FAILED') ||
-        (phonepeResponse.paymentState === 'FAILED') ||
-        (phonepeResponse.state === 'FAILED')
+        phonepeResponse.state === 'FAILED' ||
+        phonepeResponse.paymentState === 'FAILED' ||
+        phonepeResponse.code === 'PAYMENT_FAILED'
       );
-      
+
       const isCancelled = (
-        (phonepeResponse.code === 'PAYMENT_CANCELLED' && phonepeResponse.paymentState === 'CANCELLED') ||
-        (phonepeResponse.code === 'PAYMENT_CANCELLED' && phonepeResponse.state === 'CANCELLED') ||
-        (phonepeResponse.paymentState === 'CANCELLED') ||
-        (phonepeResponse.state === 'CANCELLED')
+        phonepeResponse.state === 'CANCELLED' ||
+        phonepeResponse.paymentState === 'CANCELLED' ||
+        phonepeResponse.code === 'PAYMENT_CANCELLED'
       );
 
       // Update payment session status
       let newStatus = 'pending';
       if (isSuccess) newStatus = 'success';
       else if (isFailed || isCancelled) newStatus = 'failed';
+      
+      console.log('🎯 STATUS DECISION:', {
+        isSuccess,
+        isFailed,
+        isCancelled,
+        newStatus,
+        originalState: phonepeResponse.state
+      });
 
       await PaymentSession.findByIdAndUpdate(paymentSession._id, { status: newStatus });
 
