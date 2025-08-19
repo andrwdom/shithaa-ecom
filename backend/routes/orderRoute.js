@@ -25,58 +25,7 @@ orderRouter.get('/user/count', verifyToken, getUserOrderCount);
 orderRouter.get('/by-email/:email', getOrdersByEmail)
 orderRouter.get('/:id', optionalVerifyToken, getOrderById);   // GET /api/orders/:id
 
-// PhonePe order lookup endpoint - MUST come before generic routes
-orderRouter.get('/phonepe/:merchantTransactionId', async (req, res) => {
-  console.log('PhonePe order lookup endpoint hit:', req.params);
-  console.log('Request URL:', req.url);
-  console.log('Request method:', req.method);
-  
-  try {
-    const { merchantTransactionId } = req.params;
-    if (!merchantTransactionId) {
-      console.log('No merchant transaction ID provided');
-      return res.status(400).json({
-        success: false,
-        message: 'Merchant transaction ID is required'
-      });
-    }
 
-    console.log('Looking up order for transaction ID:', merchantTransactionId);
-    
-    const order = await (await import('../models/orderModel.js')).default.findOne({
-      phonepeTransactionId: merchantTransactionId
-    });
-
-    console.log('Order lookup result:', order ? 'Found' : 'Not found');
-
-    if (!order) {
-      return res.status(404).json({
-        success: false,
-        message: 'Order not found for this transaction'
-      });
-    }
-
-    res.json({
-      success: true,
-      order: {
-        id: order._id,
-        phonepeTransactionId: order.phonepeTransactionId,
-        paymentStatus: order.paymentStatus,
-        orderStatus: order.orderStatus,
-        status: order.status,
-        amount: order.amount,
-        createdAt: order.createdAt
-      }
-    });
-  } catch (error) {
-    console.error('PhonePe order lookup error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to lookup order',
-      error: error.message
-    });
-  }
-});
 
 // Emergency fallback - get most recent pending order
 orderRouter.get('/recent-pending', async (req, res) => {
@@ -157,5 +106,58 @@ orderRouter.get('/', async (req, res) => {
 });
 
 orderRouter.get('/:orderId/invoice', optionalVerifyToken, generateInvoice)
+
+// PhonePe order lookup endpoint - MOVED TO END to avoid route conflicts with payment routes
+orderRouter.get('/phonepe/:merchantTransactionId', async (req, res) => {
+  console.log('PhonePe order lookup endpoint hit:', req.params);
+  console.log('Request URL:', req.url);
+  console.log('Request method:', req.method);
+  
+  try {
+    const { merchantTransactionId } = req.params;
+    if (!merchantTransactionId) {
+      console.log('No merchant transaction ID provided');
+      return res.status(400).json({
+        success: false,
+        message: 'Merchant transaction ID is required'
+      });
+    }
+
+    console.log('Looking up order for transaction ID:', merchantTransactionId);
+    
+    const order = await (await import('../models/orderModel.js')).default.findOne({
+      phonepeTransactionId: merchantTransactionId
+    });
+
+    console.log('Order lookup result:', order ? 'Found' : 'Not found');
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found for this transaction'
+      });
+    }
+
+    res.json({
+      success: true,
+      order: {
+        id: order._id,
+        phonepeTransactionId: order.phonepeTransactionId,
+        paymentStatus: order.paymentStatus,
+        orderStatus: order.orderStatus,
+        status: order.status,
+        amount: order.amount,
+        createdAt: order.createdAt
+      }
+    });
+  } catch (error) {
+    console.error('PhonePe order lookup error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to lookup order',
+      error: error.message
+    });
+  }
+});
 
 export default orderRouter
