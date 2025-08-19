@@ -270,6 +270,12 @@ export const createPhonePeSession = async (req, res) => {
 
     // Use SDK to create payment session
     const redirectUrl = `${process.env.PHONEPE_REDIRECT_URL || process.env.BASE_URL || 'https://shithaa.in'}/payment/phonepe/callback?merchantTransactionId=${phonepeTransactionId}`;
+    
+    // Log webhook configuration for debugging
+    console.log('🔗 WEBHOOK CONFIG:');
+    console.log('- Redirect URL:', redirectUrl);
+    console.log('- Webhook URL:', `${process.env.BASE_URL || 'https://shithaa.in'}/api/payment/phonepe/webhook`);
+    console.log('- Webhook Auth:', process.env.PHONEPE_CALLBACK_USERNAME ? 'SET' : 'NOT SET');
     const request = StandardCheckoutPayRequest.builder()
       .merchantOrderId(phonepeTransactionId)
       .amount(amount * 100) // paise
@@ -572,7 +578,22 @@ export const verifyPhonePePayment = async (req, res) => {
 
     console.log('Payment session status:', paymentSession.status);
 
-    // Try to get status from PhonePe SDK
+    // PRIORITY 1: Check if webhook already updated the status
+    if (paymentSession.status === 'success' || paymentSession.status === 'failed') {
+      console.log('🎯 WEBHOOK STATUS DETECTED: Using existing status:', paymentSession.status);
+      return res.json({
+        success: true,
+        data: {
+          code: paymentSession.status === 'success' ? 'PAYMENT_SUCCESS' : 'PAYMENT_FAILED',
+          paymentState: paymentSession.status === 'success' ? 'COMPLETED' : 'FAILED',
+          merchantTransactionId: merchantTransactionId,
+          state: paymentSession.status === 'success' ? 'COMPLETED' : 'FAILED',
+          source: 'webhook'
+        }
+      });
+    }
+
+    // PRIORITY 2: Try to get status from PhonePe SDK (fallback)
     let phonepeResponse;
     try {
       console.log('Attempting PhonePe SDK verification...');
