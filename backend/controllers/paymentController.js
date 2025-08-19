@@ -661,7 +661,13 @@ export const verifyPhonePePayment = async (req, res) => {
 
       return res.json({
         success: true,
-        data: phonepeResponse
+        data: {
+          code: isSuccess ? 'PAYMENT_SUCCESS' : (isFailed ? 'PAYMENT_FAILED' : 'PAYMENT_PENDING'),
+          paymentState: isSuccess ? 'COMPLETED' : (isFailed ? 'FAILED' : 'PENDING'),
+          merchantTransactionId: merchantTransactionId,
+          state: isSuccess ? 'COMPLETED' : (isFailed ? 'FAILED' : 'PENDING'),
+          source: 'sdk'
+        }
       });
     }
 

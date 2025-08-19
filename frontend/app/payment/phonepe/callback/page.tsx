@@ -117,25 +117,25 @@ function PhonePeCallbackInner() {
         const verifyData = await verifyRes.json()
         console.log('PhonePe verification response:', verifyData)
         
-        if (verifyData.success && verifyData.paymentData) {
-          const paymentData = verifyData.paymentData
-          console.log('Payment data from PhonePe:', paymentData)
-          
-          // Check payment status - FIXED LOGIC
-          const isSuccess = (
-            paymentData.code === 'PAYMENT_SUCCESS' ||
-            paymentData.code === 'SUCCESS' ||
-            paymentData.status === 'SUCCESS' ||
-            paymentData.paymentState === 'COMPLETED' ||
-            paymentData.state === 'COMPLETED'
-          )
-          
-          const isPending = (
-            paymentData.code === 'PAYMENT_PENDING' ||
-            paymentData.status === 'PENDING' ||
-            paymentData.paymentState === 'PENDING' ||
-            paymentData.state === 'PENDING'
-          )
+                 if (verifyData.success && verifyData.data) {
+           const paymentData = verifyData.data
+           console.log('Payment data from PhonePe:', paymentData)
+           
+           // Check payment status - ENHANCED LOGIC
+           const isSuccess = (
+             paymentData.code === 'PAYMENT_SUCCESS' ||
+             paymentData.code === 'SUCCESS' ||
+             paymentData.status === 'SUCCESS' ||
+             paymentData.paymentState === 'COMPLETED' ||
+             paymentData.state === 'COMPLETED'
+           )
+           
+           const isPending = (
+             paymentData.code === 'PAYMENT_PENDING' ||
+             paymentData.status === 'PENDING' ||
+             paymentData.paymentState === 'PENDING' ||
+             paymentData.state === 'PENDING'
+           )
           
           if (isSuccess) {
             setStatus('success')
@@ -241,22 +241,23 @@ function PhonePeCallbackInner() {
             redirectToPaymentFailed(transactionId, failureReason, failureAmount, storedOrderData)
             return
           }
-        } else {
-          console.error('PhonePe verification failed:', verifyData)
-          // Payment verification failed - redirect to PaymentFailed page
-          console.log('Payment verification failed, redirecting to PaymentFailed page')
-          
-          // Enhanced error logging
-          console.log('🔍 VERIFICATION FAILURE DETAILS:', {
-            success: verifyData.success,
-            message: verifyData.message,
-            data: verifyData.data,
-            transactionId: transactionId
-          })
-          
-          redirectToPaymentFailed(transactionId, verifyData.message || 'Payment verification failed', null, storedOrderData)
-          return
-        }
+                 } else {
+           console.error('PhonePe verification failed:', verifyData)
+           // Payment verification failed - redirect to PaymentFailed page
+           console.log('Payment verification failed, redirecting to PaymentFailed page')
+           
+           // Enhanced error logging
+           console.log('🔍 VERIFICATION FAILURE DETAILS:', {
+             success: verifyData.success,
+             message: verifyData.message,
+             data: verifyData.data,
+             fullResponse: verifyData,
+             transactionId: transactionId
+           })
+           
+           redirectToPaymentFailed(transactionId, verifyData.message || 'Payment verification failed', null, storedOrderData)
+           return
+         }
       } else {
         console.error('PhonePe verification request failed with status:', verifyRes.status)
         // Payment verification request failed - redirect to PaymentFailed page
