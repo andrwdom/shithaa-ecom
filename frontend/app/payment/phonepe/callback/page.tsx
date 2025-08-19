@@ -72,9 +72,9 @@ function PhonePeCallbackInner() {
     // Check payment status for the transaction ID from URL
     checkPaymentStatusForTransaction(transactionId, null)
     
-    // Set up polling for payment status
+    // Set up polling for payment status - INCREASED RETRY COUNT AND DELAY
     interval = setInterval(() => {
-      if (!stopped && tries < 20) {
+      if (!stopped && tries < 30) { // Increased from 20 to 30 tries
         setTries(t => t + 1)
         checkPaymentStatusForTransaction(transactionId, null)
       } else if (!stopped) {
@@ -86,7 +86,7 @@ function PhonePeCallbackInner() {
         redirectToPaymentFailed(transactionId, 'Payment status could not be confirmed after multiple attempts', null, storedOrderData)
         return
       }
-    }, 3000)
+    }, 5000) // Increased from 3000ms to 5000ms to give webhook more time
     
     return () => { if (interval) clearInterval(interval) }
   }, [router, tries])
@@ -140,8 +140,15 @@ function PhonePeCallbackInner() {
         }
       }
       
-      // Try to verify payment with PhonePe
+      // Try to verify payment with PhonePe - ENHANCED WITH WEBHOOK AWARENESS
       console.log('Attempting PhonePe payment verification...')
+      
+      // First, wait a bit for webhook to potentially update the status
+      if (tries === 0) {
+        console.log('First verification attempt - waiting for webhook...')
+        await new Promise(resolve => setTimeout(resolve, 2000)) // Wait 2 seconds for webhook
+      }
+      
       const verifyRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/payment/phonepe/verify/${transactionId}`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
@@ -173,6 +180,9 @@ function PhonePeCallbackInner() {
             setStatus('success')
             setMessage('Payment successful! Creating your order...')
             setOrderId(paymentData.merchantTransactionId || transactionId)
+            
+            // Log successful webhook detection
+            console.log('🎉 SUCCESS: Payment verified successfully! Webhook has updated the status.')
             
             // Payment successful - create order from payment session
             console.log('Payment successful, creating order from payment session')
