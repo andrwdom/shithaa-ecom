@@ -75,15 +75,32 @@ connectDB().then(async () => {
 });
 
 // Debug logging middleware
+// Logging middleware - PRODUCTION OPTIMIZED
 app.use((req, res, next) => {
-    console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+    // Only log in development or for errors in production
+    if (process.env.NODE_ENV === 'development') {
+        console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+    }
+    
+    // Add request ID for tracking
+    req.headers['x-request-id'] = req.headers['x-request-id'] || `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Log slow requests in production
+    const start = Date.now();
+    res.on('finish', () => {
+        const duration = Date.now() - start;
+        if (duration > 1000) { // Log requests taking more than 1 second
+            console.warn(`🐌 SLOW REQUEST: ${req.method} ${req.url} took ${duration}ms - ${req.ip}`);
+        }
+    });
+    
     next();
 });
 
-// Rate limiting
+// Rate limiting - PRODUCTION OPTIMIZED
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 1000, // 1000 requests per windowMs
+    max: 200, // 200 requests per 15 minutes (PRODUCTION OPTIMIZED)
     message: 'Too many requests from this IP, please try again later.',
     standardHeaders: true,
     legacyHeaders: false,
@@ -105,7 +122,7 @@ app.use(limiter);
 // Apply rate limiting to auth routes with higher limits
 const authLimiter = rateLimit({
     windowMs: 60 * 60 * 1000, // 1 hour
-    max: 50, // 50 attempts per hour
+    max: 10, // 10 attempts per hour (PRODUCTION OPTIMIZED)
     message: 'Too many login attempts, please try again later',
     standardHeaders: true,
     legacyHeaders: false,
@@ -202,11 +219,27 @@ app.get('/api/cors-test', (req, res) => {
   });
 });
 
-// Health check endpoint
+// Health check endpoint - PRODUCTION OPTIMIZED
 app.get('/api/health', (req, res) => {
+  // Check MongoDB connection
+  const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+  
+  // Check memory usage
+  const memUsage = process.memoryUsage();
+  const memUsageMB = {
+    rss: Math.round(memUsage.rss / 1024 / 1024),
+    heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024),
+    heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024),
+    external: Math.round(memUsage.external / 1024 / 1024)
+  };
+  
   res.json({ 
     status: 'ok',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    database: dbStatus,
+    memory: memUsageMB,
+    environment: process.env.NODE_ENV || 'development'
   });
 });
 
@@ -310,15 +343,31 @@ app.use((err, req, res, next) => {
     }
 });
 
-// General error handling middleware
+// General error handling middleware - PRODUCTION OPTIMIZED
 app.use((err, req, res, next) => {
-    console.error('Error:', err.stack)
+    // Log error with context for production monitoring
+    console.error('🚨 PRODUCTION ERROR:', {
+        message: err.message,
+        stack: err.stack,
+        url: req.url,
+        method: req.method,
+        ip: req.ip,
+        userAgent: req.headers['user-agent'],
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV
+    });
+    
+    // Don't expose internal errors to clients in production
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    
     res.status(500).json({
         success: false,
-        message: 'Internal Server Error',
-        error: process.env.NODE_ENV === 'development' ? err.message : undefined
-    })
-})
+        message: isDevelopment ? 'Internal Server Error' : 'Something went wrong. Please try again later.',
+        error: isDevelopment ? err.message : undefined,
+        timestamp: new Date().toISOString(),
+        requestId: req.headers['x-request-id'] || 'unknown'
+    });
+});
 
 // Initialize Firebase Admin SDK
 try {

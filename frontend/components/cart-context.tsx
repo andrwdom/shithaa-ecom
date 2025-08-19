@@ -176,11 +176,21 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       clearTimeout(calculationTimeoutRef.current)
     }
 
-    // 🔧 FIX: Set initial total immediately to prevent fluctuation
-    const initialTotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
-    console.log("[CartContext] 🔧 Setting initial total:", initialTotal, "for", cartItems.length, "items")
-    setCartTotal(initialTotal)
-    setCartSubtotal(initialTotal)
+    // 🔧 FIX: Set initial total only if no offers are expected
+    // For loungewear items, wait for offer calculation to avoid showing wrong total
+    const hasLoungewearItems = cartItems.some(item => 
+      item.categorySlug === 'zipless-feeding-lounge-wear' || 
+      item.categorySlug === 'non-feeding-lounge-wear'
+    );
+    
+    if (!hasLoungewearItems) {
+      const initialTotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
+      console.log("[CartContext] 🔧 Setting initial total (no offers):", initialTotal)
+      setCartTotal(initialTotal)
+      setCartSubtotal(initialTotal)
+    } else {
+      console.log("[CartContext] 🔧 Waiting for offer calculation (loungewear items detected)")
+    }
 
     calculationTimeoutRef.current = setTimeout(async () => {
       isCalculatingRef.current = true
@@ -226,7 +236,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         } else {
           // 🔧 FIX: Only update if cart hasn't changed and we need fallback
           if (cartHash === lastCartHashRef.current) {
-            console.log("[CartContext] 🔧 API error, keeping initial total")
+            console.log("[CartContext] 🔧 API error, setting fallback total")
+            // Set fallback total if offer calculation fails
+            const fallbackTotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
+            setCartTotal(fallbackTotal)
+            setCartSubtotal(fallbackTotal)
             setOfferDetails(null)
           }
         }
@@ -234,7 +248,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         console.error("[CartContext] ❌ Error calculating cart total:", error)
         // 🔧 FIX: Only update if cart hasn't changed and we need fallback
         if (cartHash === lastCartHashRef.current) {
-          console.log("[CartContext] 🔧 Error occurred, keeping initial total")
+          console.log("[CartContext] 🔧 Error occurred, setting fallback total")
+          // Set fallback total if offer calculation fails
+          const fallbackTotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
+          setCartTotal(fallbackTotal)
+          setCartSubtotal(fallbackTotal)
           setOfferDetails(null)
         }
       } finally {
@@ -260,12 +278,17 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, [cartItems, calculateCartTotalWithOffers])
 
-  // Cleanup on unmount
+  // Cleanup on unmount - PRODUCTION OPTIMIZED
   useEffect(() => {
     return () => {
       if (calculationTimeoutRef.current) {
         clearTimeout(calculationTimeoutRef.current)
+        calculationTimeoutRef.current = null
       }
+      if (isCalculatingRef.current) {
+        isCalculatingRef.current = false
+      }
+      lastCartHashRef.current = ''
     }
   }, [])
 

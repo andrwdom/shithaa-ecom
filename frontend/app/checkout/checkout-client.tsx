@@ -278,10 +278,20 @@ export default function CheckoutClient() {
     };
   }, [buyNowItem, clearBuyNowAfterSuccessfulCheckout]);
 
-  // Calculate discounted total using cartTotal from context
+  // Calculate discounted total using cartTotal from context (which includes loungewear offer)
   const subtotal = cartTotal || checkoutItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const discount = appliedCoupon ? Math.round((subtotal * appliedCoupon.discountPercentage) / 100) : 0;
-  const finalTotal = subtotal - discount;
+  const couponDiscount = appliedCoupon ? Math.round((subtotal * appliedCoupon.discountPercentage) / 100) : 0;
+  const finalTotal = subtotal - couponDiscount;
+  
+  // Debug logging to track total calculation
+  console.log('[Checkout] Total calculation:', {
+    cartTotal,
+    checkoutItemsSubtotal: checkoutItems.reduce((sum, item) => sum + item.price * item.quantity, 0),
+    subtotal,
+    couponDiscount,
+    finalTotal,
+    offerDetails
+  });
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -703,7 +713,7 @@ export default function CheckoutClient() {
                 
                 {/* Coupon Discount */}
                 {appliedCoupon && (
-                  <div className="text-right text-green-700 font-semibold mt-2">Coupon Discount: -₹{discount}</div>
+                  <div className="text-right text-green-700 font-semibold mt-2">Coupon Discount: -₹{couponDiscount}</div>
                 )}
                 
                 <div className="text-right font-bold mt-4 text-xl text-[rgb(71,60,102)]">Total: ₹{finalTotal}</div>

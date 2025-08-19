@@ -166,7 +166,14 @@ export const createPhonePeSession = async (req, res) => {
     
     // Reserve stock temporarily (will be confirmed or restored based on payment result)
     try {
-      await updateProductStock(cartItems);
+      // Use atomic stock reservation instead of just validation
+      const { reserveStock } = await import('../utils/stock.js');
+      
+      // Reserve stock for each item atomically
+      for (const item of cartItems) {
+        await reserveStock(item._id, item.size, item.quantity);
+        console.log(`Stock reserved: ${item.name} ${item.size} x${item.quantity}`);
+      }
       console.log('Stock reservation successful');
     } catch (stockError) {
       console.error('Stock reservation failed:', stockError);

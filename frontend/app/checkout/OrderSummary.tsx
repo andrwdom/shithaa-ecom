@@ -29,7 +29,9 @@ export default function OrderSummary({ cartItems, coupon, offerDetails, mode = '
     };
   }
   
-  const total = itemSubtotal + shipping;
+  // Calculate total with offer discount
+  const offerDiscount = offerDetails?.offerApplied ? offerDetails.offerDiscount : 0;
+  const total = itemSubtotal - offerDiscount + shipping;
   
   // 🔑 FIXED: Enhanced debug logging to confirm data source and prevent contamination
   console.log(`[OrderSummary] 🔍 DEBUG: Mode: ${mode}, Items count: ${displayItems.length}`, {
@@ -62,9 +64,11 @@ export default function OrderSummary({ cartItems, coupon, offerDetails, mode = '
     subtotal: cartItems?.reduce((s, i) => s + i.price * i.quantity, 0),
     displayItemsSubtotal: displayItems?.reduce((s, i) => s + i.price * i.quantity, 0),
     itemSubtotal,
+    offerDiscount,
     shipping,
     total,
-    shippingCalculation
+    shippingCalculation,
+    offerDetails
   });
   
   return (
