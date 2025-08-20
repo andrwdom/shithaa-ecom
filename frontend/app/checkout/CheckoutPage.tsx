@@ -470,7 +470,7 @@ export default function CheckoutPage() {
     };
   }
 
-  async function handleRetryPayment(e?: React.MouseEvent) {
+    async function handleRetryPayment(e?: React.MouseEvent) {
     if (e) e.preventDefault();
     
     console.log('[CheckoutPage] 🔄 Starting robust retry payment process...');
@@ -481,11 +481,13 @@ export default function CheckoutPage() {
       // 1) ensure sessionId exists and is refreshed from retry endpoint
       const currentSessionId = localStorage.getItem('checkout:sessionId');
       if (!currentSessionId) {
-        console.error('[CheckoutPage] no checkout:sessionId for retry');
+        console.error('[CheckoutPage] ❌ No checkout:sessionId found for retry');
         setPaymentError('No checkout session found. Please start a new checkout.');
         setProcessing(false);
         return;
       }
+
+      console.log('[CheckoutPage] 🔍 Found existing session ID:', currentSessionId);
 
       // Call retry endpoint and await the fresh session
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
@@ -502,17 +504,19 @@ export default function CheckoutPage() {
       });
       
       const retryJson = await retryRes.json();
+      console.log('[CheckoutPage] 📥 Retry endpoint response:', retryJson);
+      
       if (!retryRes.ok) {
-        console.error('[CheckoutPage] retry endpoint failed', retryJson);
-        setPaymentError('Failed to refresh checkout session. Try again.');
+        console.error('[CheckoutPage] ❌ Retry endpoint failed:', retryJson);
+        setPaymentError(`Failed to refresh checkout session: ${retryJson.message || 'Unknown error'}`);
         setProcessing(false);
         return;
       }
       
       const refreshedSessionId = retryJson.data?.session?.sessionId || retryJson.data?.sessionId;
       if (!refreshedSessionId) {
-        console.error('[CheckoutPage] retry returned no sessionId', retryJson);
-        setPaymentError('Retry failed: no session returned.');
+        console.error('[CheckoutPage] ❌ Retry returned no sessionId:', retryJson);
+        setPaymentError('Retry failed: no session returned from server.');
         setProcessing(false);
         return;
       }
@@ -522,7 +526,8 @@ export default function CheckoutPage() {
       console.log('[CheckoutPage] ✅ Checkout session refreshed:', {
         sessionId: refreshedSessionId,
         status: retryJson.data?.session?.status,
-        source: retryJson.data?.session?.source
+        source: retryJson.data?.session?.source,
+        itemsCount: retryJson.data?.session?.items?.length || 0
       });
 
       // 2) prepare shipping — ensure shipping object exists (backend requires it)
@@ -555,11 +560,11 @@ export default function CheckoutPage() {
       // redirect user to PhonePe flow
       window.location.href = redirectUrl;
       
-         } catch (err: any) {
-       console.error('[CheckoutPage] handleRetryPayment error', err);
-       setPaymentError(err.message || 'Failed to create PhonePe payment session');
-       setProcessing(false);
-     }
+    } catch (err: any) {
+      console.error('[CheckoutPage] ❌ handleRetryPayment error:', err);
+      setPaymentError(err.message || 'Failed to create PhonePe payment session');
+      setProcessing(false);
+    }
   }
 
   return (

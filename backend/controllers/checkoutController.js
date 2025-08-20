@@ -498,53 +498,73 @@ export const retryCheckoutSession = async (req, res) => {
       return errorResponse(res, 400, 'Session ID is required');
     }
     
-    console.log(`[${correlationId}] Retrying checkout session: ${sessionId}`);
+    console.log(`[${correlationId}] 🔄 Retrying checkout session: ${sessionId}`);
     
     const session = await CheckoutSession.findOne({ sessionId });
     if (!session) {
-      console.log(`[${correlationId}] Checkout session not found: ${sessionId}`);
+      console.log(`[${correlationId}] ❌ Checkout session not found: ${sessionId}`);
       return errorResponse(res, 404, 'Checkout session not found');
     }
     
-    // Reset session status to pending
-    session.status = 'pending';
-    session.updatedAt = new Date();
-    await session.save();
+    console.log(`[${correlationId}] 📊 Current session status: ${session.status}, source: ${session.source}`);
     
-    console.log(`[${correlationId}] Checkout session reset to pending: ${sessionId}`);
+    // Reset session status to pending and clear any PhonePe transaction ID
+    const updateData = {
+      status: 'pending',
+      updatedAt: new Date(),
+      phonepeTransactionId: undefined // Clear any existing transaction ID
+    };
     
-    // Log retry event
-    await PaymentEvent.createEvent({
-      correlationId,
-      eventType: 'session_retry',
-      source: 'backend',
-      checkoutSessionId: sessionId,
-      userId: req.user?.id,
-      userEmail: req.user?.email,
-      data: { 
-        previousStatus: session.status,
-        newStatus: 'pending',
-        source: session.source 
-      }
-    });
+    const updatedSession = await CheckoutSession.findOneAndUpdate(
+      { sessionId },
+      updateData,
+      { new: true, runValidators: true }
+    );
+    
+    if (!updatedSession) {
+      console.log(`[${correlationId}] ❌ Failed to update session: ${sessionId}`);
+      return errorResponse(res, 500, 'Failed to update checkout session');
+    }
+    
+    console.log(`[${correlationId}] ✅ Checkout session reset to pending: ${sessionId}`);
+    
+    // Try to log retry event (but don't fail if it errors)
+    try {
+      await PaymentEvent.createEvent({
+        correlationId,
+        eventType: 'session_retry',
+        source: 'backend',
+        checkoutSessionId: sessionId,
+        userId: req.user?.id,
+        userEmail: req.user?.email,
+        data: { 
+          previousStatus: session.status,
+          newStatus: 'pending',
+          source: session.source 
+        }
+      });
+      console.log(`[${correlationId}] 📝 Retry event logged successfully`);
+    } catch (eventError) {
+      console.warn(`[${correlationId}] ⚠️ Failed to log retry event (non-critical):`, eventError.message);
+    }
     
     return successResponse(res, {
       message: 'Checkout session reset successfully',
       session: {
-        sessionId: session.sessionId,
-        source: session.source,
-        items: session.items,
-        subtotal: session.subtotal,
-        total: session.total,
-        status: session.status,
-        userEmail: session.userEmail,
-        createdAt: session.createdAt,
-        updatedAt: session.updatedAt
+        sessionId: updatedSession.sessionId,
+        source: updatedSession.source,
+        items: updatedSession.items,
+        subtotal: updatedSession.subtotal,
+        total: updatedSession.total,
+        status: updatedSession.status,
+        userEmail: updatedSession.userEmail,
+        createdAt: updatedSession.createdAt,
+        updatedAt: updatedSession.updatedAt
       }
     });
     
   } catch (error) {
-    console.error(`[${correlationId}] Error retrying checkout session:`, error);
+    console.error(`[${correlationId}] ❌ Error retrying checkout session:`, error);
     return errorResponse(res, 500, 'Failed to retry checkout session', error.message);
   }
 };

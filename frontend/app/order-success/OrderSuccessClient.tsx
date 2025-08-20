@@ -21,10 +21,10 @@ function OrderSuccessContent() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    // If no orderId is provided, redirect to account page
+    // If no orderId is provided, try to get from checkout session
     if (!orderId) {
-      console.log("No order ID provided, redirecting to account page");
-      router.push('/account');
+      console.log("No order ID provided, trying to get from checkout session");
+      fetchFromCheckoutSession();
       return;
     }
 
@@ -39,14 +39,73 @@ function OrderSuccessContent() {
           credentials: 'include',
         });
         const data = await res.json();
-        if (res.ok && data.data) setOrder(data.data);
-        else setError(data.message || "Order not found.");
+        if (res.ok && data.data) {
+          setOrder(data.data);
+          console.log("✅ Order fetched successfully:", data.data);
+        } else {
+          console.log("❌ Order not found, trying checkout session fallback");
+          // Try to get from checkout session as fallback
+          fetchFromCheckoutSession();
+        }
       } catch (err) {
-        setError("Could not fetch order. Please try again.");
+        console.log("❌ Order fetch failed, trying checkout session fallback:", err);
+        // Try to get from checkout session as fallback
+        fetchFromCheckoutSession();
+      }
+    }
+
+    async function fetchFromCheckoutSession() {
+      setLoading(true);
+      setError("");
+      try {
+        const sessionId = localStorage.getItem('checkout:sessionId');
+        if (!sessionId) {
+          setError("No order or checkout session found. Please check your account or start a new checkout.");
+          setLoading(false);
+          return;
+        }
+
+        console.log("🔄 Fetching from checkout session:", sessionId);
+        const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + `/api/checkout/session/${sessionId}/summary`;
+        const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+        const res = await fetch(apiUrl, {
+          headers: token ? { token } : {},
+          credentials: 'include',
+        });
+        const data = await res.json();
+        
+        if (res.ok && data.data) {
+          // Convert checkout session data to order-like format
+          const sessionData = data.data;
+          const mockOrder = {
+            orderId: sessionId,
+            phonepeTransactionId: sessionData.phonepeTransactionId || 'N/A',
+            amountPaid: sessionData.total,
+            total: sessionData.total,
+            totalPrice: sessionData.total,
+            paymentMethod: 'PhonePe',
+            paymentStatus: 'paid',
+            status: 'Order Placed',
+            items: sessionData.items || [],
+            subtotal: sessionData.subtotal,
+            shippingCost: sessionData.shippingCost,
+            discount: sessionData.discount,
+            userEmail: sessionData.userEmail,
+            source: sessionData.source
+          };
+          setOrder(mockOrder);
+          console.log("✅ Checkout session data converted to order:", mockOrder);
+        } else {
+          setError("Could not fetch order details. Please check your account.");
+        }
+      } catch (err) {
+        console.error("❌ Checkout session fetch failed:", err);
+        setError("Could not fetch order details. Please check your account.");
       } finally {
         setLoading(false);
       }
     }
+
     fetchOrder();
   }, [orderId, router]);
 
@@ -107,6 +166,19 @@ function OrderSuccessContent() {
           <div className="font-semibold">Status:</div>
           <div className={`capitalize font-bold ${isPaid ? 'text-green-700' : 'text-red-700'}`}>{order.paymentStatus || order.status || 'N/A'}</div>
         </div>
+        {order.items && order.items.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <div className="font-semibold text-left text-gray-800 mb-2">Order Items:</div>
+            <div className="space-y-2">
+              {order.items.map((item: any, index: number) => (
+                <div key={index} className="flex justify-between text-sm text-gray-700">
+                  <span>{item.name} (Size: {item.size}) x {item.quantity}</span>
+                  <span>₹{item.price * item.quantity}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
       {isPaid ? (
         <>

@@ -25,6 +25,7 @@ const paymentEventSchema = new mongoose.Schema({
     required: true,
     enum: [
       'session_created',
+      'session_retry',
       'stock_reserved',
       'stock_released',
       'payment_initiated',
