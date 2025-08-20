@@ -1,163 +1,57 @@
-import express from 'express'
-import {
-    placeOrder, 
-    allOrders, 
-    userOrders, 
-    updateStatus, 
-    processCardPayment, 
-    cancelOrder,
-    getUserOrders,
-    getOrderById,
-    createOrder,
-    generateInvoice,
-    getUserOrderCount,
+import express from 'express';
+import { 
+    getAllOrders, 
+    getOrderById, 
+    createOrder, 
+    updateOrder, 
+    deleteOrder,
+    getOrdersByUser,
+    getOrdersByStatus,
+    updateOrderStatus,
     createStructuredOrder,
-    getOrdersByEmail
-} from '../controllers/orderController.js'
-import adminAuth from '../middleware/adminAuth.js'
-import { verifyToken, isAdmin, optionalVerifyToken } from '../middleware/auth.js'
+    generateInvoice,
+    getOrderAnalytics,
+    getOrderStats,
+    getOrderTimeline,
+    getOrderHistory,
+    getOrderSummary,
+    getOrderDetails,
+    getOrderTracking,
+    getOrderNotes,
+    addOrderNote,
+    updateOrderNote,
+    deleteOrderNote
+} from '../controllers/orderController.js';
+import { verifyToken, isAdmin, optionalAuth } from '../middleware/auth.js'
 
-const orderRouter = express.Router()
+const orderRouter = express.Router();
 
-// RESTful routes
-orderRouter.get('/user', verifyToken, getUserOrders); // GET /api/orders/user
-orderRouter.get('/user/count', verifyToken, getUserOrderCount);
-orderRouter.get('/by-email/:email', getOrdersByEmail)
-orderRouter.get('/:id', optionalVerifyToken, getOrderById);   // GET /api/orders/:id
+// Public routes (optional auth for guest users)
+orderRouter.get('/:id', optionalAuth, getOrderById);   // GET /api/orders/:id
 
+// Protected routes (requires authentication)
+orderRouter.get('/user/:userId', verifyToken, getOrdersByUser); // GET /api/orders/user/:userId
+orderRouter.get('/status/:status', verifyToken, getOrdersByStatus); // GET /api/orders/status/:status
+orderRouter.put('/:id/status', verifyToken, updateOrderStatus); // PUT /api/orders/:id/status
+orderRouter.get('/analytics', verifyToken, getOrderAnalytics); // GET /api/orders/analytics
+orderRouter.get('/stats', verifyToken, getOrderStats); // GET /api/orders/stats
+orderRouter.get('/:id/timeline', verifyToken, getOrderTimeline); // GET /api/orders/:id/timeline
+orderRouter.get('/history/:userId', verifyToken, getOrderHistory); // GET /api/orders/history/:userId
+orderRouter.get('/summary/:userId', verifyToken, getOrderSummary); // GET /api/orders/summary/:userId
+orderRouter.get('/details/:id', verifyToken, getOrderDetails); // GET /api/orders/details/:id
+orderRouter.get('/tracking/:id', verifyToken, getOrderTracking); // GET /api/orders/tracking/:id
+orderRouter.get('/:id/notes', verifyToken, getOrderNotes); // GET /api/orders/:id/notes
+orderRouter.post('/:id/notes', verifyToken, addOrderNote); // POST /api/orders/:id/notes
+orderRouter.put('/:id/notes/:noteId', verifyToken, updateOrderNote); // PUT /api/orders/:id/notes/:noteId
+orderRouter.delete('/:id/notes/:noteId', verifyToken, deleteOrderNote); // DELETE /api/orders/:id/notes/:noteId
 
+// Admin routes
+orderRouter.get('/', verifyToken, isAdmin, getAllOrders); // GET /api/orders
+orderRouter.post('/', optionalAuth, createStructuredOrder); // POST /api/orders (new)
+orderRouter.put('/:id', verifyToken, isAdmin, updateOrder); // PUT /api/orders/:id
+orderRouter.delete('/:id', verifyToken, isAdmin, deleteOrder); // DELETE /api/orders/:id
 
-// Emergency fallback - get most recent pending order
-orderRouter.get('/recent-pending', async (req, res) => {
-  try {
-    const order = await (await import('../models/orderModel.js')).default.findOne({
-      paymentStatus: { $in: ['pending', 'paid'] }
-    }).sort({ createdAt: -1 }).limit(1);
+// Invoice generation
+orderRouter.get('/:orderId/invoice', optionalAuth, generateInvoice) // GET /api/orders/:orderId/invoice
 
-    if (!order) {
-      return res.status(404).json({
-        success: false,
-        message: 'No recent orders found'
-      });
-    }
-
-    res.json({
-      success: true,
-      order: {
-        id: order._id,
-        phonepeTransactionId: order.phonepeTransactionId,
-        paymentStatus: order.paymentStatus,
-        orderStatus: order.orderStatus,
-        status: order.status,
-        amount: order.amount,
-        payment: order.payment,
-        createdAt: order.createdAt
-      }
-    });
-  } catch (error) {
-    console.error('Recent pending order lookup error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to lookup recent order',
-      error: error.message
-    });
-  }
-});
-
-orderRouter.post('/', optionalVerifyToken, createStructuredOrder); // POST /api/orders (new)
-orderRouter.post('/legacy', verifyToken, createOrder);      // POST /api/orders/legacy
-
-// Admin Features
-orderRouter.post('/list', adminAuth, allOrders)
-orderRouter.post('/status', adminAuth, updateStatus)
-
-// User Features - Legacy routes for backward compatibility
-orderRouter.post('/userorders', verifyToken, userOrders)
-orderRouter.post('/place', verifyToken, placeOrder)
-orderRouter.post('/process-card', verifyToken, processCardPayment)
-orderRouter.post('/cancel', verifyToken, cancelOrder)
-
-orderRouter.get('/', async (req, res) => {
-  try {
-    console.log('Orders GET request received');
-    console.log('Origin:', req.headers.origin);
-    console.log('User-Agent:', req.headers['user-agent']);
-    
-    const { email } = req.query;
-    let orders;
-    if (email) {
-      // Search both legacy and new-structure orders
-      orders = await (await import('../models/orderModel.js')).default.find({
-        $or: [
-          { email: { $regex: new RegExp('^' + email + '$', 'i') } },
-          { 'userInfo.email': { $regex: new RegExp('^' + email + '$', 'i') } }
-        ]
-      }).sort({ createdAt: -1 });
-    } else {
-      orders = await (await import('../models/orderModel.js')).default.find().sort({ createdAt: -1 });
-    }
-    
-    console.log(`Found ${orders.length} orders`);
-    res.json({ success: true, orders });
-  } catch (err) {
-    console.error('Error in orders GET route:', err);
-    res.status(500).json({ success: false, message: 'Failed to fetch orders', error: err.message });
-  }
-});
-
-orderRouter.get('/:orderId/invoice', optionalVerifyToken, generateInvoice)
-
-// PhonePe order lookup endpoint - MOVED TO END to avoid route conflicts with payment routes
-orderRouter.get('/phonepe/:merchantTransactionId', async (req, res) => {
-  console.log('PhonePe order lookup endpoint hit:', req.params);
-  console.log('Request URL:', req.url);
-  console.log('Request method:', req.method);
-  
-  try {
-    const { merchantTransactionId } = req.params;
-    if (!merchantTransactionId) {
-      console.log('No merchant transaction ID provided');
-      return res.status(400).json({
-        success: false,
-        message: 'Merchant transaction ID is required'
-      });
-    }
-
-    console.log('Looking up order for transaction ID:', merchantTransactionId);
-    
-    const order = await (await import('../models/orderModel.js')).default.findOne({
-      phonepeTransactionId: merchantTransactionId
-    });
-
-    console.log('Order lookup result:', order ? 'Found' : 'Not found');
-
-    if (!order) {
-      return res.status(404).json({
-        success: false,
-        message: 'Order not found for this transaction'
-      });
-    }
-
-    res.json({
-      success: true,
-      order: {
-        id: order._id,
-        phonepeTransactionId: order.phonepeTransactionId,
-        paymentStatus: order.paymentStatus,
-        orderStatus: order.orderStatus,
-        status: order.status,
-        amount: order.amount,
-        createdAt: order.createdAt
-      }
-    });
-  } catch (error) {
-    console.error('PhonePe order lookup error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to lookup order',
-      error: error.message
-    });
-  }
-});
-
-export default orderRouter
+export default orderRouter;

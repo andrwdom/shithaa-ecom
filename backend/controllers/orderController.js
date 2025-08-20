@@ -694,7 +694,7 @@ const generateInvoice = async (req, res) => {
 
     // Access control: only owner or admin, or allow if test order
     if (!order.isTestOrder) {
-      // Determine admin access from either attached user (optionalVerifyToken)
+      // Determine admin access from either attached user (optionalAuth)
       // or directly from the JWT (admin panel tokens may not map to userModel).
       let isAdmin = false;
       const user = req.user;

@@ -1,13 +1,14 @@
 import express from 'express';
 import { 
     createPhonePeSession, 
-    phonePeCallback, 
-    verifyPhonePePayment,
-    createOrderFromPaymentSession,
-    dummyPaymentSuccess,
-    getPaymentStatus
+    verifyPhonePePayment, 
+    getPaymentStatus,
+    createRazorpayOrder,
+    verifyRazorpayPayment,
+    createStripePaymentIntent,
+    confirmStripePayment
 } from '../controllers/paymentController.js';
-import { verifyToken, optionalVerifyToken } from '../middleware/auth.js';
+import { verifyToken, optionalAuth } from '../middleware/auth.js';
 // Add imports for refund and webhook controllers
 import { initiatePhonePeRefund, getPhonePeRefundStatus } from '../controllers/refundController.js';
 import { phonePeWebhookHandler } from '../controllers/webhookController.js';
@@ -16,18 +17,19 @@ const paymentRouter = express.Router();
 
 // PhonePe payment routes
 paymentRouter.post('/phonepe/create-session', verifyToken, createPhonePeSession);
-paymentRouter.post('/phonepe/callback', phonePeCallback);
-paymentRouter.post('/phonepe/create-order', verifyToken, createOrderFromPaymentSession);
-paymentRouter.post('/phonepe/dummy-success', verifyToken, dummyPaymentSuccess);
-paymentRouter.get('/phonepe/verify/:merchantTransactionId', optionalVerifyToken, verifyPhonePePayment);
+paymentRouter.post('/phonepe/callback', createPhonePePayment);
+paymentRouter.get('/phonepe/verify/:merchantTransactionId', optionalAuth, verifyPhonePePayment);
 
-// Payment status endpoint
-paymentRouter.get('/status/:sessionId', optionalVerifyToken, getPaymentStatus);
-// PhonePe refund routes
-paymentRouter.post('/phonepe/refund', verifyToken, initiatePhonePeRefund);
-paymentRouter.get('/phonepe/refund-status/:merchantRefundId', verifyToken, getPhonePeRefundStatus);
-// PhonePe webhook route
-paymentRouter.post('/phonepe/webhook', phonePeWebhookHandler);
+// Payment status routes
+paymentRouter.get('/status/:sessionId', optionalAuth, getPaymentStatus);
+
+// Razorpay payment routes
+paymentRouter.post('/razorpay/create-order', verifyToken, createRazorpayOrder);
+paymentRouter.post('/razorpay/verify', verifyToken, verifyRazorpayPayment);
+
+// Stripe payment routes
+paymentRouter.post('/stripe/create-payment-intent', verifyToken, createStripePaymentIntent);
+paymentRouter.post('/stripe/confirm-payment', verifyToken, confirmStripePayment);
 
 // Debug endpoint for PhonePe testing
 paymentRouter.get('/phonepe/debug/:merchantTransactionId', async (req, res) => {

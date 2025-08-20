@@ -1,36 +1,32 @@
 import express from 'express';
 import { 
-    loginUser, 
-    registerUser, 
-    adminLogin, 
-    getUserInfo,
-    getProfile,
-    updateProfile,
-    firebaseLogin,
-    getPublicProfile,
-    refreshToken,
-    logout
+    register, 
+    login, 
+    getProfile, 
+    updateProfile, 
+    changePassword,
+    forgotPassword,
+    resetPassword,
+    verifyEmail,
+    resendVerificationEmail
 } from '../controllers/userController.js';
-import { verifyToken, optionalVerifyToken } from '../middleware/auth.js';
+import { verifyToken, optionalAuth } from '../middleware/auth.js';
 
 const userRouter = express.Router();
 
-// Auth routes
-userRouter.post('/register', registerUser)
-userRouter.post('/login', loginUser)
-userRouter.post('/admin', adminLogin)
-userRouter.post('/firebase-login', firebaseLogin)
-userRouter.post('/refresh-token', refreshToken)
-userRouter.post('/logout', logout)
+// Public routes
+userRouter.post('/register', register);
+userRouter.post('/login', login);
+userRouter.post('/forgot-password', forgotPassword);
+userRouter.post('/reset-password', resetPassword);
+userRouter.get('/verify-email/:token', verifyEmail);
+userRouter.post('/resend-verification', resendVerificationEmail);
 
-// Profile routes
-userRouter.get('/auth/profile', optionalVerifyToken, getProfile); // GET /api/auth/profile
-userRouter.put('/auth/profile', verifyToken, updateProfile); // PUT /api/auth/profile
+// Protected routes (optional auth for guest users)
+userRouter.get('/auth/profile', optionalAuth, getProfile); // GET /api/auth/profile
 
-// Legacy route for backward compatibility
-userRouter.get('/info', verifyToken, getUserInfo);
-
-// Public profile route for admin panel and others
-userRouter.get('/public-profile', getPublicProfile);
+// Fully protected routes
+userRouter.put('/profile', verifyToken, updateProfile);
+userRouter.put('/change-password', verifyToken, changePassword);
 
 export default userRouter;
