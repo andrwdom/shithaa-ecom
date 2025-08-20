@@ -17,6 +17,7 @@ import { getCheckoutMode } from "@/components/checkout-flow-manager";
 import { getIdToken } from "firebase/auth";
 import { Gift } from "lucide-react";
 import Link from "next/link";
+import { setCheckoutSessionId } from "@/lib/checkoutSession";
 
 export default function CheckoutClient() {
   const { cartItems, clearCartAfterSuccessfulCheckout, cartTotal, offerDetails, openCartSidebar } = useCart();
@@ -607,8 +608,9 @@ export default function CheckoutClient() {
       }
       
       // 🔧 FIX: Create checkout session first before payment
+      const sourceValue = isBuyNowMode ? 'buynow' : 'cart';
       const checkoutSessionData = {
-        source: isBuyNowMode ? 'buynow' : 'cart',
+        source: sourceValue,
         items: checkoutItems.map(item => ({
           productId: item._id || item.id, // Backend expects 'productId'
           size: item.size,
@@ -617,17 +619,31 @@ export default function CheckoutClient() {
         email: form.email || user.email
       };
 
-      console.log('🔍 DEBUG: Creating checkout session with data:', checkoutSessionData);
+      console.log('🔍 DEBUG: Source value being sent:', sourceValue);
+      console.log('🔍 DEBUG: Source value type:', typeof sourceValue);
+      console.log('🔍 DEBUG: Source value length:', sourceValue.length);
+      console.log('🔍 DEBUG: Source value === "buynow":', sourceValue === 'buynow');
+      console.log('🔍 DEBUG: Source value === "cart":', sourceValue === 'cart');
       console.log('🔍 DEBUG: Token exists:', !!token);
       console.log('🔍 DEBUG: Token preview:', token ? `${token.substring(0, 20)}...` : 'NONE');
       console.log('🔍 DEBUG: API URL:', process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000');
       console.log('🔍 DEBUG: Checkout items:', checkoutItems);
+      console.log('🔍 DEBUG: Checkout items length:', checkoutItems.length);
+      console.log('🔍 DEBUG: Checkout items structure:', checkoutItems.map(item => ({
+        _id: item._id,
+        id: item.id,
+        name: item.name,
+        size: item.size,
+        quantity: item.quantity
+      })));
       console.log('🔍 DEBUG: User data:', { 
         mongoId: user.mongoId, 
         uid: user.uid, 
         email: user.email,
         displayName: user.displayName 
       });
+      console.log('🔍 DEBUG: isBuyNowMode:', isBuyNowMode);
+      console.log('🔍 DEBUG: Final checkout session data being sent:', JSON.stringify(checkoutSessionData, null, 2));
 
       // 🔧 TEST: Check if backend is reachable first
       try {
@@ -636,14 +652,24 @@ export default function CheckoutClient() {
         if (!healthCheck.ok) {
           const healthData = await healthCheck.json();
           console.error('🔍 DEBUG: Backend health check failed:', healthData);
+        } else {
+          const healthData = await healthCheck.json();
+          console.log('🔍 DEBUG: Backend health check success:', healthData);
         }
       } catch (healthError) {
         console.error('🔍 DEBUG: Backend health check failed:', healthError);
         throw new Error('Backend server is not reachable. Please check your connection.');
       }
 
-      // 🔧 TEST: Check if checkout endpoint is accessible
+      // 🔧 TEST: Check if checkout endpoint is accessible with minimal data
       try {
+        const testData = {
+          source: 'cart',
+          items: [],
+          email: 'test@test.com'
+        };
+        console.log('🔍 DEBUG: Testing checkout endpoint with data:', testData);
+        
         const checkoutTest = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/checkout/session`, {
           method: 'POST',
           headers: {
@@ -651,16 +677,15 @@ export default function CheckoutClient() {
             'Authorization': `Bearer ${token}`,
             'x-request-id': `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
           },
-          body: JSON.stringify({
-            source: 'cart',
-            items: [],
-            email: 'test@test.com'
-          })
+          body: JSON.stringify(testData)
         });
         console.log('🔍 DEBUG: Checkout endpoint test status:', checkoutTest.status);
         if (!checkoutTest.ok) {
-          const testData = await checkoutTest.json();
-          console.error('🔍 DEBUG: Checkout endpoint test failed:', testData);
+          const testResponse = await checkoutTest.json();
+          console.error('🔍 DEBUG: Checkout endpoint test failed:', testResponse);
+        } else {
+          const testResponse = await checkoutTest.json();
+          console.log('🔍 DEBUG: Checkout endpoint test success:', testResponse);
         }
       } catch (testError) {
         console.error('🔍 DEBUG: Checkout endpoint test failed:', testError);
@@ -687,15 +712,29 @@ export default function CheckoutClient() {
 
       const checkoutData = await checkoutRes.json();
       console.log('✅ Checkout session created successfully:', checkoutData);
+      const createdSessionId = checkoutData?.data?.sessionId;
+      if (createdSessionId) {
+        setCheckoutSessionId(createdSessionId);
+      }
 
-      // Now create PhonePe payment session with the checkout session data
+      // Now create PhonePe payment session with the checkout session data (pass only sessionId)
       const paymentRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/payment/phonepe/create-session`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
-        body: JSON.stringify(orderData)
+        body: JSON.stringify({ sessionId: createdSessionId || checkoutSessionData?.sessionId || checkoutSessionData?.checkoutSessionId, shipping: {
+          fullName: `${form.firstName} ${form.lastName}`,
+          email: form.email || user.email,
+          phone: form.phone,
+          addressLine1: form.address1 || "",
+          addressLine2: form.address2 || "",
+          city: form.city,
+          state: form.state,
+          postalCode: form.pincode || "",
+          country: form.country || "India"
+        } })
       });
 
       if (paymentRes.ok) {

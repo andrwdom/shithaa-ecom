@@ -106,12 +106,11 @@ export const createPhonePeSession = async (req, res) => {
     console.log(`[${correlationId}] Request body:`, JSON.stringify(req.body, null, 2));
     console.log(`[${correlationId}] User:`, req.user);
     
-    const {
-      checkoutSessionId,
-      shipping
-    } = req.body;
+    const { checkoutSessionId, sessionId, shipping } = req.body;
+    // Support both names (new: sessionId) while keeping backward compat
+    const effectiveSessionId = checkoutSessionId || sessionId;
 
-    if (!checkoutSessionId || !shipping) {
+    if (!effectiveSessionId || !shipping) {
       console.log(`[${correlationId}] Validation failed - missing required fields`);
       return res.status(400).json({
         success: false,
@@ -122,9 +121,9 @@ export const createPhonePeSession = async (req, res) => {
     console.log(`[${correlationId}] Validation passed, proceeding with session creation`);
     
     // Fetch checkout session
-    const checkoutSession = await CheckoutSession.findOne({ sessionId: checkoutSessionId });
+    const checkoutSession = await CheckoutSession.findOne({ sessionId: effectiveSessionId });
     if (!checkoutSession) {
-      console.log(`[${correlationId}] Checkout session not found:`, checkoutSessionId);
+      console.log(`[${correlationId}] Checkout session not found:`, effectiveSessionId);
       return res.status(404).json({
         success: false,
         message: 'Checkout session not found'
@@ -132,7 +131,7 @@ export const createPhonePeSession = async (req, res) => {
     }
     
     if (checkoutSession.isExpired()) {
-      console.log(`[${correlationId}] Checkout session expired:`, checkoutSessionId);
+      console.log(`[${correlationId}] Checkout session expired:`, effectiveSessionId);
       return res.status(410).json({
         success: false,
         message: 'Checkout session has expired'
@@ -156,7 +155,7 @@ export const createPhonePeSession = async (req, res) => {
     
     // Create payment session (temporary storage, not an order)
     const paymentSessionData = {
-      sessionId: checkoutSessionId,
+      sessionId: effectiveSessionId,
       phonepeTransactionId,
       userId: checkoutSession.userId,
       userEmail,
@@ -206,7 +205,7 @@ export const createPhonePeSession = async (req, res) => {
       
       // Update checkout session with PhonePe transaction ID
       await CheckoutSession.findOneAndUpdate(
-        { sessionId: checkoutSessionId },
+        { sessionId: effectiveSessionId },
         { phonepeTransactionId }
       );
       
@@ -427,16 +426,24 @@ export const phonePeCallback = async (req, res) => {
       }
     }
 
-    // Find order by merchantOrderId (orderId in callback payload)
-    console.log('Looking for order with phonepeTransactionId:', merchantOrderId);
-    
-    const order = await orderModel.findOne({ phonepeTransactionId: merchantOrderId });
+    // Prefer PaymentSession -> CheckoutSession -> create order idempotently
+    const paymentSession = await PaymentSession.findOne({ phonepeTransactionId: merchantOrderId });
+    let order = await orderModel.findOne({ phonepeTransactionId: merchantOrderId });
+    if (!order && paymentSession && paymentSession.sessionId) {
+      try {
+        const { createOrderFromCheckoutSession } = await import('../services/orderFromSession.js');
+        order = await createOrderFromCheckoutSession(paymentSession.sessionId, {
+          paymentStatus: 'success',
+          phonepeTransactionId: merchantOrderId,
+          providerPayload: req.body
+        });
+      } catch (createErr) {
+        console.error('Order creation from session failed (callback path):', createErr);
+      }
+    }
     if (!order) {
       console.error('Order not found for phonepeTransactionId:', merchantOrderId);
-      return res.status(404).json({
-        success: false,
-        message: 'Order not found'
-      });
+      return res.status(404).json({ success: false, message: 'Order not found' });
     }
 
     console.log('Found order:', order._id, 'Current state:', state);

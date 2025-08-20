@@ -4,7 +4,8 @@ import {
     getCheckoutSession, 
     reserveStockForSession, 
     releaseStockForSession, 
-    cancelCheckoutSession 
+    cancelCheckoutSession,
+    getCheckoutSummary
 } from '../controllers/checkoutController.js';
 import { verifyToken, optionalVerifyToken } from '../middleware/auth.js';
 
@@ -15,6 +16,9 @@ checkoutRouter.post('/session', verifyToken, createCheckoutSession);
 
 // Get checkout session by ID (optional auth for guest users)
 checkoutRouter.get('/session/:sessionId', optionalVerifyToken, getCheckoutSession);
+
+// Checkout summary snapshot for client fail page and debugging
+checkoutRouter.get('/session/:sessionId/summary', optionalVerifyToken, getCheckoutSummary);
 
 // Reserve stock for checkout session (requires authentication)
 checkoutRouter.post('/session/:sessionId/reserve-stock', verifyToken, reserveStockForSession);

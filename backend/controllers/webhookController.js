@@ -28,14 +28,32 @@ export async function phonePeWebhookHandler(req, res) {
         console.log('🔔 WEBHOOK: No payment session found for orderId:', payload.orderId);
       }
       
-      // Then update order if it exists
-      const order = await orderModel.findOne({ phonepeTransactionId: payload.orderId });
-      if (order) {
-        order.paymentStatus = payload.state === 'COMPLETED' ? 'paid' : payload.state.toLowerCase();
-        order.orderStatus = payload.state === 'COMPLETED' ? 'Confirmed' : payload.state.toLowerCase();
-        order.status = payload.state;
-        await order.save();
-        console.log('🔔 WEBHOOK: Order updated successfully');
+      // Then update/create order via session snapshot (idempotent)
+      try {
+        const { createOrderFromCheckoutSession } = await import('../services/orderFromSession.js');
+        if (payload.state === 'COMPLETED') {
+          // Attempt to find related PaymentSession -> sessionId
+          const ps = await PaymentSession.findOne({ phonepeTransactionId: payload.orderId });
+          if (ps && ps.sessionId) {
+            await createOrderFromCheckoutSession(ps.sessionId, {
+              paymentStatus: 'success',
+              phonepeTransactionId: payload.orderId,
+              providerPayload: req.body
+            });
+          }
+        } else {
+          // Update existing order if any to failed
+          const order = await orderModel.findOne({ phonepeTransactionId: payload.orderId });
+          if (order) {
+            order.paymentStatus = payload.state.toLowerCase();
+            order.orderStatus = payload.state.toLowerCase();
+            order.status = payload.state;
+            await order.save();
+            console.log('🔔 WEBHOOK: Order updated successfully');
+          }
+        }
+      } catch (serviceErr) {
+        console.error('Order-from-session service failed (webhook):', serviceErr);
       }
     }
     // Refund status update

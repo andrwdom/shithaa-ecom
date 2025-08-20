@@ -3,6 +3,7 @@
 import { Suspense } from 'react'
 import { useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
+import { getCheckoutSessionId, clearCheckoutSessionId } from '@/lib/checkoutSession'
 import { XCircle, RefreshCw, ShoppingBag, AlertTriangle, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -23,6 +24,7 @@ function PaymentFailedContent() {
   const params = useSearchParams()
   const router = useRouter()
   const transactionId = params.get('transactionId')
+  const sessionIdParam = params.get('sessionId')
   const reason = params.get('reason') || 'Payment was not completed'
   const amount = params.get('amount')
   const itemsParam = params.get('items')
@@ -31,6 +33,7 @@ function PaymentFailedContent() {
   const [orderItems, setOrderItems] = useState<any[]>([])
   const [orderAmount, setOrderAmount] = useState<number | null>(null)
   const [orderEmail, setOrderEmail] = useState<string>('')
+  const [serverSummary, setServerSummary] = useState<any | null>(null)
 
   // Parse items and amount from URL parameters
   useEffect(() => {
@@ -52,26 +55,23 @@ function PaymentFailedContent() {
     }
   }, [itemsParam, amount, email])
 
-  // Try to get additional order data from localStorage
+  // Fetch authoritative checkout summary from server
   useEffect(() => {
-    const failedOrderData = localStorage.getItem('failedOrderData')
-    if (failedOrderData) {
-      try {
-        const orderData = JSON.parse(failedOrderData)
-        if (orderData.cartItems && !orderItems.length) {
-          setOrderItems(orderData.cartItems)
+    const sessionId = sessionIdParam || getCheckoutSessionId();
+    if (!sessionId) return;
+    const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + `/api/checkout/session/${sessionId}/summary`;
+    fetch(apiUrl)
+      .then(r => r.json())
+      .then(data => {
+        if (data && data.data) {
+          setServerSummary(data.data);
+          setOrderItems(data.data.items || []);
+          setOrderAmount(data.data.total || null);
+          setOrderEmail(data.data.userEmail || '');
         }
-        if (orderData.amount && !orderAmount) {
-          setOrderAmount(orderData.amount)
-        }
-        if (orderData.email && !orderEmail) {
-          setOrderEmail(orderData.email)
-        }
-      } catch (error) {
-        console.error('Error parsing failed order data:', error)
-      }
-    }
-  }, [orderItems.length, orderAmount, orderEmail])
+      })
+      .catch(err => console.error('Failed to load checkout summary:', err));
+  }, [sessionIdParam])
 
   // Clear any temporary order data since payment failed
   useEffect(() => {
@@ -82,6 +82,7 @@ function PaymentFailedContent() {
     localStorage.removeItem('phonepeBuyNowItem')
     localStorage.removeItem('phonepeCartItems')
     
+    clearCheckoutSessionId()
     console.log('Cleared temporary order data due to payment failure')
   }, [])
 

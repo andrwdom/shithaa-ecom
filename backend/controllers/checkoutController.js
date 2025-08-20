@@ -14,14 +14,22 @@ export const createCheckoutSession = async (req, res) => {
   try {
     console.log(`[${correlationId}] Creating checkout session`);
     console.log(`[${correlationId}] Request body:`, JSON.stringify(req.body, null, 2));
+    console.log(`[${correlationId}] Request body type:`, typeof req.body);
+    console.log(`[${correlationId}] Request body keys:`, Object.keys(req.body || {}));
     console.log(`[${correlationId}] Request headers:`, req.headers);
     console.log(`[${correlationId}] User:`, req.user);
+    console.log(`[${correlationId}] Content-Type header:`, req.headers['content-type']);
     
     const { source, items, couponCode } = req.body;
     const userId = req.user?.id;
     const userEmail = req.user?.email || req.body.email;
     
     console.log(`[${correlationId}] Parsed data:`, { source, items, userId, userEmail });
+    console.log(`[${correlationId}] Source value received:`, source);
+    console.log(`[${correlationId}] Source value type:`, typeof source);
+    console.log(`[${correlationId}] Source value length:`, source ? source.length : 'undefined');
+    console.log(`[${correlationId}] Source === "buynow":`, source === 'buynow');
+    console.log(`[${correlationId}] Source === "cart":`, source === 'cart');
     
     // Validate request
     if (!source || !['cart', 'buynow'].includes(source)) {
@@ -439,5 +447,39 @@ export const cancelCheckoutSession = async (req, res) => {
   } catch (error) {
     console.error(`[${correlationId}] Error cancelling checkout session:`, error);
     return errorResponse(res, 500, 'Failed to cancel checkout session', error.message);
+  }
+};
+
+/**
+ * Get server-authoritative checkout summary by session ID
+ * GET /api/checkout/session/:sessionId/summary
+ */
+export const getCheckoutSummary = async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    if (!sessionId) {
+      return errorResponse(res, 400, 'Session ID is required');
+    }
+
+    const s = await CheckoutSession.findOne({ sessionId });
+    if (!s) {
+      return errorResponse(res, 404, 'Checkout session not found');
+    }
+
+    return successResponse(res, {
+      sessionId: s.sessionId,
+      source: s.source,
+      items: s.items,
+      subtotal: s.subtotal,
+      shippingCost: s.shippingCost,
+      discount: s.discount,
+      total: s.total,
+      status: s.status,
+      userEmail: s.userEmail,
+      createdAt: s.createdAt,
+      updatedAt: s.updatedAt
+    });
+  } catch (error) {
+    return errorResponse(res, 500, 'Failed to get checkout summary', error.message);
   }
 };
