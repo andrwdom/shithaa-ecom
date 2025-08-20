@@ -312,31 +312,64 @@ export default function CheckoutPage() {
         throw new Error('Please complete your shipping information before proceeding.');
       }
       
-      console.log('[CheckoutPage] ✅ Data validation passed, creating payment session...');
+      console.log('[CheckoutPage] ✅ Data validation passed, creating checkout session...');
       
-      // 1. Create PhonePe payment session on backend
+      // 1. Create checkout session first
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + '/api/payment/phonepe/create-session';
+      const checkoutSessionUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + '/api/checkout/session';
+      
+      const checkoutSessionData = {
+        source: displayMode,
+        items: displayItems.map(item => ({
+          productId: item._id || item.id,
+          size: item.size,
+          quantity: item.quantity
+        })),
+        couponCode: coupon?.code
+      };
+      
+      console.log('[CheckoutPage] 📤 Creating checkout session:', checkoutSessionData);
+      
+      const checkoutRes = await fetch(checkoutSessionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify(checkoutSessionData)
+      });
+      
+      const checkoutData = await checkoutRes.json();
+      console.log('[CheckoutPage] 📥 Checkout session response:', checkoutData);
+      
+      if (!checkoutRes.ok || !checkoutData.data?.sessionId) {
+        throw new Error(checkoutData.message || 'Failed to create checkout session');
+      }
+      
+      const checkoutSessionId = checkoutData.data.sessionId;
+      console.log('[CheckoutPage] ✅ Checkout session created:', checkoutSessionId);
+      
+      // 2. Create PhonePe payment session using checkout session
+      const phonepeUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + '/api/payment/phonepe/create-session';
       
       const paymentData = {
-        amount: orderSummary.total,
-        shipping,
-        cartItems: displayItems, // Use displayItems instead of cartItems
-        coupon,
-        userId: user?.mongoId,
-        email: user?.email || shipping.email,
-        checkoutMode: displayMode, // Add checkout mode for backend
-        orderSummary: {
-          subtotal: orderSummary.subtotal,
-          discount: orderSummary.discount,
-          shipping: orderSummary.shipping,
-          total: orderSummary.total
+        checkoutSessionId,
+        shipping: {
+          fullName: shipping.fullName,
+          email: shipping.email,
+          phone: shipping.phone,
+          addressLine1: shipping.address1 || shipping.addressLine1,
+          addressLine2: shipping.address2 || shipping.addressLine2 || '',
+          city: shipping.city,
+          state: shipping.state,
+          postalCode: shipping.pincode || shipping.postalCode,
+          country: shipping.country || 'India'
         }
       };
       
-      console.log('[CheckoutPage] 📤 Sending payment data to backend:', paymentData);
+      console.log('[CheckoutPage] 📤 Creating PhonePe payment session:', paymentData);
       
-      const res = await fetch(apiUrl, {
+      const phonepeRes = await fetch(phonepeUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -345,17 +378,17 @@ export default function CheckoutPage() {
         body: JSON.stringify(paymentData)
       });
       
-      const data = await res.json();
-      console.log('[CheckoutPage] 📥 Backend response:', data);
+      const phonepeData = await phonepeRes.json();
+      console.log('[CheckoutPage] 📥 PhonePe response:', phonepeData);
       
-      if (!res.ok || !data.redirectUrl) {
-        throw new Error(data.message || 'Failed to create payment session');
+      if (!phonepeRes.ok || !phonepeData.data?.redirectUrl) {
+        throw new Error(phonepeData.message || 'Failed to create PhonePe payment session');
       }
 
-      console.log('[CheckoutPage] ✅ Payment session created, redirecting to PhonePe...');
+      console.log('[CheckoutPage] ✅ PhonePe payment session created, redirecting...');
       
-      // 2. Redirect to PhonePe payment page
-      window.location.href = data.redirectUrl;
+      // 3. Redirect to PhonePe payment page
+      window.location.href = phonepeData.data.redirectUrl;
     } catch (err: any) {
       console.error('[CheckoutPage] ❌ Payment error:', err);
       setPaymentError(err.message || 'Payment failed. Try again.');
