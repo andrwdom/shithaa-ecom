@@ -118,11 +118,19 @@ export const createPhonePeSession = async (req, res) => {
       shippingKeys: shipping ? Object.keys(shipping) : []
     });
 
-    if (!effectiveSessionId || !shipping) {
-      console.log(`[${correlationId}] Validation failed - missing required fields`);
-      return res.status(400).json({
-        success: false,
-        message: 'Missing required fields: checkoutSessionId and shipping'
+    if (!effectiveSessionId) {
+      console.log(`[${correlationId}] ❌ Validation failed - missing sessionId`);
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Missing required field: sessionId' 
+      });
+    }
+    
+    if (!shipping) {
+      console.log(`[${correlationId}] ❌ Validation failed - missing shipping`);
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Missing required field: shipping' 
       });
     }
 
@@ -131,7 +139,11 @@ export const createPhonePeSession = async (req, res) => {
     // Fetch checkout session
     const checkoutSession = await CheckoutSession.findOne({ sessionId: effectiveSessionId });
     if (!checkoutSession) {
-      console.log(`[${correlationId}] Checkout session not found:`, effectiveSessionId);
+      console.warn(`[${correlationId}] ❌ create-session: session not found`, { 
+        sessionId: effectiveSessionId, 
+        ip: req.ip,
+        userAgent: req.headers['user-agent']
+      });
       return res.status(404).json({
         success: false,
         message: 'Checkout session not found'
@@ -139,7 +151,7 @@ export const createPhonePeSession = async (req, res) => {
     }
     
     if (checkoutSession.isExpired()) {
-      console.log(`[${correlationId}] Checkout session expired:`, effectiveSessionId);
+      console.log(`[${correlationId}] ❌ Checkout session expired:`, effectiveSessionId);
       return res.status(410).json({
         success: false,
         message: 'Checkout session has expired'
@@ -148,13 +160,13 @@ export const createPhonePeSession = async (req, res) => {
     
     // 🔧 FIX: Check for valid session status - allow both 'pending' and 'awaiting_payment'
     if (!['pending', 'awaiting_payment'].includes(checkoutSession.status)) {
-      console.log(`[${correlationId}] ❌ Checkout session not ready for payment:`, {
+      console.log(`[${correlationId}] ❌ create-session: session not ready`, {
         sessionId: effectiveSessionId,
         status: checkoutSession.status,
-        allowedStatuses: ['pending', 'awaiting_payment'],
-        source: checkoutSession.source,
+        userId: checkoutSession.userId,
         createdAt: checkoutSession.createdAt,
-        updatedAt: checkoutSession.updatedAt
+        updatedAt: checkoutSession.updatedAt,
+        source: checkoutSession.source
       });
       return res.status(400).json({
         success: false,
@@ -167,6 +179,16 @@ export const createPhonePeSession = async (req, res) => {
       status: checkoutSession.status,
       source: checkoutSession.source,
       itemsCount: checkoutSession.items?.length || 0,
+      total: checkoutSession.total
+    });
+    
+    // Log the checkoutSession snapshot when attempting to create PhonePe session
+    console.info(`[${correlationId}] 🚀 creating phonepe session`, {
+      sessionId: effectiveSessionId,
+      status: checkoutSession.status,
+      itemsCount: Array.isArray(checkoutSession.items) ? checkoutSession.items.length : 0,
+      userId: checkoutSession.userId,
+      source: checkoutSession.source,
       total: checkoutSession.total
     });
     
