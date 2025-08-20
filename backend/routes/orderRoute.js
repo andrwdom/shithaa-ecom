@@ -6,7 +6,7 @@ import {
     getUserOrderCount,
     getOrderByTransactionId
 } from '../controllers/orderController.js';
-import { verifyToken, isAdmin, optionalAuth } from '../middleware/auth.js'
+import { verifyToken, optionalAuth } from '../middleware/auth.js'
 
 const orderRouter = express.Router();
 
