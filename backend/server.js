@@ -100,9 +100,10 @@ app.use((req, res, next) => {
 });
 
 // Rate limiting - PRODUCTION OPTIMIZED
+// FIXED: Increased from 200 to 2000 requests per 15 minutes to prevent 429 errors
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 200, // 200 requests per 15 minutes (PRODUCTION OPTIMIZED)
+    max: 2000, // Increased from 200 to 2000 requests per 15 minutes
     message: 'Too many requests from this IP, please try again later.',
     standardHeaders: true,
     legacyHeaders: false,
@@ -120,6 +121,25 @@ const limiter = rateLimit({
 
 // Apply rate limiting to all routes
 app.use(limiter);
+
+// Special rate limiting for payment endpoints - more generous
+const paymentLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 500, // 500 payment requests per 15 minutes
+    message: 'Too many payment requests, please try again later.',
+    standardHeaders: true,
+    legacyHeaders: false,
+    skip: (req) => {
+        // Skip rate limiting for local dev and OPTIONS requests
+        return (
+            req.headers.origin === 'http://localhost:5174' ||
+            req.headers.origin === 'http://localhost:5173' ||
+            req.headers.origin === 'http://localhost:3000' ||
+            req.headers.origin === 'http://localhost:3001' ||
+            req.method === 'OPTIONS'
+        );
+    }
+});
 
 // Apply rate limiting to auth routes with higher limits
 const authLimiter = rateLimit({
@@ -157,7 +177,9 @@ app.use(helmet({
             "connect-src": ["'self'", "https://shithaa.in", "https://admin.shithaa.in", "https://shitha-frontend.vercel.app", "https://admin.shithaa.com", "https://shithaa.com", "http://localhost:5173", "http://localhost:5174", "http://localhost:3000", "http://localhost:3001"],
             "frame-ancestors": ["'none'"],
         },
-    }
+    },
+    // Disable COOP policy to allow payment popups/redirects
+    crossOriginOpenerPolicy: false
 }));
 
 // SECURITY: Cookie parser for HttpOnly cookies
@@ -182,8 +204,8 @@ app.use('/api/user', userRouter)
 app.use('/api/products', productRouter)
 app.use('/api/cart', cartRouter)
 app.use('/api/orders', orderRouter)
-app.use('/api/payment', paymentRouter)
-app.use('/api/checkout', checkoutRouter)
+app.use('/api/payment', paymentLimiter, paymentRouter) // Apply payment rate limiter
+app.use('/api/checkout', paymentLimiter, checkoutRouter) // Apply payment rate limiter
 app.use('/api/coupons', couponRouter)
 app.use('/api/carousel', carouselRouter)
 app.use('/api/categories', categoryRouter)
@@ -222,7 +244,7 @@ app.get('/api/cors-test', (req, res) => {
   });
 });
 
-// Health check endpoint - PRODUCTION OPTIMIZED
+// Health check endpoint - PRODUCTION OPTIMIZED (bypasses rate limiting)
 app.get('/api/health', (req, res) => {
   // Check MongoDB connection
   const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
