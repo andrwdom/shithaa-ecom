@@ -12,7 +12,7 @@ export async function phonePeWebhookHandler(req, res) {
     const expected = crypto.createHash('sha256').update(`${username}:${password}`).digest('hex');
     if (authHeader !== expected) return res.status(401).json({ success: false, message: 'Invalid webhook signature' });
     const { payload, event } = req.body;
-    if (!payload || !event) return errorResponse(res, 'Invalid webhook payload', 400);
+    if (!payload || !event) return errorResponse(res, 400, 'Invalid webhook payload');
     // Payment status update - FIXED TO WORK WITH PAYMENT SESSIONS
     if (payload.orderId && payload.state) {
       console.log('🔔 WEBHOOK: Processing payment update for orderId:', payload.orderId, 'state:', payload.state);
@@ -53,6 +53,6 @@ export async function phonePeWebhookHandler(req, res) {
     }
     return successResponse(res, {}, 'Webhook processed');
   } catch (err) {
-    return errorResponse(res, err.message);
+    return errorResponse(res, 500, err.message);
   }
 } 

@@ -20,7 +20,7 @@ export const getAllCategories = async (req, res) => {
         successResponse(res, categoriesWithCount, 'Categories fetched successfully');
     } catch (error) {
         console.error('Get All Categories Error:', error);
-        errorResponse(res, error.message);
+        errorResponse(res, 500, error.message);
     }
 };
 
@@ -28,7 +28,7 @@ export const getCategoryBySlug = async (req, res) => {
     try {
         const category = await Category.findOne({ slug: req.params.slug });
         if (!category) {
-            return errorResponse(res, 'Category not found', 404);
+            return errorResponse(res, 404, 'Category not found');
         }
         
         // Get product count for this category
@@ -41,7 +41,7 @@ export const getCategoryBySlug = async (req, res) => {
         successResponse(res, categoryWithCount, 'Category fetched successfully');
     } catch (error) {
         console.error('Get Category By Slug Error:', error);
-        errorResponse(res, error.message);
+        errorResponse(res, 500, error.message);
     }
 };
 
@@ -51,7 +51,7 @@ export const getProductsByCategory = async (req, res) => {
         
         const category = await Category.findOne({ slug: req.params.slug });
         if (!category) {
-            return errorResponse(res, 'Category not found', 404);
+            return errorResponse(res, 404, 'Category not found');
         }
 
         // Build filter object
@@ -90,7 +90,7 @@ export const getProductsByCategory = async (req, res) => {
         paginatedResponse(res, products, total, page, totalPages, 'Products fetched successfully');
     } catch (error) {
         console.error('Get Products By Category Error:', error);
-        errorResponse(res, error.message);
+        errorResponse(res, 500, error.message);
     }
 };
 
@@ -98,17 +98,17 @@ export const addCategory = async (req, res) => {
     try {
         const { name, slug, description, image } = req.body;
         if (!name || !slug) {
-            return errorResponse(res, 'Name and slug are required', 400);
+            return errorResponse(res, 400, 'Name and slug are required');
         }
         const exists = await Category.findOne({ slug });
         if (exists) {
-            return errorResponse(res, 'Category with this slug already exists', 400);
+            return errorResponse(res, 400, 'Category with this slug already exists');
         }
         const category = new Category({ name, slug, description, image });
         await category.save();
         successResponse(res, category, 'Category added successfully');
     } catch (error) {
         console.error('Add Category Error:', error);
-        errorResponse(res, error.message);
+        errorResponse(res, 500, error.message);
     }
 }; 

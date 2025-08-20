@@ -6,13 +6,12 @@ export const submitContact = async (req, res) => {
         const { name, email, phone, subject, message } = req.body;
         
         if (!name || !email || !subject || !message) {
-            return errorResponse(res, 'Missing required fields: name, email, subject, message', 400);
+            return errorResponse(res, 400, 'Missing required fields: name, email, subject, message');
         }
         
         // Basic email validation
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
-            return errorResponse(res, 'Please enter a valid email address', 400);
+        if (!email.includes('@')) {
+            return errorResponse(res, 400, 'Please enter a valid email address');
         }
         
         const contact = new Contact({
@@ -31,6 +30,6 @@ export const submitContact = async (req, res) => {
         successResponse(res, null, 'Contact form submitted successfully', 201);
     } catch (error) {
         console.error('Contact Submission Error:', error);
-        errorResponse(res, 'Failed to submit contact form');
+        errorResponse(res, 500, 'Failed to submit contact form');
     }
 }; 

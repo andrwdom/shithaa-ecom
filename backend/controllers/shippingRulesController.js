@@ -8,7 +8,7 @@ export const getAllShippingRules = async (req, res) => {
         successResponse(res, rules, 'Shipping rules retrieved successfully');
     } catch (error) {
         console.error('Get shipping rules error:', error);
-        errorResponse(res, 'Failed to retrieve shipping rules', 500);
+        errorResponse(res, 500, 'Failed to retrieve shipping rules');
     }
 };
 
@@ -19,13 +19,13 @@ export const getShippingRuleByCategory = async (req, res) => {
         const rule = await ShippingRules.findOne({ category });
         
         if (!rule) {
-            return errorResponse(res, 'Shipping rule not found for this category', 404);
+            return errorResponse(res, 404, 'Shipping rule not found for this category');
         }
         
         successResponse(res, rule, 'Shipping rule retrieved successfully');
     } catch (error) {
         console.error('Get shipping rule error:', error);
-        errorResponse(res, 'Failed to retrieve shipping rule', 500);
+        errorResponse(res, 500, 'Failed to retrieve shipping rule');
     }
 };
 
@@ -37,7 +37,7 @@ export const createShippingRule = async (req, res) => {
         // Check if rule already exists for this category
         const existingRule = await ShippingRules.findOne({ category });
         if (existingRule) {
-            return errorResponse(res, 'Shipping rule already exists for this category', 400);
+            return errorResponse(res, 400, 'Shipping rule already exists for this category');
         }
         
         const newRule = new ShippingRules({
@@ -50,7 +50,7 @@ export const createShippingRule = async (req, res) => {
         successResponse(res, newRule, 'Shipping rule created successfully', 201);
     } catch (error) {
         console.error('Create shipping rule error:', error);
-        errorResponse(res, 'Failed to create shipping rule', 500);
+        errorResponse(res, 500, 'Failed to create shipping rule');
     }
 };
 
@@ -67,13 +67,13 @@ export const updateShippingRule = async (req, res) => {
         );
         
         if (!rule) {
-            return errorResponse(res, 'Shipping rule not found for this category', 404);
+            return errorResponse(res, 404, 'Shipping rule not found for this category');
         }
         
         successResponse(res, rule, 'Shipping rule updated successfully');
     } catch (error) {
         console.error('Update shipping rule error:', error);
-        errorResponse(res, 'Failed to update shipping rule', 500);
+        errorResponse(res, 500, 'Failed to update shipping rule');
     }
 };
 
@@ -85,13 +85,13 @@ export const deleteShippingRule = async (req, res) => {
         const rule = await ShippingRules.findOneAndDelete({ category });
         
         if (!rule) {
-            return errorResponse(res, 'Shipping rule not found for this category', 404);
+            return errorResponse(res, 404, 'Shipping rule not found for this category');
         }
         
         successResponse(res, null, 'Shipping rule deleted successfully');
     } catch (error) {
         console.error('Delete shipping rule error:', error);
-        errorResponse(res, 'Failed to delete shipping rule', 500);
+        errorResponse(res, 500, 'Failed to delete shipping rule');
     }
 };
 
@@ -101,11 +101,11 @@ export const calculateShippingWithRules = async (req, res) => {
         const { items, shippingInfo } = req.body;
         
         if (!items || !Array.isArray(items)) {
-            return errorResponse(res, 'Items array is required', 400);
+            return errorResponse(res, 400, 'Items array is required');
         }
 
         if (!shippingInfo || !shippingInfo.state) {
-            return errorResponse(res, 'Shipping information is required', 400);
+            return errorResponse(res, 400, 'Shipping information is required');
         }
 
         // Group items by category and calculate total quantity per category
@@ -291,6 +291,6 @@ export const seedDefaultShippingRules = async (req, res) => {
         successResponse(res, null, 'Default shipping rules seeded successfully');
     } catch (error) {
         console.error('Seed shipping rules error:', error);
-        errorResponse(res, 'Failed to seed shipping rules', 500);
+        errorResponse(res, 500, 'Failed to seed shipping rules');
     }
 }; 

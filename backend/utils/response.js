@@ -6,11 +6,17 @@ export const successResponse = (res, data, message = 'Success', statusCode = 200
     });
 };
 
-export const errorResponse = (res, message = 'Error occurred', statusCode = 500) => {
-    res.status(statusCode).json({
+export const errorResponse = (res, statusCode = 500, message = 'Error occurred', extraData = null) => {
+    const response = {
         success: false,
         message
-    });
+    };
+    
+    if (extraData) {
+        response.error = extraData;
+    }
+    
+    res.status(statusCode).json(response);
 };
 
 export const paginatedResponse = (res, data, total, page, totalPages, message = 'Success') => {

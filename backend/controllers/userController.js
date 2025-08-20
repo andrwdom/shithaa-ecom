@@ -23,12 +23,12 @@ export const getProfile = async (req, res) => {
         
         const user = await userModel.findById(req.user.id).select('-password');
         if (!user) {
-            return errorResponse(res, 'User not found', 404);
+            return errorResponse(res, 404, 'User not found');
         }
         successResponse(res, user, 'Profile fetched successfully');
     } catch (error) {
         console.error('Get Profile Error:', error);
-        errorResponse(res, error.message);
+        errorResponse(res, 500, error.message);
     }
 };
 
@@ -43,12 +43,12 @@ export const updateProfile = async (req, res) => {
         if (email) {
             // Validate email format
             if (!validator.isEmail(email)) {
-                return errorResponse(res, 'Please enter a valid email', 400);
+                return errorResponse(res, 400, 'Please enter a valid email');
             }
             // Check if email is already taken by another user
             const existingUser = await userModel.findOne({ email, _id: { $ne: req.user.id } });
             if (existingUser) {
-                return errorResponse(res, 'Email is already taken', 400);
+                return errorResponse(res, 400, 'Email is already taken');
             }
             updateData.email = email;
         }
@@ -60,13 +60,13 @@ export const updateProfile = async (req, res) => {
         ).select('-password');
         
         if (!user) {
-            return errorResponse(res, 'User not found', 404);
+            return errorResponse(res, 404, 'User not found');
         }
         
         successResponse(res, user, 'Profile updated successfully');
     } catch (error) {
         console.error('Update Profile Error:', error);
-        errorResponse(res, error.message);
+        errorResponse(res, 500, error.message);
     }
 };
 

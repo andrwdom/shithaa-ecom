@@ -60,7 +60,7 @@ export const getUserOrders = async (req, res) => {
         paginatedResponse(res, orders, total, page, totalPages, 'Orders fetched successfully');
     } catch (error) {
         console.error('Get User Orders Error:', error);
-        errorResponse(res, error.message);
+        errorResponse(res, 500, error.message);
     }
 };
 
@@ -78,7 +78,7 @@ export const getOrderById = async (req, res) => {
             order = await orderModel.findOne({ orderId: id });
         }
         if (!order) {
-            return errorResponse(res, 'Order not found', 404);
+            return errorResponse(res, 404, 'Order not found');
         }
         // Allow access to test orders for debugging
         if (order.isTestOrder === true) {
@@ -88,13 +88,13 @@ export const getOrderById = async (req, res) => {
         // Check if user owns this order or is admin
         const userId = order.userInfo?.userId || order.userId;
             if (!req.user || (userId && userId.toString() !== req.user.id && (!req.user.role || req.user.role !== 'admin'))) {
-            return errorResponse(res, 'Access denied', 403);
+            return errorResponse(res, 403, 'Access denied');
         }
         // Always include shippingAddress in response
         successResponse(res, { ...order.toObject(), shippingAddress: order.shippingAddress || null }, 'Order fetched successfully');
     } catch (error) {
         console.error('Get Order By ID Error:', error);
-        errorResponse(res, error.message);
+        errorResponse(res, 500, error.message);
     }
 };
 
