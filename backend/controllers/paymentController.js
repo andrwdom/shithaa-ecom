@@ -106,92 +106,68 @@ export const createPhonePeSession = async (req, res) => {
     console.log(`[${correlationId}] Request body:`, JSON.stringify(req.body, null, 2));
     console.log(`[${correlationId}] User:`, req.user);
     
-    const { checkoutSessionId, sessionId, shipping } = req.body;
-    // Support both names (new: sessionId) while keeping backward compat
-    const effectiveSessionId = checkoutSessionId || sessionId;
-    
-    console.log(`[${correlationId}] 🔍 Payment session creation request:`, {
-      checkoutSessionId,
-      sessionId,
-      effectiveSessionId,
-      hasShipping: !!shipping,
-      shippingKeys: shipping ? Object.keys(shipping) : []
-    });
+    // -----------------------------
+    // BEGIN PATCH: paymentController.createPhonePeSession
+    // -----------------------------
+    const { sessionId, checkoutSessionId, shipping } = req.body;
+    const effectiveSessionId = sessionId || checkoutSessionId;
 
     if (!effectiveSessionId) {
-      console.log(`[${correlationId}] ❌ Validation failed - missing sessionId`);
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Missing required field: sessionId' 
-      });
+      console.warn('[payment] create-session: missing sessionId', { ip: req.ip, body: req.body });
+      return res.status(400).json({ success: false, message: 'Missing required field: sessionId' });
     }
-    
-    if (!shipping) {
-      console.log(`[${correlationId}] ❌ Validation failed - missing shipping`);
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Missing required field: shipping' 
-      });
+    if (!shipping || !shipping.phone || !shipping.addressLine1) {
+      console.warn('[payment] create-session: missing shipping', { sessionId: effectiveSessionId, shippingProvided: !!shipping });
+      return res.status(400).json({ success: false, message: 'Missing required field: shipping' });
     }
 
-    console.log(`[${correlationId}] Validation passed, proceeding with session creation`);
-    
-    // Fetch checkout session
+    // Load the CheckoutSession snapshot from DB (single source of truth)
     const checkoutSession = await CheckoutSession.findOne({ sessionId: effectiveSessionId });
     if (!checkoutSession) {
-      console.warn(`[${correlationId}] ❌ create-session: session not found`, { 
-        sessionId: effectiveSessionId, 
-        ip: req.ip,
-        userAgent: req.headers['user-agent']
-      });
-      return res.status(404).json({
-        success: false,
-        message: 'Checkout session not found'
-      });
+      console.warn('[payment] create-session: checkoutSession not found', { sessionId: effectiveSessionId, ip: req.ip });
+      return res.status(404).json({ success: false, message: 'Checkout session not found' });
     }
-    
-    if (checkoutSession.isExpired()) {
-      console.log(`[${correlationId}] ❌ Checkout session expired:`, effectiveSessionId);
-      return res.status(410).json({
-        success: false,
-        message: 'Checkout session has expired'
-      });
-    }
-    
-    // 🔧 FIX: Check for valid session status - allow both 'pending' and 'awaiting_payment'
+
+    // Accept only these statuses
     if (!['pending', 'awaiting_payment'].includes(checkoutSession.status)) {
-      console.log(`[${correlationId}] ❌ create-session: session not ready`, {
+      console.info('[payment] create-session: session not ready for payment', {
         sessionId: effectiveSessionId,
         status: checkoutSession.status,
-        userId: checkoutSession.userId,
         createdAt: checkoutSession.createdAt,
-        updatedAt: checkoutSession.updatedAt,
-        source: checkoutSession.source
+        updatedAt: checkoutSession.updatedAt
       });
       return res.status(400).json({
         success: false,
         message: `Checkout session is not ready for payment. Current status: ${checkoutSession.status}`
       });
     }
-    
-    console.log(`[${correlationId}] ✅ Checkout session validation passed:`, {
+
+    // Log snapshot for debugging
+    console.info('[payment] create-session: building provider payload from CheckoutSession snapshot', {
       sessionId: effectiveSessionId,
-      status: checkoutSession.status,
-      source: checkoutSession.source,
-      itemsCount: checkoutSession.items?.length || 0,
-      total: checkoutSession.total
-    });
-    
-    // Log the checkoutSession snapshot when attempting to create PhonePe session
-    console.info(`[${correlationId}] 🚀 creating phonepe session`, {
-      sessionId: effectiveSessionId,
-      status: checkoutSession.status,
-      itemsCount: Array.isArray(checkoutSession.items) ? checkoutSession.items.length : 0,
       userId: checkoutSession.userId,
-      source: checkoutSession.source,
+      itemsCount: Array.isArray(checkoutSession.items) ? checkoutSession.items.length : 0,
+      subtotal: checkoutSession.subtotal,
       total: checkoutSession.total
     });
-    
+
+    // Build provider payload strictly from checkoutSession (DO NOT trust client items)
+    const providerItems = (checkoutSession.items || []).map(it => ({
+      productId: it.productId,
+      name: it.name,
+      price: it.price,
+      quantity: it.quantity
+    }));
+
+    const amount = checkoutSession.total; // use server-calculated total
+
+    // Log attempt start
+    console.info('[payment] create-session attempt start', { 
+      sessionId: effectiveSessionId, 
+      userId: checkoutSession.userId, 
+      itemsCount: checkoutSession.items?.length 
+    });
+
     const userEmail = checkoutSession.userEmail;
     console.log(`[${correlationId}] User email:`, userEmail);
     
@@ -347,6 +323,17 @@ export const createPhonePeSession = async (req, res) => {
     const response = await phonepeClient.pay(request);
     console.log(`[${correlationId}] PhonePe SDK response received:`, response);
     
+    // Log attempt end with provider response summary
+    console.info('[payment] create-session attempt end', { 
+      sessionId: effectiveSessionId, 
+      phonepeTransactionId, 
+      providerResponseSummary: {
+        hasRedirectUrl: !!response?.redirectUrl,
+        responseCode: response?.code,
+        responseMessage: response?.message
+      }
+    });
+    
     if (response && response.redirectUrl) {
       console.log(`[${correlationId}] Payment session created successfully, updating database...`);
       // Update payment session with PhonePe response
@@ -382,7 +369,7 @@ export const createPhonePeSession = async (req, res) => {
   } catch (error) {
     console.error(`[${correlationId}] === PhonePe SDK Session Creation Error ===`);
     console.error(`[${correlationId}] Error details:`, error);
-    console.error(`[${correlationId}] Error stack:`, error.stack);
+    console.error(`[${correlationId}] Error stack:`, error && error.stack ? error.stack : error);
     console.error(`[${correlationId}] Error message:`, error.message);
     
     res.status(500).json({
@@ -478,13 +465,21 @@ export const phonePeCallback = async (req, res) => {
     if (!order && paymentSession && paymentSession.sessionId) {
       try {
         const { createOrderFromCheckoutSession } = await import('../services/orderFromSession.js');
+        const { isDuplicateKeyError } = await import('../lib/idempotency.js');
+        
         order = await createOrderFromCheckoutSession(paymentSession.sessionId, {
           paymentStatus: 'success',
           phonepeTransactionId: merchantOrderId,
           providerPayload: req.body
         });
       } catch (createErr) {
-        console.error('Order creation from session failed (callback path):', createErr);
+        if (isDuplicateKeyError && isDuplicateKeyError(createErr)) {
+          console.info('Duplicate order creation (idempotency) for txn', merchantOrderId);
+          // Try to find the existing order
+          order = await orderModel.findOne({ phonepeTransactionId: merchantOrderId });
+        } else {
+          console.error('Order creation from session failed (callback path):', createErr);
+        }
       }
     }
     if (!order) {

@@ -508,10 +508,11 @@ export const retryCheckoutSession = async (req, res) => {
     
     console.log(`[${correlationId}] 📊 Current session status: ${session.status}, source: ${session.source}`);
     
-    // Reset session status to pending and clear any PhonePe transaction ID
+    // Reset session status to pending, clear any PhonePe transaction ID, and refresh expiration
     const updateData = {
       status: 'pending',
       updatedAt: new Date(),
+      expiresAt: new Date(Date.now() + 30 * 60 * 1000), // Refresh to 30 minutes
       phonepeTransactionId: undefined // Clear any existing transaction ID
     };
     

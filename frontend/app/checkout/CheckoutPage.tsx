@@ -14,6 +14,7 @@ import Script from 'next/script';
 import { useAuth } from '@/components/auth/useAuth'
 import { calculateShippingCost, ShippingInfo } from '@/lib/shipping-calculator'
 import { getSourceValue } from '@/lib/checkoutUtils'
+import { getCheckoutSessionId, setCheckoutSessionId } from '@/lib/checkoutSession';
 
 function ProductPreviewSection({ items, onEdit }: any) {
   if (!items || items.length === 0) {
@@ -401,55 +402,7 @@ export default function CheckoutPage() {
     }
   }
 
-  // 🔧 ROBUST: Safe retry + create-session flow with backoff and polling
-  async function safeCreatePhonePeSession({ sessionId, shipping }: { sessionId: string; shipping: any }, maxRetries = 3) {
-    // attempt create-session, but if server responds 'not ready' we poll summary and retry
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      console.debug('[CheckoutPage] create-session attempt', attempt, { sessionId });
-      
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-      const phonepeUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + '/api/payment/phonepe/create-session';
-      
-      const createRes = await fetch(phonepeUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        },
-        body: JSON.stringify({ sessionId, shipping })
-      });
-      
-      const json = await createRes.json().catch(() => null);
-      if (createRes.ok && json && json.success) {
-        console.debug('[CheckoutPage] create-session ok', { sessionId, json });
-        return json;
-      }
-      
-      // If server says session not ready, fetch summary and wait a bit before retrying
-      const reason = json?.message || 'unknown';
-      console.warn('[CheckoutPage] create-session failed', { status: createRes.status, reason });
-      
-      if (reason.toLowerCase().includes('not ready for payment') || createRes.status === 400) {
-        // fetch summary to confirm session status for debug
-        const summaryUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + `/api/checkout/session/${sessionId}/summary`;
-        const summaryRes = await fetch(summaryUrl, {
-          headers: {
-            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-          }
-        });
-        const summary = await summaryRes.json().catch(() => null);
-        console.debug('[CheckoutPage] session summary before retry', { sessionId, summary });
-        
-        // short backoff
-        await new Promise(r => setTimeout(r, 600)); // 600ms backoff
-        continue;
-      }
-      
-      // other errors: bubble up
-      throw new Error(json?.message || 'create-session failed');
-    }
-    throw new Error('create-session: exceeded retries');
-  }
+
 
   // Helper function to build shipping object from form or saved data
   function buildShippingFromFormOrSaved() {
@@ -470,100 +423,86 @@ export default function CheckoutPage() {
     };
   }
 
-    async function handleRetryPayment(e?: React.MouseEvent) {
+  async function safeCreatePhonePeSession({ sessionId, shipping }: { sessionId: string; shipping: any }, maxRetries = 4) {
+    // Try create-session; if server says session not ready, poll summary and retry
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      console.debug('[checkout] create-session attempt', attempt, { sessionId });
+      const createRes = await fetch('/api/payment/phonepe/create-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId, shipping })
+      });
+      let json;
+      try { json = await createRes.json(); } catch (e) { json = null; }
+      if (createRes.ok && json && json.success) return json;
+
+      const reason = json?.message || `http-${createRes.status}`;
+      console.warn('[checkout] create-session failed', { sessionId, reason });
+      // If session not ready, poll the summary then retry after backoff
+      if (reason.toLowerCase().includes('not ready') || createRes.status === 400) {
+        const summaryRes = await fetch(`/api/checkout/session/${sessionId}/summary`);
+        const summary = await summaryRes.json().catch(()=>null);
+        console.debug('[checkout] session summary:', { sessionId, summary });
+        // Backoff
+        await new Promise(r=>setTimeout(r, 600 * attempt));
+        continue;
+      }
+      // For other errors, throw
+      throw new Error(json?.message || 'create-session failed');
+    }
+    throw new Error('create-session: exceeded retries');
+  }
+
+  async function handleRetryPayment(e?: React.MouseEvent) {
     if (e) e.preventDefault();
     
-    console.log('[CheckoutPage] 🔄 Starting robust retry payment process...');
-    setProcessing(true);
-    setPaymentError(null);
-    
     try {
-      // 1) ensure sessionId exists and is refreshed from retry endpoint
-      const currentSessionId = localStorage.getItem('checkout:sessionId');
+      const currentSessionId = getCheckoutSessionId();
       if (!currentSessionId) {
-        console.error('[CheckoutPage] ❌ No checkout:sessionId found for retry');
+        console.error('[checkout] no checkout:sessionId available for retry');
         setPaymentError('No checkout session found. Please start a new checkout.');
-        setProcessing(false);
         return;
       }
 
-      console.log('[CheckoutPage] 🔍 Found existing session ID:', currentSessionId);
-
-      // Call retry endpoint and await the fresh session
+      // 1) Refresh the session using retry endpoint
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-      const retryUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + `/api/checkout/session/${currentSessionId}/retry`;
-      
-      console.log('[CheckoutPage] 📤 Calling retry endpoint:', retryUrl);
-      
-      const retryRes = await fetch(retryUrl, {
+      const retryRes = await fetch(`/api/checkout/session/${currentSessionId}/retry`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         }
       });
-      
       const retryJson = await retryRes.json();
-      console.log('[CheckoutPage] 📥 Retry endpoint response:', retryJson);
-      
       if (!retryRes.ok) {
-        console.error('[CheckoutPage] ❌ Retry endpoint failed:', retryJson);
-        setPaymentError(`Failed to refresh checkout session: ${retryJson.message || 'Unknown error'}`);
-        setProcessing(false);
+        console.error('[checkout] retry endpoint failed', retryJson);
+        setPaymentError('Failed to refresh checkout session. Try again.');
         return;
       }
-      
-      const refreshedSessionId = retryJson.data?.session?.sessionId || retryJson.data?.sessionId;
-      if (!refreshedSessionId) {
-        console.error('[CheckoutPage] ❌ Retry returned no sessionId:', retryJson);
-        setPaymentError('Retry failed: no session returned from server.');
-        setProcessing(false);
+      const refreshedId = retryJson.data?.session?.sessionId || retryJson.sessionId;
+      if (!refreshedId) {
+        console.error('[checkout] retry returned no sessionId', retryJson);
+        setPaymentError('Retry failed: no session returned.');
         return;
       }
+      // store refreshed id
+      setCheckoutSessionId(refreshedId);
 
-      // store fresh session id
-      localStorage.setItem('checkout:sessionId', refreshedSessionId);
-      console.log('[CheckoutPage] ✅ Checkout session refreshed:', {
-        sessionId: refreshedSessionId,
-        status: retryJson.data?.session?.status,
-        source: retryJson.data?.session?.source,
-        itemsCount: retryJson.data?.session?.items?.length || 0
-      });
-
-      // 2) prepare shipping — ensure shipping object exists (backend requires it)
-      const shippingData = buildShippingFromFormOrSaved();
-      if (!shippingData) {
-        setPaymentError('Shipping info missing. Please fill shipping details.');
-        setProcessing(false);
-        return;
+      // 2) build shipping — ensure it exists and is valid
+      const shipping = buildShippingFromFormOrSaved(); // must exist
+      if (!shipping) { 
+        setPaymentError('Please fill shipping details'); 
+        return; 
       }
 
-      // 3) call robust create-session which retries when session not ready
-      console.log('[CheckoutPage] 📤 Creating PhonePe payment session with refreshed session:', {
-        sessionId: refreshedSessionId,
-        shipping: shippingData
-      });
-      
-      const createResult = await safeCreatePhonePeSession({ 
-        sessionId: refreshedSessionId, 
-        shipping: shippingData 
-      }, 4);
-      
-      // expected createResult contains provider redirect URL
-      const redirectUrl = createResult.data?.redirectUrl || createResult.redirectUrl;
-      if (!redirectUrl) {
-        throw new Error('No redirect URL received from PhonePe');
-      }
-      
-      console.log('[CheckoutPage] ✅ PhonePe payment session created on retry, redirecting...');
-      
-      // redirect user to PhonePe flow
-      window.location.href = redirectUrl;
-      
+      // 3) call create-session robustly (safeCreatePhonePeSession will poll if session not ready)
+      const result = await safeCreatePhonePeSession({ sessionId: refreshedId, shipping }, 4);
+      // redirect to provider
+      const redirectUrl = result?.data?.redirectUrl || result?.redirectUrl;
+      if (redirectUrl) window.location.href = redirectUrl;
     } catch (err: any) {
-      console.error('[CheckoutPage] ❌ handleRetryPayment error:', err);
+      console.error('[checkout] handleRetryPayment error', err);
       setPaymentError(err.message || 'Failed to create PhonePe payment session');
-      setProcessing(false);
     }
   }
 

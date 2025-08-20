@@ -1,5 +1,6 @@
 import CheckoutSession from '../models/CheckoutSession.js';
 import orderModel from '../models/orderModel.js';
+import { isDuplicateKeyError } from '../lib/idempotency.js';
 
 /**
  * Create an Order from a CheckoutSession snapshot (idempotent).
@@ -33,15 +34,25 @@ export async function createOrderFromCheckoutSession(sessionId, { paymentStatus,
     status: 'Order Placed',
     metadata: { providerPayload }
   });
-  await order.save();
-
-  // Mark session as paid (best-effort)
   try {
-    s.status = 'paid';
-    await s.save();
-  } catch {}
-
-  return order;
+    await order.save();
+    
+    // Mark session as paid (best-effort)
+    try {
+      s.status = 'paid';
+      await s.save();
+    } catch {}
+    
+    return order;
+  } catch (err) {
+    if (isDuplicateKeyError(err)) {
+      console.info('Duplicate order creation (idempotency) for session', sessionId);
+      // Return existing order
+      const existing = await orderModel.findOne({ checkoutSessionId: sessionId });
+      if (existing) return existing;
+    }
+    throw err;
+  }
 }
 
 export default { createOrderFromCheckoutSession };

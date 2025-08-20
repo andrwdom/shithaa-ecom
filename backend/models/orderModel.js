@@ -119,5 +119,9 @@ const orderSchema = new mongoose.Schema({
 // Add explicit unique index for orderId
 orderSchema.index({ orderId: 1 }, { unique: true });
 
+// Ensure idempotency indexes exist
+orderSchema.index({ checkoutSessionId: 1 }, { unique: true, sparse: true });
+orderSchema.index({ phonepeTransactionId: 1 }, { unique: true, sparse: true });
+
 const orderModel = mongoose.models.order || mongoose.model('order',orderSchema)
 export default orderModel;
