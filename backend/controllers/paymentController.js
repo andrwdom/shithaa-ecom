@@ -109,6 +109,14 @@ export const createPhonePeSession = async (req, res) => {
     const { checkoutSessionId, sessionId, shipping } = req.body;
     // Support both names (new: sessionId) while keeping backward compat
     const effectiveSessionId = checkoutSessionId || sessionId;
+    
+    console.log(`[${correlationId}] 🔍 Payment session creation request:`, {
+      checkoutSessionId,
+      sessionId,
+      effectiveSessionId,
+      hasShipping: !!shipping,
+      shippingKeys: shipping ? Object.keys(shipping) : []
+    });
 
     if (!effectiveSessionId || !shipping) {
       console.log(`[${correlationId}] Validation failed - missing required fields`);
@@ -138,13 +146,29 @@ export const createPhonePeSession = async (req, res) => {
       });
     }
     
-    if (checkoutSession.status !== 'awaiting_payment') {
-      console.log(`[${correlationId}] Checkout session not ready for payment:`, checkoutSession.status);
+    // 🔧 FIX: Check for valid session status - allow both 'pending' and 'awaiting_payment'
+    if (!['pending', 'awaiting_payment'].includes(checkoutSession.status)) {
+      console.log(`[${correlationId}] ❌ Checkout session not ready for payment:`, {
+        sessionId: effectiveSessionId,
+        status: checkoutSession.status,
+        allowedStatuses: ['pending', 'awaiting_payment'],
+        source: checkoutSession.source,
+        createdAt: checkoutSession.createdAt,
+        updatedAt: checkoutSession.updatedAt
+      });
       return res.status(400).json({
         success: false,
-        message: 'Checkout session is not ready for payment'
+        message: `Checkout session is not ready for payment. Current status: ${checkoutSession.status}`
       });
     }
+    
+    console.log(`[${correlationId}] ✅ Checkout session validation passed:`, {
+      sessionId: effectiveSessionId,
+      status: checkoutSession.status,
+      source: checkoutSession.source,
+      itemsCount: checkoutSession.items?.length || 0,
+      total: checkoutSession.total
+    });
     
     const userEmail = checkoutSession.userEmail;
     console.log(`[${correlationId}] User email:`, userEmail);

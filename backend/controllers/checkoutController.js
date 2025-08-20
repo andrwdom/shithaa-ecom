@@ -483,3 +483,68 @@ export const getCheckoutSummary = async (req, res) => {
     return errorResponse(res, 500, 'Failed to get checkout summary', error.message);
   }
 };
+
+/**
+ * Retry checkout session - reset status and return fresh session
+ * POST /api/checkout/session/:sessionId/retry
+ */
+export const retryCheckoutSession = async (req, res) => {
+  const correlationId = req.headers['x-request-id'] || `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  
+  try {
+    const { sessionId } = req.params;
+    
+    if (!sessionId) {
+      return errorResponse(res, 400, 'Session ID is required');
+    }
+    
+    console.log(`[${correlationId}] Retrying checkout session: ${sessionId}`);
+    
+    const session = await CheckoutSession.findOne({ sessionId });
+    if (!session) {
+      console.log(`[${correlationId}] Checkout session not found: ${sessionId}`);
+      return errorResponse(res, 404, 'Checkout session not found');
+    }
+    
+    // Reset session status to pending
+    session.status = 'pending';
+    session.updatedAt = new Date();
+    await session.save();
+    
+    console.log(`[${correlationId}] Checkout session reset to pending: ${sessionId}`);
+    
+    // Log retry event
+    await PaymentEvent.createEvent({
+      correlationId,
+      eventType: 'session_retry',
+      source: 'backend',
+      checkoutSessionId: sessionId,
+      userId: req.user?.id,
+      userEmail: req.user?.email,
+      data: { 
+        previousStatus: session.status,
+        newStatus: 'pending',
+        source: session.source 
+      }
+    });
+    
+    return successResponse(res, {
+      message: 'Checkout session reset successfully',
+      session: {
+        sessionId: session.sessionId,
+        source: session.source,
+        items: session.items,
+        subtotal: session.subtotal,
+        total: session.total,
+        status: session.status,
+        userEmail: session.userEmail,
+        createdAt: session.createdAt,
+        updatedAt: session.updatedAt
+      }
+    });
+    
+  } catch (error) {
+    console.error(`[${correlationId}] Error retrying checkout session:`, error);
+    return errorResponse(res, 500, 'Failed to retry checkout session', error.message);
+  }
+};

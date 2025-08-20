@@ -5,7 +5,8 @@ import {
     reserveStockForSession, 
     releaseStockForSession, 
     cancelCheckoutSession,
-    getCheckoutSummary
+    getCheckoutSummary,
+    retryCheckoutSession
 } from '../controllers/checkoutController.js';
 import { verifyToken, optionalVerifyToken } from '../middleware/auth.js';
 
@@ -19,6 +20,9 @@ checkoutRouter.get('/session/:sessionId', optionalVerifyToken, getCheckoutSessio
 
 // Checkout summary snapshot for client fail page and debugging
 checkoutRouter.get('/session/:sessionId/summary', optionalVerifyToken, getCheckoutSummary);
+
+// Retry checkout session - reset status to pending
+checkoutRouter.post('/session/:sessionId/retry', verifyToken, retryCheckoutSession);
 
 // Reserve stock for checkout session (requires authentication)
 checkoutRouter.post('/session/:sessionId/reserve-stock', verifyToken, reserveStockForSession);
