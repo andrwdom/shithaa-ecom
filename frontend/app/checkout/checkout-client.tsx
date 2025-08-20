@@ -18,6 +18,7 @@ import { getIdToken } from "firebase/auth";
 import { Gift } from "lucide-react";
 import Link from "next/link";
 import { setCheckoutSessionId } from "@/lib/checkoutSession";
+import { getSourceValue } from "@/lib/checkoutUtils";
 
 export default function CheckoutClient() {
   const { cartItems, clearCartAfterSuccessfulCheckout, cartTotal, offerDetails, openCartSidebar } = useCart();
@@ -574,7 +575,7 @@ export default function CheckoutClient() {
         cartItems: itemsWithId,
         userId: user.mongoId || user.uid,
         email: form.email || user.email,
-        source: isBuyNowMode ? 'buynow' : 'cart'
+        source: getSourceValue(isBuyNowMode)
       };
 
       // Store order data in sessionStorage for fallback order creation
@@ -608,7 +609,7 @@ export default function CheckoutClient() {
       }
       
       // 🔧 FIX: Create checkout session first before payment
-      const sourceValue = isBuyNowMode ? 'buynow' : 'cart';
+      const sourceValue = getSourceValue(isBuyNowMode);
       const checkoutSessionData = {
         source: sourceValue,
         items: checkoutItems.map(item => ({
@@ -724,7 +725,7 @@ export default function CheckoutClient() {
           'Content-Type': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
-        body: JSON.stringify({ sessionId: createdSessionId || checkoutSessionData?.sessionId || checkoutSessionData?.checkoutSessionId, shipping: {
+        body: JSON.stringify({ sessionId: createdSessionId, shipping: {
           fullName: `${form.firstName} ${form.lastName}`,
           email: form.email || user.email,
           phone: form.phone,

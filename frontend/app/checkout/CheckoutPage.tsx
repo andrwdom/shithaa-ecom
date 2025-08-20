@@ -13,6 +13,7 @@ import PageLoading from '@/components/page-loading';
 import Script from 'next/script';
 import { useAuth } from '@/components/auth/useAuth'
 import { calculateShippingCost, ShippingInfo } from '@/lib/shipping-calculator'
+import { getSourceValue } from '@/lib/checkoutUtils'
 
 function ProductPreviewSection({ items, onEdit }: any) {
   if (!items || items.length === 0) {
@@ -319,7 +320,7 @@ export default function CheckoutPage() {
       const checkoutSessionUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + '/api/checkout/session';
       
       const checkoutSessionData = {
-        source: displayMode,
+        source: getSourceValue(isBuyNowMode),
         items: displayItems.map(item => ({
           productId: item._id || item.id,
           size: item.size,
