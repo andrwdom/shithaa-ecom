@@ -317,6 +317,17 @@ export default function CheckoutPage() {
       
       // 1. Create checkout session first
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      
+      // Debug: Log current state
+      console.log('[CheckoutPage] 🔍 Debug - Current state:', {
+        hasToken: !!token,
+        hasShipping: !!shipping,
+        shippingEmail: shipping?.email,
+        displayItemsCount: displayItems?.length,
+        orderSummaryTotal: orderSummary?.total,
+        isBuyNowMode
+      });
+      
       const checkoutSessionUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + '/api/checkout/session';
       
       const checkoutSessionData = {
@@ -326,10 +337,13 @@ export default function CheckoutPage() {
           size: item.size,
           quantity: item.quantity
         })),
-        couponCode: coupon?.code
+        couponCode: coupon?.code,
+        email: shipping.email // Include email for guest checkout
       };
       
       console.log('[CheckoutPage] 📤 Creating checkout session:', checkoutSessionData);
+      console.log('[CheckoutPage] 🔑 Token present:', !!token);
+      console.log('[CheckoutPage] 🌐 API URL:', checkoutSessionUrl);
       
       const checkoutRes = await fetch(checkoutSessionUrl, {
         method: 'POST',
@@ -340,11 +354,48 @@ export default function CheckoutPage() {
         body: JSON.stringify(checkoutSessionData)
       });
       
-      const checkoutData = await checkoutRes.json();
-      console.log('[CheckoutPage] 📥 Checkout session response:', checkoutData);
+      console.log('[CheckoutPage] 📥 Checkout response status:', checkoutRes.status);
+      console.log('[CheckoutPage] 📥 Checkout response headers:', Object.fromEntries(checkoutRes.headers.entries()));
       
-      if (!checkoutRes.ok || !checkoutData.data?.sessionId) {
-        throw new Error(checkoutData.message || 'Failed to create checkout session');
+      let checkoutData;
+      try {
+        checkoutData = await checkoutRes.json();
+        console.log('[CheckoutPage] 📥 Checkout session response:', checkoutData);
+      } catch (parseError) {
+        console.error('[CheckoutPage] ❌ Failed to parse checkout response:', parseError);
+        const responseText = await checkoutRes.text();
+        console.error('[CheckoutPage] ❌ Raw response text:', responseText);
+        throw new Error('Invalid response from server. Please try again.');
+      }
+      
+      // Enhanced error handling for checkout session creation
+      if (!checkoutRes.ok) {
+        console.error('[CheckoutPage] ❌ Checkout session creation failed:', {
+          status: checkoutRes.status,
+          statusText: checkoutRes.statusText,
+          data: checkoutData
+        });
+        
+        if (checkoutRes.status === 401) {
+          throw new Error('Authentication failed. Please log in again.');
+        } else if (checkoutRes.status === 400) {
+          throw new Error(checkoutData.message || 'Invalid checkout data. Please check your information.');
+        } else if (checkoutRes.status === 429) {
+          throw new Error('Too many requests. Please wait a moment and try again.');
+        } else {
+          throw new Error(checkoutData.message || `Checkout failed (${checkoutRes.status}). Please try again.`);
+        }
+      }
+      
+      // Validate response structure
+      if (!checkoutData || !checkoutData.success) {
+        console.error('[CheckoutPage] ❌ Invalid checkout response structure:', checkoutData);
+        throw new Error('Invalid response from server. Please try again.');
+      }
+      
+      if (!checkoutData.data || !checkoutData.data.sessionId) {
+        console.error('[CheckoutPage] ❌ Missing sessionId in response:', checkoutData);
+        throw new Error('Failed to create checkout session. Please try again.');
       }
       
       const checkoutSessionId = checkoutData.data.sessionId;
@@ -383,10 +434,24 @@ export default function CheckoutPage() {
         body: JSON.stringify(paymentData)
       });
       
-      const phonepeData = await phonepeRes.json();
-      console.log('[CheckoutPage] 📥 PhonePe response:', phonepeData);
+      console.log('[CheckoutPage] 📥 PhonePe response status:', phonepeRes.status);
+      
+      let phonepeData;
+      try {
+        phonepeData = await phonepeRes.json();
+        console.log('[CheckoutPage] 📥 PhonePe response:', phonepeData);
+      } catch (parseError) {
+        console.error('[CheckoutPage] ❌ Failed to parse PhonePe response:', parseError);
+        const responseText = await phonepeRes.text();
+        console.error('[CheckoutPage] ❌ Raw PhonePe response text:', responseText);
+        throw new Error('Invalid response from payment server. Please try again.');
+      }
       
       if (!phonepeRes.ok || !phonepeData.data?.redirectUrl) {
+        console.error('[CheckoutPage] ❌ PhonePe payment session creation failed:', {
+          status: phonepeRes.status,
+          data: phonepeData
+        });
         throw new Error(phonepeData.message || 'Failed to create PhonePe payment session');
       }
 
@@ -396,7 +461,27 @@ export default function CheckoutPage() {
       window.location.href = phonepeData.data.redirectUrl;
     } catch (err: any) {
       console.error('[CheckoutPage] ❌ Payment error:', err);
-      setPaymentError(err.message || 'Payment failed. Try again.');
+      
+      // Enhanced error message handling
+      let errorMessage = 'Payment failed. Try again.';
+      
+      if (err.message) {
+        if (err.message.includes('Authentication failed')) {
+          errorMessage = 'Please log in again to continue with checkout.';
+        } else if (err.message.includes('Invalid checkout data')) {
+          errorMessage = 'Please check your shipping information and try again.';
+        } else if (err.message.includes('Too many requests')) {
+          errorMessage = 'Too many requests. Please wait a moment and try again.';
+        } else if (err.message.includes('Failed to create checkout session')) {
+          errorMessage = 'Unable to create checkout session. Please refresh and try again.';
+        } else if (err.message.includes('Invalid response from server')) {
+          errorMessage = 'Server error. Please try again in a moment.';
+        } else {
+          errorMessage = err.message;
+        }
+      }
+      
+      setPaymentError(errorMessage);
       setProcessing(false);
     }
   }
