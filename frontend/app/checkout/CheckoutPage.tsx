@@ -577,7 +577,7 @@ export default function CheckoutPage() {
                 key={`${displayMode}-${displayItems.length}-${displayItems?.[0]?.id || "none"}`}
                 cartItems={displayItems} 
                 coupon={coupon} 
-                offerDetails={offerDetails}
+                offerDetails={isBuyNowMode ? null : offerDetails}
                 mode={displayMode}
                 shippingInfo={shipping}
               />

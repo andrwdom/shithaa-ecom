@@ -13,7 +13,13 @@
     "generate-webp": "node scripts/generate-webp.js",
     "analyze": "ANALYZE=true npm run build",
     "performance:monitor": "node scripts/performance-monitor.js",
-    "performance:audit": "lighthouse http://localhost:3000 --output=json --output-path=./lighthouse-report.json"
+    "performance:audit": "lighthouse http://localhost:3000 --output=json --output-path=./lighthouse-report.json",
+    "test:e2e": "node scripts/run-e2e-tests.js",
+    "test:e2e:ui": "npx playwright test --ui",
+    "test:e2e:headed": "npx playwright test --headed",
+    "test:e2e:debug": "npx playwright test --debug",
+    "test:e2e:report": "npx playwright show-report",
+    "test:isolation": "node test-cart-buynow-isolation.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

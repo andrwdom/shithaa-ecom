@@ -10,6 +10,17 @@ export default function OrderSummary({ cartItems, coupon, offerDetails, mode = '
   const isBuyNowMode = mode === 'buy-now';
   const displayItems = cartItems || [];
   
+  // 🚨 SAFETY CHECK: Ensure buy-now flows never receive cart promotions
+  if (isBuyNowMode && offerDetails?.offerApplied) {
+    console.error('[OrderSummary] 🚨 SAFETY VIOLATION: Buy-now flow received cart promotions!', {
+      mode,
+      offerDetails,
+      displayItems
+    });
+    // Force override to prevent cart promotion leakage
+    offerDetails = null;
+  }
+  
   // 🔑 FIXED: Calculate all values fresh from displayItems instead of using potentially contaminated summary
   const itemSubtotal = displayItems.reduce((acc: number, item: any) => acc + (item.price * item.quantity), 0);
   
@@ -29,8 +40,8 @@ export default function OrderSummary({ cartItems, coupon, offerDetails, mode = '
     };
   }
   
-  // Calculate total with offer discount
-  const offerDiscount = offerDetails?.offerApplied ? offerDetails.offerDiscount : 0;
+  // Calculate total with offer discount - Only for cart mode
+  const offerDiscount = (!isBuyNowMode && offerDetails?.offerApplied) ? offerDetails.offerDiscount : 0;
   const total = itemSubtotal - offerDiscount + shipping;
   
   // 🔑 FIXED: Enhanced debug logging to confirm data source and prevent contamination
@@ -38,7 +49,7 @@ export default function OrderSummary({ cartItems, coupon, offerDetails, mode = '
     mode,
     isBuyNowMode,
     itemsCount: displayItems.length,
-    firstItem: displayItems[0] ? {
+    firstItem: displayItems.length > 0 ? {
       name: displayItems[0].name,
       price: displayItems[0].price,
       quantity: displayItems[0].quantity,
@@ -54,17 +65,23 @@ export default function OrderSummary({ cartItems, coupon, offerDetails, mode = '
     // ✅ NO MORE SUMMARY PROP - Single source of truth
     dataSource: 'displayItems + shipping calculation',
     cartItemsProp: cartItems,
-    displayItemsFinal: displayItems
+    displayItemsFinal: displayItems,
+    // 🚨 SAFETY: Log promotion isolation
+    promotionsIsolated: isBuyNowMode ? !offerDetails?.offerApplied : true,
+    offerDetailsReceived: !!offerDetails,
+    offerDetailsApplied: !isBuyNowMode && offerDetails?.offerApplied
   });
   
   // 🔑 DEBUG: Log calculation details right before rendering totals
   console.log("[OrderSummary] DEBUG calculation:", {
     cartItems,
     mode,
-    subtotal: cartItems?.reduce((s, i) => s + i.price * i.quantity, 0),
-    displayItemsSubtotal: displayItems?.reduce((s, i) => s + i.price * i.quantity, 0),
+    isBuyNowMode,
+    subtotal: cartItems?.reduce((s: number, i: any) => s + i.price * i.quantity, 0),
+    displayItemsSubtotal: displayItems?.reduce((s: number, i: any) => s + i.price * i.quantity, 0),
     itemSubtotal,
     offerDiscount,
+    offerDetailsApplied: !isBuyNowMode && offerDetails?.offerApplied,
     shipping,
     total,
     shippingCalculation,
@@ -87,8 +104,8 @@ export default function OrderSummary({ cartItems, coupon, offerDetails, mode = '
           <span>Subtotal</span><span>₹{itemSubtotal}</span>
         </div>
         
-        {/* Loungewear Offer */}
-        {offerDetails?.offerApplied && (
+        {/* Loungewear Offer - Only for cart mode */}
+        {!isBuyNowMode && offerDetails?.offerApplied && (
           <div className="flex justify-between text-green-700 font-semibold">
             <div className="flex items-center gap-1">
               <Gift className="h-3 w-3"/>
@@ -131,8 +148,8 @@ export default function OrderSummary({ cartItems, coupon, offerDetails, mode = '
           <span>Total</span><span>₹{total}</span>
         </div>
         
-        {/* Offer Details */}
-        {offerDetails?.offerApplied && (
+        {/* Offer Details - Only for cart mode */}
+        {!isBuyNowMode && offerDetails?.offerApplied && (
           <div className="mt-3 bg-green-50 border border-green-200 rounded">
             <div className="text-xs text-green-800 space-y-1">
               <p className="font-semibold">🎉 Loungewear Offer Applied!</p>
@@ -141,6 +158,16 @@ export default function OrderSummary({ cartItems, coupon, offerDetails, mode = '
                 <p>• {offerDetails.offerDetails.remainingItems} item(s) at ₹450 each</p>
               )}
               <p className="font-semibold">You saved ₹{offerDetails.offerDiscount}!</p>
+            </div>
+          </div>
+        )}
+        
+        {/* 🚨 SAFETY: Show warning if buy-now flow somehow received promotions */}
+        {isBuyNowMode && offerDetails?.offerApplied && (
+          <div className="mt-3 bg-red-50 border border-red-200 rounded">
+            <div className="text-xs text-red-800 space-y-1">
+              <p className="font-semibold">⚠️ System Warning</p>
+              <p>Buy-now flow should not have cart promotions. This has been automatically corrected.</p>
             </div>
           </div>
         )}
