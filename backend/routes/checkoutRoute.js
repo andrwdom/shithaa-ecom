@@ -8,20 +8,20 @@ import {
     getCheckoutSummary,
     retryCheckoutSession
 } from '../controllers/checkoutController.js';
-import { verifyToken, optionalVerifyToken } from '../middleware/auth.js';
+import { verifyToken, optionalAuth } from '../middleware/auth.js';
 
 const checkoutRouter = express.Router();
 
-// Create checkout session (requires authentication)
-checkoutRouter.post('/session', verifyToken, createCheckoutSession);
+// Create checkout session (allows both authenticated and guest users)
+checkoutRouter.post('/session', optionalAuth, createCheckoutSession);
 
 // Get checkout session by ID (optional auth for guest users)
-checkoutRouter.get('/session/:sessionId', optionalVerifyToken, getCheckoutSession);
+checkoutRouter.get('/session/:sessionId', optionalAuth, getCheckoutSession);
 
 // Checkout summary snapshot for client fail page and debugging
-checkoutRouter.get('/session/:sessionId/summary', optionalVerifyToken, getCheckoutSummary);
+checkoutRouter.get('/session/:sessionId/summary', optionalAuth, getCheckoutSummary);
 
-// Retry checkout session - reset status to pending
+// Retry checkout session - reset status to pending (requires authentication)
 checkoutRouter.post('/session/:sessionId/retry', verifyToken, retryCheckoutSession);
 
 // Reserve stock for checkout session (requires authentication)

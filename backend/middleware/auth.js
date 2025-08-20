@@ -1,147 +1,79 @@
-import jwt from 'jsonwebtoken'
-import userModel from '../models/userModel.js'
+import jwt from 'jsonwebtoken';
+import { errorResponse } from '../utils/response.js';
 
-const verifyToken = async (req, res, next) => {
-    try {
-        // SECURITY: Check for token in HttpOnly cookies first, then headers for backward compatibility
-        let token = req.cookies?.token;
-        
-        // Fallback to headers for backward compatibility
-        if (!token && req.headers.token) {
-            token = req.headers.token;
-        }
-        
-        if (!token && req.headers.authorization) {
-            const authHeader = req.headers.authorization;
-            if (authHeader.startsWith('Bearer ')) {
-                token = authHeader.substring(7); // Remove 'Bearer ' prefix
-            }
-        }
-        
-        if (!token) {
-            return res.status(401).json({
-                success: false,
-                message: 'No token provided'
-            });
-        }
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        
-        // SECURITY: Check if token is expired
-        if (decoded.exp && Date.now() >= decoded.exp * 1000) {
-            return res.status(401).json({
-                success: false,
-                message: 'Token expired'
-            });
-        }
-        
-        const user = await userModel.findById(decoded.id);
-        if (!user) {
-            return res.status(401).json({
-                success: false,
-                message: 'Invalid token'
-            });
-        }
-
-        req.user = user;
-        req.user.id = user._id.toString();
-        next();
-    } catch (error) {
-        console.error('Auth middleware - Error:', error);
-        return res.status(401).json({
-            success: false,
-            message: 'Invalid token'
-        });
-    }
-};
-
-const isAdmin = async (req, res, next) => {
-    // Debug logging
-    console.log('=== ADMIN AUTH DEBUG ===');
-    console.log('Request headers:', req.headers);
-    console.log('Token header:', req.headers.token);
-    console.log('Authorization header:', req.headers.authorization);
+export const verifyToken = async (req, res, next) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1] || req.headers.token;
     
-    // Check for token in both formats
-    let token = req.headers.token;
-    
-    // If not found in token header, check Authorization header
-    if (!token && req.headers.authorization) {
-        const authHeader = req.headers.authorization;
-        if (authHeader.startsWith('Bearer ')) {
-            token = authHeader.substring(7); // Remove 'Bearer ' prefix
-        }
-    }
-
-    console.log('Final token being used:', token);
-    console.log('Token type:', typeof token);
-    console.log('Token length:', token ? token.length : 0);
-
     if (!token) {
-        console.log('❌ No token provided');
-        return res.status(401).json({ 
-            success: false, 
-            message: 'Not Authorized - No token provided' 
-        });
+      console.log('Auth middleware - No token provided');
+      return errorResponse(res, 401, 'Access token required. Please log in to continue.');
     }
 
     try {
-        console.log('JWT_SECRET exists:', !!process.env.JWT_SECRET);
-        console.log('JWT_SECRET length:', process.env.JWT_SECRET ? process.env.JWT_SECRET.length : 0);
-        
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        console.log('Token decoded successfully:', { id: decoded.id, email: decoded.email, role: decoded.role });
-        
-        if (decoded.role !== 'admin') {
-            console.log('❌ User role is not admin:', decoded.role);
-            return res.status(403).json({ 
-                success: false, 
-                message: 'Not Authorized - Admin access required' 
-            });
-        }
-
-        console.log('✅ Admin authentication successful');
-        req.user = decoded;
-        next();
-    } catch (error) {
-        console.log('❌ JWT verification failed:', error.message);
-        return res.status(401).json({ 
-            success: false, 
-            message: 'Not Authorized - Invalid token' 
+      const decoded = jwt.verify(token, JWT_SECRET);
+      req.user = decoded;
+      console.log('Auth middleware - Token verified successfully for user:', decoded.email);
+      next();
+    } catch (jwtError) {
+      if (jwtError.name === 'TokenExpiredError') {
+        console.log('Auth middleware - Token expired:', {
+          expiredAt: jwtError.expiredAt,
+          currentTime: new Date(),
+          timeDifference: new Date() - jwtError.expiredAt
         });
+        
+        // Return a specific error for expired tokens
+        return errorResponse(res, 401, 'Your session has expired. Please log in again to continue.', {
+          errorType: 'TOKEN_EXPIRED',
+          expiredAt: jwtError.expiredAt,
+          message: 'Please log out and log back in to refresh your session.'
+        });
+      } else if (jwtError.name === 'JsonWebTokenError') {
+        console.log('Auth middleware - Invalid token format');
+        return errorResponse(res, 401, 'Invalid token format. Please log in again.');
+      } else {
+        console.log('Auth middleware - JWT verification failed:', jwtError.message);
+        return errorResponse(res, 401, 'Invalid token. Please log in again.');
+      }
     }
-}
-
-const optionalVerifyToken = async (req, res, next) => {
-    try {
-        // Check for token in cookies first, then headers for backward compatibility
-        let token = req.cookies?.token;
-        
-        // Fallback to headers for backward compatibility
-        if (!token && req.headers.token) {
-            token = req.headers.token;
-        }
-        
-        if (!token && req.headers.authorization) {
-            const authHeader = req.headers.authorization;
-            if (authHeader.startsWith('Bearer ')) {
-                token = authHeader.substring(7); // Remove 'Bearer ' prefix
-            }
-        }
-        
-        if (!token) {
-            req.user = null;
-            return next();
-        }
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const user = await userModel.findById(decoded.id);
-        req.user = user || null;
-        if (req.user) req.user.id = req.user._id.toString();
-        next();
-    } catch (error) {
-        req.user = null;
-        next();
-    }
+  } catch (error) {
+    console.error('Auth middleware - Unexpected error:', error);
+    return errorResponse(res, 500, 'Authentication error. Please try again.');
+  }
 };
 
-export { verifyToken, isAdmin, optionalVerifyToken }
+export const optionalAuth = async (req, res, next) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1] || req.headers.token;
+    
+    if (!token) {
+      console.log('Optional auth middleware - No token provided, proceeding as guest');
+      req.user = null;
+      return next();
+    }
+
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET);
+      req.user = decoded;
+      console.log('Optional auth middleware - Token verified for user:', decoded.email);
+      next();
+    } catch (jwtError) {
+      if (jwtError.name === 'TokenExpiredError') {
+        console.log('Optional auth middleware - Token expired, proceeding as guest');
+        req.user = null;
+        return next();
+      } else {
+        console.log('Optional auth middleware - Invalid token, proceeding as guest');
+        req.user = null;
+        return next();
+      }
+    }
+  } catch (error) {
+    console.error('Optional auth middleware - Error, proceeding as guest:', error);
+    req.user = null;
+    next();
+  }
+};

@@ -23,17 +23,23 @@ export const createCheckoutSession = async (req, res) => {
     const { source, items, couponCode, email } = req.body;
     const userId = req.user?.id;
     
-    // Enhanced user email handling
+    // Enhanced user email handling with better validation
     let userEmail = null;
     if (req.user?.email) {
       userEmail = req.user.email;
       console.log(`[${correlationId}] ✅ Using authenticated user email:`, userEmail);
     } else if (email) {
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        console.log(`[${correlationId}] ❌ Invalid email format:`, email);
+        return errorResponse(res, 400, 'Please provide a valid email address.');
+      }
       userEmail = email;
       console.log(`[${correlationId}] ✅ Using provided email:`, userEmail);
     } else {
       console.log(`[${correlationId}] ❌ No user email found in request or user object`);
-      return errorResponse(res, 400, 'User email is required for checkout. Please provide an email address.');
+      return errorResponse(res, 400, 'Email address is required for checkout. Please provide your email address.');
     }
     
     console.log(`[${correlationId}] Parsed data:`, { source, items, userId, userEmail });
@@ -94,7 +100,7 @@ export const createCheckoutSession = async (req, res) => {
     
     console.log(`[${correlationId}] ✅ Basic validation passed, proceeding with checkout session creation`);
     
-    // Create payment event
+    // Create payment event (but don't fail if it errors)
     try {
       await PaymentEvent.createEvent({
         correlationId,
@@ -181,7 +187,8 @@ export const createCheckoutSession = async (req, res) => {
         userAgent: req.headers['user-agent'],
         ipAddress: req.ip || req.connection.remoteAddress,
         correlationId,
-        checkoutFlow: source
+        checkoutFlow: source,
+        isGuest: !userId
       }
     });
     
@@ -205,7 +212,8 @@ export const createCheckoutSession = async (req, res) => {
       total,
       currency: 'INR',
       expiresAt: checkoutSession.expiresAt,
-      message: 'Checkout session created successfully'
+      message: 'Checkout session created successfully',
+      isGuest: !userId
     };
     
     console.log(`[${correlationId}] 📤 Sending success response:`, responseData);
