@@ -606,7 +606,89 @@ export default function CheckoutClient() {
         sessionStorage.setItem('cartOrderData', JSON.stringify(orderDataWithFlags));
       }
       
-      // Create PhonePe payment session
+      // 🔧 FIX: Create checkout session first before payment
+      const checkoutSessionData = {
+        source: isBuyNowMode ? 'buynow' : 'cart',
+        items: checkoutItems.map(item => ({
+          productId: item._id || item.id, // Backend expects 'productId'
+          size: item.size,
+          quantity: item.quantity
+        })),
+        email: form.email || user.email
+      };
+
+      console.log('🔍 DEBUG: Creating checkout session with data:', checkoutSessionData);
+      console.log('🔍 DEBUG: Token exists:', !!token);
+      console.log('🔍 DEBUG: Token preview:', token ? `${token.substring(0, 20)}...` : 'NONE');
+      console.log('🔍 DEBUG: API URL:', process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000');
+      console.log('🔍 DEBUG: Checkout items:', checkoutItems);
+      console.log('🔍 DEBUG: User data:', { 
+        mongoId: user.mongoId, 
+        uid: user.uid, 
+        email: user.email,
+        displayName: user.displayName 
+      });
+
+      // 🔧 TEST: Check if backend is reachable first
+      try {
+        const healthCheck = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/health`);
+        console.log('🔍 DEBUG: Backend health check status:', healthCheck.status);
+        if (!healthCheck.ok) {
+          const healthData = await healthCheck.json();
+          console.error('🔍 DEBUG: Backend health check failed:', healthData);
+        }
+      } catch (healthError) {
+        console.error('🔍 DEBUG: Backend health check failed:', healthError);
+        throw new Error('Backend server is not reachable. Please check your connection.');
+      }
+
+      // 🔧 TEST: Check if checkout endpoint is accessible
+      try {
+        const checkoutTest = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/checkout/session`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            'x-request-id': `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+          },
+          body: JSON.stringify({
+            source: 'cart',
+            items: [],
+            email: 'test@test.com'
+          })
+        });
+        console.log('🔍 DEBUG: Checkout endpoint test status:', checkoutTest.status);
+        if (!checkoutTest.ok) {
+          const testData = await checkoutTest.json();
+          console.error('🔍 DEBUG: Checkout endpoint test failed:', testData);
+        }
+      } catch (testError) {
+        console.error('🔍 DEBUG: Checkout endpoint test failed:', testError);
+      }
+
+      const checkoutRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/checkout/session`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'x-request-id': `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+        },
+        body: JSON.stringify(checkoutSessionData)
+      });
+
+      console.log('🔍 DEBUG: Checkout response status:', checkoutRes.status);
+      console.log('🔍 DEBUG: Checkout response ok:', checkoutRes.ok);
+
+      if (!checkoutRes.ok) {
+        const checkoutError = await checkoutRes.json();
+        console.error('🔍 DEBUG: Checkout error response:', checkoutError);
+        throw new Error(checkoutError.message || `Checkout session creation failed (${checkoutRes.status})`);
+      }
+
+      const checkoutData = await checkoutRes.json();
+      console.log('✅ Checkout session created successfully:', checkoutData);
+
+      // Now create PhonePe payment session with the checkout session data
       const paymentRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/payment/phonepe/create-session`, {
         method: 'POST',
         headers: {

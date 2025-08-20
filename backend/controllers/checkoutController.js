@@ -13,21 +13,29 @@ export const createCheckoutSession = async (req, res) => {
   
   try {
     console.log(`[${correlationId}] Creating checkout session`);
+    console.log(`[${correlationId}] Request body:`, JSON.stringify(req.body, null, 2));
+    console.log(`[${correlationId}] Request headers:`, req.headers);
+    console.log(`[${correlationId}] User:`, req.user);
     
     const { source, items, couponCode } = req.body;
     const userId = req.user?.id;
     const userEmail = req.user?.email || req.body.email;
     
+    console.log(`[${correlationId}] Parsed data:`, { source, items, userId, userEmail });
+    
     // Validate request
     if (!source || !['cart', 'buynow'].includes(source)) {
+      console.log(`[${correlationId}] ❌ Invalid source: ${source}`);
       return errorResponse(res, 400, 'Invalid source. Must be "cart" or "buynow"');
     }
     
     if (!items || !Array.isArray(items) || items.length === 0) {
+      console.log(`[${correlationId}] ❌ Invalid items:`, items);
       return errorResponse(res, 400, 'Items array is required and must not be empty');
     }
     
     if (!userEmail) {
+      console.log(`[${correlationId}] ❌ No user email:`, userEmail);
       return errorResponse(res, 400, 'User email is required');
     }
     
