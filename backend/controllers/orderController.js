@@ -98,6 +98,41 @@ export const getOrderById = async (req, res) => {
     }
 };
 
+// GET /api/orders/transaction/:transactionId - Get order by PhonePe transaction ID
+export const getOrderByTransactionId = async (req, res) => {
+    try {
+        const { transactionId } = req.params;
+        
+        if (!transactionId) {
+            return errorResponse(res, 400, 'Transaction ID is required');
+        }
+
+        const order = await orderModel.findOne({ phonepeTransactionId: transactionId });
+        
+        if (!order) {
+            return errorResponse(res, 404, 'Order not found for this transaction');
+        }
+
+        // For transaction-based lookups, we allow access without strict user validation
+        // since this is typically used in payment callbacks where user context might be limited
+        // However, we still include user info if available for security purposes
+        const userId = order.userInfo?.userId || order.userId;
+        
+        // If user is authenticated, verify ownership or admin access
+        if (req.user) {
+            if (userId && userId.toString() !== req.user.id && (!req.user.role || req.user.role !== 'admin')) {
+                return errorResponse(res, 403, 'Access denied');
+            }
+        }
+
+        // Always include shippingAddress in response
+        successResponse(res, { ...order.toObject(), shippingAddress: order.shippingAddress || null }, 'Order fetched successfully by transaction ID');
+    } catch (error) {
+        console.error('Get Order By Transaction ID Error:', error);
+        errorResponse(res, 500, error.message);
+    }
+};
+
 // Helper to get user email
 function getOrderUserEmail(req, fallback) {
   return (req.user && req.user.email) || fallback || '';

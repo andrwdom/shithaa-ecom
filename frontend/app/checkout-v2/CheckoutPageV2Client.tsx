@@ -136,41 +136,8 @@ export default function CheckoutPageV2Client() {
       setCheckoutError(null);
       const token = await getIdToken();
       
-      // Create checkout session first (if not already exists)
-      let checkoutSessionId = currentSession.sessionId;
-      
-      if (!checkoutSessionId) {
-        console.log('[CheckoutPageV2] Creating new checkout session...');
-        
-        const checkoutResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/checkout/session`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-            'x-request-id': `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-          },
-          body: JSON.stringify({
-            source: 'buynow',
-            items: getCheckoutItems().map(item => ({
-              productId: item.productId || item._id,
-              size: item.size,
-              quantity: item.quantity
-            }))
-          })
-        });
-        
-        const checkoutData = await checkoutResponse.json();
-        
-        if (!checkoutResponse.ok || !checkoutData.data?.sessionId) {
-          throw new Error(checkoutData.message || 'Failed to create checkout session');
-        }
-        
-        checkoutSessionId = checkoutData.data.sessionId;
-        console.log('[CheckoutPageV2] Checkout session created:', checkoutSessionId);
-      }
-      
-      // Create PhonePe payment session using checkout session
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/payment/phonepe/create-session`, {
+      // Create PhonePe payment session
+      const response = await fetch('/api/payment/phonepe/create-session', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -178,7 +145,7 @@ export default function CheckoutPageV2Client() {
           'x-request-id': `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
         },
         body: JSON.stringify({
-          checkoutSessionId,
+          checkoutSessionId: currentSession.sessionId,
           shipping: {
             fullName: user.displayName || 'Guest User',
             email: user.email || '',
@@ -195,14 +162,13 @@ export default function CheckoutPageV2Client() {
 
       const data = await response.json();
       
-      if (data.success && data.data?.redirectUrl) {
+      if (data.success && data.redirectUrl) {
         // Redirect to PhonePe
-        window.location.href = data.data.redirectUrl;
+        window.location.href = data.redirectUrl;
       } else {
         setCheckoutError(data.message || 'Failed to create payment session');
       }
     } catch (err) {
-      console.error('[CheckoutPageV2] Payment error:', err);
       setCheckoutError(err instanceof Error ? err.message : 'Unknown error occurred');
     }
   };

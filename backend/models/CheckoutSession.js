@@ -74,7 +74,8 @@ const checkoutSessionSchema = new mongoose.Schema({
   // Expiration and timestamps
   expiresAt: { 
     type: Date, 
-    required: true
+    required: true,
+    index: { expireAfterSeconds: 0 } // TTL index
   },
   createdAt: { 
     type: Date, 
@@ -105,7 +106,7 @@ checkoutSessionSchema.index({ sessionId: 1 }, { unique: true });
 checkoutSessionSchema.index({ phonepeTransactionId: 1 });
 checkoutSessionSchema.index({ userId: 1 });
 checkoutSessionSchema.index({ status: 1 });
-checkoutSessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 }); // TTL index
+checkoutSessionSchema.index({ expiresAt: 1 });
 checkoutSessionSchema.index({ createdAt: 1 });
 
 // Virtual for session age

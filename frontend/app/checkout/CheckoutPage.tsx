@@ -13,7 +13,6 @@ import PageLoading from '@/components/page-loading';
 import Script from 'next/script';
 import { useAuth } from '@/components/auth/useAuth'
 import { calculateShippingCost, ShippingInfo } from '@/lib/shipping-calculator'
-import { getSourceValue } from '@/lib/checkoutUtils'
 
 function ProductPreviewSection({ items, onEdit }: any) {
   if (!items || items.length === 0) {
@@ -313,119 +312,31 @@ export default function CheckoutPage() {
         throw new Error('Please complete your shipping information before proceeding.');
       }
       
-      console.log('[CheckoutPage] ✅ Data validation passed, creating checkout session...');
+      console.log('[CheckoutPage] ✅ Data validation passed, creating payment session...');
       
-      // 1. Create checkout session first
+      // 1. Create PhonePe payment session on backend
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-      
-      // Debug: Log current state
-      console.log('[CheckoutPage] 🔍 Debug - Current state:', {
-        hasToken: !!token,
-        hasShipping: !!shipping,
-        shippingEmail: shipping?.email,
-        displayItemsCount: displayItems?.length,
-        orderSummaryTotal: orderSummary?.total,
-        isBuyNowMode
-      });
-      
-      const checkoutSessionUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + '/api/checkout/session';
-      
-      const checkoutSessionData = {
-        source: getSourceValue(isBuyNowMode),
-        items: displayItems.map(item => ({
-          productId: item._id || item.id,
-          size: item.size,
-          quantity: item.quantity
-        })),
-        couponCode: coupon?.code,
-        email: shipping.email // Include email for guest checkout
-      };
-      
-      console.log('[CheckoutPage] 📤 Creating checkout session:', checkoutSessionData);
-      console.log('[CheckoutPage] 🔑 Token present:', !!token);
-      console.log('[CheckoutPage] 🌐 API URL:', checkoutSessionUrl);
-      
-      const checkoutRes = await fetch(checkoutSessionUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        },
-        body: JSON.stringify(checkoutSessionData)
-      });
-      
-      console.log('[CheckoutPage] 📥 Checkout response status:', checkoutRes.status);
-      console.log('[CheckoutPage] 📥 Checkout response headers:', Object.fromEntries(checkoutRes.headers.entries()));
-      
-      let checkoutData;
-      try {
-        checkoutData = await checkoutRes.json();
-        console.log('[CheckoutPage] 📥 Checkout session response:', checkoutData);
-      } catch (parseError) {
-        console.error('[CheckoutPage] ❌ Failed to parse checkout response:', parseError);
-        const responseText = await checkoutRes.text();
-        console.error('[CheckoutPage] ❌ Raw response text:', responseText);
-        throw new Error('Invalid response from server. Please try again.');
-      }
-      
-      // Enhanced error handling for checkout session creation
-      if (!checkoutRes.ok) {
-        console.error('[CheckoutPage] ❌ Checkout session creation failed:', {
-          status: checkoutRes.status,
-          statusText: checkoutRes.statusText,
-          data: checkoutData
-        });
-        
-        if (checkoutRes.status === 401) {
-          throw new Error('Authentication failed. Please log in again.');
-        } else if (checkoutRes.status === 400) {
-          throw new Error(checkoutData.message || 'Invalid checkout data. Please check your information.');
-        } else if (checkoutRes.status === 429) {
-          throw new Error('Too many requests. Please wait a moment and try again.');
-        } else {
-          throw new Error(checkoutData.message || `Checkout failed (${checkoutRes.status}). Please try again.`);
-        }
-      }
-      
-      // Validate response structure
-      if (!checkoutData || !checkoutData.success) {
-        console.error('[CheckoutPage] ❌ Invalid checkout response structure:', checkoutData);
-        throw new Error('Invalid response from server. Please try again.');
-      }
-      
-      if (!checkoutData.data || !checkoutData.data.sessionId) {
-        console.error('[CheckoutPage] ❌ Missing sessionId in response:', checkoutData);
-        throw new Error('Failed to create checkout session. Please try again.');
-      }
-      
-      const checkoutSessionId = checkoutData.data.sessionId;
-      console.log('[CheckoutPage] ✅ Checkout session created:', checkoutSessionId);
-      
-      // Store the session ID for potential retry
-      localStorage.setItem('checkout:sessionId', checkoutSessionId);
-      console.log('[CheckoutPage] 💾 Stored checkout session ID for retry:', checkoutSessionId);
-      
-      // 2. Create PhonePe payment session using checkout session
-      const phonepeUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + '/api/payment/phonepe/create-session';
+      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + '/api/payment/phonepe/create-session';
       
       const paymentData = {
-        sessionId: checkoutSessionId, // Use sessionId instead of checkoutSessionId
-        shipping: {
-          fullName: shipping.fullName,
-          email: shipping.email,
-          phone: shipping.phone,
-          addressLine1: shipping.address1 || shipping.addressLine1,
-          addressLine2: shipping.address2 || shipping.addressLine2 || '',
-          city: shipping.city,
-          state: shipping.state,
-          postalCode: shipping.pincode || shipping.postalCode,
-          country: shipping.country || 'India'
+        amount: orderSummary.total,
+        shipping,
+        cartItems: displayItems, // Use displayItems instead of cartItems
+        coupon,
+        userId: user?.mongoId,
+        email: user?.email || shipping.email,
+        checkoutMode: displayMode, // Add checkout mode for backend
+        orderSummary: {
+          subtotal: orderSummary.subtotal,
+          discount: orderSummary.discount,
+          shipping: orderSummary.shipping,
+          total: orderSummary.total
         }
       };
       
-      console.log('[CheckoutPage] 📤 Creating PhonePe payment session:', paymentData);
+      console.log('[CheckoutPage] 📤 Sending payment data to backend:', paymentData);
       
-      const phonepeRes = await fetch(phonepeUrl, {
+      const res = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -434,220 +345,20 @@ export default function CheckoutPage() {
         body: JSON.stringify(paymentData)
       });
       
-      console.log('[CheckoutPage] 📥 PhonePe response status:', phonepeRes.status);
+      const data = await res.json();
+      console.log('[CheckoutPage] 📥 Backend response:', data);
       
-      let phonepeData;
-      try {
-        phonepeData = await phonepeRes.json();
-        console.log('[CheckoutPage] 📥 PhonePe response:', phonepeData);
-      } catch (parseError) {
-        console.error('[CheckoutPage] ❌ Failed to parse PhonePe response:', parseError);
-        const responseText = await phonepeRes.text();
-        console.error('[CheckoutPage] ❌ Raw PhonePe response text:', responseText);
-        throw new Error('Invalid response from payment server. Please try again.');
-      }
-      
-      if (!phonepeRes.ok || !phonepeData.data?.redirectUrl) {
-        console.error('[CheckoutPage] ❌ PhonePe payment session creation failed:', {
-          status: phonepeRes.status,
-          data: phonepeData
-        });
-        throw new Error(phonepeData.message || 'Failed to create PhonePe payment session');
+      if (!res.ok || !data.redirectUrl) {
+        throw new Error(data.message || 'Failed to create payment session');
       }
 
-      console.log('[CheckoutPage] ✅ PhonePe payment session created, redirecting...');
+      console.log('[CheckoutPage] ✅ Payment session created, redirecting to PhonePe...');
       
-      // 3. Redirect to PhonePe payment page
-      window.location.href = phonepeData.data.redirectUrl;
+      // 2. Redirect to PhonePe payment page
+      window.location.href = data.redirectUrl;
     } catch (err: any) {
       console.error('[CheckoutPage] ❌ Payment error:', err);
-      
-      // Enhanced error message handling
-      let errorMessage = 'Payment failed. Try again.';
-      
-      if (err.message) {
-        if (err.message.includes('Authentication failed')) {
-          errorMessage = 'Please log in again to continue with checkout.';
-        } else if (err.message.includes('Invalid checkout data')) {
-          errorMessage = 'Please check your shipping information and try again.';
-        } else if (err.message.includes('Too many requests')) {
-          errorMessage = 'Too many requests. Please wait a moment and try again.';
-        } else if (err.message.includes('Failed to create checkout session')) {
-          errorMessage = 'Unable to create checkout session. Please refresh and try again.';
-        } else if (err.message.includes('Invalid response from server')) {
-          errorMessage = 'Server error. Please try again in a moment.';
-        } else {
-          errorMessage = err.message;
-        }
-      }
-      
-      setPaymentError(errorMessage);
-      setProcessing(false);
-    }
-  }
-
-  // 🔧 ROBUST: Safe retry + create-session flow with backoff and polling
-  async function safeCreatePhonePeSession({ sessionId, shipping }: { sessionId: string; shipping: any }, maxRetries = 3) {
-    // attempt create-session, but if server responds 'not ready' we poll summary and retry
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      console.debug('[CheckoutPage] create-session attempt', attempt, { sessionId });
-      
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-      const phonepeUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + '/api/payment/phonepe/create-session';
-      
-      const createRes = await fetch(phonepeUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        },
-        body: JSON.stringify({ sessionId, shipping })
-      });
-      
-      const json = await createRes.json().catch(() => null);
-      if (createRes.ok && json && json.success) {
-        console.debug('[CheckoutPage] create-session ok', { sessionId, json });
-        return json;
-      }
-      
-      // If server says session not ready, fetch summary and wait a bit before retrying
-      const reason = json?.message || 'unknown';
-      console.warn('[CheckoutPage] create-session failed', { status: createRes.status, reason });
-      
-      if (reason.toLowerCase().includes('not ready for payment') || createRes.status === 400) {
-        // fetch summary to confirm session status for debug
-        const summaryUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + `/api/checkout/session/${sessionId}/summary`;
-        const summaryRes = await fetch(summaryUrl, {
-          headers: {
-            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-          }
-        });
-        const summary = await summaryRes.json().catch(() => null);
-        console.debug('[CheckoutPage] session summary before retry', { sessionId, summary });
-        
-        // short backoff
-        await new Promise(r => setTimeout(r, 600)); // 600ms backoff
-        continue;
-      }
-      
-      // other errors: bubble up
-      throw new Error(json?.message || 'create-session failed');
-    }
-    throw new Error('create-session: exceeded retries');
-  }
-
-  // Helper function to build shipping object from form or saved data
-  function buildShippingFromFormOrSaved() {
-    if (!shipping || !shipping.fullName || !shipping.email || !shipping.phone) {
-      return null;
-    }
-    
-    return {
-      fullName: shipping.fullName,
-      email: shipping.email,
-      phone: shipping.phone,
-      addressLine1: shipping.address1 || shipping.addressLine1 || '',
-      addressLine2: shipping.address2 || shipping.addressLine2 || '',
-      city: shipping.city || '',
-      state: shipping.state || '',
-      postalCode: shipping.pincode || shipping.postalCode || '',
-      country: shipping.country || 'India'
-    };
-  }
-
-    async function handleRetryPayment(e?: React.MouseEvent) {
-    if (e) e.preventDefault();
-    
-    console.log('[CheckoutPage] 🔄 Starting robust retry payment process...');
-    setProcessing(true);
-    setPaymentError(null);
-    
-    try {
-      // 1) ensure sessionId exists and is refreshed from retry endpoint
-      const currentSessionId = localStorage.getItem('checkout:sessionId');
-      if (!currentSessionId) {
-        console.error('[CheckoutPage] ❌ No checkout:sessionId found for retry');
-        setPaymentError('No checkout session found. Please start a new checkout.');
-        setProcessing(false);
-        return;
-      }
-
-      console.log('[CheckoutPage] 🔍 Found existing session ID:', currentSessionId);
-
-      // Call retry endpoint and await the fresh session
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-      const retryUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + `/api/checkout/session/${currentSessionId}/retry`;
-      
-      console.log('[CheckoutPage] 📤 Calling retry endpoint:', retryUrl);
-      
-      const retryRes = await fetch(retryUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        }
-      });
-      
-      const retryJson = await retryRes.json();
-      console.log('[CheckoutPage] 📥 Retry endpoint response:', retryJson);
-      
-      if (!retryRes.ok) {
-        console.error('[CheckoutPage] ❌ Retry endpoint failed:', retryJson);
-        setPaymentError(`Failed to refresh checkout session: ${retryJson.message || 'Unknown error'}`);
-        setProcessing(false);
-        return;
-      }
-      
-      const refreshedSessionId = retryJson.data?.session?.sessionId || retryJson.data?.sessionId;
-      if (!refreshedSessionId) {
-        console.error('[CheckoutPage] ❌ Retry returned no sessionId:', retryJson);
-        setPaymentError('Retry failed: no session returned from server.');
-        setProcessing(false);
-        return;
-      }
-
-      // store fresh session id
-      localStorage.setItem('checkout:sessionId', refreshedSessionId);
-      console.log('[CheckoutPage] ✅ Checkout session refreshed:', {
-        sessionId: refreshedSessionId,
-        status: retryJson.data?.session?.status,
-        source: retryJson.data?.session?.source,
-        itemsCount: retryJson.data?.session?.items?.length || 0
-      });
-
-      // 2) prepare shipping — ensure shipping object exists (backend requires it)
-      const shippingData = buildShippingFromFormOrSaved();
-      if (!shippingData) {
-        setPaymentError('Shipping info missing. Please fill shipping details.');
-        setProcessing(false);
-        return;
-      }
-
-      // 3) call robust create-session which retries when session not ready
-      console.log('[CheckoutPage] 📤 Creating PhonePe payment session with refreshed session:', {
-        sessionId: refreshedSessionId,
-        shipping: shippingData
-      });
-      
-      const createResult = await safeCreatePhonePeSession({ 
-        sessionId: refreshedSessionId, 
-        shipping: shippingData 
-      }, 4);
-      
-      // expected createResult contains provider redirect URL
-      const redirectUrl = createResult.data?.redirectUrl || createResult.redirectUrl;
-      if (!redirectUrl) {
-        throw new Error('No redirect URL received from PhonePe');
-      }
-      
-      console.log('[CheckoutPage] ✅ PhonePe payment session created on retry, redirecting...');
-      
-      // redirect user to PhonePe flow
-      window.location.href = redirectUrl;
-      
-    } catch (err: any) {
-      console.error('[CheckoutPage] ❌ handleRetryPayment error:', err);
-      setPaymentError(err.message || 'Failed to create PhonePe payment session');
+      setPaymentError(err.message || 'Payment failed. Try again.');
       setProcessing(false);
     }
   }
@@ -818,7 +529,7 @@ export default function CheckoutPage() {
                   <button
                     type="button"
                     className="btn btn-sm btn-outline border-red-400 text-red-700 hover:bg-red-50 mt-2"
-                    onClick={handleRetryPayment}
+                    onClick={handlePhonePePayment}
                     disabled={processing}
                   >
                     Retry PhonePe Payment
@@ -866,7 +577,7 @@ export default function CheckoutPage() {
                 key={`${displayMode}-${displayItems.length}-${displayItems?.[0]?.id || "none"}`}
                 cartItems={displayItems} 
                 coupon={coupon} 
-                offerDetails={isBuyNowMode ? null : offerDetails}
+                offerDetails={offerDetails}
                 mode={displayMode}
                 shippingInfo={shipping}
               />

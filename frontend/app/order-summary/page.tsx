@@ -22,14 +22,15 @@ function OrderSummaryContent() {
   const params = useSearchParams()
   const router = useRouter()
   const orderId = params.get('orderId')
+  const transactionId = params.get('transactionId')
   const [order, setOrder] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
 
   useEffect(() => {
-    // If no orderId is provided, redirect to account page
-    if (!orderId) {
-      console.log("No order ID provided, redirecting to account page")
+    // If neither orderId nor transactionId is provided, redirect to account page
+    if (!orderId && !transactionId) {
+      console.log("No order ID or transaction ID provided, redirecting to account page")
       router.push('/account')
       return
     }
@@ -38,23 +39,54 @@ function OrderSummaryContent() {
       setLoading(true)
       setError("")
       try {
-        const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + `/api/orders/${orderId}`
-        const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
-        const res = await fetch(apiUrl, {
-          headers: token ? { token } : {},
-          credentials: 'include',
-        })
-        const data = await res.json()
-        if (res.ok && data.data) setOrder(data.data)
-        else setError(data.message || "Order not found.")
+        let apiUrl: string
+        let token: string | null = null
+        
+        if (typeof window !== 'undefined') {
+          token = localStorage.getItem('token')
+        }
+
+        if (orderId) {
+          // Fetch order by order ID
+          apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + `/api/orders/${orderId}`
+          const res = await fetch(apiUrl, {
+            headers: token ? { token } : {},
+            credentials: 'include',
+          })
+          const data = await res.json()
+          if (res.ok && data.data) {
+            setOrder(data.data)
+            return
+          } else {
+            setError(data.message || "Order not found.")
+            return
+          }
+                 } else if (transactionId) {
+           // Fetch order by PhonePe transaction ID using the new transaction endpoint
+           apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + `/api/orders/transaction/${transactionId}`
+           const res = await fetch(apiUrl, {
+             headers: token ? { token } : {},
+             credentials: 'include',
+           })
+           const data = await res.json()
+           if (res.ok && data.success && data.data) {
+             // Use the order data directly from the new endpoint
+             setOrder(data.data)
+             return
+           } else {
+             setError(data.message || "Order not found for this transaction.")
+             return
+           }
+         }
       } catch (err) {
+        console.error("Error fetching order:", err)
         setError("Could not fetch order. Please try again.")
       } finally {
         setLoading(false)
       }
     }
     fetchOrder()
-  }, [orderId, router])
+  }, [orderId, transactionId, router])
 
   if (loading) {
     return (

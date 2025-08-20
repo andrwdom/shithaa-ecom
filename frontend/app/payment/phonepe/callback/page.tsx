@@ -191,52 +191,66 @@ function PhonePeCallbackInner() {
                   throw new Error('Total amount is missing or invalid from order data')
                 }
                 
-                console.log('✅ Order data validation passed, proceeding with order creation')
-                console.log('Creating order from payment session for transaction:', transactionId)
+                console.log('✅ Order data validation passed - Order already exists from createPhonePeSession')
+                console.log('Order was created upfront, proceeding to order summary for transaction:', transactionId)
                 
-                const createOrderRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/payment/phonepe/create-order`, {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
-                  },
-                  body: JSON.stringify({ phonepeTransactionId: transactionId })
-                })
-                
-                console.log('Order creation response status:', createOrderRes.status)
-                
-                if (createOrderRes.ok) {
-                  const orderResult = await createOrderRes.json()
-                  console.log('✅ Order creation successful:', orderResult)
-                  
-                  if (orderResult.success && orderResult.order) {
-                    setStatus('success')
-                    setMessage('Order created successfully! Redirecting to order summary...')
-                    setOrderId(orderResult.order._id || orderResult.order.orderId)
-                    setOrderDetails(orderResult.order)
-                    
-                    // Store order details for order summary page
-                    localStorage.setItem('lastOrder', JSON.stringify({
-                      id: transactionId,
-                      orderSummary: { total: orderResult.order.amount || orderResult.order.total },
-                      paymentMethod: 'PhonePe'
-                    }))
-                    
-                    // Clear temporary order data after successful order creation
-                    clearTemporaryOrderData()
-                    
-                    // Redirect to OrderSummary page with order ID
-                    setTimeout(() => { 
-                      router.push(`/order-summary?orderId=${orderResult.order._id || orderResult.order.orderId}`)
-                    }, 2000)
-                    return
-                  } else {
-                    throw new Error('Order creation failed: ' + (orderResult.message || 'Unknown error'))
-                  }
-                } else {
-                  const errorData = await createOrderRes.json()
-                  throw new Error('Order creation failed: ' + (errorData.message || `HTTP ${createOrderRes.status}`))
-                }
+                                 // Since the order was already created in createPhonePeSession, we don't need to create it again
+                 // Just get the order details and redirect to order summary
+                 try {
+                   // Get order details from the backend using the new transaction endpoint
+                   const orderRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/orders/transaction/${transactionId}`, {
+                     method: 'GET',
+                     headers: {
+                       'Content-Type': 'application/json'
+                     }
+                   })
+                   
+                   if (orderRes.ok) {
+                     const orderData = await orderRes.json()
+                     if (orderData.success && orderData.data) {
+                       setStatus('success')
+                       setMessage('Payment successful! Order already exists. Redirecting to order summary...')
+                       setOrderId(orderData.data._id || orderData.data.orderId)
+                       setOrderDetails(orderData.data)
+                       
+                       // Store order details for order summary page
+                       localStorage.setItem('lastOrder', JSON.stringify({
+                         id: transactionId,
+                         orderSummary: { total: orderData.data.totalPrice || orderData.data.total || orderData.data.amount },
+                         paymentMethod: 'PhonePe'
+                       }))
+                       
+                       // Clear temporary order data
+                       clearTemporaryOrderData()
+                       
+                       // Redirect to OrderSummary page with order ID
+                       setTimeout(() => { 
+                         router.push(`/order-summary?orderId=${orderData.data._id || orderData.data.orderId}`)
+                       }, 2000)
+                       return
+                     } else {
+                       throw new Error('Could not retrieve order details')
+                     }
+                   } else {
+                     throw new Error(`Failed to get order details: HTTP ${orderRes.status}`)
+                   }
+                 } catch (orderError) {
+                   console.error('❌ Error getting order details:', orderError)
+                   // Even if we can't get order details, redirect to order summary with transaction ID
+                   // The order summary page can fetch the order using the transaction ID
+                   setStatus('success')
+                   setMessage('Payment successful! Redirecting to order summary...')
+                   setOrderId(transactionId)
+                   
+                   // Clear temporary order data
+                   clearTemporaryOrderData()
+                   
+                   // Redirect to OrderSummary page with transaction ID
+                   setTimeout(() => { 
+                     router.push(`/order-summary?transactionId=${transactionId}`)
+                   }, 2000)
+                   return
+                 }
               } else {
                 console.error('❌ CRITICAL: No order data available for order creation')
                 console.error('Available storage keys:', Object.keys(localStorage).filter(key => key.includes('phonepe') || key.includes('order')))
