@@ -1,6 +1,7 @@
 "use client"
-import { createContext, useContext, useState, useEffect, ReactNode } from "react"
-import { useAuth } from "./auth/useAuth"
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useAuth } from './auth/AuthContext';
+import { authenticatedFetch } from '@/lib/api-utils';
 import { toast } from "sonner"
 
 interface WishlistItem {
@@ -56,9 +57,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
       setIsLoading(true)
       
       console.log('Fetching wishlist from:', `${apiUrl}/api/wishlist`)
-      const response = await fetch(`${apiUrl}/api/wishlist`, {
-        credentials: 'include'
-      })
+      const response = await authenticatedFetch(`${apiUrl}/api/wishlist`)
 
       console.log('Wishlist response status:', response.status)
       
@@ -87,12 +86,11 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
 
     try {
       console.log('Adding to wishlist:', productId)
-      const response = await fetch(`${apiUrl}/api/wishlist/add`, {
+      const response = await authenticatedFetch(`${apiUrl}/api/wishlist/add`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        credentials: 'include',
         body: JSON.stringify({ productId })
       })
 
@@ -117,9 +115,8 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
 
     try {
       console.log('Removing from wishlist:', productId)
-      const response = await fetch(`${apiUrl}/api/wishlist/remove/${productId}`, {
+      const response = await authenticatedFetch(`${apiUrl}/api/wishlist/remove/${productId}`, {
         method: 'DELETE',
-        credentials: 'include'
       })
 
       console.log('Remove from wishlist response status:', response.status)

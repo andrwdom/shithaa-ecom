@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation'
 import PageLoading from '@/components/page-loading';
 import { useAuth } from '@/components/auth/useAuth'
 import { calculateShippingCost, ShippingInfo } from '@/lib/shipping-calculator'
+import { authenticatedFetch } from '@/lib/api-utils';
 
 function ProductPreviewSection({ items, onEdit }: any) {
   if (!items || items.length === 0) {
@@ -334,12 +335,11 @@ export default function CheckoutPage() {
       
       console.log('[CheckoutPage] 📤 Sending payment data to backend:', paymentData);
       
-      const res = await fetch(apiUrl, {
+      const res = await authenticatedFetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        credentials: 'include', // Send HttpOnly cookies for authentication
         body: JSON.stringify(paymentData)
       });
       
@@ -357,19 +357,8 @@ export default function CheckoutPage() {
     } catch (err: any) {
       console.error('[CheckoutPage] ❌ Payment error:', err);
       
-      // Check if this is an authentication error
-      if (err.message === 'Invalid token format. Please log in again.') {
-        console.log('[CheckoutPage] 🔐 Authentication error detected, logging out user...');
-        setPaymentError('Your session has expired. Please log in again.');
-        
-        // Clear the payment error after a short delay and then logout
-        setTimeout(() => {
-          logout(); // This will redirect to home page
-        }, 2000);
-      } else {
-        setPaymentError(err.message || 'Payment failed. Try again.');
-      }
-      
+      // Set the error message
+      setPaymentError(err.message || 'Payment failed. Try again.');
       setProcessing(false);
     }
   }

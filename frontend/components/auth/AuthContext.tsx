@@ -4,6 +4,7 @@ import { onAuthStateChanged, signOut, User } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { useRouter } from 'next/navigation';
 import { toast } from "sonner";
+import { authenticatedFetch } from '@/lib/api-utils';
 
 const AuthContext = createContext<any>(null);
 
@@ -21,9 +22,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // SECURITY: Fetch backend user profile using HttpOnly cookies
       if (firebaseUser) {
         try {
-          const res = await fetch((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + '/api/user/auth/profile', {
-            credentials: 'include' // SECURITY: Send cookies with request
-          });
+          const res = await authenticatedFetch((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + '/api/user/auth/profile');
           const data = await res.json();
           if (res.ok && data.data) {
             setMongoUser(data.data);
@@ -74,9 +73,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // SECURITY: Call backend logout to clear HttpOnly cookies
       try {
-        await fetch((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + '/api/user/logout', {
-          method: 'POST',
-          credentials: 'include'
+        await authenticatedFetch((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + '/api/user/logout', {
+          method: 'POST'
         });
       } catch (e) {
         console.warn('Backend logout failed:', e);

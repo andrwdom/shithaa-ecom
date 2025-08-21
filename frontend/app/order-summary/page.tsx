@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { CheckCircle, Package, MapPin, CreditCard, User, ShoppingBag } from 'lucide-react'
 import Link from 'next/link'
+import { authenticatedFetch } from '@/lib/api-utils';
 
 export default function OrderSummaryPage() {
   return (
@@ -35,50 +36,26 @@ function OrderSummaryContent() {
       return
     }
 
-    async function fetchOrder() {
-      setLoading(true)
-      setError("")
+    const fetchOrderDetails = async () => {
       try {
-        let apiUrl: string
+        setLoading(true);
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+        const res = await authenticatedFetch(`${apiUrl}/api/orders/${orderId}`);
+        const data = await res.json();
         
-        if (orderId) {
-          // Fetch order by order ID
-          apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + `/api/orders/${orderId}`
-          const res = await fetch(apiUrl, {
-            credentials: 'include',
-          })
-          const data = await res.json()
-          if (res.ok && data.data) {
-            setOrder(data.data)
-            return
-          } else {
-            setError(data.message || "Order not found.")
-            return
-          }
-                 } else if (transactionId) {
-           // Fetch order by PhonePe transaction ID using the new transaction endpoint
-           apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + `/api/orders/transaction/${transactionId}`
-        const res = await fetch(apiUrl, {
-          credentials: 'include',
-        })
-        const data = await res.json()
-           if (res.ok && data.success && data.data) {
-             // Use the order data directly from the new endpoint
-             setOrder(data.data)
-             return
-           } else {
-             setError(data.message || "Order not found for this transaction.")
-             return
-           }
-         }
-      } catch (err) {
-        console.error("Error fetching order:", err)
-        setError("Could not fetch order. Please try again.")
+        if (res.ok && data.success) {
+          setOrder(data.data);
+        } else {
+          setError(data.message || 'Failed to fetch order details');
+        }
+      } catch (error: any) {
+        setError(error.message || 'Failed to fetch order details');
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
-    fetchOrder()
+    };
+
+    fetchOrderDetails()
   }, [orderId, transactionId, router])
 
   if (loading) {

@@ -5,21 +5,27 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 export const verifyToken = async (req, res, next) => {
   try {
-    const authHeader = req.headers.authorization;
-    const tokenHeader = req.headers.token;
+    // Check for token in HttpOnly cookies first (primary method)
+    let token = req.cookies?.token;
+    
+    // Fallback to Authorization header for backward compatibility
+    if (!token) {
+      const authHeader = req.headers.authorization;
+      const tokenHeader = req.headers.token;
+      token = req.headers.authorization?.split(' ')[1] || req.headers.token;
+    }
 
-    console.log('Auth middleware - Request headers:', {
-      authHeader: !!authHeader,
-      tokenHeader: !!tokenHeader,
-      authHeaderPrefix: authHeader?.split(' ')[0],
+    console.log('Auth middleware - Request authentication:', {
+      hasCookieToken: !!req.cookies?.token,
+      hasAuthHeader: !!req.headers.authorization,
+      hasTokenHeader: !!req.headers.token,
+      tokenFound: !!token,
       method: req.method,
       url: req.url
     });
 
-    const token = req.headers.authorization?.split(' ')[1] || req.headers.token;
-
     if (!token) {
-      console.log('Auth middleware - No token provided');
+      console.log('Auth middleware - No token provided in cookies or headers');
       return errorResponse(res, 401, 'Access token required. Please log in to continue.');
     }
 
@@ -68,7 +74,13 @@ export const verifyToken = async (req, res, next) => {
 
 export const optionalAuth = async (req, res, next) => {
   try {
-    const token = req.headers.authorization?.split(' ')[1] || req.headers.token;
+    // Check for token in HttpOnly cookies first
+    let token = req.cookies?.token;
+    
+    // Fallback to Authorization header for backward compatibility
+    if (!token) {
+      token = req.headers.authorization?.split(' ')[1] || req.headers.token;
+    }
     
     if (!token) {
       console.log('Optional auth middleware - No token provided, proceeding as guest');

@@ -146,6 +146,85 @@ export function createDebouncedFetch(delay: number = 300) {
   }
 }
 
+/**
+ * Utility function for making authenticated API calls with automatic token refresh
+ */
+export async function authenticatedFetch(
+  url: string, 
+  options: RequestInit = {},
+  retryCount = 0
+): Promise<Response> {
+  const maxRetries = 1; // Only retry once to avoid infinite loops
+  
+  try {
+    // Make the request with credentials
+    const response = await fetch(url, {
+      ...options,
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+    });
+
+    // If we get a 401 and haven't retried yet, try to refresh the token
+    if (response.status === 401 && retryCount < maxRetries) {
+      console.log('🔐 Access token expired, attempting to refresh...');
+      
+      try {
+        // Try to refresh the token
+        const refreshResponse = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/user/refresh-token`,
+          {
+            method: 'POST',
+            credentials: 'include',
+          }
+        );
+
+        if (refreshResponse.ok) {
+          console.log('✅ Token refreshed successfully, retrying original request...');
+          // Token refreshed, retry the original request
+          return authenticatedFetch(url, options, retryCount + 1);
+        } else {
+          console.log('❌ Token refresh failed, user needs to log in again');
+          // Token refresh failed, user needs to log in again
+          throw new Error('Your session has expired. Please log in again.');
+        }
+      } catch (refreshError) {
+        console.log('❌ Token refresh error:', refreshError);
+        throw new Error('Your session has expired. Please log in again.');
+      }
+    }
+
+    return response;
+  } catch (error) {
+    // If it's our custom error, throw it
+    if (error instanceof Error && error.message.includes('session has expired')) {
+      throw error;
+    }
+    
+    // For other errors, throw a generic error
+    throw new Error('Request failed. Please try again.');
+  }
+}
+
+/**
+ * Utility function for making authenticated API calls that returns JSON
+ */
+export async function authenticatedFetchJson<T = any>(
+  url: string, 
+  options: RequestInit = {}
+): Promise<T> {
+  const response = await authenticatedFetch(url, options);
+  
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || `Request failed with status ${response.status}`);
+  }
+  
+  return response.json();
+}
+
 // Fallback hero images data when API is unavailable
 const FALLBACK_HERO_IMAGES = {
   'maternity-feeding-wear': {

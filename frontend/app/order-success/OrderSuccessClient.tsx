@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { CheckCircle, Loader2 } from "lucide-react";
+import { authenticatedFetch } from '@/lib/api-utils';
 
 export default function OrderSuccessClient() {
   return (
@@ -19,90 +20,47 @@ function OrderSuccessContent() {
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [checkoutSummary, setCheckoutSummary] = useState<any>(null);
 
   useEffect(() => {
-    // If no orderId is provided, try to get from checkout session
+    // If no orderId is provided, show error
     if (!orderId) {
-      console.log("No order ID provided, trying to get from checkout session");
-      fetchFromCheckoutSession();
+      setError("No order ID provided. Please check your order confirmation email or contact support.");
+      setLoading(false);
       return;
     }
 
-    async function fetchOrder() {
-      setLoading(true);
-      setError("");
+    const fetchOrderDetails = async () => {
       try {
-        const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + `/api/orders/${orderId}`;
-        const res = await fetch(apiUrl, {
-          credentials: 'include',
-        });
-        const data = await res.json();
-        if (res.ok && data.data) {
-          setOrder(data.data);
-          console.log("✅ Order fetched successfully:", data.data);
+        setLoading(true);
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+        
+        // Fetch order details
+        const orderRes = await authenticatedFetch(`${apiUrl}/api/orders/${orderId}`);
+        const orderData = await orderRes.json();
+        
+        if (orderRes.ok && orderData.success) {
+          setOrder(orderData.data);
         } else {
-          console.log("❌ Order not found, trying checkout session fallback");
-          // Try to get from checkout session as fallback
-          fetchFromCheckoutSession();
-        }
-      } catch (err) {
-        console.log("❌ Order fetch failed, trying checkout session fallback:", err);
-        // Try to get from checkout session as fallback
-        fetchFromCheckoutSession();
-      }
-    }
-
-    async function fetchFromCheckoutSession() {
-      setLoading(true);
-      setError("");
-      try {
-        const sessionId = localStorage.getItem('checkout:sessionId');
-        if (!sessionId) {
-          setError("No order or checkout session found. Please check your account or start a new checkout.");
-          setLoading(false);
+          setError(orderData.message || 'Failed to fetch order details');
           return;
         }
-
-        console.log("🔄 Fetching from checkout session:", sessionId);
-        const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + `/api/checkout/session/${sessionId}/summary`;
-        const res = await fetch(apiUrl, {
-          credentials: 'include',
-        });
-        const data = await res.json();
         
-        if (res.ok && data.data) {
-          // Convert checkout session data to order-like format
-          const sessionData = data.data;
-          const mockOrder = {
-            orderId: sessionId,
-            phonepeTransactionId: sessionData.phonepeTransactionId || 'N/A',
-            amountPaid: sessionData.total,
-            total: sessionData.total,
-            totalPrice: sessionData.total,
-            paymentMethod: 'PhonePe',
-            paymentStatus: 'paid',
-            status: 'Order Placed',
-            items: sessionData.items || [],
-            subtotal: sessionData.subtotal,
-            shippingCost: sessionData.shippingCost,
-            discount: sessionData.discount,
-            userEmail: sessionData.userEmail,
-            source: sessionData.source
-          };
-          setOrder(mockOrder);
-          console.log("✅ Checkout session data converted to order:", mockOrder);
-        } else {
-          setError("Could not fetch order details. Please check your account.");
+        // Fetch checkout session summary
+        const sessionRes = await authenticatedFetch(`${apiUrl}/api/checkout/session/${orderData.data.checkoutSessionId}/summary`);
+        const sessionData = await sessionRes.json();
+        
+        if (sessionRes.ok && sessionData.success) {
+          setCheckoutSummary(sessionData.data);
         }
-      } catch (err) {
-        console.error("❌ Checkout session fetch failed:", err);
-        setError("Could not fetch order details. Please check your account.");
+      } catch (error: any) {
+        setError(error.message || 'Failed to fetch order details');
       } finally {
         setLoading(false);
       }
-    }
+    };
 
-    fetchOrder();
+    fetchOrderDetails();
   }, [orderId, router]);
 
   if (loading) {
