@@ -89,7 +89,7 @@ const orderSchema = new mongoose.Schema({
     // Link to CheckoutSession snapshot to enforce single source of truth
     checkoutSessionId: { type: String, unique: true, sparse: true },
     // Flow source for analytics and isolation guarantees
-    source: { type: String, enum: ['cart', 'buynow'], index: true },
+    source: { type: String, enum: ['cart', 'buynow'] },
     // Snapshot versioning for future evolutions
     itemsSnapshotVersion: { type: Number, default: 1 },
     // Refund tracking for PhonePe

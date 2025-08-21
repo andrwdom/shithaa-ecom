@@ -1,49 +1,47 @@
 import express from 'express'
-import { verifyToken } from '../middleware/auth.js'
 
 const carouselRouter = express.Router()
 
-// Sample carousel data - replace with database integration
+// Sample carousel data
 const sampleCarousels = [
   {
     id: 'carousel-1',
-    url: '/blue-dress.JPG',
-    alt: 'Maternity Feeding Wear Collection',
-    title: 'New Maternity Collection',
-    link: '/collections/maternity-feeding-wear',
+    url: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&h=400&fit=crop',
+    alt: 'Fashion Collection 1',
+    title: 'New Arrivals',
+    link: '/collections/new-arrivals',
     order: 1,
     isActive: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+    createdAt: '2024-01-01T00:00:00.000Z',
+    updatedAt: '2024-01-01T00:00:00.000Z'
   },
   {
     id: 'carousel-2',
-    url: '/prink-dress.JPG',
-    alt: 'Zipless Feeding Lounge Wear',
-    title: 'Revolutionary Zipless Design',
-    link: '/collections/zipless-feeding-lounge-wear',
+    url: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=800&h=400&fit=crop',
+    alt: 'Fashion Collection 2',
+    title: 'Summer Styles',
+    link: '/collections/summer',
     order: 2,
     isActive: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+    createdAt: '2024-01-01T00:00:00.000Z',
+    updatedAt: '2024-01-01T00:00:00.000Z'
   },
   {
     id: 'carousel-3',
-    url: '/leopard-dress.jpg',
-    alt: 'Non-Feeding Lounge Wear',
-    title: 'Comfortable Everyday Wear',
-    link: '/collections/non-feeding-lounge-wear',
+    url: 'https://images.unsplash.com/photo-1445205170230-053b83016050?w=800&h=400&fit=crop',
+    alt: 'Fashion Collection 3',
+    title: 'Trending Now',
+    link: '/collections/trending',
     order: 3,
     isActive: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+    createdAt: '2024-01-01T00:00:00.000Z',
+    updatedAt: '2024-01-01T00:00:00.000Z'
   }
 ]
 
-// GET /api/carousels - Get all active carousel images
-carouselRouter.get('/', async (req, res) => {
+// GET /api/carousels - Get all active carousel images (public)
+carouselRouter.get('/', (req, res) => {
   try {
-    // Filter active carousels and sort by order
     const activeCarousels = sampleCarousels
       .filter(carousel => carousel.isActive)
       .sort((a, b) => a.order - b.order)
@@ -54,20 +52,20 @@ carouselRouter.get('/', async (req, res) => {
       message: 'Carousel images retrieved successfully'
     })
   } catch (error) {
-    console.error('Error fetching carousel images:', error)
+    console.error('Error retrieving carousel images:', error)
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch carousel images',
+      message: 'Failed to retrieve carousel images',
       error: error.message
     })
   }
 })
 
-// GET /api/carousels/:id - Get specific carousel image
-carouselRouter.get('/:id', async (req, res) => {
+// GET /api/carousels/:id - Get specific carousel image (public)
+carouselRouter.get('/:id', (req, res) => {
   try {
     const { id } = req.params
-    const carousel = sampleCarousels.find(c => c.id === id)
+    const carousel = sampleCarousels.find(c => c.id === id && c.isActive)
 
     if (!carousel) {
       return res.status(404).json({
@@ -82,119 +80,10 @@ carouselRouter.get('/:id', async (req, res) => {
       message: 'Carousel image retrieved successfully'
     })
   } catch (error) {
-    console.error('Error fetching carousel image:', error)
+    console.error('Error retrieving carousel image:', error)
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch carousel image',
-      error: error.message
-    })
-  }
-})
-
-// POST /api/carousels - Create new carousel image (admin only)
-carouselRouter.post('/', verifyToken, async (req, res) => {
-  try {
-    const { url, alt, title, link, order, isActive } = req.body
-
-    // Validate required fields
-    if (!url || !alt || !title) {
-      return res.status(400).json({
-        success: false,
-        message: 'URL, alt text, and title are required'
-      })
-    }
-
-    const newCarousel = {
-      id: `carousel-${Date.now()}`,
-      url,
-      alt,
-      title,
-      link: link || null,
-      order: order || sampleCarousels.length + 1,
-      isActive: isActive !== false, // Default to true
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
-
-    // In a real app, save to database
-    // sampleCarousels.push(newCarousel)
-
-    res.status(201).json({
-      success: true,
-      data: newCarousel,
-      message: 'Carousel image created successfully'
-    })
-  } catch (error) {
-    console.error('Error creating carousel image:', error)
-    res.status(500).json({
-      success: false,
-      message: 'Failed to create carousel image',
-      error: error.message
-    })
-  }
-})
-
-// PUT /api/carousels/:id - Update carousel image (admin only)
-carouselRouter.put('/:id', verifyToken, async (req, res) => {
-  try {
-    const { id } = req.params
-    const updates = req.body
-
-    const carouselIndex = sampleCarousels.findIndex(c => c.id === id)
-    if (carouselIndex === -1) {
-      return res.status(404).json({
-        success: false,
-        message: 'Carousel image not found'
-      })
-    }
-
-    // Update carousel
-    sampleCarousels[carouselIndex] = {
-      ...sampleCarousels[carouselIndex],
-      ...updates,
-      updatedAt: new Date().toISOString()
-    }
-
-    res.json({
-      success: true,
-      data: sampleCarousels[carouselIndex],
-      message: 'Carousel image updated successfully'
-    })
-  } catch (error) {
-    console.error('Error updating carousel image:', error)
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update carousel image',
-      error: error.message
-    })
-  }
-})
-
-// DELETE /api/carousels/:id - Delete carousel image (admin only)
-carouselRouter.delete('/:id', verifyToken, async (req, res) => {
-  try {
-    const { id } = req.params
-    const carouselIndex = sampleCarousels.findIndex(c => c.id === id)
-
-    if (carouselIndex === -1) {
-      return res.status(404).json({
-        success: false,
-        message: 'Carousel image not found'
-      })
-    }
-
-    // In a real app, delete from database
-    // sampleCarousels.splice(carouselIndex, 1)
-
-    res.json({
-      success: true,
-      message: 'Carousel image deleted successfully'
-    })
-  } catch (error) {
-    console.error('Error deleting carousel image:', error)
-    res.status(500).json({
-      success: false,
-      message: 'Failed to delete carousel image',
+      message: 'Failed to retrieve carousel image',
       error: error.message
     })
   }
