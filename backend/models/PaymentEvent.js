@@ -4,8 +4,7 @@ const paymentEventSchema = new mongoose.Schema({
   // Event identifier
   eventId: { 
     type: String, 
-    required: true,
-    unique: true 
+    required: true
   },
   
   // Correlation ID for request tracing

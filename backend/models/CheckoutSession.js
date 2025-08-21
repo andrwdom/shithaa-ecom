@@ -4,8 +4,7 @@ const checkoutSessionSchema = new mongoose.Schema({
   // Unique session identifier
   sessionId: { 
     type: String, 
-    required: true,
-    unique: true
+    required: true
   },
   
   // Source of checkout (cart or buy-now)

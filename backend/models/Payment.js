@@ -4,8 +4,7 @@ const paymentSchema = new mongoose.Schema({
   // Unique payment identifier from PhonePe
   paymentId: { 
     type: String, 
-    required: true,
-    unique: true 
+    required: true
   },
   
   // Order reference
