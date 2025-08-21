@@ -197,13 +197,14 @@ function PhonePeCallbackInner() {
                                  // Since the order was already created in createPhonePeSession, we don't need to create it again
                  // Just get the order details and redirect to order summary
                  try {
-                   // Get order details from the backend using the new transaction endpoint
-                   const orderRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/orders/transaction/${transactionId}`, {
-                     method: 'GET',
-                  headers: {
-                       'Content-Type': 'application/json'
-                     }
-                   })
+                                      // Get order details from the backend using the checkout session endpoint
+                  const orderRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/checkout/session/${transactionId}`, {
+                    method: 'GET',
+                    credentials: 'include',
+                    headers: {
+                      'Content-Type': 'application/json'
+                    }
+                  })
                    
                    if (orderRes.ok) {
                      const orderData = await orderRes.json()
