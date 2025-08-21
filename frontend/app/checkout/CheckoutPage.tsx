@@ -658,10 +658,23 @@ export default function CheckoutPage() {
                 type="button"
                 className="w-full bg-[rgb(71,60,102)] hover:bg-[rgb(71,60,102)]/90 text-white text-lg font-semibold rounded-xl py-3 mt-4 transition disabled:opacity-60 disabled:cursor-not-allowed"
                 onClick={handlePhonePePayment}
-                disabled={processing || !orderSummary?.total || orderSummary.total <= 0 || !shipping?.fullName || !shipping?.email || !shipping?.phone}
+                disabled={
+                  processing || 
+                  isSessionLoading || 
+                  !checkoutSessionId || 
+                  !orderSummary?.total || 
+                  orderSummary.total <= 0 || 
+                  !shipping?.fullName || 
+                  !shipping?.email || 
+                  !shipping?.phone
+                }
               >
                 {processing ? (
                   <span className="loading loading-spinner loading-md"></span>
+                ) : isSessionLoading ? (
+                  'Creating Secure Session...'
+                ) : !checkoutSessionId ? (
+                  'Session Error - Refresh'
                 ) : !orderSummary?.total || orderSummary.total <= 0 ? (
                   'Complete Order Details'
                 ) : !shipping?.fullName || !shipping?.email || !shipping?.phone ? (
@@ -672,12 +685,17 @@ export default function CheckoutPage() {
               </button>
               
               {/* Help text when button is disabled */}
-              {(!orderSummary?.total || orderSummary.total <= 0) && (
+              {(isSessionLoading || !checkoutSessionId) && (
+                <p className="text-xs text-gray-500 text-center mt-2">
+                  Please wait while we prepare your secure checkout...
+                </p>
+              )}
+              {(!isSessionLoading && (!orderSummary?.total || orderSummary.total <= 0)) && (
                 <p className="text-xs text-gray-500 text-center mt-2">
                   Please wait for order details to load...
                 </p>
               )}
-              {orderSummary?.total && orderSummary.total > 0 && (!shipping?.fullName || !shipping?.email || !shipping?.phone) && (
+              {(!isSessionLoading && orderSummary?.total > 0 && (!shipping?.fullName || !shipping?.email || !shipping?.phone)) && (
                 <p className="text-xs text-gray-500 text-center mt-2">
                   Please complete your shipping information above
                 </p>
