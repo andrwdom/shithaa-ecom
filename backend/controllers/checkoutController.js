@@ -115,10 +115,56 @@ export const createCheckoutSession = async (req, res) => {
       }
     });
     
-    // Save session
+    // Save session first to get the ID
     await checkoutSession.save();
     
-    console.log(`[${correlationId}] Checkout session created: ${sessionId}`);
+    // 🔑 CRITICAL FIX: Reserve stock immediately and mark session as ready
+    console.log(`[${correlationId}] Reserving stock for new session...`);
+    const stockOperations = [];
+    
+    for (const item of validatedItems) {
+      try {
+        await reserveStock(item.productId, item.size, item.quantity);
+        stockOperations.push({
+          productId: item.productId,
+          size: item.size,
+          quantity: item.quantity,
+          success: true
+        });
+      } catch (error) {
+        stockOperations.push({
+          productId: item.productId,
+          size: item.size,
+          quantity: item.quantity,
+          success: false,
+          error: error.message
+        });
+      }
+    }
+
+    // Check if all stock operations succeeded
+    const failedOperations = stockOperations.filter(op => !op.success);
+    if (failedOperations.length > 0) {
+      // Release any successfully reserved stock
+      for (const op of stockOperations) {
+        if (op.success) {
+          try {
+            await releaseStock(op.productId, op.size, op.quantity);
+          } catch (releaseError) {
+            console.error(`[${correlationId}] Failed to release stock:`, releaseError);
+          }
+        }
+      }
+      
+      return errorResponse(res, 409, 'Stock reservation failed for some items', { failedOperations });
+    }
+
+    // Mark session as ready for payment
+    checkoutSession.stockReserved = true;
+    checkoutSession.status = 'awaiting_payment';
+    await checkoutSession.save();
+    
+    console.log(`[${correlationId}] Checkout session created and ready: ${sessionId}`);
     
     // Return session data (without sensitive info)
     return successResponse(res, {
