@@ -6,7 +6,8 @@ import {
     getPublicProfile,
     firebaseLogin,
     refreshToken,
-    logout
+    logout,
+    adminLogin
 } from '../controllers/userController.js';
 import { verifyToken, optionalAuth } from '../middleware/auth.js';
 
@@ -16,6 +17,9 @@ const userRouter = express.Router();
 userRouter.post('/firebase-login', firebaseLogin); // POST /api/user/firebase-login
 userRouter.post('/refresh-token', refreshToken); // POST /api/user/refresh-token
 userRouter.post('/logout', logout); // POST /api/user/logout
+
+// Admin routes
+userRouter.post('/admin', adminLogin); // POST /api/user/admin
 
 // Profile routes
 userRouter.get('/auth/profile', optionalAuth, getProfile); // GET /api/auth/profile
