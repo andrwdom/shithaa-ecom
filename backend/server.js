@@ -65,8 +65,9 @@ app.set('trust proxy', 1)
 const allowedOrigins = [
     'https://shithaa.in',
     'https://www.shithaa.in',
-    'http://localhost:3000', // Frontend dev
-    'http://localhost:5173'  // Admin dev
+    'https://admin.shithaa.in',  // Admin panel
+    'http://localhost:3000',     // Frontend dev
+    'http://localhost:5173'      // Admin dev
 ];
 
 const corsOptions = {
