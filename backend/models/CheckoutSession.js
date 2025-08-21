@@ -106,8 +106,8 @@ checkoutSessionSchema.index({ sessionId: 1 }, { unique: true });
 checkoutSessionSchema.index({ phonepeTransactionId: 1 });
 checkoutSessionSchema.index({ userId: 1 });
 checkoutSessionSchema.index({ status: 1 });
-checkoutSessionSchema.index({ expiresAt: 1 });
-checkoutSessionSchema.index({ createdAt: 1 });
+// expiresAt already has TTL index defined in schema
+// createdAt doesn't need additional indexing
 
 // Virtual for session age
 checkoutSessionSchema.virtual('ageInMinutes').get(function() {

@@ -87,7 +87,7 @@ const orderSchema = new mongoose.Schema({
     // Payment gateway fields
     phonepeTransactionId: { type: String },
     // Link to CheckoutSession snapshot to enforce single source of truth
-    checkoutSessionId: { type: String, index: true, unique: true, sparse: true },
+    checkoutSessionId: { type: String, unique: true, sparse: true },
     // Flow source for analytics and isolation guarantees
     source: { type: String, enum: ['cart', 'buynow'], index: true },
     // Snapshot versioning for future evolutions

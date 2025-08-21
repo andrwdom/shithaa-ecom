@@ -97,7 +97,7 @@ paymentSessionSchema.pre('save', function(next) {
 paymentSessionSchema.index({ phonepeTransactionId: 1 })
 paymentSessionSchema.index({ sessionId: 1 })
 paymentSessionSchema.index({ status: 1 })
-paymentSessionSchema.index({ createdAt: 1 })
+// createdAt already has TTL index with expires: 1800
 
 const PaymentSession = mongoose.model('PaymentSession', paymentSessionSchema)
 
