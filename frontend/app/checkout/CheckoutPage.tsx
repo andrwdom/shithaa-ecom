@@ -284,55 +284,7 @@ export default function CheckoutPage() {
     }
   }, [])
 
-  // CRITICAL FIX: Create or update the checkout session on the backend
-  // This runs when the items or user details change.
-  useEffect(() => {
-      const createOrUpdateSession = async () => {
-          if (!displayItems || displayItems.length === 0) {
-              return; // Don't create a session for an empty cart
-          }
-
-          console.log('🔄 Creating or updating checkout session...');
-          setIsSessionLoading(true);
-          try {
-              const sessionData = {
-                  source: displayMode,
-                  items: displayItems,
-                  userId: user?.mongoId,
-                  userEmail: user?.email || shipping?.email, // Pass an email if available
-              };
-
-              const data = await authenticatedFetchJson('/api/checkout/session', {
-                  method: 'POST',
-                  body: JSON.stringify(sessionData),
-              });
-
-              if (data.success && data.data.sessionId) {
-                  console.log('✅ Checkout session created/updated successfully:', data.data.sessionId);
-                  setCheckoutSessionId(data.data.sessionId);
-                  // Update order summary with authoritative data from backend
-                  setOrderSummary({
-                      subtotal: data.data.subtotal,
-                      offerDiscount: data.data.offerDiscount,
-                      couponDiscount: data.data.couponDiscount,
-                      shipping: data.data.shippingCost,
-                      total: data.data.total,
-                      shippingMessage: data.data.shippingMessage,
-                      isFreeShipping: data.data.isFreeShipping,
-                  });
-              } else {
-                  throw new Error(data.message || 'Failed to create checkout session.');
-              }
-          } catch (error: any) {
-              console.error('❌ Error creating checkout session:', error);
-              setPaymentError(error.message);
-          } finally {
-              setIsSessionLoading(false);
-          }
-      };
-
-      createOrUpdateSession();
-  }, [displayItems, displayMode, user]);
+  // We now create the checkout session in handlePhonePePayment when we have all the data
 
   // PhonePe payment handler
   async function handlePhonePePayment() {
@@ -384,15 +336,42 @@ export default function CheckoutPage() {
       if (!shipping || !shipping.fullName || !shipping.email || !shipping.phone) {
         throw new Error('Please complete your shipping information before proceeding.');
       }
-      
-      console.log('[CheckoutPage] ✅ Data validation passed, creating payment session...');
+
+      // 🔑 CRITICAL FIX: Create checkout session with complete data
+      console.log('[CheckoutPage] 🔄 Creating checkout session with complete data...');
+      const sessionData = {
+        source: displayMode,
+        items: displayItems,
+        userId: user?.mongoId,
+        userEmail: user?.email || shipping?.email,
+        shipping, // Include shipping info
+        orderSummary, // Include order summary
+        coupon // Include coupon if any
+      };
+
+      const sessionResponse = await authenticatedFetchJson('/api/checkout/session', {
+        method: 'POST',
+        body: JSON.stringify(sessionData),
+      });
+
+      if (!sessionResponse.success || !sessionResponse.data?.sessionId) {
+        throw new Error(sessionResponse.message || 'Failed to create checkout session');
+      }
+
+      const checkoutSessionId = sessionResponse.data.sessionId;
+      console.log('[CheckoutPage] ✅ Checkout session created:', checkoutSessionId);
       
       // 1. Create PhonePe payment session on backend
       const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + '/api/payment/phonepe/create-session';
       
       const paymentData = {
-        checkoutSessionId, // CRITICAL FIX: Send the session ID to the backend
+        checkoutSessionId,
         shipping,
+        cartItems: displayItems,
+        orderSummary,
+        userId: user?.mongoId,
+        email: user?.email || shipping.email,
+        checkoutMode: displayMode
       };
       
       console.log('[CheckoutPage] 📤 Sending payment data to backend:', paymentData);

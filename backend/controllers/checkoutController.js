@@ -51,9 +51,14 @@ export const createCheckoutSession = async (req, res) => {
     let subtotal = 0;
     
     for (const item of items) {
-      const product = await productModel.findById(item.productId);
+      const productId = item.productId || item._id; // 🔑 FIX: Use item._id as the product identifier
+      if (!productId) {
+        return errorResponse(res, 400, `Item is missing a product identifier.`, { item });
+      }
+
+      const product = await productModel.findById(productId);
       if (!product) {
-        return errorResponse(res, 400, `Product not found: ${item.productId}`);
+        return errorResponse(res, 400, `Product not found: ${productId}`);
       }
       
       const sizeObj = product.sizes.find(s => s.size === item.size);
