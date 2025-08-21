@@ -19,8 +19,8 @@ export const createCheckoutSession = async (req, res) => {
     const userEmail = req.user?.email || req.body.email;
     
     // Validate request
-    if (!source || !['cart', 'buynow'].includes(source)) {
-      return errorResponse(res, 400, 'Invalid source. Must be "cart" or "buynow"');
+    if (!source || !['cart', 'buynow', 'buy-now'].includes(source)) {
+      return errorResponse(res, 400, 'Invalid source. Must be "cart" or "buy-now"');
     }
     
     if (!items || !Array.isArray(items) || items.length === 0) {
