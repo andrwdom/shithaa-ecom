@@ -106,28 +106,70 @@ export const createPhonePeSession = async (req, res) => {
     console.log(`[${correlationId}] Request body:`, JSON.stringify(req.body, null, 2));
     console.log(`[${correlationId}] User:`, req.user);
     
-    const {
+    let {
       checkoutSessionId,
       shipping
     } = req.body;
 
-    if (!checkoutSessionId || !shipping) {
-      console.log(`[${correlationId}] Validation failed - missing required fields`);
-      return res.status(400).json({
-        success: false,
-        message: 'Missing required fields: checkoutSessionId and shipping'
-      });
+    let checkoutSession;
+
+    if (checkoutSessionId && shipping) {
+      console.log(`[${correlationId}] Modern payload detected. Proceeding with checkoutSessionId:`, checkoutSessionId);
+      checkoutSession = await CheckoutSession.findOne({ sessionId: checkoutSessionId });
+    } else {
+      console.warn(`[${correlationId}] WARNING: Legacy payload detected. Creating checkout session on the fly.`);
+      
+      const { cartItems, userId, email, checkoutMode, orderSummary } = req.body;
+      shipping = req.body.shipping; // Get shipping from the legacy body
+
+      if (!cartItems || !shipping || !checkoutMode || !orderSummary) {
+        console.log(`[${correlationId}] Validation failed - legacy payload is missing required fields`);
+        return res.status(400).json({
+          success: false,
+          message: 'Missing required fields in legacy payload: cartItems, shipping, checkoutMode, and orderSummary are required.'
+        });
+      }
+
+      // Recreate the logic from the checkout/session endpoint here as a fallback
+      try {
+        const sessionData = {
+          source: checkoutMode,
+          items: cartItems.map(item => ({
+            productId: item._id,
+            name: item.name,
+            quantity: item.quantity,
+            price: item.price,
+            image: item.image,
+            size: item.size
+          })),
+          userId: req.user?.id || userId,
+          userEmail: req.user?.email || email || shipping.email,
+          subtotal: orderSummary.subtotal,
+          total: orderSummary.total,
+          // We don't have discount/shipping details in this legacy payload, so we use the summary
+          offerDiscount: 0,
+          couponDiscount: 0,
+          shippingCost: orderSummary.shipping || 0
+        };
+
+        checkoutSession = new CheckoutSession(sessionData);
+        await checkoutSession.save();
+        checkoutSessionId = checkoutSession.sessionId; // Set the ID for later use
+        console.log(`[${correlationId}] ✅ Legacy checkout session created successfully:`, checkoutSessionId);
+      } catch (sessionError) {
+        console.error(`[${correlationId}] ❌ Error creating legacy checkout session:`, sessionError);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to create a checkout session for the legacy request.'
+        });
+      }
     }
 
-    console.log(`[${correlationId}] Validation passed, proceeding with session creation`);
-    
-    // Fetch checkout session
-    const checkoutSession = await CheckoutSession.findOne({ sessionId: checkoutSessionId });
     if (!checkoutSession) {
-      console.log(`[${correlationId}] Checkout session not found:`, checkoutSessionId);
+      console.log(`[${correlationId}] Checkout session not found or could not be created for ID:`, checkoutSessionId);
       return res.status(404).json({
         success: false,
-        message: 'Checkout session not found'
+        message: 'Checkout session not found or could not be created.'
       });
     }
     
