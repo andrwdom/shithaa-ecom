@@ -54,18 +54,10 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
 
     try {
       setIsLoading(true)
-      const token = localStorage.getItem('token')
-      if (!token) {
-        console.log('No token found for wishlist fetch')
-        return
-      }
-
+      
       console.log('Fetching wishlist from:', `${apiUrl}/api/wishlist`)
       const response = await fetch(`${apiUrl}/api/wishlist`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+        credentials: 'include'
       })
 
       console.log('Wishlist response status:', response.status)
@@ -94,19 +86,13 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const token = localStorage.getItem('token')
-      if (!token) {
-        toast.error("Please sign in to add items to wishlist")
-        return
-      }
-
       console.log('Adding to wishlist:', productId)
       const response = await fetch(`${apiUrl}/api/wishlist/add`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
+        credentials: 'include',
         body: JSON.stringify({ productId })
       })
 
@@ -130,16 +116,10 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     if (!user) return
 
     try {
-      const token = localStorage.getItem('token')
-      if (!token) return
-
       console.log('Removing from wishlist:', productId)
       const response = await fetch(`${apiUrl}/api/wishlist/remove/${productId}`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+        credentials: 'include'
       })
 
       console.log('Remove from wishlist response status:', response.status)

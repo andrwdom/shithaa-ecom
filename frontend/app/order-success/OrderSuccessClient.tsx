@@ -33,9 +33,7 @@ function OrderSuccessContent() {
       setError("");
       try {
         const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + `/api/orders/${orderId}`;
-        const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
         const res = await fetch(apiUrl, {
-          headers: token ? { token } : {},
           credentials: 'include',
         });
         const data = await res.json();
@@ -67,9 +65,7 @@ function OrderSuccessContent() {
 
         console.log("🔄 Fetching from checkout session:", sessionId);
         const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + `/api/checkout/session/${sessionId}/summary`;
-        const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
         const res = await fetch(apiUrl, {
-          headers: token ? { token } : {},
           credentials: 'include',
         });
         const data = await res.json();

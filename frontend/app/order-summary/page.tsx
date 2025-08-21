@@ -40,17 +40,11 @@ function OrderSummaryContent() {
       setError("")
       try {
         let apiUrl: string
-        let token: string | null = null
         
-        if (typeof window !== 'undefined') {
-          token = localStorage.getItem('token')
-        }
-
         if (orderId) {
           // Fetch order by order ID
           apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + `/api/orders/${orderId}`
           const res = await fetch(apiUrl, {
-            headers: token ? { token } : {},
             credentials: 'include',
           })
           const data = await res.json()
@@ -65,7 +59,6 @@ function OrderSummaryContent() {
            // Fetch order by PhonePe transaction ID using the new transaction endpoint
            apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + `/api/orders/transaction/${transactionId}`
         const res = await fetch(apiUrl, {
-          headers: token ? { token } : {},
           credentials: 'include',
         })
         const data = await res.json()

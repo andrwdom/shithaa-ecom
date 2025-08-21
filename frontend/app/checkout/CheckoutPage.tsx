@@ -313,7 +313,7 @@ export default function CheckoutPage() {
       console.log('[CheckoutPage] ✅ Data validation passed, creating payment session...');
       
       // 1. Create PhonePe payment session on backend
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      // Use credentials: 'include' for HttpOnly cookie authentication instead of localStorage token
       const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + '/api/payment/phonepe/create-session';
       
       const paymentData = {
@@ -337,9 +337,9 @@ export default function CheckoutPage() {
       const res = await fetch(apiUrl, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          'Content-Type': 'application/json'
         },
+        credentials: 'include', // Send HttpOnly cookies for authentication
         body: JSON.stringify(paymentData)
       });
       
