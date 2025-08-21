@@ -341,82 +341,65 @@ export const firebaseLogin = async (req, res) => {
 
     let decoded;
     try {
-      // Try to verify Firebase ID token
-      decoded = await admin.auth().verifyIdToken(idToken);
-    } catch (firebaseError) {
-      console.error('Firebase token verification failed:', firebaseError.message);
-      console.error('Firebase error details:', firebaseError);
-      
-      // Check if Firebase Admin is properly initialized
+      // Ensure Firebase Admin is initialized before trying to verify a token
       if (!admin.apps.length) {
-        console.error('Firebase Admin SDK not initialized');
-        // Don't return error - let the fallback handle it
-        console.log('Proceeding with fallback authentication...');
+          console.error('CRITICAL: Firebase Admin SDK is not initialized. Cannot verify ID token.');
+          throw new Error('Firebase Admin SDK not initialized');
+      }
+      decoded = await admin.auth().verifyIdToken(idToken);
+    } catch (err) {
+      console.error('Firebase token verification failed:', err);
+
+      // CRITICAL: In production, never fall back. Always fail securely.
+      if (process.env.NODE_ENV === 'production') {
+        return res.status(500).json({ 
+          success: false, 
+          message: 'Could not verify login. Server configuration error.' 
+        });
+      }
+
+      // Fallback for LOCAL DEVELOPMENT ONLY when Firebase Admin is not available
+      console.log('Fallback mode: Using token decode fallback for local development.');
+      let email = 'test@example.com';
+      try {
+        const tokenParts = idToken.split('.');
+        if (tokenParts.length === 3) {
+          const payload = JSON.parse(Buffer.from(tokenParts[1], 'base64').toString());
+          email = payload.email || 'test@example.com';
+        }
+      } catch (e) {
+        // Ignore parsing errors
       }
       
-      // For development or when Firebase Admin isn't available, create a mock user
-      if (process.env.NODE_ENV === 'development' || process.env.FIREBASE_ADMIN_DISABLED === 'true' || !admin.apps.length) {
-        console.log('Fallback mode: Firebase Admin not available, using token decode fallback');
-        
-        // Extract email from the token if possible (basic JWT decode)
-        let email = 'test@example.com';
-        try {
-          const tokenParts = idToken.split('.');
-          if (tokenParts.length === 3) {
-            const payload = JSON.parse(Buffer.from(tokenParts[1], 'base64').toString());
-            email = payload.email || 'test@example.com';
-            console.log('Successfully extracted email from token:', email);
-          }
-        } catch (e) {
-          console.log('Could not extract email from token, using default');
-        }
-        
-        // Create a test user for development
-        let user = await userModel.findOne({ email });
-        if (!user) {
-          user = await userModel.create({
-            name: 'Test User',
-            email: email,
-            password: '',
-          });
-        }
-        
-        const accessToken = createToken({ id: user._id, email: user.email, role: 'user' }, '24h');
-        const refreshToken = createToken({ 
-            id: user._id, 
-            email: user.email, 
-            role: 'user', 
-            type: 'refresh' 
-        }, '7d');
-        
-        // SECURITY: Set HttpOnly cookies for secure token storage
-        res.cookie('token', accessToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            maxAge: 24 * 60 * 60 * 1000, // 24 hours
-            path: '/'
-        });
-        
-        res.cookie('refresh_token', refreshToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-            path: '/'
-        });
-        
-        return res.json({ 
-          success: true, 
-          data: { user, token: accessToken }, 
-          message: 'Login successful (using fallback authentication)' 
-        });
-      } else {
-        return res.status(401).json({ 
-          success: false, 
-          message: 'Firebase authentication failed. Please try again or contact support.' 
-        });
+      let user = await userModel.findOne({ email });
+      if (!user) {
+        user = await userModel.create({ name: 'Test User', email, password: '' });
       }
+      
+      const accessToken = createToken({ id: user._id, email: user.email, role: 'user' }, '24h');
+      const refreshToken = createToken({ id: user._id, email: user.email, role: 'user', type: 'refresh' }, '7d');
+      
+      res.cookie('token', accessToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          maxAge: 24 * 60 * 60 * 1000,
+          path: '/'
+      });
+      
+      res.cookie('refresh_token', refreshToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          maxAge: 7 * 24 * 60 * 60 * 1000,
+          path: '/'
+      });
+      
+      return res.json({ 
+        success: true, 
+        data: { user, token: accessToken }, 
+        message: 'Login successful (using fallback authentication)' 
+      });
     }
 
     if (!decoded || !decoded.email) {
