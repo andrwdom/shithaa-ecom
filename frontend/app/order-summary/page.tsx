@@ -64,11 +64,11 @@ function OrderSummaryContent() {
                  } else if (transactionId) {
            // Fetch order by PhonePe transaction ID using the new transaction endpoint
            apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + `/api/orders/transaction/${transactionId}`
-           const res = await fetch(apiUrl, {
-             headers: token ? { token } : {},
-             credentials: 'include',
-           })
-           const data = await res.json()
+        const res = await fetch(apiUrl, {
+          headers: token ? { token } : {},
+          credentials: 'include',
+        })
+        const data = await res.json()
            if (res.ok && data.success && data.data) {
              // Use the order data directly from the new endpoint
              setOrder(data.data)

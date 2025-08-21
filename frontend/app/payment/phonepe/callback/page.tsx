@@ -200,7 +200,7 @@ function PhonePeCallbackInner() {
                    // Get order details from the backend using the new transaction endpoint
                    const orderRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/orders/transaction/${transactionId}`, {
                      method: 'GET',
-                     headers: {
+                  headers: {
                        'Content-Type': 'application/json'
                      }
                    })
@@ -208,30 +208,30 @@ function PhonePeCallbackInner() {
                    if (orderRes.ok) {
                      const orderData = await orderRes.json()
                      if (orderData.success && orderData.data) {
-                       setStatus('success')
+                    setStatus('success')
                        setMessage('Payment successful! Order already exists. Redirecting to order summary...')
                        setOrderId(orderData.data._id || orderData.data.orderId)
                        setOrderDetails(orderData.data)
-                       
-                       // Store order details for order summary page
-                       localStorage.setItem('lastOrder', JSON.stringify({
-                         id: transactionId,
+                    
+                    // Store order details for order summary page
+                    localStorage.setItem('lastOrder', JSON.stringify({
+                      id: transactionId,
                          orderSummary: { total: orderData.data.totalPrice || orderData.data.total || orderData.data.amount },
-                         paymentMethod: 'PhonePe'
-                       }))
-                       
+                      paymentMethod: 'PhonePe'
+                    }))
+                    
                        // Clear temporary order data
-                       clearTemporaryOrderData()
-                       
-                       // Redirect to OrderSummary page with order ID
-                       setTimeout(() => { 
+                    clearTemporaryOrderData()
+                    
+                    // Redirect to OrderSummary page with order ID
+                    setTimeout(() => { 
                          router.push(`/order-summary?orderId=${orderData.data._id || orderData.data.orderId}`)
-                       }, 2000)
-                       return
-                     } else {
+                    }, 2000)
+                    return
+                  } else {
                        throw new Error('Could not retrieve order details')
-                     }
-                   } else {
+                  }
+                } else {
                      throw new Error(`Failed to get order details: HTTP ${orderRes.status}`)
                    }
                  } catch (orderError) {
@@ -250,7 +250,7 @@ function PhonePeCallbackInner() {
                      router.push(`/order-summary?transactionId=${transactionId}`)
                    }, 2000)
                    return
-                 }
+                }
               } else {
                 console.error('❌ CRITICAL: No order data available for order creation')
                 console.error('Available storage keys:', Object.keys(localStorage).filter(key => key.includes('phonepe') || key.includes('order')))

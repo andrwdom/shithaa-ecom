@@ -120,8 +120,9 @@ export default function AccountPageClient() {
         
         // Fetch order count
         try {
+          console.log("Fetching order count with token:", !!token)
           const countRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/orders/user/count`, {
-            headers: { token }
+            headers: token ? { token } : {}
           })
           console.log("Order count response status:", countRes.status)
           if (countRes.ok) {

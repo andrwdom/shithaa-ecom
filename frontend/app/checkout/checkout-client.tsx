@@ -414,31 +414,58 @@ export default function CheckoutClient() {
   }
 
   async function ensureBackendToken() {
+    console.log("🔍 DEBUG: ensureBackendToken called");
     const token = localStorage.getItem("token");
-    if (token) return token;
-    if (!user) return null;
+    console.log("🔍 DEBUG: Token from localStorage:", !!token);
+
+    if (token) {
+      console.log("✅ DEBUG: Using existing token from localStorage");
+      return token;
+    }
+
+    if (!user) {
+      console.log("❌ DEBUG: No user found, cannot get backend token");
+      setError("Please log in to continue with your order.");
+      setShowLogin(true);
+      return null;
+    }
+
     try {
+      console.log("🔍 DEBUG: Getting Firebase ID token...");
       const idToken = await getIdToken(user, true); // force refresh
+      console.log("✅ DEBUG: Got Firebase ID token, exchanging for backend token...");
+
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/user/firebase-login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ idToken }),
       });
+
+      console.log("🔍 DEBUG: Firebase login response status:", res.status);
+
       if (res.status === 401) {
+        console.log("❌ DEBUG: Firebase login returned 401");
         setError("Session expired or invalid. Please log in again.");
         setShowLogin(true);
         return null;
       }
+
       if (res.status === 500) {
+        console.log("❌ DEBUG: Firebase login returned 500");
         setError("Server error during authentication. Please try again or contact support.");
         setShowLogin(true);
         return null;
       }
+
       const data = await res.json();
+      console.log("🔍 DEBUG: Firebase login response data:", data);
+
       if (data.success && data.data.token) {
+        console.log("✅ DEBUG: Successfully got backend token, storing in localStorage");
         localStorage.setItem("token", data.data.token);
         return data.data.token;
       } else {
+        console.log("❌ DEBUG: Authentication failed:", data.message);
         setError(data.message || "Authentication failed. Please log in again.");
         setShowLogin(true);
         return null;
@@ -538,11 +565,17 @@ export default function CheckoutClient() {
       return;
     }
     setLoading(true);
+    console.log("🔍 DEBUG: Starting checkout process...");
     const token = await ensureBackendToken();
+    console.log("🔍 DEBUG: Token obtained:", !!token);
+
     if (!token) {
+      console.log("❌ DEBUG: No token available, stopping checkout");
       setLoading(false);
       return;
     }
+
+    console.log("✅ DEBUG: Token available, proceeding with checkout");
     try {
       // Map checkoutItems to ensure each item has _id (string)
       const validHex24 = /^[a-fA-F0-9]{24}$/;
@@ -719,6 +752,10 @@ export default function CheckoutClient() {
       }
 
       // Now create PhonePe payment session with the checkout session data (pass only sessionId)
+      console.log("🔍 DEBUG: Creating PhonePe payment session...");
+      console.log("🔍 DEBUG: Session ID:", createdSessionId);
+      console.log("🔍 DEBUG: Token being sent:", !!token);
+
       const paymentRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/payment/phonepe/create-session`, {
         method: 'POST',
         headers: {
@@ -738,10 +775,15 @@ export default function CheckoutClient() {
         } })
       });
 
+      console.log("🔍 DEBUG: PhonePe session creation response status:", paymentRes.status);
+      console.log("🔍 DEBUG: PhonePe session creation response ok:", paymentRes.ok);
+
       if (paymentRes.ok) {
         const paymentData = await paymentRes.json();
-        
+        console.log("🔍 DEBUG: PhonePe session creation response data:", paymentData);
+
         if (paymentData.success && paymentData.data?.redirectUrl) {
+          console.log("✅ DEBUG: PhonePe session created successfully, redirecting to:", paymentData.data.redirectUrl);
           // Store the PhonePe transaction ID for better tracking
           if (paymentData.data.phonepeTransactionId) {
             const orderDataWithTransaction = {
@@ -776,6 +818,17 @@ export default function CheckoutClient() {
         }
       } else {
         const errorData = await paymentRes.json();
+        console.error('❌ DEBUG: PhonePe session creation failed:', errorData);
+        console.error('❌ DEBUG: Response status:', paymentRes.status);
+
+        if (paymentRes.status === 401) {
+          console.error('❌ DEBUG: Authentication failed - token might be invalid');
+          setError("Your session has expired. Please log in again to continue with your order.");
+          setShowLogin(true);
+          setLoading(false);
+          return;
+        }
+
         throw new Error(errorData.message || `Payment session creation failed (${paymentRes.status})`);
       }
 

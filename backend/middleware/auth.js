@@ -5,12 +5,25 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 export const verifyToken = async (req, res, next) => {
   try {
+    const authHeader = req.headers.authorization;
+    const tokenHeader = req.headers.token;
+
+    console.log('Auth middleware - Request headers:', {
+      authHeader: !!authHeader,
+      tokenHeader: !!tokenHeader,
+      authHeaderPrefix: authHeader?.split(' ')[0],
+      method: req.method,
+      url: req.url
+    });
+
     const token = req.headers.authorization?.split(' ')[1] || req.headers.token;
-    
+
     if (!token) {
       console.log('Auth middleware - No token provided');
       return errorResponse(res, 401, 'Access token required. Please log in to continue.');
     }
+
+    console.log('Auth middleware - Token found, length:', token.length);
 
     try {
       const decoded = jwt.verify(token, JWT_SECRET);
@@ -18,13 +31,21 @@ export const verifyToken = async (req, res, next) => {
       console.log('Auth middleware - Token verified successfully for user:', decoded.email);
       next();
     } catch (jwtError) {
+      console.log('Auth middleware - JWT verification failed:', {
+        error: jwtError.name,
+        message: jwtError.message,
+        tokenLength: token.length,
+        tokenStart: token.substring(0, 20) + '...',
+        currentTime: new Date()
+      });
+
       if (jwtError.name === 'TokenExpiredError') {
         console.log('Auth middleware - Token expired:', {
           expiredAt: jwtError.expiredAt,
           currentTime: new Date(),
           timeDifference: new Date() - jwtError.expiredAt
         });
-        
+
         // Return a specific error for expired tokens
         return errorResponse(res, 401, 'Your session has expired. Please log in again to continue.', {
           errorType: 'TOKEN_EXPIRED',
