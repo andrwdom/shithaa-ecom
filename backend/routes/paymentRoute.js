@@ -6,7 +6,7 @@ import {
     dummyPaymentSuccess,
     getPaymentStatus
 } from '../controllers/paymentController.js';
-import { verifyToken, optionalVerifyToken } from '../middleware/auth.js';
+import { verifyToken, optionalAuth } from '../middleware/auth.js';
 // Add imports for refund and webhook controllers
 import { initiatePhonePeRefund, getPhonePeRefundStatus } from '../controllers/refundController.js';
 import { phonePeWebhookHandler } from '../controllers/webhookController.js';
@@ -17,10 +17,10 @@ const paymentRouter = express.Router();
 paymentRouter.post('/phonepe/create-session', verifyToken, createPhonePeSession);
 paymentRouter.post('/phonepe/callback', phonePeCallback);
 paymentRouter.post('/phonepe/dummy-success', verifyToken, dummyPaymentSuccess);
-paymentRouter.get('/phonepe/verify/:merchantTransactionId', optionalVerifyToken, verifyPhonePePayment);
+paymentRouter.get('/phonepe/verify/:merchantTransactionId', optionalAuth, verifyPhonePePayment);
 
 // Payment status endpoint
-paymentRouter.get('/status/:sessionId', optionalVerifyToken, getPaymentStatus);
+paymentRouter.get('/status/:sessionId', optionalAuth, getPaymentStatus);
 // PhonePe refund routes
 paymentRouter.post('/phonepe/refund', verifyToken, initiatePhonePeRefund);
 paymentRouter.get('/phonepe/refund-status/:merchantRefundId', verifyToken, getPhonePeRefundStatus);

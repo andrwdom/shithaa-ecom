@@ -1,6 +1,6 @@
 import express from 'express';
 import { getCarouselBanners, createCarouselBanner, updateCarouselBanner, deleteCarouselBanner, updateBannerOrder } from '../controllers/carouselController.js';
-import { isAdmin } from '../middleware/auth.js';
+import { verifyToken } from '../middleware/auth.js';
 import upload from '../middleware/multer.js';
 
 const router = express.Router();
@@ -9,12 +9,12 @@ const router = express.Router();
 router.get('/', getCarouselBanners);
 
 // Admin route to get all banners (including inactive ones)
-router.get('/admin', isAdmin, getCarouselBanners);
+router.get('/admin', verifyToken, getCarouselBanners);
 
 // Admin routes
-router.post('/', isAdmin, upload.single('image'), createCarouselBanner);
-router.put('/:id', isAdmin, upload.single('image'), updateCarouselBanner);
-router.delete('/:id', isAdmin, deleteCarouselBanner);
-router.post('/order', isAdmin, updateBannerOrder);
+router.post('/', verifyToken, upload.single('image'), createCarouselBanner);
+router.put('/:id', verifyToken, upload.single('image'), updateCarouselBanner);
+router.delete('/:id', verifyToken, deleteCarouselBanner);
+router.post('/order', verifyToken, updateBannerOrder);
 
 export default router; 
