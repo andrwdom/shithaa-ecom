@@ -1,74 +1,33 @@
 "use client";
-import React, { useState } from 'react'
+import React from 'react'
 import { Gift } from 'lucide-react'
-import { calculateShippingCost, ShippingInfo } from '@/lib/shipping-calculator'
 
-export default function OrderSummary({ cartItems, coupon, offerDetails, mode = 'cart', shippingInfo }: any) {
-  const [open, setOpen] = useState(true)
-  
-  // 🔑 FIXED: Ensure strict data separation based on checkout mode
+export default function OrderSummary({ 
+  summary, 
+  cartItems, 
+  coupon, 
+  offerDetails, 
+  mode = 'cart', 
+  shippingInfo 
+}: any) {
+  // All calculations are now received via the 'summary' prop
+  const { 
+    subtotal, 
+    offerDiscount, 
+    couponDiscount, 
+    shipping, 
+    total, 
+    shippingMessage, 
+    isFreeShipping 
+  } = summary;
+
   const isBuyNowMode = mode === 'buy-now';
   const displayItems = cartItems || [];
-  
-  // 🔑 FIXED: Calculate all values fresh from displayItems instead of using potentially contaminated summary
-  const itemSubtotal = displayItems.reduce((acc: number, item: any) => acc + (item.price * item.quantity), 0);
-  
-  // 🔑 FIXED: Calculate actual shipping cost using shipping rules instead of hardcoded values
-  let shippingCalculation;
-  let shipping = 0;
-  
-  if (shippingInfo && shippingInfo.state && shippingInfo.state.trim()) {
-    shippingCalculation = calculateShippingCost(displayItems, shippingInfo);
-    shipping = shippingCalculation.shippingCost;
-  } else {
-    // No shipping info available yet
-    shippingCalculation = {
-      shippingCost: 0,
-      isFreeShipping: false,
-      shippingMessage: "Shipping location not set"
-    };
-  }
-  
-  // Calculate total with offer discount
-  const offerDiscount = offerDetails?.offerApplied ? offerDetails.offerDiscount : 0;
-  const total = itemSubtotal - offerDiscount + shipping;
-  
-  // 🔑 FIXED: Enhanced debug logging to confirm data source and prevent contamination
-  console.log(`[OrderSummary] 🔍 DEBUG: Mode: ${mode}, Items count: ${displayItems.length}`, {
+
+  console.log('[OrderSummary] ✅ Using pre-calculated summary prop:', {
+    summary,
     mode,
-    isBuyNowMode,
-    itemsCount: displayItems.length,
-    firstItem: displayItems[0] ? {
-      name: displayItems[0].name,
-      price: displayItems[0].price,
-      quantity: displayItems[0].quantity,
-      size: displayItems[0].size
-    } : null,
-    calculatedValues: {
-      itemSubtotal,
-      shipping,
-      total
-    },
-    shippingCalculation,
-    shippingInfo,
-    // ✅ NO MORE SUMMARY PROP - Single source of truth
-    dataSource: 'displayItems + shipping calculation',
-    cartItemsProp: cartItems,
-    displayItemsFinal: displayItems
-  });
-  
-  // 🔑 DEBUG: Log calculation details right before rendering totals
-  console.log("[OrderSummary] DEBUG calculation:", {
-    cartItems,
-    mode,
-    subtotal: cartItems?.reduce((s, i) => s + i.price * i.quantity, 0),
-    displayItemsSubtotal: displayItems?.reduce((s, i) => s + i.price * i.quantity, 0),
-    itemSubtotal,
-    offerDiscount,
-    shipping,
-    total,
-    shippingCalculation,
-    offerDetails
+    displayItemsCount: displayItems.length
   });
   
   return (
@@ -84,7 +43,7 @@ export default function OrderSummary({ cartItems, coupon, offerDetails, mode = '
           </div>
         ))}
         <div className="border-t pt-2 flex justify-between">
-          <span>Subtotal</span><span>₹{itemSubtotal}</span>
+          <span>Subtotal</span><span>₹{subtotal}</span>
         </div>
         
         {/* Loungewear Offer */}
@@ -94,15 +53,15 @@ export default function OrderSummary({ cartItems, coupon, offerDetails, mode = '
               <Gift className="h-3 w-3"/>
               <span>Loungewear Offer</span>
             </div>
-            <span>-₹{offerDetails.offerDiscount}</span>
+            <span>-₹{Math.abs(offerDiscount)}</span>
           </div>
         )}
         
         {/* Coupon Discount */}
-        {coupon && (
+        {coupon && couponDiscount > 0 && (
           <div className="flex justify-between text-green-700 font-semibold">
             <span>Coupon Discount ({coupon.discountPercentage}%)</span>
-            <span>-₹{Math.round((itemSubtotal * coupon.discountPercentage) / 100)}</span>
+            <span>-₹{couponDiscount}</span>
           </div>
         )}
         
@@ -112,8 +71,8 @@ export default function OrderSummary({ cartItems, coupon, offerDetails, mode = '
           <span className="flex flex-col items-end">
             {!shippingInfo?.state ? (
               <span className="text-gray-500 text-sm">Set shipping location</span>
-            ) : shippingCalculation.isFreeShipping ? (
-              <span className="text-green-700 font-semibold text-sm">{shippingCalculation.shippingMessage}</span>
+            ) : isFreeShipping ? (
+              <span className="text-green-700 font-semibold text-sm">{shippingMessage}</span>
             ) : (
               <span className="text-gray-700 font-semibold text-sm">₹{shipping}</span>
             )}
@@ -121,9 +80,9 @@ export default function OrderSummary({ cartItems, coupon, offerDetails, mode = '
         </div>
         
         {/* 🔑 FIXED: Show shipping message below the cost */}
-        {shippingCalculation.shippingMessage && shippingInfo?.state && (
+        {shippingMessage && shippingInfo?.state && (
           <div className="text-xs text-gray-600 text-right">
-            {shippingCalculation.shippingMessage}
+            {shippingMessage}
           </div>
         )}
         
@@ -133,14 +92,14 @@ export default function OrderSummary({ cartItems, coupon, offerDetails, mode = '
         
         {/* Offer Details */}
         {offerDetails?.offerApplied && (
-          <div className="mt-3 bg-green-50 border border-green-200 rounded">
+          <div className="mt-3 bg-green-50 border border-green-200 rounded p-3">
             <div className="text-xs text-green-800 space-y-1">
               <p className="font-semibold">🎉 Loungewear Offer Applied!</p>
               <p>• {offerDetails.offerDetails?.completeSets} set(s) of 3 for ₹1299 each</p>
               {offerDetails.offerDetails?.remainingItems > 0 && (
                 <p>• {offerDetails.offerDetails.remainingItems} item(s) at ₹450 each</p>
               )}
-              <p className="font-semibold">You saved ₹{offerDetails.offerDiscount}!</p>
+              <p className="font-semibold">You saved ₹{Math.abs(offerDiscount)}!</p>
             </div>
           </div>
         )}

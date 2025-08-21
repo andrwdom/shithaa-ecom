@@ -3,14 +3,11 @@ import { useState, useEffect } from 'react'
 import ShippingForm from './ShippingForm'
 import CouponInput from './CouponInput'
 import OrderSummary from './OrderSummary'
-import PlaceOrderButton from './PlaceOrderButton'
 import { useCart } from '@/components/cart-context'
-import { useBuyNow } from '@/components/buy-now-context'
 import { useCheckoutFlow } from '@/components/checkout-flow-manager'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import PageLoading from '@/components/page-loading';
-import Script from 'next/script';
 import { useAuth } from '@/components/auth/useAuth'
 import { calculateShippingCost, ShippingInfo } from '@/lib/shipping-calculator'
 
@@ -47,7 +44,7 @@ export default function CheckoutPage() {
   const router = useRouter()
   const [processing, setProcessing] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
-  const { user } = useAuth();
+  const { user, logout } = useAuth(); // Get logout function from useAuth
 
   // Use the centralized checkout flow manager instead of individual contexts
   const { 
@@ -112,8 +109,9 @@ export default function CheckoutPage() {
       const total = amountAfterOffer - couponDiscount + shippingCost;
 
       const newOrderSummary = { 
-        subtotal: rawSubtotal, 
-        discount: couponDiscount, 
+        subtotal: rawSubtotal,
+        offerDiscount, // Pass the offer discount down
+        couponDiscount,
         shipping: shippingCost, 
         total,
         shippingMessage: shippingCalculation.shippingMessage,
@@ -358,7 +356,20 @@ export default function CheckoutPage() {
       window.location.href = data.redirectUrl;
     } catch (err: any) {
       console.error('[CheckoutPage] ❌ Payment error:', err);
-      setPaymentError(err.message || 'Payment failed. Try again.');
+      
+      // Check if this is an authentication error
+      if (err.message === 'Invalid token format. Please log in again.') {
+        console.log('[CheckoutPage] 🔐 Authentication error detected, logging out user...');
+        setPaymentError('Your session has expired. Please log in again.');
+        
+        // Clear the payment error after a short delay and then logout
+        setTimeout(() => {
+          logout(); // This will redirect to home page
+        }, 2000);
+      } else {
+        setPaymentError(err.message || 'Payment failed. Try again.');
+      }
+      
       setProcessing(false);
     }
   }
@@ -526,14 +537,23 @@ export default function CheckoutPage() {
               {paymentError && (
                 <div className="text-red-600 text-center font-semibold mb-2 flex flex-col items-center gap-2">
                   <span>{paymentError}</span>
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-outline border-red-400 text-red-700 hover:bg-red-50 mt-2"
-                    onClick={handlePhonePePayment}
-                    disabled={processing}
-                  >
-                    Retry PhonePe Payment
-                  </button>
+                  {/* Only show retry button for non-authentication errors */}
+                  {!paymentError.includes('session has expired') && (
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline border-red-400 text-red-700 hover:bg-red-50 mt-2"
+                      onClick={handlePhonePePayment}
+                      disabled={processing}
+                    >
+                      Retry PhonePe Payment
+                    </button>
+                  )}
+                  {/* Show login redirect message for authentication errors */}
+                  {paymentError.includes('session has expired') && (
+                    <div className="text-sm text-gray-600 mt-2">
+                      Redirecting to login page...
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -575,6 +595,7 @@ export default function CheckoutPage() {
               
               <OrderSummary 
                 key={`${displayMode}-${displayItems.length}-${displayItems?.[0]?.id || "none"}`}
+                summary={orderSummary}
                 cartItems={displayItems} 
                 coupon={coupon} 
                 offerDetails={offerDetails}
