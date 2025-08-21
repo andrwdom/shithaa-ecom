@@ -3,6 +3,7 @@ import 'dotenv/config'
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { existsSync } from 'fs';
+import cors from 'cors';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -56,6 +57,30 @@ console.log('---');
 
 // Trust proxy - required for rate limiting behind reverse proxy
 app.set('trust proxy', 1)
+
+// SECURITY: Configure CORS for Production
+const allowedOrigins = [
+    'https://shithaa.in',
+    'https://www.shithaa.in',
+    'http://localhost:3000', // Frontend dev
+    'http://localhost:5173'  // Admin dev
+];
+
+const corsOptions = {
+    origin: (origin, callback) => {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true, // This is crucial for sending cookies
+    optionsSuccessStatus: 200 // Some legacy browsers choke on 204
+};
+
+app.use(cors(corsOptions));
+
 
 // Connect to MongoDB
 connectDB().then(async () => {
@@ -163,12 +188,12 @@ app.use(helmet({
 // SECURITY: Cookie parser for HttpOnly cookies
 app.use(cookieParser());
 
-// CORS is completely handled by nginx - no backend configuration needed
+// CORS is completely handled by nginx - no backend configuration needed -- REMOVED, handled by cors package now
 
-// CORS is completely handled by nginx - no backend CORS configuration needed
+// CORS is completely handled by nginx - no backend CORS configuration needed -- REMOVED, handled by cors package now
 
-// CORS is completely handled by nginx - no backend CORS middleware needed
-// This prevents duplicate CORS headers that cause browser errors
+// CORS is completely handled by nginx - no backend CORS middleware needed -- REMOVED, handled by cors package now
+// This prevents duplicate CORS headers that cause browser errors -- REMOVED, handled by cors package now
 
 // middlewares
 app.use(express.json())

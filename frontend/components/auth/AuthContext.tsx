@@ -35,6 +35,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 position: 'top-center',
               });
             }
+            
+            // Start proactive token refresh (refresh every 23 hours to stay ahead of 24-hour expiration)
+            const startProactiveRefresh = () => {
+              const refreshInterval = setInterval(async () => {
+                try {
+                  console.log('🔄 Proactively refreshing token...');
+                  const refreshRes = await fetch(
+                    `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/user/refresh-token`,
+                    {
+                      method: 'POST',
+                      credentials: 'include',
+                    }
+                  );
+                  
+                  if (refreshRes.ok) {
+                    console.log('✅ Token proactively refreshed');
+                  } else {
+                    console.log('❌ Proactive token refresh failed');
+                  }
+                } catch (error) {
+                  console.log('❌ Proactive token refresh error:', error);
+                }
+              }, 23 * 60 * 60 * 1000); // 23 hours
+              
+              // Clean up interval when component unmounts
+              return () => clearInterval(refreshInterval);
+            };
+            
+            startProactiveRefresh();
           } else if (res.status === 200 && !data.data) {
             // User not authenticated to backend (expected for new users)
             setMongoUser(null);

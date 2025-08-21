@@ -19,6 +19,7 @@
   "dependencies": {
     "@tailwindcss/line-clamp": "^0.4.4",
     "axios": "^1.10.0",
+    "cors": "^2.8.5",
     "file-saver": "^2.0.5",
     "framer-motion": "^12.23.0",
     "mongoose": "^8.16.2",

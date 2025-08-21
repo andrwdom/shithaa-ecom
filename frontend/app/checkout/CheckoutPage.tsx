@@ -298,6 +298,28 @@ export default function CheckoutPage() {
     setPaymentError(null);
     
     try {
+      // Proactively refresh token before payment to prevent session expiration
+      if (user?.mongoId) {
+        console.log('[CheckoutPage] 🔄 Proactively refreshing token before payment...');
+        try {
+          const refreshRes = await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/user/refresh-token`,
+            {
+              method: 'POST',
+              credentials: 'include',
+            }
+          );
+          
+          if (refreshRes.ok) {
+            console.log('[CheckoutPage] ✅ Token proactively refreshed before payment');
+          } else {
+            console.log('[CheckoutPage] ⚠️ Proactive token refresh failed, proceeding with current token');
+          }
+        } catch (error) {
+          console.log('[CheckoutPage] ⚠️ Proactive token refresh error, proceeding with current token:', error);
+        }
+      }
+      
       // Validate required data
       if (!orderSummary || !orderSummary.total || orderSummary.total <= 0) {
         throw new Error('Invalid order total. Please check your order summary.');

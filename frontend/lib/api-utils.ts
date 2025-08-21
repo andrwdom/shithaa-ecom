@@ -157,6 +157,8 @@ export async function authenticatedFetch(
   const maxRetries = 1; // Only retry once to avoid infinite loops
   
   try {
+    console.log(`🔐 Making authenticated request to: ${url}`);
+    
     // Make the request with credentials
     const response = await fetch(url, {
       ...options,
@@ -166,6 +168,8 @@ export async function authenticatedFetch(
         ...options.headers,
       },
     });
+
+    console.log(`🔐 Response status: ${response.status}`);
 
     // If we get a 401 and haven't retried yet, try to refresh the token
     if (response.status === 401 && retryCount < maxRetries) {
@@ -181,23 +185,30 @@ export async function authenticatedFetch(
           }
         );
 
+        console.log(`🔐 Refresh response status: ${refreshResponse.status}`);
+
         if (refreshResponse.ok) {
           console.log('✅ Token refreshed successfully, retrying original request...');
           // Token refreshed, retry the original request
           return authenticatedFetch(url, options, retryCount + 1);
         } else {
           console.log('❌ Token refresh failed, user needs to log in again');
-          // Token refresh failed, user needs to log in again
-          throw new Error('Your session has expired. Please log in again.');
+          const refreshData = await refreshResponse.json().catch(() => ({}));
+          throw new Error(refreshData.message || 'Your session has expired. Please log in again.');
         }
       } catch (refreshError) {
         console.log('❌ Token refresh error:', refreshError);
+        if (refreshError instanceof Error) {
+          throw refreshError;
+        }
         throw new Error('Your session has expired. Please log in again.');
       }
     }
 
     return response;
   } catch (error) {
+    console.error('❌ Authenticated fetch error:', error);
+    
     // If it's our custom error, throw it
     if (error instanceof Error && error.message.includes('session has expired')) {
       throw error;

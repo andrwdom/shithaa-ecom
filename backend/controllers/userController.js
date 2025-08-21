@@ -5,8 +5,8 @@ import userModel from "../models/userModel.js";
 import { successResponse, errorResponse } from '../utils/response.js'
 import admin from 'firebase-admin';
 
-const createToken = (payload) => {
-    return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '7d' });
+const createToken = (payload, expiresIn = '24h') => {
+    return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn });
 }
 
 // GET /api/auth/profile - Get current user profile
@@ -89,7 +89,7 @@ const loginUser = async (req, res) => {
                 id: user._id,
                 email: user.email,
                 role: 'user'
-            });
+            }, '24h');
             
             const refreshToken = createToken({ 
                 id: user._id,
@@ -103,7 +103,7 @@ const loginUser = async (req, res) => {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
                 sameSite: 'lax',
-                maxAge: 15 * 60 * 1000, // 15 minutes
+                maxAge: 24 * 60 * 60 * 1000, // 24 hours
                 path: '/'
             });
             
@@ -171,7 +171,7 @@ const registerUser = async (req, res) => {
             id: user._id,
             email: user.email,
             role: 'user'
-        });
+        }, '24h');
         
         const refreshToken = createToken({ 
             id: user._id,
@@ -185,7 +185,7 @@ const registerUser = async (req, res) => {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',
-            maxAge: 15 * 60 * 1000, // 15 minutes
+            maxAge: 24 * 60 * 60 * 1000, // 24 hours
             path: '/'
         });
         
@@ -248,7 +248,7 @@ const adminLogin = async (req, res) => {
             id: adminUser._id,
             email: adminUser.email,
             role: 'admin'
-        });
+        }, '24h');
         
         const refreshToken = createToken({
             id: adminUser._id,
@@ -262,7 +262,7 @@ const adminLogin = async (req, res) => {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',
-            maxAge: 15 * 60 * 1000, // 15 minutes
+            maxAge: 24 * 60 * 60 * 1000, // 24 hours
             path: '/'
         });
         
@@ -381,7 +381,7 @@ export const firebaseLogin = async (req, res) => {
           });
         }
         
-        const accessToken = createToken({ id: user._id, email: user.email, role: 'user' });
+        const accessToken = createToken({ id: user._id, email: user.email, role: 'user' }, '24h');
         const refreshToken = createToken({ 
             id: user._id, 
             email: user.email, 
@@ -394,7 +394,7 @@ export const firebaseLogin = async (req, res) => {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',
-            maxAge: 15 * 60 * 1000, // 15 minutes
+            maxAge: 24 * 60 * 60 * 1000, // 24 hours
             path: '/'
         });
         
@@ -438,7 +438,7 @@ export const firebaseLogin = async (req, res) => {
     }
 
     // Create app JWT and refresh token
-    const accessToken = createToken({ id: user._id, email: user.email, role: 'user' });
+    const accessToken = createToken({ id: user._id, email: user.email, role: 'user' }, '24h');
     const refreshToken = createToken({ 
         id: user._id, 
         email: user.email, 
@@ -451,7 +451,7 @@ export const firebaseLogin = async (req, res) => {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        maxAge: 15 * 60 * 1000, // 15 minutes
+        maxAge: 24 * 60 * 60 * 1000, // 24 hours
         path: '/'
     });
     
@@ -507,14 +507,14 @@ export const refreshToken = async (req, res) => {
             id: user._id,
             email: user.email,
             role: user.role
-        });
+        }, '24h');
 
         // Set new access token in HttpOnly cookie
         res.cookie('token', newAccessToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',
-            maxAge: 15 * 60 * 1000, // 15 minutes
+            maxAge: 24 * 60 * 60 * 1000, // 24 hours
             path: '/'
         });
 
