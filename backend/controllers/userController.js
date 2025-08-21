@@ -4,9 +4,12 @@ import jwt from 'jsonwebtoken'
 import userModel from "../models/userModel.js";
 import { successResponse, errorResponse } from '../utils/response.js'
 import admin from 'firebase-admin';
+import { config } from '../config.js'; // Import the centralized config
+
+const JWT_SECRET = config.jwt_secret;
 
 const createToken = (payload, expiresIn = '24h') => {
-    return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn });
+    return jwt.sign(payload, JWT_SECRET, { expiresIn });
 }
 
 // GET /api/auth/profile - Get current user profile
@@ -467,7 +470,7 @@ export const refreshToken = async (req, res) => {
         }
 
         // Verify refresh token
-        const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET);
+        const decoded = jwt.verify(refreshToken, JWT_SECRET);
         
         if (decoded.type !== 'refresh') {
             return res.status(401).json({

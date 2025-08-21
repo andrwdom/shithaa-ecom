@@ -1,7 +1,8 @@
 import jwt from 'jsonwebtoken';
 import { errorResponse } from '../utils/response.js';
+import { config } from '../config.js'; // Import the centralized config
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const JWT_SECRET = config.jwt_secret;
 
 export const verifyToken = async (req, res, next) => {
   try {

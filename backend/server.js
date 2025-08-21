@@ -48,11 +48,14 @@ const PORT = config.port
 console.log('🔧 Environment Variables Debug:');
 console.log('NODE_ENV:', process.env.NODE_ENV);
 console.log('PORT:', process.env.PORT);
-console.log('JWT_SECRET:', process.env.JWT_SECRET ? 'SET' : 'NOT SET');
-console.log('JWT_SECRET length:', process.env.JWT_SECRET ? process.env.JWT_SECRET.length : 0);
-console.log('JWT_SECRET preview:', process.env.JWT_SECRET ? process.env.JWT_SECRET.substring(0, 10) + '...' : 'N/A');
 console.log('MONGODB_URI:', process.env.MONGODB_URI ? 'SET' : 'NOT SET');
 console.log('GOOGLE_APPLICATION_CREDENTIALS:', process.env.GOOGLE_APPLICATION_CREDENTIALS ? 'SET' : 'NOT SET');
+// CRITICAL: Log the loaded JWT_SECRET for verification
+const loadedJwtSecret = config.jwt_secret;
+console.log('JWT_SECRET loaded:', loadedJwtSecret ? 'SET' : 'NOT SET');
+if (loadedJwtSecret) {
+    console.log('JWT_SECRET preview:', loadedJwtSecret.substring(0, 4) + '...' + loadedJwtSecret.substring(loadedJwtSecret.length - 4));
+}
 console.log('---');
 
 // Trust proxy - required for rate limiting behind reverse proxy
