@@ -9,15 +9,14 @@ import {
 import { getAllOrders } from '../controllers/adminOrderController.js';
 import { 
     verifyToken, 
-    optionalAuth, 
-    verifyAdminOrderRequest 
+    optionalAuth 
 } from '../middleware/auth.js';
 
 const orderRouter = express.Router();
 
 // Public routes (optional auth for guest users)
-orderRouter.get('/transaction/:transactionId', optionalAuth, getOrderByTransactionId); // GET /api/orders/transaction/:transactionId
-orderRouter.get('/:id', optionalAuth, getOrderById);   // GET /api/orders/:id
+orderRouter.get('/transaction/:transactionId', optionalAuth, getOrderByTransactionId);
+orderRouter.get('/:id', optionalAuth, getOrderById);
 
 // Protected routes (requires authentication)
 /*
@@ -26,15 +25,14 @@ orderRouter.get('/:id', optionalAuth, getOrderById);   // GET /api/orders/:id
  * Per user constraints, the admin panel cannot be modified, so the backend must accommodate this.
  * All other sensitive order actions (like updating status) DO send a token and remain protected.
  */
-orderRouter.get('/', getAllOrders); // GET /api/orders (admin only - now public)
-orderRouter.get('/user/:userId', verifyToken, getUserOrders); // GET /api/orders/user/:userId
-orderRouter.get('/by-email/:email', optionalAuth, getOrdersByEmail); // GET /api/orders/by-email/:email
+orderRouter.get('/', getAllOrders); // This route is now public.
+orderRouter.get('/user/:userId', verifyToken, getUserOrders);
+orderRouter.get('/by-email/:email', optionalAuth, getOrdersByEmail);
 orderRouter.get('/user/count', (req, res, next) => {
-  // Allow without auth for now - just return 0 for unauthenticated users
   if (!req.user) {
     return res.json({ success: true, count: 0 });
   }
   next();
-}, getUserOrderCount); // GET /api/orders/user/count
+}, getUserOrderCount);
 
 export default orderRouter;
