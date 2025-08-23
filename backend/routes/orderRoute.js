@@ -6,6 +6,7 @@ import {
     getUserOrderCount,
     getOrderByTransactionId
 } from '../controllers/orderController.js';
+import { getAllOrders } from '../controllers/adminOrderController.js';
 import { verifyToken, optionalAuth } from '../middleware/auth.js'
 
 const orderRouter = express.Router();
@@ -15,6 +16,7 @@ orderRouter.get('/transaction/:transactionId', optionalAuth, getOrderByTransacti
 orderRouter.get('/:id', optionalAuth, getOrderById);   // GET /api/orders/:id
 
 // Protected routes (requires authentication)
+orderRouter.get('/', verifyToken, getAllOrders); // GET /api/orders (admin only)
 orderRouter.get('/user/:userId', verifyToken, getUserOrders); // GET /api/orders/user/:userId
 orderRouter.get('/by-email/:email', optionalAuth, getOrdersByEmail); // GET /api/orders/by-email/:email
 orderRouter.get('/user/count', (req, res, next) => {

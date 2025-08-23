@@ -1041,7 +1041,11 @@ const Orders = ({ token, setToken }) => {
   const fetchOrders = () => {
     setLoading(true);
     setApiError('');
-    axios.get(`${backendUrl}/api/orders`)
+    axios.get(`${backendUrl}/api/orders`, {
+        headers: {
+          token: localStorage.getItem('token')
+        }
+      })
       .then(response => {
         setLastApiResponse(response.data);
         if (response.data.success) {
