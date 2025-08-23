@@ -85,11 +85,9 @@ const corsOptions = {
     allowedHeaders: ['Content-Type', 'Authorization', 'token'], // Explicitly allow 'token' header
 };
 
+// CRITICAL: Handle CORS and preflight requests BEFORE any other middleware
 app.use(cors(corsOptions));
-
-// Explicitly handle preflight requests
 app.options('*', cors(corsOptions));
-
 
 // Connect to MongoDB
 connectDB().then(async () => {
@@ -154,29 +152,6 @@ const limiter = rateLimit({
 
 // Apply rate limiting to all routes
 app.use(limiter);
-
-// Apply rate limiting to auth routes with higher limits
-const authLimiter = rateLimit({
-    windowMs: 60 * 60 * 1000, // 1 hour
-    max: 10, // 10 attempts per hour (PRODUCTION OPTIMIZED)
-    message: 'Too many login attempts, please try again later',
-    standardHeaders: true,
-    legacyHeaders: false,
-    skip: (req) => {
-        // Skip rate limiting for local dev and OPTIONS requests
-        return (
-            req.headers.origin === 'http://localhost:5174' ||
-            req.headers.origin === 'http://localhost:5173' ||
-            req.headers.origin === 'http://localhost:3000' ||
-            req.headers.origin === 'http://localhost:3001' ||
-            req.method === 'OPTIONS'
-        );
-    }
-});
-
-// Apply auth rate limiting only to specific routes
-app.use('/api/user/login', authLimiter);
-app.use('/api/user/admin', authLimiter);
 
 // SECURITY: Helmet for comprehensive security headers
 app.use(helmet({
