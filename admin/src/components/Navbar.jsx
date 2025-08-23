@@ -3,9 +3,9 @@ import { assets } from '../assets/assets'
 
 const Navbar = ({setToken}) => {
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    setToken('');
-  };
+    localStorage.removeItem('token')
+    setToken('')
+  }
 
   return (
     <div className='flex items-center py-2 px-[4%] justify-between shadow-sm' style={{ backgroundColor: '#4D1E64' }}>

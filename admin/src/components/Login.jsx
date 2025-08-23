@@ -11,33 +11,27 @@ const Login = ({setToken}) => {
 
     const onSubmitHandler = async (e) => {
         try {
-            e.preventDefault();
-            setLoading(true);
+            e.preventDefault()
+            setLoading(true)
             
             const response = await axios.post(backendUrl + '/api/user/admin', {
                 email,
                 password
-            });
+            })
             
             if (response.data.success) {
-                const token = response.data.data.token;
-                setToken(token);
-                localStorage.setItem('token', token);
-                toast.success('Login successful! Welcome to Admin Panel.')
+                const token = response.data.data.token
+                setToken(token)
+                localStorage.setItem('token', token)
+                toast.success('Login successful!')
             } else {
                 toast.error(response.data.message || 'Login failed')
             }
         } catch (error) {
-            console.error('Login error:', error);
-            if (error.response?.status === 401) {
-                toast.error('Invalid email or password. Please try again.');
-            } else if (error.response?.status === 500) {
-                toast.error('Server error. Please try again later.');
-            } else {
-                toast.error(error.message || 'Login failed. Please check your connection.');
-            }
+            console.error('Login error:', error)
+            toast.error(error.response?.data?.message || 'Login failed')
         } finally {
-            setLoading(false);
+            setLoading(false)
         }
     }
 
