@@ -4,7 +4,8 @@ import {
     phonePeCallback, 
     verifyPhonePePayment,
     dummyPaymentSuccess,
-    getPaymentStatus
+    getPaymentStatus,
+    getOrderByTransactionId // 🔑 ADDED: Import the new controller function
 } from '../controllers/paymentController.js';
 import { verifyToken, optionalAuth } from '../middleware/auth.js';
 // Add imports for refund and webhook controllers
@@ -19,6 +20,9 @@ paymentRouter.post('/phonepe/callback', phonePeCallback);
 paymentRouter.post('/phonepe/dummy-success', verifyToken, dummyPaymentSuccess);
 paymentRouter.get('/phonepe/verify/:merchantTransactionId', optionalAuth, verifyPhonePePayment);
 
+// 🔑 NEW: Endpoint for frontend to fetch order details securely after payment
+paymentRouter.get('/order/:transactionId', optionalAuth, getOrderByTransactionId);
+
 // Payment status endpoint
 paymentRouter.get('/status/:sessionId', optionalAuth, getPaymentStatus);
 // PhonePe refund routes
@@ -26,49 +30,6 @@ paymentRouter.post('/phonepe/refund', verifyToken, initiatePhonePeRefund);
 paymentRouter.get('/phonepe/refund-status/:merchantRefundId', verifyToken, getPhonePeRefundStatus);
 // PhonePe webhook route
 paymentRouter.post('/phonepe/webhook', phonePeWebhookHandler);
-
-// Debug endpoint for PhonePe testing
-paymentRouter.get('/phonepe/debug/:merchantTransactionId', async (req, res) => {
-  try {
-    const { merchantTransactionId } = req.params;
-    console.log('Debug request for transaction:', merchantTransactionId);
-    
-    // Check if order exists
-    const order = await (await import('../models/orderModel.js')).default.findOne({
-      phonepeTransactionId: merchantTransactionId
-    });
-    
-    if (!order) {
-      return res.json({
-        success: false,
-        message: 'Order not found',
-        merchantTransactionId
-      });
-    }
-    
-    return res.json({
-      success: true,
-      order: {
-        id: order._id,
-        phonepeTransactionId: order.phonepeTransactionId,
-        paymentStatus: order.paymentStatus,
-        orderStatus: order.orderStatus,
-        status: order.status,
-        amount: order.amount,
-        paymentLog: order.paymentLog,
-        createdAt: order.createdAt,
-        updatedAt: order.updatedAt
-      }
-    });
-  } catch (error) {
-    console.error('Debug endpoint error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Debug endpoint failed',
-      error: error.message
-    });
-  }
-});
 
 // Test endpoint to manually mark order as paid
 paymentRouter.post('/phonepe/test-success/:merchantTransactionId', async (req, res) => {

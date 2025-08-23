@@ -822,3 +822,32 @@ export const getPaymentStatus = async (req, res) => {
     return errorResponse(res, 500, 'Failed to get payment status', error.message);
   }
 }; 
+
+/**
+ * Get order details by PhonePe transaction ID
+ * This is used by the frontend callback page to get order details after payment.
+ */
+export const getOrderByTransactionId = async (req, res) => {
+  const correlationId = req.headers['x-request-id'] || `req_${Date.now()}`;
+  try {
+    const { transactionId } = req.params;
+
+    if (!transactionId) {
+      return errorResponse(res, 400, 'Transaction ID is required');
+    }
+
+    // Find the order using the PhonePe transaction ID
+    const order = await orderModel.findOne({ phonepeTransactionId: transactionId });
+
+    if (!order) {
+      return errorResponse(res, 404, 'Order not found for this transaction');
+    }
+
+    // Return the full order object, which includes the `orderId` field
+    return successResponse(res, { order });
+
+  } catch (error) {
+    console.error(`[${correlationId}] Error getting order by transaction ID:`, error);
+    return errorResponse(res, 500, 'Failed to retrieve order details', error.message);
+  }
+}; 

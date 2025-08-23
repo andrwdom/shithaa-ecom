@@ -145,7 +145,8 @@ function PhonePeCallbackInner() {
             // This removes the dependency on localStorage which is causing the failure
             try {
               console.log(`Fetching order details for transactionId: ${transactionId}`);
-              const orderRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/payment/phonepe/debug/${transactionId}`, {
+              // 🔑 FIX: Use the new, correct, and secure endpoint.
+              const orderRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/payment/order/${transactionId}`, {
                 method: 'GET',
                 credentials: 'include',
                 headers: {
