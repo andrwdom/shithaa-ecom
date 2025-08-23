@@ -369,10 +369,17 @@ export default function CheckoutPage() {
       // 1. Create PhonePe payment session on backend
       const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + '/api/payment/phonepe/create-session';
       
+      // Ensure each item has _id for stock validation
+      const cartItems = displayItems.map(item => ({
+        ...item,
+        _id: item._id || item.id, // Use _id if available, fallback to id
+        productId: item._id || item.id // Also include productId for compatibility
+      }));
+
       const paymentData = {
         checkoutSessionId,
         shipping,
-        cartItems: displayItems,
+        cartItems,
         orderSummary,
         userId: user?.mongoId,
         email: user?.email || shipping.email,
