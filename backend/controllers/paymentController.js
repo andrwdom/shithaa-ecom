@@ -297,12 +297,15 @@ export const createPhonePeSession = async (req, res) => {
     }
 
     // Initialize PhonePe client and create payment request in parallel
-    const redirectUrl = `${config.phonepe.redirect_url}?merchantTransactionId=${phonepeTransactionId}`;
+    // 🔑 CRITICAL FIX: Hardcode the correct callback URL to prevent misconfiguration.
+    const redirectUrl = `${process.env.FRONTEND_URL || 'https://shithaa.in'}/payment/phonepe/callback`;
+    const callbackUrl = `${process.env.VPS_BASE_URL || 'https://shithaa.in'}/api/payment/phonepe/webhook`;
     
     const request = StandardCheckoutPayRequest.builder()
       .merchantOrderId(phonepeTransactionId)
       .amount(checkoutSession.total * 100) // paise
       .redirectUrl(redirectUrl)
+      .callbackUrl(callbackUrl) // Explicitly set the server-to-server callback URL
       .build();
 
     // Get PhonePe client instance (cached singleton)
