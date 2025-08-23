@@ -68,7 +68,8 @@ const allowedOrigins = [
     'https://www.shithaa.in',
     'https://admin.shithaa.in',  // Admin panel
     'http://localhost:3000',     // Frontend dev
-    'http://localhost:5173'      // Admin dev
+    'http://localhost:5173',     // Admin dev
+    'http://localhost:5174'      // Additional dev port
 ];
 
 const corsOptions = {
@@ -78,12 +79,17 @@ const corsOptions = {
         if (!origin || allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
             callback(null, true);
         } else {
+            console.log('CORS blocked origin:', origin);
             callback(new Error('Not allowed by CORS'));
         }
     },
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'token'], // Explicitly allow 'token' header
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'token', 'x-requested-with'],
+    exposedHeaders: ['Access-Control-Allow-Origin'],
+    maxAge: 86400, // 24 hours
+    preflightContinue: false,
+    optionsSuccessStatus: 204
 };
 
 // CRITICAL: Handle CORS and preflight requests BEFORE any other middleware
