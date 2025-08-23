@@ -1,4 +1,5 @@
 import orderModel from "../models/orderModel.js";
+import { sendOrderStatusUpdate, sendShippingNotification } from '../utils/emailService.js';
 
 // Get all orders (admin only)
 // Update order status
@@ -43,6 +44,16 @@ export const updateOrderStatus = async (req, res) => {
                 success: false,
                 message: "Order not found"
             });
+        }
+
+        // Send email notification based on status
+        if (status === 'Shipped' && shippingPartner && trackingId) {
+            await sendShippingNotification(order, {
+                partner: shippingPartner,
+                trackingId: trackingId
+            });
+        } else {
+            await sendOrderStatusUpdate(order, status);
         }
 
         res.json({
