@@ -158,7 +158,7 @@ export default function OrderHistory({ orders }: { orders: any[] }) {
       <div className="flex flex-col gap-6">
       {orders.map((order) => {
         const items = order.items || order.cartItems || [];
-        const status = order.status || order.orderStatus || order.paymentStatus;
+        const status = order.orderStatus || order.status || order.paymentStatus;
         const orderDate = order.createdAt || order.date || order.orderDate || order.updatedAt;
         const config = STATUS_CONFIG[status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.Pending;
         

@@ -20,7 +20,8 @@ interface Order {
     image: string[]
   }>
   amount: number
-  status: string
+  status?: string
+  orderStatus?: string
   payment: boolean
   paymentMethod: string
   date: string
@@ -121,15 +122,15 @@ export default function AccountPageClient() {
         // Fetch order count
         try {
           console.log("Fetching order count with token:", !!token)
-          const countRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/orders/user/count`, {
+          const countRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/orders/by-email/${encodeURIComponent(user.email)}`, {
             headers: token ? { token } : {}
           })
           console.log("Order count response status:", countRes.status)
           if (countRes.ok) {
             const countData = await countRes.json()
             console.log("Order count data:", countData)
-            if (countData.success) {
-              setOrderCount(countData.count)
+            if (countData.success && countData.orders) {
+              setOrderCount(countData.orders.length)
             }
           } else {
             console.error("Failed to fetch order count:", countRes.status, countRes.statusText)
