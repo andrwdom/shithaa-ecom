@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react'
-import axios from 'axios'
+import api from '../utils/axiosConfig'
 import { backendUrl, currency } from '../App'
 import { toast } from 'react-toastify'
 import { assets } from '../assets/assets'
@@ -431,28 +431,19 @@ function ShippingTrackingModal({ order, onClose, onStatusChange }) {
 
     setLoading(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://shithaa.in'}/api/orders/status`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'token': localStorage.getItem('token')
-        },
-        body: JSON.stringify({
+      const response = await api.post('/api/orders/status', {
           orderId: order._id,
           status: 'Shipped',
           shippingPartner,
           trackingId: trackingId.trim()
-        })
-      });
+        });
 
-      const data = await response.json();
-      
-      if (data.success) {
+      if (response.data.success) {
         toast.success('Order marked as shipped with tracking details!');
         onStatusChange(order._id, 'Shipped');
         onClose();
       } else {
-        toast.error(data.message || 'Failed to update order status');
+        toast.error(response.data.message || 'Failed to update order status');
       }
     } catch (error) {
       console.error('Error updating order status:', error);
@@ -1024,7 +1015,7 @@ const Orders = ({ token, setToken }) => {
     if (!email) return '';
     if (userNameCache[email]) return userNameCache[email];
     try {
-      const res = await axios.get(`${backendUrl}/api/user/public-profile?email=${encodeURIComponent(email)}`);
+      const res = await api.get(`/api/user/public-profile?email=${encodeURIComponent(email)}`);
       if (res.data && res.data.success && res.data.profile && res.data.profile.name) {
         setUserNameCache(prev => ({ ...prev, [email]: res.data.profile.name }));
         return res.data.profile.name;
@@ -1041,9 +1032,7 @@ const Orders = ({ token, setToken }) => {
   const fetchOrders = () => {
     setLoading(true);
     setApiError('');
-    axios.get(`${backendUrl}/api/orders`, {
-        withCredentials: true // This will send the HttpOnly cookies
-      })
+    api.get('/api/orders')
       .then(response => {
         setLastApiResponse(response.data);
         if (response.data.success) {
@@ -1113,13 +1102,7 @@ const Orders = ({ token, setToken }) => {
   const updateStatus = async (orderId, status) => {
     try {
       console.log("Updating order status:", orderId, "to", status);
-      const response = await axios.post(
-        `${backendUrl}/api/orders/status`,
-        { orderId, status },
-        {
-          withCredentials: true // This will send the HttpOnly cookies
-        }
-      );
+      const response = await api.post('/api/orders/status', { orderId, status });
       console.log('Status update response:', response.data);
       if (response.data.success) {
         fetchOrders();

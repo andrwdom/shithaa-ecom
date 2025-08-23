@@ -20,35 +20,23 @@ export const currency = '₹'
 
 const App = () => {
 
-  const [token, setToken] = useState(() => {
-    const storedToken = localStorage.getItem('token');
-    return storedToken && storedToken !== 'undefined' ? storedToken : '';
+    const [isAuthenticated, setToken] = useState(() => {
+    return localStorage.getItem('isAdmin') === 'true' ? 'authenticated' : '';
   });
 
   useEffect(() => {
-    console.log('App.jsx: Token changed to:', token);
-    console.log('App.jsx: localStorage token:', localStorage.getItem('token'));
+    console.log('App.jsx: Authentication state changed:', isAuthenticated);
     
-    if (token && token !== 'undefined' && token.trim() !== '') {
-      localStorage.setItem('token', token);
-    } else {
-      localStorage.removeItem('token');
+    if (!isAuthenticated) {
+      localStorage.removeItem('isAdmin');
     }
-  }, [token]);
-
-  // Check if token is valid on mount
-  useEffect(() => {
-    const storedToken = localStorage.getItem('token');
-    if (storedToken && storedToken !== 'undefined' && storedToken.trim() !== '') {
-      setToken(storedToken);
-    }
-  }, []);
+  }, [isAuthenticated]);
 
   return (
     <div className='bg-gray-50 min-h-screen'>
         <ToastContainer />
         <Toaster position="top-right" />
-        {!token || token === 'undefined' || token.trim() === ""
+        {!isAuthenticated
           ? (
             <Routes>
               <Route path="/" element={<Login setToken={setToken} />} />
