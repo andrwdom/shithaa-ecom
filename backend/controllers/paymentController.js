@@ -305,7 +305,7 @@ export const createPhonePeSession = async (req, res) => {
       .merchantOrderId(phonepeTransactionId)
       .amount(checkoutSession.total * 100) // paise
       .redirectUrl(redirectUrl)
-      .callbackUrl(callbackUrl) // Explicitly set the server-to-server callback URL
+      // .callbackUrl(callbackUrl) // 🔑 FIX: This method does not exist in the SDK and was causing the crash. The callback is set in the PhonePe dashboard.
       .build();
 
     // Get PhonePe client instance (cached singleton)
@@ -663,7 +663,8 @@ export const verifyPhonePePayment = async (req, res) => {
       if (isFailed || isCancelled) {
         if (paymentSession.stockReserved) {
           console.log('Restoring stock for failed/cancelled payment');
-          await restoreProductStock(paymentSession.orderData.cartItems);
+          // 🔑 FIX: Restore stock from the order's items, not the payment session.
+          await restoreProductStock(order.items);
           
           // Mark stock as no longer reserved
           await PaymentSession.findByIdAndUpdate(paymentSession._id, { stockReserved: false });
