@@ -7,7 +7,10 @@ const Navbar = ({setToken}) => {
         <img className='h-12 w-auto' src={assets.logo} alt="Shitha Logo" />
         <div className='flex col gap-10'>
           <button 
-            onClick={()=>setToken('')} 
+            onClick={() => {
+              localStorage.removeItem('isAdmin');
+              setToken('');
+            }} 
             className='bg-[#4D1E64] text-white px-7 py-2.5 rounded-md text-sm font-medium hover:bg-[#3a164d] transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#4D1E64] focus:ring-offset-2 flex items-center gap-2'
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

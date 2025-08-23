@@ -1042,9 +1042,7 @@ const Orders = ({ token, setToken }) => {
     setLoading(true);
     setApiError('');
     axios.get(`${backendUrl}/api/orders`, {
-        headers: {
-          token: localStorage.getItem('token')
-        }
+        withCredentials: true // This will send the HttpOnly cookies
       })
       .then(response => {
         setLastApiResponse(response.data);
@@ -1094,9 +1092,7 @@ const Orders = ({ token, setToken }) => {
           status: 'Cancelled'
         },
         {
-          headers: {
-            token: token
-          }
+          withCredentials: true // This will send the HttpOnly cookies
         }
       );
       
@@ -1121,9 +1117,7 @@ const Orders = ({ token, setToken }) => {
         `${backendUrl}/api/orders/status`,
         { orderId, status },
         {
-          headers: {
-            token: token
-          }
+          withCredentials: true // This will send the HttpOnly cookies
         }
       );
       console.log('Status update response:', response.data);

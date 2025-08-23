@@ -6,7 +6,7 @@ const ProtectedRoute = ({ children, token }) => {
   console.log('ProtectedRoute: Token length:', token ? token.length : 0);
   console.log('ProtectedRoute: Token type:', typeof token);
   
-  if (!token || token === 'undefined' || token.trim() === '') {
+  if (!token || token === 'undefined' || token.trim() === '' || !localStorage.getItem('isAdmin')) {
     console.log('ProtectedRoute: No valid token found, redirecting to login');
     return <Navigate to="/" replace />;
   }

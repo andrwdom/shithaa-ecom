@@ -22,8 +22,9 @@ const Login = ({setToken}) => {
             console.log('Login response:', response.data);
             
             if (response.data.success) {
-                console.log('Setting token:', response.data.data.token);
-                setToken(response.data.data.token)
+                // The token is now stored in HttpOnly cookies by the backend
+                setToken('authenticated'); // We just need to know we're authenticated
+                localStorage.setItem('isAdmin', 'true');
                 toast.success('Login successful! Welcome to Admin Panel.')
             } else {
                 toast.error(response.data.message || 'Login failed')
