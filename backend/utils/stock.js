@@ -145,12 +145,13 @@ export async function checkStockAvailability(productId, size, quantity) {
     }
     
     const available = sizeObj.stock >= quantity;
+    console.log(`Stock check for ${product.name} (${size}): Available=${sizeObj.stock}, Requested=${quantity}`);
     return {
         available,
         currentStock: sizeObj.stock,
         requestedQuantity: quantity,
         productName: product.name,
-        error: available ? null : `Insufficient stock. Available: ${sizeObj.stock}, Requested: ${quantity}`
+        error: available ? null : `Insufficient stock for ${product.name} (${size}). Available: ${sizeObj.stock}, Requested: ${quantity}`
     };
 }
 
@@ -163,7 +164,7 @@ export async function validateStockForItems(items) {
     const validations = [];
     
     for (const item of items) {
-        const validation = await checkStockAvailability(item._id, item.size, item.quantity);
+        const validation = await checkStockAvailability(item._id || item.productId, item.size, item.quantity);
         validations.push({
             item,
             ...validation
