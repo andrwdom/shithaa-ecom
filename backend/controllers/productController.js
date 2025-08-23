@@ -4,10 +4,6 @@ import path from "path";
 import fs from "fs";
 import imageOptimizer from '../utils/imageOptimizer.js';
 import Category from '../models/Category.js';
-import { z } from 'zod';
-import { productSchema } from '../validation/product.schema.js';
-import { config } from '../config.js';
-import mongoose from 'mongoose';
 
 
 // GET /api/products/:id or /api/products/custom/:customId - RESTful single product fetch
