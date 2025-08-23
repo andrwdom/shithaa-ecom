@@ -164,8 +164,9 @@ export async function validateStockForItems(items) {
     const validations = [];
     
     for (const item of items) {
-        // Try all possible ID fields
-        const productId = item._id || item.productId || item.id;
+        // 🔑 CRITICAL FIX: Prioritize `productId` from the session item schema.
+        // The subdocument `_id` is NOT the product ID.
+        const productId = item.productId || item._id || item.id;
         if (!productId) {
             validations.push({
                 item,
