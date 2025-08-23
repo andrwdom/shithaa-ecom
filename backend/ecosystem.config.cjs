@@ -2,6 +2,7 @@ module.exports = {
   apps: [{
     name: 'shithaa-backend',
     script: 'server.js',
+    cwd: __dirname, // Ensures the app starts in the correct directory
     instances: 'max', // Use all CPU cores
     exec_mode: 'cluster',
     max_memory_restart: '1G',
