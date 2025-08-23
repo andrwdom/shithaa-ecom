@@ -125,7 +125,7 @@ export const getAllProducts = async (req, res) => {
 };
 
 // List all products with filtering, sorting, and pagination
-const listProducts = async (req, res) => {
+export const listProducts = async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 24;
