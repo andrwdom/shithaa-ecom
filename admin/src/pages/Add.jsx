@@ -298,7 +298,7 @@ const Add = ({token}) => {
       console.log('Request headers being sent:', { token });
       
       const response = await axios.post(
-        backendUrl + "/api/products",
+        backendUrl + "/api/admin/products",
         formData,
         { 
           headers: { token },

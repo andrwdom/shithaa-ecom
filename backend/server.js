@@ -22,6 +22,7 @@ import { config } from './config.js'
 import mongoose from 'mongoose'
 import userRouter from './routes/userRoute.js'
 import productRouter from './routes/productRoute.js'
+import adminProductRouter from './routes/adminProductRoute.js'
 import cartRouter from './routes/cartRoute.js'
 import orderRouter from './routes/orderRoute.js'
 import paymentRouter from './routes/paymentRoute.js'
@@ -189,6 +190,7 @@ app.use('/gallery', express.static('/var/www/shithaa-ecom/uploads'));
 // api endpoints
 app.use('/api/user', userRouter)
 app.use('/api/products', productRouter)
+app.use('/api/admin/products', adminProductRouter)
 app.use('/api/cart', cartRouter)
 app.use('/api/orders', orderRouter)
 app.use('/api/payment', paymentRouter)

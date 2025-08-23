@@ -47,7 +47,7 @@ export default function CheckoutPage() {
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const { user, logout } = useAuth(); // Get logout function from useAuth
   const [checkoutSessionId, setCheckoutSessionId] = useState<string | null>(null);
-  const [isSessionLoading, setIsSessionLoading] = useState(true);
+  const [isSessionLoading, setIsSessionLoading] = useState(false);
 
   // Use the centralized checkout flow manager instead of individual contexts
   const { 
@@ -639,8 +639,6 @@ export default function CheckoutPage() {
                 onClick={handlePhonePePayment}
                 disabled={
                   processing || 
-                  isSessionLoading || 
-                  !checkoutSessionId || 
                   !orderSummary?.total || 
                   orderSummary.total <= 0 || 
                   !shipping?.fullName || 
@@ -650,10 +648,6 @@ export default function CheckoutPage() {
               >
                 {processing ? (
                   <span className="loading loading-spinner loading-md"></span>
-                ) : isSessionLoading ? (
-                  'Creating Secure Session...'
-                ) : !checkoutSessionId ? (
-                  'Session Error - Refresh'
                 ) : !orderSummary?.total || orderSummary.total <= 0 ? (
                   'Complete Order Details'
                 ) : !shipping?.fullName || !shipping?.email || !shipping?.phone ? (
@@ -664,12 +658,7 @@ export default function CheckoutPage() {
               </button>
               
               {/* Help text when button is disabled */}
-              {(isSessionLoading || !checkoutSessionId) && (
-                <p className="text-xs text-gray-500 text-center mt-2">
-                  Please wait while we prepare your secure checkout...
-                </p>
-              )}
-              {(!isSessionLoading && (!orderSummary?.total || orderSummary.total <= 0)) && (
+              {(!orderSummary?.total || orderSummary.total <= 0) && (
                 <p className="text-xs text-gray-500 text-center mt-2">
                   Please wait for order details to load...
                 </p>
