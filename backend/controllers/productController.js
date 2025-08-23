@@ -1,4 +1,5 @@
 import fs from "fs";
+import path from "path";
 import imageOptimizer from '../utils/imageOptimizer.js';
 import productModel from '../models/productModel.js';
 import Category from '../models/Category.js';
@@ -813,6 +814,14 @@ export const moveProduct = async (req, res) => {
       return res.status(400).json({ 
         success: false, 
         message: 'action must be either "top" or "bottom"' 
+      });
+    }
+
+    // Validate productId format
+    if (!productId.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid product ID format'
       });
     }
     
