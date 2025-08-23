@@ -207,33 +207,34 @@ function PhonePeCallbackInner() {
                   })
                    
                    if (orderRes.ok) {
-                     const orderData = await orderRes.json()
-                    if (orderData.success && orderData.order) {
-                    setStatus('success')
-                      setMessage('Payment successful! Redirecting...')
-                      setOrderId(orderData.order.id) // Use the actual order ID
-                      setOrderDetails(orderData.order)
-                    
-                    // Store order details for order summary page
-                    localStorage.setItem('lastOrder', JSON.stringify({
-                      id: orderData.order.id,
-                      orderSummary: { total: orderData.order.amount },
-                      paymentMethod: 'PhonePe'
-                    }))
-                    
+                     const orderData = await orderRes.json();
+                     if (orderData.success && orderData.order) {
+                       setStatus('success');
+                       setMessage('Payment successful! Redirecting...');
+                       setOrderId(orderData.order.orderId); // Use the public order ID
+                       setOrderDetails(orderData.order);
+
+                       // Store order details for order summary page
+                       localStorage.setItem('lastOrder', JSON.stringify({
+                         id: orderData.order.orderId, // Use public ID
+                         orderSummary: { total: orderData.order.amount },
+                         paymentMethod: 'PhonePe'
+                       }));
+
                        // Clear temporary order data
-                    clearTemporaryOrderData()
-                    
-                    // 🔑 CRITICAL FIX: Redirect to the correct order success page
-                    setTimeout(() => { 
-                      router.push(`/order-success?orderId=${orderData.order.orderId}`)
-                    }, 2000)
-                    return
-                  } else {
-                       throw new Error('Could not retrieve order details')
-                  }
-                } else {
-                     throw new Error(`Failed to get order details: HTTP ${orderRes.status}`)
+                       clearTemporaryOrderData();
+
+                       // 🔑 CRITICAL FIX: Redirect to the correct order success page
+                       setTimeout(() => {
+                         router.push(`/order-success?orderId=${orderData.order.orderId}`);
+                       }, 2000);
+                       return;
+                     } else {
+                       // If the API call is successful but the order isn't found, it's a critical issue
+                       throw new Error(orderData.message || 'Order details could not be retrieved from the server.');
+                     }
+                   } else {
+                       throw new Error(`Failed to get order details: HTTP ${orderRes.status}`);
                    }
                  } catch (orderError) {
                    console.error('❌ Error getting order details:', orderError)
