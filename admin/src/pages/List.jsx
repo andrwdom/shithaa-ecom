@@ -4,27 +4,27 @@ import { backendUrl, currency } from '../config'
 import { toast } from 'react-toastify'
 import EditProduct from './EditProduct'
 import {
-  FiSearch, 
-  FiFilter, 
-  FiEdit, 
-  FiTrash2, 
-  FiChevronLeft, 
-  FiChevronRight, 
-  FiGrid, 
-  FiList,
-  FiPackage,
-  FiAlertTriangle,
-  FiCheckCircle,
-  FiX,
-  FiMenu,
-  FiSave,
-  FiChevronUp,
-  FiChevronDown,
-  FiSettings,
-  FiDollarSign,
-  FiTag,
-  FiBarChart
-} from 'react-icons/fi'
+  Search, 
+  Filter, 
+  Edit, 
+  Trash2, 
+  ChevronLeft, 
+  ChevronRight, 
+  Grid, 
+  List as ListIcon,
+  Package,
+  AlertTriangle,
+  CheckCircle,
+  X,
+  GripVertical,
+  Save,
+  ChevronUp,
+  ChevronDown,
+  Settings,
+  DollarSign,
+  Tag,
+  BarChart3
+} from 'lucide-react'
 
 // Constants
 const ALL_SIZES = ["S", "M", "L", "XL", "XXL"]
