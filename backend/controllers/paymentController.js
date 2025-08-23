@@ -115,7 +115,8 @@ export const createPhonePeSession = async (req, res) => {
       const sessionData = {
         source: checkoutMode,
         items: cartItems.map(item => ({
-          productId: item._id,
+          _id: item._id || item.productId || item.id,
+          productId: item._id || item.productId || item.id,
           name: item.name,
           quantity: item.quantity,
           price: item.price,

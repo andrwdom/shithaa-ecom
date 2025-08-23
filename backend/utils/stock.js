@@ -164,7 +164,18 @@ export async function validateStockForItems(items) {
     const validations = [];
     
     for (const item of items) {
-        const validation = await checkStockAvailability(item._id || item.productId, item.size, item.quantity);
+        // Try all possible ID fields
+        const productId = item._id || item.productId || item.id;
+        if (!productId) {
+            validations.push({
+                item,
+                available: false,
+                error: `Product ID not found for item: ${item.name}`
+            });
+            continue;
+        }
+
+        const validation = await checkStockAvailability(productId, item.size, item.quantity);
         validations.push({
             item,
             ...validation
