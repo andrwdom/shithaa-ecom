@@ -112,17 +112,27 @@ export const createPhonePeSession = async (req, res) => {
         });
       }
 
-      const sessionData = {
-        source: checkoutMode,
-        items: cartItems.map(item => ({
-          _id: item._id || item.productId || item.id,
-          productId: item._id || item.productId || item.id,
+      // Normalize item data to match schema
+      const items = cartItems.map(item => {
+        const productId = item._id || item.productId || item.id;
+        if (!productId) {
+          throw new Error(`Product ID not found for item: ${item.name}`);
+        }
+        return {
+          productId, // Required by schema
           name: item.name,
           quantity: item.quantity,
           price: item.price,
           image: item.image,
-          size: item.size
-        })),
+          size: item.size,
+          categorySlug: item.categorySlug,
+          category: item.category
+        };
+      });
+
+      const sessionData = {
+        source: checkoutMode,
+        items,
         userId: req.user?.id || userId,
         userEmail: req.user?.email || email || shipping.email,
         subtotal: orderSummary.subtotal,
