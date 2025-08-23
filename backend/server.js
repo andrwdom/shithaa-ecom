@@ -69,24 +69,27 @@ const allowedOrigins = [
     'https://admin.shithaa.in',  // Admin panel
     'http://localhost:3000',     // Frontend dev
     'http://localhost:5173',     // Admin dev
-    'http://localhost:5174'      // Additional dev port
+    'http://localhost:5174',     // Additional dev port
+    'http://localhost:4173'      // Admin production preview
 ];
 
 const corsOptions = {
     origin: (origin, callback) => {
+        console.log('Request origin:', origin);
         // Allow requests with no origin (like mobile apps or curl requests)
         // Also allow all origins in development
         if (!origin || allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
             callback(null, true);
         } else {
             console.log('CORS blocked origin:', origin);
+            console.log('Allowed origins:', allowedOrigins);
             callback(new Error('Not allowed by CORS'));
         }
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'token', 'x-requested-with'],
-    exposedHeaders: ['Access-Control-Allow-Origin'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'token', 'x-requested-with', 'Accept', 'Origin'],
+    exposedHeaders: ['Access-Control-Allow-Origin', 'Access-Control-Allow-Credentials'],
     maxAge: 86400, // 24 hours
     preflightContinue: false,
     optionsSuccessStatus: 204
