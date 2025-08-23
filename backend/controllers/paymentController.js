@@ -297,8 +297,8 @@ export const createPhonePeSession = async (req, res) => {
     }
 
     // Initialize PhonePe client and create payment request in parallel
-    // 🔑 CRITICAL FIX: Hardcode the correct callback URL to prevent misconfiguration.
-    const redirectUrl = `${process.env.FRONTEND_URL || 'https://shithaa.in'}/payment/phonepe/callback`;
+    // 🔑 CRITICAL FIX: The redirect URL MUST contain the transaction ID for the frontend to verify the payment.
+    const redirectUrl = `${process.env.FRONTEND_URL || 'https://shithaa.in'}/payment/phonepe/callback?merchantTransactionId=${phonepeTransactionId}`;
     const callbackUrl = `${process.env.VPS_BASE_URL || 'https://shithaa.in'}/api/payment/phonepe/webhook`;
     
     const request = StandardCheckoutPayRequest.builder()

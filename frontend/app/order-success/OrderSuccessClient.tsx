@@ -35,8 +35,8 @@ function OrderSuccessContent() {
         setLoading(true);
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
         
-        // Fetch order details
-        const orderRes = await authenticatedFetch(`${apiUrl}/api/orders/${orderId}`);
+        // 🔑 FIX: Fetch order details using the correct, newly created endpoint for public order IDs.
+        const orderRes = await authenticatedFetch(`${apiUrl}/api/orders/by-orderid/${orderId}`);
         const orderData = await orderRes.json();
         
         if (orderRes.ok && orderData.success) {
@@ -46,13 +46,9 @@ function OrderSuccessContent() {
           return;
         }
         
-        // Fetch checkout session summary
-        const sessionRes = await authenticatedFetch(`${apiUrl}/api/checkout/session/${orderData.data.checkoutSessionId}/summary`);
-        const sessionData = await sessionRes.json();
+        // 🔑 REMOVED: Fetching checkout session summary is redundant.
+        // The required data is already in the order object.
         
-        if (sessionRes.ok && sessionData.success) {
-          setCheckoutSummary(sessionData.data);
-        }
       } catch (error: any) {
         setError(error.message || 'Failed to fetch order details');
       } finally {

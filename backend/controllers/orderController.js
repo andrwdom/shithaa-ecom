@@ -133,6 +133,28 @@ export const getOrderByTransactionId = async (req, res) => {
     }
 };
 
+/**
+ * Get a single order by its public-facing orderId string (e.g., "SHITHAA-1234")
+ */
+export const getOrderByPublicId = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const order = await orderModel.findOne({ orderId: orderId });
+
+    if (!order) {
+      return errorResponse(res, 404, 'Order not found');
+    }
+
+    // Optional: Add authorization check if needed, e.g., for guest users vs logged-in users
+    // For now, we assume if you have the orderId, you can view the summary.
+
+    return successResponse(res, order);
+  } catch (error) {
+    console.error(`Error fetching order by public ID: ${req.params.orderId}`, error);
+    return errorResponse(res, 500, 'Failed to fetch order', error.message);
+  }
+};
+
 // Helper to get user email
 function getOrderUserEmail(req, fallback) {
   return (req.user && req.user.email) || fallback || '';
