@@ -70,8 +70,9 @@ export const config = {
         env: process.env.PHONEPE_ENV || 'SANDBOX',
         merchant_id: process.env.PHONEPE_MERCHANT_ID,
         api_key: process.env.PHONEPE_API_KEY,
-        salt_index: process.env.PHONEPE_SALT_INDEX,
-        redirect_url: process.env.PHONEPE_REDIRECT_URL,
+        salt_index: parseInt(process.env.PHONEPE_SALT_INDEX || '1', 10),
+        redirect_url: process.env.PHONEPE_REDIRECT_URL || 'https://shithaa.in/payment/phonepe/callback',
+        callback_url: process.env.PHONEPE_CALLBACK_URL || 'https://shithaa.in/api/payment/phonepe/webhook',
     },
   
     // Frontend URL for emails

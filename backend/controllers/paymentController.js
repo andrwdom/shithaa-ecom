@@ -10,6 +10,7 @@ import { getUniqueOrderId } from './orderController.js';
 import { StandardCheckoutClient, Env, StandardCheckoutPayRequest } from 'pg-sdk-node';
 import { randomUUID } from 'crypto';
 import { generateInvoiceBuffer, sendInvoiceEmail } from '../utils/invoiceGenerator.js';
+import { config } from '../config.js';
 
 // Helper function to get user email for orders
 const getOrderUserEmail = (req, email) => {
@@ -18,29 +19,19 @@ const getOrderUserEmail = (req, email) => {
 
 // Helper function to initialize PhonePe client
 const initializePhonePeClient = () => {
-    const PHONEPE_MERCHANT_ID = process.env.PHONEPE_MERCHANT_ID;
-    const PHONEPE_API_KEY = process.env.PHONEPE_API_KEY;
-    const PHONEPE_SALT_INDEX = parseInt(process.env.PHONEPE_SALT_INDEX || '1', 10);
-    const PHONEPE_ENV = process.env.PHONEPE_ENV === 'PRODUCTION' ? Env.PRODUCTION : Env.SANDBOX;
+    const { phonepe } = config;
 
-    console.log('=== PhonePe SDK Initialization ===');
-    console.log('Environment variables:');
-    console.log('- PHONEPE_MERCHANT_ID:', PHONEPE_MERCHANT_ID);
-    console.log('- PHONEPE_API_KEY:', PHONEPE_API_KEY ? 'SET (' + PHONEPE_API_KEY.substring(0, 8) + '...)' : 'NOT SET');
-    console.log('- PHONEPE_SALT_INDEX:', PHONEPE_SALT_INDEX);
-    console.log('- PHONEPE_ENV:', process.env.PHONEPE_ENV, '->', PHONEPE_ENV);
-
-    if (!PHONEPE_MERCHANT_ID || !PHONEPE_API_KEY) {
+    if (!phonepe.merchant_id || !phonepe.api_key) {
         console.error('PhonePe credentials missing, cannot initialize client');
         return null;
     }
 
     try {
         const client = StandardCheckoutClient.getInstance(
-            PHONEPE_MERCHANT_ID,
-            PHONEPE_API_KEY,
-            PHONEPE_SALT_INDEX,
-            PHONEPE_ENV
+            phonepe.merchant_id,
+            phonepe.api_key,
+            phonepe.salt_index,
+            phonepe.env === 'PRODUCTION' ? Env.PRODUCTION : Env.SANDBOX
         );
         console.log('PhonePe client initialized successfully');
         return client;
@@ -292,7 +283,7 @@ export const createPhonePeSession = async (req, res) => {
     }
 
     // Initialize PhonePe client and create payment request in parallel
-    const redirectUrl = `${process.env.PHONEPE_REDIRECT_URL || 'https://shithaa.in'}/payment/phonepe/callback?merchantTransactionId=${phonepeTransactionId}`;
+    const redirectUrl = `${config.phonepe.redirect_url}?merchantTransactionId=${phonepeTransactionId}`;
     
     const request = StandardCheckoutPayRequest.builder()
       .merchantOrderId(phonepeTransactionId)
@@ -385,10 +376,10 @@ export const phonePeCallback = async (req, res) => {
     let phonepeClient;
     try {
       phonepeClient = StandardCheckoutClient.getInstance(
-        process.env.PHONEPE_MERCHANT_ID,
-        process.env.PHONEPE_API_KEY,
-        parseInt(process.env.PHONEPE_SALT_INDEX || '1', 10),
-        process.env.PHONEPE_ENV === 'PRODUCTION' ? Env.PRODUCTION : Env.SANDBOX
+        config.phonepe.merchant_id,
+        config.phonepe.api_key,
+        config.phonepe.salt_index,
+        config.phonepe.env === 'PRODUCTION' ? Env.PRODUCTION : Env.SANDBOX
       );
       console.log('PhonePe client initialized successfully for callback validation');
     } catch (clientError) {
