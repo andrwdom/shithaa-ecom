@@ -197,8 +197,8 @@ function PhonePeCallbackInner() {
                                  // Since the order was already created in createPhonePeSession, we don't need to create it again
                  // Just get the order details and redirect to order summary
                  try {
-                                      // Get order details from the backend using the checkout session endpoint
-                  const orderRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/checkout/session/${transactionId}`, {
+                  // Get order details from the backend using the debug endpoint to find the order by transactionId
+                  const orderRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/payment/phonepe/debug/${transactionId}`, {
                     method: 'GET',
                     credentials: 'include',
                     headers: {
@@ -208,25 +208,25 @@ function PhonePeCallbackInner() {
                    
                    if (orderRes.ok) {
                      const orderData = await orderRes.json()
-                     if (orderData.success && orderData.data) {
+                    if (orderData.success && orderData.order) {
                     setStatus('success')
-                       setMessage('Payment successful! Order already exists. Redirecting to order summary...')
-                       setOrderId(orderData.data._id || orderData.data.orderId)
-                       setOrderDetails(orderData.data)
+                      setMessage('Payment successful! Redirecting...')
+                      setOrderId(orderData.order.id) // Use the actual order ID
+                      setOrderDetails(orderData.order)
                     
                     // Store order details for order summary page
                     localStorage.setItem('lastOrder', JSON.stringify({
-                      id: transactionId,
-                         orderSummary: { total: orderData.data.totalPrice || orderData.data.total || orderData.data.amount },
+                      id: orderData.order.id,
+                      orderSummary: { total: orderData.order.amount },
                       paymentMethod: 'PhonePe'
                     }))
                     
                        // Clear temporary order data
                     clearTemporaryOrderData()
                     
-                    // Redirect to OrderSummary page with order ID
+                    // 🔑 CRITICAL FIX: Redirect to the correct order success page
                     setTimeout(() => { 
-                         router.push(`/order-summary?orderId=${orderData.data._id || orderData.data.orderId}`)
+                      router.push(`/order-success?orderId=${orderData.order.orderId}`)
                     }, 2000)
                     return
                   } else {
@@ -240,15 +240,15 @@ function PhonePeCallbackInner() {
                    // Even if we can't get order details, redirect to order summary with transaction ID
                    // The order summary page can fetch the order using the transaction ID
                    setStatus('success')
-                   setMessage('Payment successful! Redirecting to order summary...')
+                   setMessage('Payment successful! Redirecting...')
                    setOrderId(transactionId)
                    
                    // Clear temporary order data
                    clearTemporaryOrderData()
                    
-                   // Redirect to OrderSummary page with transaction ID
+                   // 🔑 CRITICAL FIX: Redirect to the correct order success page
                    setTimeout(() => { 
-                     router.push(`/order-summary?transactionId=${transactionId}`)
+                     router.push(`/order-success?transactionId=${transactionId}`)
                    }, 2000)
                    return
                 }

@@ -667,6 +667,30 @@ export const verifyPhonePePayment = async (req, res) => {
         }
       }
 
+      // 🔑 CRITICAL FIX: If payment is successful, update the main order as well.
+      // This makes the verification endpoint a reliable fallback for the webhook.
+      if (isSuccess) {
+        const order = await orderModel.findOne({ phonepeTransactionId: merchantTransactionId });
+        if (order && order.paymentStatus !== 'paid') {
+          console.log(`[verify] Webhook was slow, updating order ${order.orderId} to paid.`);
+          order.payment = true;
+          order.paymentStatus = 'paid';
+          order.orderStatus = 'Confirmed';
+          order.status = 'Order Placed';
+          await order.save();
+
+          // Clear user's cart (non-blocking)
+          if (order.userId) {
+            userModel.findByIdAndUpdate(order.userId, { cartData: {} }).catch(err => console.error('Error clearing cart:', err));
+          }
+
+          // Send invoice email (non-blocking)
+          generateInvoiceBuffer(order)
+            .then(pdfBuffer => sendInvoiceEmail(order, pdfBuffer))
+            .catch(err => console.error('Error sending invoice from verify endpoint:', err));
+        }
+      }
+
       return res.json({
         success: true,
         data: {
