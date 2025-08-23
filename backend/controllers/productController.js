@@ -1,8 +1,6 @@
-import productModel from '../models/productModel.js';
-import { successResponse, errorResponse, paginatedResponse } from '../utils/response.js'
-import path from "path";
 import fs from "fs";
 import imageOptimizer from '../utils/imageOptimizer.js';
+import productModel from '../models/productModel.js';
 import Category from '../models/Category.js';
 
 
@@ -189,7 +187,7 @@ export const listProducts = async (req, res) => {
     }
 };
 
-// POST /api/products - Add new product
+// Add product
 export const addProduct = async (req, res) => {
     try {
         console.log('Add Product Request Body:', req.body);
