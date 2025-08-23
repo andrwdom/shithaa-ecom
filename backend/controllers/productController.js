@@ -3,6 +3,13 @@ import { successResponse, errorResponse, paginatedResponse } from '../utils/resp
 import path from "path";
 import fs from "fs";
 import imageOptimizer from '../utils/imageOptimizer.js';
+import Product from '../models/Product.js';
+import Category from '../models/Category.js';
+import { z } from 'zod';
+import { productSchema } from '../validation/product.schema.js';
+import { config } from '../config.js';
+import mongoose from 'mongoose';
+
 
 // GET /api/products/:id or /api/products/custom/:customId - RESTful single product fetch
 export const getProductById = async (req, res) => {
@@ -119,6 +126,71 @@ export const getAllProducts = async (req, res) => {
     } catch (error) {
         console.error('Get All Products Error:', error);
         res.status(500).json({ error: error.message });
+    }
+};
+
+// List all products with filtering, sorting, and pagination
+const listProducts = async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 24;
+        const skip = (page - 1) * limit;
+
+        const {
+            search,
+            categorySlug,
+            size,
+            minPrice,
+            maxPrice,
+            sortBy = 'displayOrder',
+            sortOrder = 'asc'
+        } = req.query;
+
+        let query = {};
+
+        if (search) {
+            query.$or = [
+                { name: { $regex: search, $options: 'i' } },
+                { customId: { $regex: search, $options: 'i' } }
+            ];
+        }
+
+        if (categorySlug) {
+            const category = await Category.findOne({ slug: categorySlug });
+            if (category) {
+                query.category = category.name;
+            }
+        }
+
+        if (size) {
+            query['sizes.size'] = size;
+        }
+
+        if (minPrice || maxPrice) {
+            query.price = {};
+            if (minPrice) {
+                query.price.$gte = parseInt(minPrice);
+            }
+            if (maxPrice) {
+                query.price.$lte = parseInt(maxPrice);
+            }
+        }
+        
+        const sortOptions = {};
+        sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
+
+        const products = await Product.find(query)
+            .sort(sortOptions)
+            .skip(skip)
+            .limit(limit);
+
+        const total = await Product.countDocuments(query);
+        const pages = Math.ceil(total / limit);
+
+        res.json({ success: true, products, total, pages });
+    } catch (error) {
+        console.error("Error in listProducts:", error);
+        res.status(500).json({ success: false, message: 'Error fetching products' });
     }
 };
 
@@ -418,17 +490,6 @@ export const addProduct = async (req, res) => {
             error: errorMessage,
             details: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
-    }
-}
-
-// function for list product
-export const listProducts = async (req, res) => {
-    try {
-        const products = await productModel.find({}).sort({ date: -1 });
-        res.json({ success: true, products })
-    } catch (error) {
-        console.error('List Products Error:', error);
-        res.json({ success: false, message: error.message || "Failed to fetch products" })
     }
 }
 

@@ -1,17 +1,16 @@
 import jwt from 'jsonwebtoken';
 import { errorResponse } from '../utils/response.js';
 import { config } from '../config.js'; // Import the centralized config
+import User from '../models/User.js';
 
 const JWT_SECRET = config.jwt_secret;
 
 export const verifyToken = async (req, res, next) => {
   try {
-    // For admin routes, check token header first
-    let token = req.headers.token;
-    
-    // For other routes, check cookies
+    const token = req.cookies.token || req.headers.authorization?.split(" ")[1] || req.headers.token;
+
     if (!token) {
-      token = req.cookies?.token || req.headers.authorization?.split(' ')[1];
+        return res.status(401).json({ success: false, message: 'Access Denied. No token provided.' });
     }
 
     console.log('Auth middleware - Request authentication:', {
