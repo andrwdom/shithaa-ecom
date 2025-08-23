@@ -8,6 +8,10 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      '@lib': path.resolve(__dirname, './src/lib'),
+      '@components': path.resolve(__dirname, './src/components'),
+      '@pages': path.resolve(__dirname, './src/pages'),
+      '@utils': path.resolve(__dirname, './src/utils'),
     },
   },
   optimizeDeps: {
@@ -18,20 +22,37 @@ export default defineConfig({
       'lucide-react',
       '@hello-pangea/dnd',
       'react-hot-toast',
-      'react-toastify'
+      'react-toastify',
+      'clsx',
+      'tailwind-merge'
     ],
+    exclude: [],
   },
   build: {
     rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, 'index.html'),
+      },
       output: {
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'ui-vendor': ['react-toastify', 'react-hot-toast', 'react-icons', 'lucide-react'],
-          'dnd-vendor': ['@hello-pangea/dnd']
+        manualChunks: (id) => {
+          if (id.includes('node_modules')) {
+            if (id.includes('react/') || id.includes('react-dom/') || id.includes('react-router-dom/')) {
+              return 'vendor-react';
+            }
+            if (id.includes('@hello-pangea/dnd')) {
+              return 'vendor-dnd';
+            }
+            if (id.includes('lucide-react') || id.includes('react-icons')) {
+              return 'vendor-icons';
+            }
+            return 'vendor';
+          }
         },
       },
     },
-    chunkSizeWarningLimit: 1000,
+    target: 'esnext',
+    minify: 'esbuild',
+    sourcemap: false,
   },
   server: { 
     port: 5174,
