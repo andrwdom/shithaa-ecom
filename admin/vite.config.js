@@ -11,17 +11,27 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    include: ['react', 'react-dom', 'react-router-dom'],
+    include: [
+      'react', 
+      'react-dom', 
+      'react-router-dom',
+      'lucide-react',
+      '@hello-pangea/dnd',
+      'react-hot-toast',
+      'react-toastify'
+    ],
   },
   build: {
     rollupOptions: {
       output: {
         manualChunks: {
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'ui-vendor': ['react-toastify', 'react-hot-toast', 'react-icons'],
+          'ui-vendor': ['react-toastify', 'react-hot-toast', 'react-icons', 'lucide-react'],
+          'dnd-vendor': ['@hello-pangea/dnd']
         },
       },
     },
+    chunkSizeWarningLimit: 1000,
   },
   server: { 
     port: 5174,
