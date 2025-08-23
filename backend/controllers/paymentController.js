@@ -204,6 +204,9 @@ export const createPhonePeSession = async (req, res) => {
     const phonepeTransactionId = randomUUID();
     const orderId = await getUniqueOrderId();
     
+    // 🔑 CRITICAL FIX: Declare order and paymentSession in a higher scope
+    let order, paymentSession;
+
     // Prepare all data objects for parallel creation
     const paymentSessionData = {
       sessionId: checkoutSessionId,
@@ -260,7 +263,7 @@ export const createPhonePeSession = async (req, res) => {
 
     // Execute all database operations in parallel
     try {
-      const [order, paymentSession] = await Promise.all([
+      [order, paymentSession] = await Promise.all([
         orderModel.create(orderPayload),
         PaymentSession.create(paymentSessionData),
         CheckoutSession.findByIdAndUpdate(checkoutSession._id, {
