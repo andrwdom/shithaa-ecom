@@ -1032,7 +1032,11 @@ const Orders = ({ token, setToken }) => {
   const fetchOrders = () => {
     setLoading(true);
     setApiError('');
-    api.get('/api/orders')
+    axios.get(`${backendUrl}/api/orders`, {
+      headers: {
+        token: localStorage.getItem('token')
+      }
+    })
       .then(response => {
         setLastApiResponse(response.data);
         if (response.data.success) {
@@ -1102,7 +1106,10 @@ const Orders = ({ token, setToken }) => {
   const updateStatus = async (orderId, status) => {
     try {
       console.log("Updating order status:", orderId, "to", status);
-      const response = await api.post('/api/orders/status', { orderId, status });
+      const response = await axios.post(`${backendUrl}/api/orders/status`, 
+        { orderId, status },
+        { headers: { token: localStorage.getItem('token') } }
+      );
       console.log('Status update response:', response.data);
       if (response.data.success) {
         fetchOrders();

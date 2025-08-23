@@ -6,9 +6,8 @@ import shithaLogo from '../assets/shithaa_logo.jpg'
 import { backendUrl } from '../App'
 
 const Login = ({setToken}) => {
-
-    const [email,setEmail] = useState('')
-    const [password,setPassword] = useState('')
+    const [email, setEmail] = useState('')
+    const [password, setPassword] = useState('')
     const [loading, setLoading] = useState(false)
 
     const onSubmitHandler = async (e) => {
@@ -16,22 +15,21 @@ const Login = ({setToken}) => {
             e.preventDefault();
             setLoading(true);
             
-            console.log('Login attempt with:', { email, password });
-            
-            const response = await axios.post(backendUrl + '/api/user/admin', {email, password})
-            console.log('Login response:', response.data);
+            const response = await axios.post(backendUrl + '/api/user/admin', {
+                email,
+                password
+            });
             
             if (response.data.success) {
-                // The token is now stored in HttpOnly cookies by the backend
-                setToken('authenticated'); // We just need to know we're authenticated
-                localStorage.setItem('isAdmin', 'true');
+                const token = response.data.data.token;
+                setToken(token);
+                localStorage.setItem('token', token);
                 toast.success('Login successful! Welcome to Admin Panel.')
             } else {
                 toast.error(response.data.message || 'Login failed')
             }
-             
         } catch (error) {
-            console.log('Login error:', error);
+            console.error('Login error:', error);
             if (error.response?.status === 401) {
                 toast.error('Invalid email or password. Please try again.');
             } else if (error.response?.status === 500) {
@@ -44,19 +42,18 @@ const Login = ({setToken}) => {
         }
     }
 
-  return (
-    <div className='min-h-screen flex items-center justify-center w-full bg-theme-50'>
-        <div className='bg-white shadow-lg rounded-lg px-8 py-6 max-w-md w-full mx-4'>
+    return (
+        <div className='min-h-screen flex flex-col items-center justify-center w-full bg-theme-50'>
             <div className="flex justify-center mb-6">
                 <img src={shithaLogo} alt="Shitha Logo" className="w-32" />
             </div>
             <h1 className='text-2xl font-bold mb-6 text-theme-600 text-center'>Admin Panel</h1>
             
-            <form onSubmit={onSubmitHandler} className="space-y-4">
-                <div className=''>
+            <form onSubmit={onSubmitHandler} className="space-y-4 w-full max-w-md px-4">
+                <div>
                     <p className='text-sm font-medium text-theme-700 mb-2'>Email Address</p>
                     <input 
-                        onChange={(e)=>setEmail(e.target.value)} 
+                        onChange={(e) => setEmail(e.target.value)} 
                         value={email} 
                         className='rounded-md w-full px-3 py-2 border border-theme-200 outline-none focus:border-theme-400 focus:ring-1 focus:ring-theme-400 transition-colors' 
                         type="email" 
@@ -64,10 +61,10 @@ const Login = ({setToken}) => {
                         required 
                     />
                 </div>
-                <div className=''>
+                <div>
                     <p className='text-sm font-medium text-theme-700 mb-2'>Password</p>
                     <input 
-                        onChange={(e)=>setPassword(e.target.value)} 
+                        onChange={(e) => setPassword(e.target.value)} 
                         value={password} 
                         className='rounded-md w-full px-3 py-2 border border-theme-200 outline-none focus:border-theme-400 focus:ring-1 focus:ring-theme-400 transition-colors' 
                         type="password" 
@@ -84,8 +81,7 @@ const Login = ({setToken}) => {
                 </button>
             </form>
         </div>
-    </div>
-  )
+    )
 }
 
 export default Login
