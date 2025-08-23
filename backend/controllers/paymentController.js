@@ -102,79 +102,63 @@ export const createPhonePeSession = async (req, res) => {
   const correlationId = req.headers['x-request-id'] || `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   
   try {
-    console.log(`[${correlationId}] === PhonePe Session Creation Started ===`);
-    console.log(`[${correlationId}] Request body:`, JSON.stringify(req.body, null, 2));
-    console.log(`[${correlationId}] User:`, req.user);
-    
     let {
       checkoutSessionId,
-      shipping
+      shipping,
+      cartItems,
+      userId,
+      email,
+      checkoutMode,
+      orderSummary
     } = req.body;
 
-    let checkoutSession;
-
-    if (checkoutSessionId && shipping) {
-      console.log(`[${correlationId}] Modern payload detected. Proceeding with checkoutSessionId:`, checkoutSessionId);
-      checkoutSession = await CheckoutSession.findOne({ sessionId: checkoutSessionId });
-    } else {
-      console.warn(`[${correlationId}] WARNING: Legacy payload detected. Creating checkout session on the fly.`);
-      
-      const { cartItems, userId, email, checkoutMode, orderSummary } = req.body;
-      shipping = req.body.shipping; // Get shipping from the legacy body
-
+    // Fast path: Create session immediately without validation
+    if (!checkoutSessionId) {
       if (!cartItems || !shipping || !checkoutMode || !orderSummary) {
-        console.log(`[${correlationId}] Validation failed - legacy payload is missing required fields`);
         return res.status(400).json({
           success: false,
-          message: 'Missing required fields in legacy payload: cartItems, shipping, checkoutMode, and orderSummary are required.'
+          message: 'Missing required fields: cartItems, shipping, checkoutMode, and orderSummary are required.'
         });
       }
 
-      // Recreate the logic from the checkout/session endpoint here as a fallback
-      try {
-        const sessionData = {
-          source: checkoutMode,
-          items: cartItems.map(item => ({
-            productId: item._id,
-            name: item.name,
-            quantity: item.quantity,
-            price: item.price,
-            image: item.image,
-            size: item.size
-          })),
-          userId: req.user?.id || userId,
-          userEmail: req.user?.email || email || shipping.email,
-          subtotal: orderSummary.subtotal,
-          total: orderSummary.total,
-          // We don't have discount/shipping details in this legacy payload, so we use the summary
-          offerDiscount: 0,
-          couponDiscount: 0,
-          shippingCost: orderSummary.shipping || 0
-        };
+      const sessionData = {
+        source: checkoutMode,
+        items: cartItems.map(item => ({
+          productId: item._id,
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+          image: item.image,
+          size: item.size
+        })),
+        userId: req.user?.id || userId,
+        userEmail: req.user?.email || email || shipping.email,
+        subtotal: orderSummary.subtotal,
+        total: orderSummary.total,
+        offerDiscount: 0,
+        couponDiscount: 0,
+        shippingCost: orderSummary.shipping || 0,
+        status: 'awaiting_payment',
+        expiresAt: new Date(Date.now() + 30 * 60 * 1000), // 30 minutes from now
+        sessionId: `sess_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      };
 
-        checkoutSession = new CheckoutSession(sessionData);
-        await checkoutSession.save();
-        checkoutSessionId = checkoutSession.sessionId; // Set the ID for later use
-        console.log(`[${correlationId}] ✅ Legacy checkout session created successfully:`, checkoutSessionId);
-      } catch (sessionError) {
-        console.error(`[${correlationId}] ❌ Error creating legacy checkout session:`, sessionError);
-        return res.status(500).json({
-          success: false,
-          message: 'Failed to create a checkout session for the legacy request.'
-        });
-      }
+      const checkoutSession = new CheckoutSession(sessionData);
+      await checkoutSession.save();
+      checkoutSessionId = checkoutSession.sessionId;
     }
 
+    // Validate session after creation
+    const checkoutSession = await CheckoutSession.findOne({ sessionId: checkoutSessionId });
+    
     if (!checkoutSession) {
-      console.log(`[${correlationId}] Checkout session not found or could not be created for ID:`, checkoutSessionId);
       return res.status(404).json({
         success: false,
-        message: 'Checkout session not found or could not be created.'
+        message: 'Checkout session not found.'
       });
     }
     
     if (checkoutSession.isExpired()) {
-      console.log(`[${correlationId}] Checkout session expired:`, checkoutSessionId);
       return res.status(410).json({
         success: false,
         message: 'Checkout session has expired'
@@ -182,7 +166,6 @@ export const createPhonePeSession = async (req, res) => {
     }
     
     if (checkoutSession.status !== 'awaiting_payment') {
-      console.log(`[${correlationId}] Checkout session not ready for payment:`, checkoutSession.status);
       return res.status(400).json({
         success: false,
         message: 'Checkout session is not ready for payment'
@@ -192,11 +175,11 @@ export const createPhonePeSession = async (req, res) => {
     const userEmail = checkoutSession.userEmail;
     console.log(`[${correlationId}] User email:`, userEmail);
     
-    // Generate unique transaction ID
+    // Generate unique transaction ID and prepare data
     const phonepeTransactionId = randomUUID();
-    console.log(`[${correlationId}] Generated PhonePe transaction ID:`, phonepeTransactionId);
+    const orderId = await getUniqueOrderId();
     
-    // Create payment session (temporary storage, not an order)
+    // Prepare all data objects for parallel creation
     const paymentSessionData = {
       sessionId: checkoutSessionId,
       phonepeTransactionId,
@@ -205,26 +188,14 @@ export const createPhonePeSession = async (req, res) => {
       orderData: {
         amount: checkoutSession.total,
         shipping: {
-          fullName: shipping.fullName,
-          email: shipping.email,
-          phone: shipping.phone,
-          addressLine1: shipping.addressLine1,
+          ...shipping,
           addressLine2: shipping.addressLine2 || '',
-          city: shipping.city,
-          state: shipping.state,
-          postalCode: shipping.postalCode,
           country: shipping.country || 'India'
         },
-        cartItems: checkoutSession.items.map(item => ({
-          _id: item.productId,
-          name: item.name,
-          quantity: item.quantity,
-          price: item.price,
-          image: item.image,
-          size: item.size
-        }))
+        cartItems: checkoutSession.items
       },
       status: 'pending',
+      stockReserved: true,
       metadata: {
         userAgent: req.headers['user-agent'],
         ipAddress: req.ip || req.connection.remoteAddress,
@@ -233,159 +204,61 @@ export const createPhonePeSession = async (req, res) => {
       }
     };
 
-    console.log(`[${correlationId}] Payment session data prepared, stock already reserved in checkout session`);
-    
-    // Stock is already reserved in the checkout session, so we don't need to reserve again
-    paymentSessionData.stockReserved = true;
-    
-    // CRITICAL FIX: Create Order with awaiting_payment status BEFORE redirecting to PhonePe
-    // This ensures the order exists when the webhook arrives
-    console.log(`[${correlationId}] Creating Order with awaiting_payment status...`);
-    
+    const orderPayload = {
+      orderId,
+      userInfo: {
+        userId: checkoutSession.userId,
+        name: shipping.fullName,
+        email: userEmail
+      },
+      userId: checkoutSession.userId,
+      shippingInfo: {
+        ...shipping,
+        addressLine2: shipping.addressLine2 || '',
+        country: shipping.country || 'India'
+      },
+      items: checkoutSession.items,
+      totalPrice: checkoutSession.total,
+      subtotal: checkoutSession.subtotal,
+      total: checkoutSession.total,
+      amount: checkoutSession.total,
+      paymentMethod: 'PhonePe',
+      status: 'Pending',
+      paymentStatus: 'awaiting_payment',
+      orderStatus: 'awaiting_payment',
+      phonepeTransactionId,
+      checkoutSessionId,
+      source: checkoutSession.source,
+      placedAt: new Date(),
+      createdAt: new Date()
+    };
+
+    // Execute all database operations in parallel
     try {
-      const orderId = await getUniqueOrderId();
-      
-      // Create order using the exact format expected by the order model
-      const orderPayload = {
-        orderId,
-        // Set both userInfo and userId for backward compatibility
-        userInfo: {
-          userId: checkoutSession.userId,
-          name: shipping.fullName,
-          email: userEmail
-        },
-        userId: checkoutSession.userId, // Legacy field for backward compatibility
-        shippingInfo: {
-          fullName: shipping.fullName,
-          email: shipping.email,
-          phone: shipping.phone,
-          addressLine1: shipping.addressLine1,
-          addressLine2: shipping.addressLine2 || '',
-          city: shipping.city,
-          state: shipping.state,
-          postalCode: shipping.postalCode,
-          country: shipping.country || 'India'
-        },
-        items: checkoutSession.items.map(item => ({
-          _id: item.productId,
-          name: item.name,
-          quantity: item.quantity,
-          price: item.price,
-          image: item.image,
-          size: item.size
-        })),
-        // Set both totalPrice and total for backward compatibility
-        totalPrice: checkoutSession.total,
-        subtotal: checkoutSession.subtotal,
-        total: checkoutSession.total,
-        amount: checkoutSession.total, // Legacy field for backward compatibility
-        paymentMethod: 'PhonePe',
-        status: 'Pending',
-        paymentStatus: 'awaiting_payment',
-        orderStatus: 'awaiting_payment',
-        phonepeTransactionId: phonepeTransactionId,
-        checkoutSessionId: checkoutSessionId,
-        source: checkoutSession.source,
-        placedAt: new Date(),
-        createdAt: new Date()
-      };
-      
-      // Create and save the order
-      const order = new orderModel(orderPayload);
-      await order.save();
-      
-      console.log(`[${correlationId}] Order created successfully with ID:`, order._id);
-      
-      // Update checkout session with order ID and phonepe transaction ID
-      await CheckoutSession.findByIdAndUpdate(checkoutSession._id, {
-        orderId: order._id,
-        phonepeTransactionId: phonepeTransactionId,
-        status: 'awaiting_payment'
-      });
-      
-    } catch (orderError) {
-      console.error(`[${correlationId}] Failed to create order:`, orderError);
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to create order',
-        error: orderError.message
-      });
-    }
-    
-    console.log(`[${correlationId}] Attempting to save payment session to database...`);
-    
-    // Save payment session to database
-    let paymentSession;
-    try {
-      paymentSession = await PaymentSession.create(paymentSessionData);
-      console.log(`[${correlationId}] Payment session saved successfully:`, paymentSession._id);
-      
-      // Update checkout session with PhonePe transaction ID
-      await CheckoutSession.findOneAndUpdate(
-        { sessionId: checkoutSessionId },
-        { phonepeTransactionId }
-      );
-      
-    } catch (dbError) {
-      console.error(`[${correlationId}] Database save failed:`, dbError);
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to create payment session in database',
-        error: dbError.message
-      });
-    }
+      const [order, paymentSession] = await Promise.all([
+        orderModel.create(orderPayload),
+        PaymentSession.create(paymentSessionData),
+        CheckoutSession.findByIdAndUpdate(checkoutSession._id, {
+          orderId,
+          phonepeTransactionId,
+          status: 'awaiting_payment'
+        })
+      ]);
 
-    console.log('PhonePe SDK configuration check:');
-    console.log('- Merchant ID:', process.env.PHONEPE_MERCHANT_ID);
-    console.log('- API Key:', process.env.PHONEPE_API_KEY ? 'SET' : 'NOT SET');
-    console.log('- Salt Index:', process.env.PHONEPE_SALT_INDEX);
-    console.log('- Environment:', process.env.PHONEPE_ENV, '->', (process.env.PHONEPE_ENV === 'PRODUCTION' ? Env.PRODUCTION : Env.SANDBOX));
-    console.log('- Client initialized:', !!(process.env.PHONEPE_MERCHANT_ID && process.env.PHONEPE_API_KEY));
-
-    // Check if PhonePe client is available
-    if (!(process.env.PHONEPE_MERCHANT_ID && process.env.PHONEPE_API_KEY)) {
-      console.error('PhonePe client not initialized, cannot proceed');
-      console.error('Missing environment variables:');
-      console.error('- PHONEPE_MERCHANT_ID:', process.env.PHONEPE_MERCHANT_ID ? 'SET' : 'NOT SET');
-      console.error('- PHONEPE_API_KEY:', process.env.PHONEPE_API_KEY ? 'SET' : 'NOT SET');
-      
-      // Restore stock since we can't create payment
-      try {
-        await restoreProductStock(cartItems);
-        console.log('Stock restored after PhonePe initialization failure');
-      } catch (restoreError) {
-        console.error('Failed to restore stock after PhonePe failure:', restoreError);
+      if (!order || !paymentSession) {
+        throw new Error('Failed to create order or payment session');
       }
-      
-      // Delete payment session
-      try {
-        await PaymentSession.findByIdAndDelete(paymentSession._id);
-        console.log('Payment session deleted after PhonePe failure');
-      } catch (deleteError) {
-        console.error('Failed to delete payment session:', deleteError);
-      }
-      
+    } catch (error) {
+      console.error(`[${correlationId}] Database operations failed:`, error);
       return res.status(500).json({
         success: false,
-        message: 'Payment service not available',
-        error: 'PhonePe client initialization failed - check environment variables',
-        details: {
-          merchantId: !!process.env.PHONEPE_MERCHANT_ID,
-          apiKey: !!process.env.PHONEPE_API_KEY,
-          saltIndex: !!process.env.PHONEPE_SALT_INDEX,
-          environment: process.env.PHONEPE_ENV
-        }
+        message: 'Failed to create order and payment session',
+        error: error.message
       });
     }
 
-    // Use SDK to create payment session
-    const redirectUrl = `${process.env.PHONEPE_REDIRECT_URL || process.env.PHONEPE_REDIRECT_URL || 'https://shithaa.in'}/payment/phonepe/callback?merchantTransactionId=${phonepeTransactionId}`;
-    
-    // Log webhook configuration for debugging
-    console.log(`[${correlationId}] 🔗 WEBHOOK CONFIG:`);
-    console.log(`[${correlationId}] - Redirect URL:`, redirectUrl);
-    console.log(`[${correlationId}] - Webhook URL:`, `${process.env.BASE_URL || 'https://shithaa.in'}/api/payment/phonepe/webhook`);
-    console.log(`[${correlationId}] - Webhook Auth:`, process.env.PHONEPE_CALLBACK_USERNAME ? 'SET' : 'NOT SET');
+    // Initialize PhonePe client and create payment request in parallel
+    const redirectUrl = `${process.env.PHONEPE_REDIRECT_URL || 'https://shithaa.in'}/payment/phonepe/callback?merchantTransactionId=${phonepeTransactionId}`;
     
     const request = StandardCheckoutPayRequest.builder()
       .merchantOrderId(phonepeTransactionId)
@@ -393,61 +266,52 @@ export const createPhonePeSession = async (req, res) => {
       .redirectUrl(redirectUrl)
       .build();
 
-    // Initialize PhonePe client ONCE to avoid singleton re-initialization error
-    let phonepeClient;
-    try {
-      phonepeClient = StandardCheckoutClient.getInstance(
-        process.env.PHONEPE_MERCHANT_ID,
-        process.env.PHONEPE_API_KEY,
-        parseInt(process.env.PHONEPE_SALT_INDEX || '1', 10),
-        process.env.PHONEPE_ENV === 'PRODUCTION' ? Env.PRODUCTION : Env.SANDBOX
-      );
-      console.log('PhonePe client initialized successfully for this request');
-    } catch (clientError) {
-      console.error(`[${correlationId}] PhonePe client initialization failed:`, clientError);
-      // Delete payment session
-      await PaymentSession.findByIdAndDelete(paymentSession._id);
-      
+    // Get PhonePe client instance (cached singleton)
+    const phonepeClient = initializePhonePeClient();
+    if (!phonepeClient) {
       return res.status(500).json({
         success: false,
         message: 'Payment service not available',
-        error: 'PhonePe client initialization failed: ' + clientError.message
+        error: 'PhonePe client initialization failed - check environment variables'
       });
     }
 
-    const response = await phonepeClient.pay(request);
-    console.log(`[${correlationId}] PhonePe SDK response received:`, response);
-    
-    if (response && response.redirectUrl) {
-      console.log(`[${correlationId}] Payment session created successfully, updating database...`);
-      // Update payment session with PhonePe response
-      await PaymentSession.findByIdAndUpdate(paymentSession._id, {
-        'phonepeResponse.redirectUrl': response.redirectUrl,
-        'phonepeResponse.merchantOrderId': phonepeTransactionId,
-        'phonepeResponse.responseCode': response.code || 'SUCCESS',
-        'phonepeResponse.responseMessage': response.message || 'Payment session created'
-      });
+    try {
+      const response = await phonepeClient.pay(request);
+      
+      if (response && response.redirectUrl) {
+        // Update payment session with PhonePe response
+        await PaymentSession.findByIdAndUpdate(paymentSession._id, {
+          'phonepeResponse.redirectUrl': response.redirectUrl,
+          'phonepeResponse.merchantOrderId': phonepeTransactionId,
+          'phonepeResponse.responseCode': response.code || 'SUCCESS',
+          'phonepeResponse.responseMessage': response.message || 'Payment session created'
+        });
 
-      console.log(`[${correlationId}] === PhonePe Session Creation Successful ===`);
-      return res.json({
-        success: true,
-        sessionId: checkoutSessionId,
-        phonepeTransactionId: phonepeTransactionId,
-        redirectUrl: response.redirectUrl
-      });
-    } else {
-      console.log(`[${correlationId}] PhonePe response missing redirectUrl, cleaning up...`);
-      
-      // Delete payment session
-      await PaymentSession.findByIdAndUpdate(paymentSession._id, {
-        'phonepeResponse.responseCode': 'FAILED',
-        'phonepeResponse.responseMessage': 'PhonePe response missing redirectUrl'
-      });
-      
-      return res.status(400).json({
+        return res.json({
+          success: true,
+          sessionId: checkoutSessionId,
+          phonepeTransactionId: phonepeTransactionId,
+          redirectUrl: response.redirectUrl
+        });
+      } else {
+        await PaymentSession.findByIdAndUpdate(paymentSession._id, {
+          'phonepeResponse.responseCode': 'FAILED',
+          'phonepeResponse.responseMessage': 'PhonePe response missing redirectUrl'
+        });
+        
+        return res.status(400).json({
+          success: false,
+          message: 'Failed to create payment session',
+          phonepeError: response
+        });
+      }
+    } catch (error) {
+      console.error(`[${correlationId}] PhonePe payment creation failed:`, error);
+      return res.status(500).json({
         success: false,
-        message: 'Failed to create payment session',
-        phonepeError: response
+        message: 'Failed to create payment',
+        error: error.message
       });
     }
   } catch (error) {
