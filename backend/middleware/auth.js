@@ -108,30 +108,3 @@ export const optionalAuth = async (req, res, next) => {
     next();
   }
 };
-
-// Special middleware for the admin GET /api/orders route to prefer cookie auth
-export const verifyAdminOrderRequest = async (req, res, next) => {
-  try {
-    // For this specific route, prioritize the cookie, then fall back to headers.
-    const token = req.cookies.token || req.headers.authorization?.split(" ")[1] || req.headers.token;
-
-    if (!token) {
-        return res.status(401).json({ success: false, message: 'Access Denied. No token provided.' });
-    }
-
-    try {
-      const decoded = jwt.verify(token, JWT_SECRET);
-      req.user = decoded;
-      next();
-    } catch (jwtError) {
-      console.log('Admin Orders Auth - JWT verification failed:', {
-        error: jwtError.name,
-        message: jwtError.message,
-      });
-      return res.status(401).json({ success: false, message: 'Invalid or expired token.' });
-    }
-  } catch (error) {
-    console.error('Admin Orders Auth - Unexpected error:', error);
-    return res.status(500).json({ success: false, message: 'Authentication error.' });
-  }
-};
