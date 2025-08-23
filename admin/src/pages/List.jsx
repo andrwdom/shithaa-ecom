@@ -789,7 +789,7 @@ const List = ({ token }) => {
         params.append('maxPrice', priceRange.max)
       }
       
-      const response = await axios.get(`${backendUrl}/api/products?${params}`, {
+      const response = await axios.get(`${backendUrl}/api/admin/products?${params}`, {
         headers: { token }
       })
       
@@ -845,7 +845,7 @@ const List = ({ token }) => {
     }
     
     try {
-      await axios.delete(`${backendUrl}/api/products/${productId}`, {
+      await axios.delete(`${backendUrl}/api/admin/products/${productId}`, {
         headers: { token }
       })
       toast.success('Product deleted successfully')
@@ -1025,7 +1025,7 @@ const List = ({ token }) => {
         displayOrder: p.displayOrder
       }))
       
-      await axios.put(`${backendUrl}/api/products/reorder`, {
+      await axios.put(`${backendUrl}/api/admin/products/reorder`, {
         products: productsToReorder,
         categorySlug
       }, {
@@ -1058,7 +1058,7 @@ const List = ({ token }) => {
     try {
       setIsReordering(true)
       const response = await axios.put(
-        `${backendUrl}/api/products/move`,
+        `${backendUrl}/api/admin/products/move`,
         {
           productId,
           action, // 'top' or 'bottom'
