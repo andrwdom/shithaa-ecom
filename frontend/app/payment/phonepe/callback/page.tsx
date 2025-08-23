@@ -138,136 +138,47 @@ function PhonePeCallbackInner() {
           )
          
           if (isSuccess) {
-            setStatus('success')
-            setMessage('Payment successful! Creating your order...')
-            setOrderId(paymentData.merchantTransactionId || transactionId)
-            
-            // Log successful webhook detection
-            console.log('🎉 SUCCESS: Payment verified successfully! Webhook has updated the status.')
-            
-            // Payment successful - create order from payment session
-            console.log('Payment successful, creating order from payment session')
-            
+            setStatus('success');
+            setMessage('Payment verified! Fetching your order details...');
+
+            // Directly fetch order details from backend using transactionId
+            // This removes the dependency on localStorage which is causing the failure
             try {
-              // Try to get order data from multiple storage locations with priority
-              let pendingOrderData = storedOrderData || 
-                                   localStorage.getItem('pendingOrderData') ||
-                                   sessionStorage.getItem('pendingOrderData') ||
-                                   localStorage.getItem('phonepeOrderData')
-              
-              console.log('🔍 ORDER DATA RETRIEVAL DEBUG:')
-              console.log('- storedOrderData:', !!storedOrderData)
-              console.log('- pendingOrderData (localStorage):', !!localStorage.getItem('pendingOrderData'))
-              console.log('- pendingOrderData (sessionStorage):', !!sessionStorage.getItem('pendingOrderData'))
-              console.log('- phonepeOrderData:', !!localStorage.getItem('phonepeOrderData'))
-              console.log('- buyNowItem:', !!localStorage.getItem('phonepeBuyNowItem'))
-              console.log('- cartItems:', !!localStorage.getItem('phonepeCartItems'))
-              
-              if (!pendingOrderData) {
-                console.log('Order data not found in primary storage, trying to reconstruct...')
-                pendingOrderData = reconstructOrderData()
-                console.log('Reconstruction result:', !!pendingOrderData)
-              }
-              
-              if (pendingOrderData) {
-                const orderData = JSON.parse(pendingOrderData)
-                console.log('✅ Parsed order data successfully:', {
-                  hasShipping: !!orderData.shipping,
-                  hasCartItems: !!orderData.cartItems,
-                  cartItemsCount: orderData.cartItems?.length || 0,
-                  hasAmount: !!orderData.amount,
-                  amount: orderData.amount,
-                  email: orderData.email || orderData.shipping?.email
-                })
-                
-                // Validate that we have the basic data needed
-                if (!orderData.shipping?.fullName) {
-                  throw new Error('Shipping name is missing from order data')
+              console.log(`Fetching order details for transactionId: ${transactionId}`);
+              const orderRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/payment/phonepe/debug/${transactionId}`, {
+                method: 'GET',
+                credentials: 'include',
+                headers: {
+                  'Content-Type': 'application/json'
                 }
-                if (!orderData.cartItems || orderData.cartItems.length === 0) {
-                  throw new Error('Order items are missing from order data')
-                }
-                if (!orderData.amount || orderData.amount <= 0) {
-                  throw new Error('Total amount is missing or invalid from order data')
-                }
-                
-                console.log('✅ Order data validation passed - Order already exists from createPhonePeSession')
-                console.log('Order was created upfront, proceeding to order summary for transaction:', transactionId)
-                
-                                 // Since the order was already created in createPhonePeSession, we don't need to create it again
-                 // Just get the order details and redirect to order summary
-                 try {
-                  // Get order details from the backend using the debug endpoint to find the order by transactionId
-                  const orderRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/payment/phonepe/debug/${transactionId}`, {
-                    method: 'GET',
-                    credentials: 'include',
-                    headers: {
-                      'Content-Type': 'application/json'
-                    }
-                  })
-                   
-                   if (orderRes.ok) {
-                     const orderData = await orderRes.json();
-                     if (orderData.success && orderData.order) {
-                       setStatus('success');
-                       setMessage('Payment successful! Redirecting...');
-                       setOrderId(orderData.order.orderId); // Use the public order ID
-                       setOrderDetails(orderData.order);
+              });
 
-                       // Store order details for order summary page
-                       localStorage.setItem('lastOrder', JSON.stringify({
-                         id: orderData.order.orderId, // Use public ID
-                         orderSummary: { total: orderData.order.amount },
-                         paymentMethod: 'PhonePe'
-                       }));
+              if (orderRes.ok) {
+                const orderData = await orderRes.json();
+                if (orderData.success && orderData.order) {
+                  console.log('Successfully fetched order:', orderData.order);
+                  setMessage('Payment successful! Redirecting...');
+                  setOrderId(orderData.order.orderId); // Use the public order ID
 
-                       // Clear temporary order data
-                       clearTemporaryOrderData();
+                  // Clear temporary data now that we have the final order
+                  clearTemporaryOrderData();
 
-                       // 🔑 CRITICAL FIX: Redirect to the correct order success page
-                       setTimeout(() => {
-                         router.push(`/order-success?orderId=${orderData.order.orderId}`);
-                       }, 2000);
-                       return;
-                     } else {
-                       // If the API call is successful but the order isn't found, it's a critical issue
-                       throw new Error(orderData.message || 'Order details could not be retrieved from the server.');
-                     }
-                   } else {
-                       throw new Error(`Failed to get order details: HTTP ${orderRes.status}`);
-                   }
-                 } catch (orderError) {
-                   console.error('❌ Error getting order details:', orderError)
-                   // Even if we can't get order details, redirect to order summary with transaction ID
-                   // The order summary page can fetch the order using the transaction ID
-                   setStatus('success')
-                   setMessage('Payment successful! Redirecting...')
-                   setOrderId(transactionId)
-                   
-                   // Clear temporary order data
-                   clearTemporaryOrderData()
-                   
-                   // 🔑 CRITICAL FIX: Redirect to the correct order success page
-                   setTimeout(() => { 
-                     router.push(`/order-success?transactionId=${transactionId}`)
-                   }, 2000)
-                   return
+                  // Redirect to the success page
+                  router.push(`/order-success?orderId=${orderData.order.orderId}`);
+                  return; // Stop further execution
+                } else {
+                  // API call was fine, but backend couldn't find the order
+                  throw new Error(orderData.message || 'Order not found on server for this transaction.');
                 }
               } else {
-                console.error('❌ CRITICAL: No order data available for order creation')
-                console.error('Available storage keys:', Object.keys(localStorage).filter(key => key.includes('phonepe') || key.includes('order')))
-                throw new Error('Could not retrieve order data for order creation - no data found in any storage location')
+                // API call itself failed
+                throw new Error(`Failed to fetch order details (HTTP ${orderRes.status})`);
               }
-            } catch (orderError: any) {
-              console.error('❌ Order creation error:', orderError)
-              console.error('Order error details:', {
-                message: orderError.message,
-                stack: orderError.stack,
-                transactionId: transactionId
-              })
-              // Order creation failed - redirect to PaymentFailed page
-              redirectToPaymentFailed(transactionId, `Order creation failed: ${orderError.message}`, null, storedOrderData)
-              return
+            } catch (error) {
+              console.error('❌ Failed to retrieve order after successful payment:', error);
+              // Redirect to failure page with a specific error message
+              redirectToPaymentFailed(transactionId, (error as Error).message, null, null);
+              return;
             }
           } else if (isPending) {
             setStatus('pending')
