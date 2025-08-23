@@ -3,10 +3,32 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import api from '../utils/api';
 import { backendUrl } from '../config';
+import { FiPackage, FiAlertTriangle } from 'react-icons/fi';
+
+const OrderSkeleton = () => (
+  <div className="bg-white p-4 rounded-lg shadow animate-pulse">
+    <div className="flex justify-between items-start mb-4">
+      <div>
+        <div className="h-5 bg-gray-200 rounded w-32 mb-2"></div>
+        <div className="h-4 bg-gray-200 rounded w-24"></div>
+      </div>
+      <div className="h-6 bg-gray-200 rounded w-20"></div>
+    </div>
+    <div className="mb-4 space-y-2">
+      <div className="h-4 bg-gray-200 rounded w-48"></div>
+      <div className="h-4 bg-gray-200 rounded w-36"></div>
+    </div>
+    <div className="flex justify-between items-center">
+      <div className="h-8 bg-gray-200 rounded w-24"></div>
+      <div className="h-8 bg-gray-200 rounded w-28"></div>
+    </div>
+  </div>
+);
 
 const Orders = ({ token, setToken }) => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const navigate = useNavigate();
 
@@ -17,20 +39,23 @@ const Orders = ({ token, setToken }) => {
   const fetchOrders = async () => {
     try {
       setLoading(true);
+      setError(null);
       const response = await api.get('/api/orders');
       
       if (response.data.success) {
         setOrders(response.data.orders);
       } else {
-        toast.error(response.data.message || 'Failed to fetch orders');
+        throw new Error(response.data.message || 'Failed to fetch orders');
       }
-    } catch (error) {
-      console.error('Error fetching orders:', error);
-      if (error.response?.status === 401) {
+    } catch (err) {
+      console.error('Error fetching orders:', err);
+      const errorMessage = err.response?.data?.message || err.message || 'An unknown error occurred';
+      setError(errorMessage);
+      toast.error(errorMessage);
+      if (err.response?.status === 401 || err.response?.status === 403) {
         setToken('');
         navigate('/');
       }
-      toast.error(error.response?.data?.message || 'Failed to fetch orders');
     } finally {
       setLoading(false);
     }
@@ -55,18 +80,44 @@ const Orders = ({ token, setToken }) => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
-      </div>
-    );
-  }
+  const renderContent = () => {
+    if (loading) {
+      return (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <OrderSkeleton key={index} />
+          ))}
+        </div>
+      );
+    }
 
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold mb-6">Orders Management</h1>
-      
+    if (error) {
+      return (
+        <div className="text-center py-16 bg-red-50 text-red-700 rounded-lg">
+          <FiAlertTriangle className="mx-auto h-12 w-12" />
+          <h3 className="mt-4 text-lg font-medium">Failed to load orders</h3>
+          <p className="mt-2 text-sm">{error}</p>
+          <button
+            onClick={fetchOrders}
+            className="mt-6 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+          >
+            Try Again
+          </button>
+        </div>
+      );
+    }
+
+    if (orders.length === 0) {
+      return (
+        <div className="text-center py-16">
+            <FiPackage className="mx-auto h-12 w-12 text-gray-400" />
+            <h3 className="mt-4 text-lg font-medium">No orders found</h3>
+            <p className="mt-2 text-sm text-gray-500">When new orders are placed, they will appear here.</p>
+        </div>
+      );
+    }
+
+    return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {orders.map(order => (
           <div key={order._id} className="bg-white p-4 rounded-lg shadow">
