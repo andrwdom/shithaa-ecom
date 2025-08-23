@@ -113,9 +113,9 @@ export function BuyNowProvider({ children }: { children: ReactNode }) {
       // Store in checkout flow specific storage with unique key
       const buyNowData = {
         flow: {
-          mode: 'buy-now',
+          mode: 'buynow',
           items: [buyNowItem],
-          source: 'buy-now',
+          source: 'buynow',
           timestamp: Date.now(),
           sessionId: `buynow_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
         },
@@ -127,9 +127,9 @@ export function BuyNowProvider({ children }: { children: ReactNode }) {
       
       // Also store in flow-specific storage for immediate checkout access
       const flow: CheckoutFlow = {
-        mode: 'buy-now',
+        mode: 'buynow',
         items: [buyNowItem],
-        source: 'buy-now',
+        source: 'buynow',
         timestamp: Date.now(),
         sessionId: `buynow_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
       };

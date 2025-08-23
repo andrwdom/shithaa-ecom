@@ -71,9 +71,9 @@ export function CheckoutFlowProviderInner({ children }: { children: React.ReactN
     if (!flow || !items || items.length === 0) return true;
     
     // Ensure buy-now mode only has buy-now items and flow source
-    if (flow.mode === 'buy-now') {
+    if (flow.mode === 'buynow') {
       // Check if flow source is buy-now related
-      const isValidBuyNowSource = flow.source === 'buy-now' || 
+      const isValidBuyNowSource = flow.source === 'buynow' || 
                                  flow.source === 'context' || 
                                  flow.source === 'stored' || 
                                  flow.source === 'raw-storage';
