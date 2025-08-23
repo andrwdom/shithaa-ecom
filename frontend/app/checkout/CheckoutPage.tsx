@@ -376,11 +376,13 @@ export default function CheckoutPage() {
       
       console.log('[CheckoutPage] 📤 Sending payment data to backend:', paymentData);
       
-      const res = await authenticatedFetch(apiUrl, {
+      const res = await fetch(apiUrl, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
+        credentials: 'include',
         body: JSON.stringify(paymentData)
       });
       
@@ -392,6 +394,10 @@ export default function CheckoutPage() {
       }
 
       console.log('[CheckoutPage] ✅ Payment session created, redirecting to PhonePe...');
+      
+      // Store success/failure URLs in localStorage for redirection after payment
+      if (data.successUrl) localStorage.setItem('payment_success_url', data.successUrl);
+      if (data.failureUrl) localStorage.setItem('payment_failure_url', data.failureUrl);
       
       // 2. Redirect to PhonePe payment page
       window.location.href = data.redirectUrl;

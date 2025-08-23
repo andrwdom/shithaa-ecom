@@ -175,6 +175,29 @@ export const createPhonePeSession = async (req, res) => {
     const userEmail = checkoutSession.userEmail;
     console.log(`[${correlationId}] User email:`, userEmail);
     
+    // First validate stock availability
+    try {
+      const { validateStockForItems } = await import('../utils/stock.js');
+      const stockValidations = await validateStockForItems(checkoutSession.items);
+      
+      // Check if any items have insufficient stock
+      const stockIssues = stockValidations.filter(v => !v.available);
+      if (stockIssues.length > 0) {
+        const errorMessages = stockIssues.map(issue => issue.error).join(', ');
+        return res.status(400).json({
+          success: false,
+          message: `Some items are out of stock: ${errorMessages}`
+        });
+      }
+    } catch (error) {
+      console.error(`[${correlationId}] Stock validation failed:`, error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to validate stock availability',
+        error: error.message
+      });
+    }
+
     // Generate unique transaction ID and prepare data
     const phonepeTransactionId = randomUUID();
     const orderId = await getUniqueOrderId();
@@ -248,6 +271,17 @@ export const createPhonePeSession = async (req, res) => {
       if (!order || !paymentSession) {
         throw new Error('Failed to create order or payment session');
       }
+
+      // Reserve stock after successful session creation
+      const { batchChangeStock } = await import('../utils/stock.js');
+      const stockOperations = checkoutSession.items.map(item => ({
+        productId: item.productId,
+        size: item.size,
+        quantityChange: -item.quantity
+      }));
+      
+      await batchChangeStock(stockOperations);
+
     } catch (error) {
       console.error(`[${correlationId}] Database operations failed:`, error);
       return res.status(500).json({
@@ -483,10 +517,16 @@ export const phonePeCallback = async (req, res) => {
     await orderModel.findByIdAndUpdate(order._id, update);
     console.log('Order updated successfully:', order._id);
 
+    // Determine redirect URL based on payment status
+    const redirectUrl = isSuccess
+      ? `${process.env.FRONTEND_URL || 'https://shithaa.in'}/order-success?orderId=${order.orderId}`
+      : `${process.env.FRONTEND_URL || 'https://shithaa.in'}/payment-failed?orderId=${order.orderId}`;
+
     res.json({
       success: isSuccess,
       message: isSuccess ? 'Payment successful' : 'Payment failed',
-      orderId: order._id
+      orderId: order._id,
+      redirectUrl
     });
   } catch (error) {
     console.error('PhonePe Callback Error:', error);
