@@ -1,9 +1,8 @@
-import productModel from "../models/productModel.js"
+import productModel from '../models/productModel.js';
 import { successResponse, errorResponse, paginatedResponse } from '../utils/response.js'
 import path from "path";
 import fs from "fs";
 import imageOptimizer from '../utils/imageOptimizer.js';
-import Product from '../models/Product.js';
 import Category from '../models/Category.js';
 import { z } from 'zod';
 import { productSchema } from '../validation/product.schema.js';
@@ -179,12 +178,12 @@ const listProducts = async (req, res) => {
         const sortOptions = {};
         sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
 
-        const products = await Product.find(query)
+        const products = await productModel.find(query)
             .sort(sortOptions)
             .skip(skip)
             .limit(limit);
 
-        const total = await Product.countDocuments(query);
+        const total = await productModel.countDocuments(query);
         const pages = Math.ceil(total / limit);
 
         res.json({ success: true, products, total, pages });
