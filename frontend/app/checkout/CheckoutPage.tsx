@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import ShippingForm from './ShippingForm'
 import CouponInput from './CouponInput'
 import OrderSummary from './OrderSummary'
@@ -286,8 +286,13 @@ export default function CheckoutPage() {
 
   // We now create the checkout session in handlePhonePePayment when we have all the data
 
-  // PhonePe payment handler
-  async function handlePhonePePayment() {
+  // PhonePe payment handler with debounce
+  const handlePhonePePayment = useCallback(async () => {
+    if (processing) {
+      console.log('[CheckoutPage] ⚠️ Payment already in progress, skipping...');
+      return;
+    }
+
     console.log('[CheckoutPage] 🚀 Starting PhonePe payment process...');
     console.log('[CheckoutPage] 📊 Payment data:', {
       orderSummary,
@@ -376,13 +381,8 @@ export default function CheckoutPage() {
       
       console.log('[CheckoutPage] 📤 Sending payment data to backend:', paymentData);
       
-      const res = await fetch(apiUrl, {
+      const res = await authenticatedFetch(apiUrl, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        credentials: 'include',
         body: JSON.stringify(paymentData)
       });
       
@@ -403,13 +403,10 @@ export default function CheckoutPage() {
       window.location.href = data.redirectUrl;
     } catch (err: any) {
       console.error('[CheckoutPage] ❌ Payment error:', err);
-      
-      // Set the error message
       setPaymentError(err.message || 'Payment failed. Try again.');
       setProcessing(false);
     }
-  }
-
+  }, [processing, orderSummary, displayItems, displayMode, shipping, coupon, user?.mongoId, user?.email]);
   return (
     <PageLoading loadingMessage="Loading Checkout..." minLoadingTime={1500}>
       <div className="min-h-screen bg-gray-50 py-6 px-2 sm:px-4">
