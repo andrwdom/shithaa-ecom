@@ -69,7 +69,7 @@ export default function CheckoutPage() {
 
   // 🔑 FIXED: Ensure strict data separation based on checkout mode
   const displayItems = isBuyNowMode ? checkoutItems : cartItems;
-  const displayMode = isBuyNowMode ? 'buy-now' : 'cart';
+  const displayMode = isBuyNowMode ? 'buynow' : 'cart';
 
   // 🔑 FIXED: Recalculate orderSummary when displayItems change to prevent data contamination
   useEffect(() => {
