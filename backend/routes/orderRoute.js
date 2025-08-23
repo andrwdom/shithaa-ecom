@@ -6,7 +6,7 @@ import {
     getUserOrderCount,
     getOrderByTransactionId
 } from '../controllers/orderController.js';
-import { getAllOrders } from '../controllers/adminOrderController.js';
+import { getAllOrders, updateOrderStatus } from '../controllers/adminOrderController.js';
 import { 
     verifyToken, 
     optionalAuth 
@@ -34,5 +34,8 @@ orderRouter.get('/user/count', (req, res, next) => {
   }
   next();
 }, getUserOrderCount);
+
+// Admin route for updating order status
+orderRouter.post('/status', verifyToken, updateOrderStatus);
 
 export default orderRouter;
