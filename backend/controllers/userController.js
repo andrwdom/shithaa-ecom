@@ -260,24 +260,7 @@ const adminLogin = async (req, res) => {
             type: 'refresh'
         }, '7d');
 
-        // SECURITY: Set HttpOnly cookies for secure token storage
-        res.cookie('token', accessToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            maxAge: 24 * 60 * 60 * 1000, // 24 hours
-            path: '/'
-        });
-        
-        res.cookie('refresh_token', refreshToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-            path: '/'
-        });
-
-        // Return user data with token for admin panel compatibility
+        // For admin panel, we'll use token-based auth
         const userData = { ...adminUser.toObject() };
         delete userData.password;
 
@@ -285,7 +268,7 @@ const adminLogin = async (req, res) => {
             success: true, 
             data: { 
                 user: userData,
-                token: accessToken // Include token for admin panel
+                token: accessToken
             },
             message: 'Admin login successful'
         });

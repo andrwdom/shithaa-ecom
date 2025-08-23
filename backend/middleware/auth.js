@@ -6,14 +6,12 @@ const JWT_SECRET = config.jwt_secret;
 
 export const verifyToken = async (req, res, next) => {
   try {
-    // Check for token in HttpOnly cookies first (primary method)
-    let token = req.cookies?.token;
+    // For admin routes, check token header first
+    let token = req.headers.token;
     
-    // Fallback to Authorization header for backward compatibility
+    // For other routes, check cookies
     if (!token) {
-      const authHeader = req.headers.authorization;
-      const tokenHeader = req.headers.token;
-      token = req.headers.authorization?.split(' ')[1] || req.headers.token;
+      token = req.cookies?.token || req.headers.authorization?.split(' ')[1];
     }
 
     console.log('Auth middleware - Request authentication:', {
