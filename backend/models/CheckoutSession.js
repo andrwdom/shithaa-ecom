@@ -10,8 +10,12 @@ const checkoutSessionSchema = new mongoose.Schema({
   // Source of checkout (cart or buy-now)
   source: { 
     type: String, 
-    enum: ['cart', 'buynow'], 
-    required: true 
+    enum: ['cart', 'buynow', 'buy-now'], // Support both formats
+    required: true,
+    set: function(val) {
+      // Normalize to 'buynow' internally
+      return val === 'buy-now' ? 'buynow' : val;
+    }
   },
   
   // User information
