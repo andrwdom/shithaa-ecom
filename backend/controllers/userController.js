@@ -260,7 +260,17 @@ const adminLogin = async (req, res) => {
             type: 'refresh'
         }, '7d');
 
-        // For admin panel, we'll use token-based auth
+        // SECURITY: Set HttpOnly cookies for secure token storage, making it available for all requests from the admin origin.
+        res.cookie('token', accessToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax', // Use 'lax' or 'none' with secure flag if on different domains
+            domain: process.env.NODE_ENV === 'production' ? '.shithaa.in' : undefined, // Allow subdomains
+            maxAge: 24 * 60 * 60 * 1000, // 24 hours
+            path: '/'
+        });
+
+        // For admin panel, we'll also return the token in the body for immediate use
         const userData = { ...adminUser.toObject() };
         delete userData.password;
 
