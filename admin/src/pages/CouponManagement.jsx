@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
-import { backendUrl } from '../App';
+import { backendUrl } from '../config';
 
 const CouponManagement = ({ token }) => {
   const [coupons, setCoupons] = useState([]);

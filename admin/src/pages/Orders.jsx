@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import api from '../utils/api';
-import { backendUrl } from '../App';
+import { backendUrl } from '../config';
 
 const Orders = ({ token, setToken }) => {
   const [orders, setOrders] = useState([]);
@@ -109,11 +109,11 @@ const Orders = ({ token, setToken }) => {
                 <option value="Delivered">Delivered</option>
                 <option value="Cancelled">Cancelled</option>
               </select>
-            </div>
-          </div>
-        ))}
-      </div>
-
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                
       {selectedOrder && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg max-w-2xl w-full p-6">
@@ -126,7 +126,7 @@ const Orders = ({ token, setToken }) => {
                 Close
               </button>
             </div>
-            
+
             <div className="space-y-4">
               <div>
                 <h3 className="font-semibold">Order Information</h3>
@@ -143,7 +143,7 @@ const Orders = ({ token, setToken }) => {
                 <p>Phone: {selectedOrder.phone}</p>
               </div>
 
-              <div>
+                  <div>
                 <h3 className="font-semibold">Items</h3>
                 {selectedOrder.items?.map((item, index) => (
                   <div key={index} className="flex justify-between items-center py-2">

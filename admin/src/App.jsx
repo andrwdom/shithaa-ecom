@@ -12,9 +12,7 @@ import { Toaster } from 'react-hot-toast'
 import 'react-toastify/dist/ReactToastify.css'
 import CarouselManagement from './pages/CarouselManagement'
 import ShippingRules from './pages/ShippingRules'
-
-export const backendUrl = import.meta.env.VITE_API_URL || 'https://shithaa.in'
-export const currency = '₹'
+import { backendUrl, currency } from './config';
 
 const App = () => {
   const [token, setToken] = useState(localStorage.getItem('token') || '')

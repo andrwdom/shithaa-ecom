@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import axios from 'axios'
-import { backendUrl, currency } from '../App'
+import { backendUrl, currency } from '../config'
 import { toast } from 'react-toastify'
 import EditProduct from './EditProduct'
-import { 
+import {
   FiSearch, 
   FiFilter, 
   FiEdit, 
@@ -83,7 +83,7 @@ const List = ({ token }) => {
   }
 
   return (
-    <div>
+        <div>
       <h1>Products</h1>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {products.map(product => (
@@ -91,22 +91,22 @@ const List = ({ token }) => {
             <h3>{product.name}</h3>
             <p>{currency}{product.price}</p>
             <div className="mt-4 flex gap-2">
-              <button 
+              <button
                 onClick={() => setEditingProduct(product)}
                 className="bg-blue-500 text-white px-2 py-1 rounded"
               >
                 Edit
               </button>
-              <button 
+    <button
                 onClick={() => handleDeleteProduct(product._id)}
                 className="bg-red-500 text-white px-2 py-1 rounded"
-              >
+                    >
                 Delete
-              </button>
+    </button>
             </div>
-          </div>
+            </div>
         ))}
-      </div>
+                  </div>
 
       {editingProduct && (
         <EditProduct

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { backendUrl } from '../App';
+import { backendUrl } from '../config';
 
 // Create an axios instance with default config
 const api = axios.create({

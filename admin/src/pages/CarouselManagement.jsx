@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
-import { backendUrl } from '../App';
+import { backendUrl } from '../config';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 
 const CarouselManagement = ({ token }) => {

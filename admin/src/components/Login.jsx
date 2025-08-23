@@ -2,7 +2,7 @@ import axios from 'axios'
 import React, { useState } from 'react'
 import { toast } from 'react-toastify'
 import { assets } from '../assets/assets'
-import { backendUrl } from '../App'
+import { backendUrl } from '../config'
 
 const Login = ({setToken}) => {
     const [email, setEmail] = useState('')
