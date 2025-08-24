@@ -17,7 +17,7 @@ export default function PhonePeDebugPage() {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/payment/phonepe/verify/${transactionId}`)
       const data = await res.json()
       setResult(data)
-    } catch (error) {
+    } catch (error: any) {
       setResult({ error: error.message })
     }
     setLoading(false)
@@ -31,7 +31,7 @@ export default function PhonePeDebugPage() {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/payment/phonepe/debug/${transactionId}`)
       const data = await res.json()
       setResult(data)
-    } catch (error) {
+    } catch (error: any) {
       setResult({ error: error.message })
     }
     setLoading(false)
@@ -45,7 +45,7 @@ export default function PhonePeDebugPage() {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/orders/phonepe/${transactionId}`)
       const data = await res.json()
       setResult(data)
-    } catch (error) {
+    } catch (error: any) {
       setResult({ error: error.message })
     }
     setLoading(false)
@@ -61,7 +61,7 @@ export default function PhonePeDebugPage() {
       })
       const data = await res.json()
       setResult(data)
-    } catch (error) {
+    } catch (error: any) {
       setResult({ error: error.message })
     }
     setLoading(false)
@@ -77,7 +77,7 @@ export default function PhonePeDebugPage() {
       })
       const data = await res.json()
       setResult(data)
-    } catch (error) {
+    } catch (error: any) {
       setResult({ error: error.message })
     }
     setLoading(false)

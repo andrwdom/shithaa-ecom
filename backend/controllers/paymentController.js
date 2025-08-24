@@ -843,8 +843,9 @@ export const getOrderByTransactionId = async (req, res) => {
       return errorResponse(res, 404, 'Order not found for this transaction');
     }
 
-    // Return the full order object, which includes the `orderId` field
-    return successResponse(res, { order });
+    // 🔑 FIX: Return the order data in the same format as the other order endpoints (`data` property)
+    // This ensures consistency for the frontend.
+    return successResponse(res, { data: order });
 
   } catch (error) {
     console.error(`[${correlationId}] Error getting order by transaction ID:`, error);

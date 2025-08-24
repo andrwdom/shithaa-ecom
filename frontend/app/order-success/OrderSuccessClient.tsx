@@ -49,8 +49,9 @@ function OrderSuccessContent() {
         const responseData = await orderRes.json();
         
         if (orderRes.ok && responseData.success) {
-          // The data structure is slightly different for each endpoint
-          const orderDetails = responseData.data || responseData.order;
+          // 🔑 FIX: Consistently use `responseData.data` to get the order details,
+          // matching the updated backend response format.
+          const orderDetails = responseData.data;
           if (orderDetails) {
             setOrder(orderDetails);
           } else {

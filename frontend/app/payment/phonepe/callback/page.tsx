@@ -20,6 +20,116 @@ function PhonePeCallbackInner() {
     let interval: NodeJS.Timeout | null = null;
     let stopped = false;
     
+    // Function to check payment status for a specific transaction
+    async function checkPaymentStatusForTransaction(transactionId: string, storedOrderData: any) {
+      try {
+        console.log('Checking payment status for:', transactionId)
+        
+        // REMOVED ORDER LOOKUP - Only verify payment directly
+        // Try to verify payment with PhonePe - ENHANCED WITH WEBHOOK AWARENESS
+        console.log('Attempting PhonePe payment verification...')
+        
+        // First, wait a bit for webhook to potentially update the status
+        if (tries === 0) {
+          console.log('First verification attempt - waiting for webhook...')
+          await new Promise(resolve => setTimeout(resolve, 2000)) // Wait 2 seconds for webhook
+        }
+        
+        const verifyRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/payment/phonepe/verify/${transactionId}`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        })
+        
+        console.log('PhonePe verification response status:', verifyRes.status)
+        
+        if (verifyRes.ok) {
+          const verifyData = await verifyRes.json()
+          console.log('PhonePe verification response:', verifyData)
+          
+          if (verifyData.success && verifyData.data) {
+            const paymentData = verifyData.data
+            console.log('Payment data from PhonePe:', paymentData)
+            
+            // Check payment status - ENHANCED LOGIC
+            const isSuccess = (
+              paymentData.code === 'PAYMENT_SUCCESS' ||
+              paymentData.code === 'SUCCESS' ||
+              paymentData.status === 'SUCCESS' ||
+              paymentData.paymentState === 'COMPLETED' ||
+              paymentData.state === 'COMPLETED'
+            )
+            
+            const isPending = (
+              paymentData.code === 'PAYMENT_PENDING' ||
+              paymentData.status === 'PENDING' ||
+              paymentData.paymentState === 'PENDING' ||
+              paymentData.state === 'PENDING'
+            )
+           
+            if (isSuccess) {
+              // 🔑 SIMPLIFIED LOGIC:
+              // 1. Stop polling immediately.
+              // 2. Set status to success to show a confirmation message.
+              // 3. Redirect to the order success page with the transactionId.
+              // The success page will be responsible for fetching the final order details.
+              // This is more robust and avoids the race condition that caused the previous error.
+              if (interval) clearInterval(interval);
+              stopped = true;
+              setStatus('success');
+              setMessage('Payment successful! Redirecting to your order summary...');
+              
+              // Redirect to the success page, which will handle fetching the order.
+              setTimeout(() => {
+                router.push(`/order-success?transactionId=${transactionId}`);
+              }, 1500); // Wait 1.5 seconds before redirecting
+              
+              return; // Stop further processing
+
+            } else if (isPending) {
+              setStatus('pending')
+              setMessage('Processing your payment, please wait...')
+            } else {
+              // Payment failed - redirect to PaymentFailed page
+              console.log('Payment failed, redirecting to PaymentFailed page')
+              const failureReason = paymentData.message || 'Payment was not completed'
+              const failureAmount = paymentData.amount || null
+              
+              redirectToPaymentFailed(transactionId, failureReason, failureAmount, storedOrderData)
+              return
+            }
+          } else {
+            console.error('PhonePe verification failed:', verifyData)
+            // Payment verification failed - redirect to PaymentFailed page
+            console.log('Payment verification failed, redirecting to PaymentFailed page')
+            
+            // Enhanced error logging
+            console.log('🔍 VERIFICATION FAILURE DETAILS:', {
+              success: verifyData.success,
+              message: verifyData.message,
+              data: verifyData.data,
+              fullResponse: verifyData,
+              transactionId: transactionId
+            })
+            
+            redirectToPaymentFailed(transactionId, verifyData.message || 'Payment verification failed', null, storedOrderData)
+            return
+          }
+        } else {
+          console.error('PhonePe verification request failed with status:', verifyRes.status)
+          // Payment verification request failed - redirect to PaymentFailed page
+          console.log('Payment verification request failed, redirecting to PaymentFailed page')
+          redirectToPaymentFailed(transactionId, `Payment verification failed (HTTP ${verifyRes.status})`, null, storedOrderData)
+          return
+        }
+      } catch (error) {
+        console.error('Payment verification error:', error)
+        // Payment verification error - redirect to PaymentFailed page
+        console.log('Payment verification error, redirecting to PaymentFailed page')
+        redirectToPaymentFailed(transactionId, 'Payment processing error occurred', null, storedOrderData)
+        return
+      }
+    }
+    
     // Get all URL parameters for debugging
     const urlParams = new URLSearchParams(window.location.search)
     const allParams = Object.fromEntries(urlParams.entries())
@@ -90,116 +200,6 @@ function PhonePeCallbackInner() {
     
     return () => { if (interval) clearInterval(interval) }
   }, [router, tries])
-
-  // Function to check payment status for a specific transaction
-  async function checkPaymentStatusForTransaction(transactionId: string, storedOrderData: any) {
-    try {
-      console.log('Checking payment status for:', transactionId)
-      
-      // REMOVED ORDER LOOKUP - Only verify payment directly
-      // Try to verify payment with PhonePe - ENHANCED WITH WEBHOOK AWARENESS
-      console.log('Attempting PhonePe payment verification...')
-      
-      // First, wait a bit for webhook to potentially update the status
-      if (tries === 0) {
-        console.log('First verification attempt - waiting for webhook...')
-        await new Promise(resolve => setTimeout(resolve, 2000)) // Wait 2 seconds for webhook
-      }
-      
-      const verifyRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/payment/phonepe/verify/${transactionId}`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
-      })
-      
-      console.log('PhonePe verification response status:', verifyRes.status)
-      
-      if (verifyRes.ok) {
-        const verifyData = await verifyRes.json()
-        console.log('PhonePe verification response:', verifyData)
-        
-        if (verifyData.success && verifyData.data) {
-          const paymentData = verifyData.data
-          console.log('Payment data from PhonePe:', paymentData)
-          
-          // Check payment status - ENHANCED LOGIC
-          const isSuccess = (
-            paymentData.code === 'PAYMENT_SUCCESS' ||
-            paymentData.code === 'SUCCESS' ||
-            paymentData.status === 'SUCCESS' ||
-            paymentData.paymentState === 'COMPLETED' ||
-            paymentData.state === 'COMPLETED'
-          )
-          
-          const isPending = (
-            paymentData.code === 'PAYMENT_PENDING' ||
-            paymentData.status === 'PENDING' ||
-            paymentData.paymentState === 'PENDING' ||
-            paymentData.state === 'PENDING'
-          )
-         
-          if (isSuccess) {
-            // 🔑 SIMPLIFIED LOGIC:
-            // 1. Stop polling immediately.
-            // 2. Set status to success to show a confirmation message.
-            // 3. Redirect to the order success page with the transactionId.
-            // The success page will be responsible for fetching the final order details.
-            // This is more robust and avoids the race condition that caused the previous error.
-            if (interval) clearInterval(interval);
-            stopped = true;
-            setStatus('success');
-            setMessage('Payment successful! Redirecting to your order summary...');
-            
-            // Redirect to the success page, which will handle fetching the order.
-            setTimeout(() => {
-              router.push(`/order-success?transactionId=${transactionId}`);
-            }, 1500); // Wait 1.5 seconds before redirecting
-            
-            return; // Stop further processing
-
-          } else if (isPending) {
-            setStatus('pending')
-            setMessage('Processing your payment, please wait...')
-          } else {
-            // Payment failed - redirect to PaymentFailed page
-            console.log('Payment failed, redirecting to PaymentFailed page')
-            const failureReason = paymentData.message || 'Payment was not completed'
-            const failureAmount = paymentData.amount || null
-            
-            redirectToPaymentFailed(transactionId, failureReason, failureAmount, storedOrderData)
-            return
-          }
-        } else {
-          console.error('PhonePe verification failed:', verifyData)
-          // Payment verification failed - redirect to PaymentFailed page
-          console.log('Payment verification failed, redirecting to PaymentFailed page')
-          
-          // Enhanced error logging
-          console.log('🔍 VERIFICATION FAILURE DETAILS:', {
-            success: verifyData.success,
-            message: verifyData.message,
-            data: verifyData.data,
-            fullResponse: verifyData,
-            transactionId: transactionId
-          })
-          
-          redirectToPaymentFailed(transactionId, verifyData.message || 'Payment verification failed', null, storedOrderData)
-          return
-        }
-      } else {
-        console.error('PhonePe verification request failed with status:', verifyRes.status)
-        // Payment verification request failed - redirect to PaymentFailed page
-        console.log('Payment verification request failed, redirecting to PaymentFailed page')
-        redirectToPaymentFailed(transactionId, `Payment verification failed (HTTP ${verifyRes.status})`, null, storedOrderData)
-        return
-      }
-    } catch (error) {
-      console.error('Payment verification error:', error)
-      // Payment verification error - redirect to PaymentFailed page
-      console.log('Payment verification error, redirecting to PaymentFailed page')
-      redirectToPaymentFailed(transactionId, 'Payment processing error occurred', null, storedOrderData)
-      return
-    }
-  }
 
   // Function to reconstruct order data from available sources
   function reconstructOrderData() {
