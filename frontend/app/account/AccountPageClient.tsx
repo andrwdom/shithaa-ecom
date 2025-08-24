@@ -149,9 +149,14 @@ export default function AccountPageClient() {
           
           if (res.ok && data.orders) {
             console.log("Orders found:", data.orders.length)
+            // Filter out awaiting_payment orders
+            const confirmedOrders = data.orders.filter((order: any) => {
+              const status = order.paymentStatus || order.status || order.orderStatus;
+              return status !== 'awaiting_payment' && status !== 'Awaiting Payment';
+            });
             // Robust date sorting: prefer createdAt, then date, then orderDate, then updatedAt
             const getOrderDate = (order: any) => order.createdAt || order.date || order.orderDate || order.updatedAt || 0;
-            const sortedOrders = data.orders.slice().sort((a: any, b: any) => new Date(getOrderDate(b)).getTime() - new Date(getOrderDate(a)).getTime());
+            const sortedOrders = confirmedOrders.slice().sort((a: any, b: any) => new Date(getOrderDate(b)).getTime() - new Date(getOrderDate(a)).getTime());
             setOrders(sortedOrders);
             // Calculate unique payment methods
             const methods = new Set(sortedOrders.map((o: any) => o.paymentMethod && o.paymentMethod.toLowerCase()))

@@ -65,7 +65,8 @@ const DashboardSummary = ({ orders }) => {
   
   const pendingOrders = orders.filter(order => {
     const status = order.orderStatus || order.status || order.paymentStatus;
-    return status === 'Pending';
+    // Only count Pending orders that are not awaiting payment
+    return status === 'Pending' && status !== 'awaiting_payment' && status !== 'Awaiting Payment';
   }).length;
   
   const processingOrders = orders.filter(order => {
@@ -1163,7 +1164,14 @@ const Orders = ({ token, setToken }) => {
   };
 
   // Enhanced search filter
+  // First filter out awaiting_payment orders
   let filteredOrders = orders.filter(order => {
+    const status = order.paymentStatus || order.status || order.orderStatus;
+    return status !== 'awaiting_payment' && status !== 'Awaiting Payment';
+  });
+
+  // Then apply search filters
+  filteredOrders = filteredOrders.filter(order => {
     // Search logic
     let matchesSearch = true;
     if (search) {
