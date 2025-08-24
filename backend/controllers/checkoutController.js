@@ -118,49 +118,10 @@ export const createCheckoutSession = async (req, res) => {
     // Save session first to get the ID
     await checkoutSession.save();
     
-    // 🔑 CRITICAL FIX: Reserve stock immediately and mark session as ready
-    console.log(`[${correlationId}] Reserving stock for new session...`);
-    const stockOperations = [];
-    
-    for (const item of validatedItems) {
-      try {
-        await reserveStock(item.productId, item.size, item.quantity);
-        stockOperations.push({
-          productId: item.productId,
-          size: item.size,
-          quantity: item.quantity,
-          success: true
-        });
-      } catch (error) {
-        stockOperations.push({
-          productId: item.productId,
-          size: item.size,
-          quantity: item.quantity,
-          success: false,
-          error: error.message
-        });
-      }
-    }
-
-    // Check if all stock operations succeeded
-    const failedOperations = stockOperations.filter(op => !op.success);
-    if (failedOperations.length > 0) {
-      // Release any successfully reserved stock
-      for (const op of stockOperations) {
-        if (op.success) {
-          try {
-            await releaseStock(op.productId, op.size, op.quantity);
-          } catch (releaseError) {
-            console.error(`[${correlationId}] Failed to release stock:`, releaseError);
-          }
-        }
-      }
-      
-      return errorResponse(res, 409, 'Stock reservation failed for some items', { failedOperations });
-    }
-
-    // Mark session as ready for payment
-    checkoutSession.stockReserved = true;
+    // 🔑 CRITICAL FIX: Stock reservation has been REMOVED from this controller.
+    // Stock is now exclusively handled in the payment controller to prevent double-deduction.
+    // The session is marked as awaiting_payment immediately.
+    checkoutSession.stockReserved = false; // Explicitly set to false
     checkoutSession.status = 'awaiting_payment';
     await checkoutSession.save();
     
