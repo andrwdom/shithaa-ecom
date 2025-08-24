@@ -52,7 +52,7 @@ function OrderSuccessContent() {
           sessionStorage.removeItem(key);
           localStorage.removeItem(key);
           break;
-        } catch (e) {
+      } catch (e) {
           console.error(`Failed to parse order details from ${key}:`, e);
         }
       }

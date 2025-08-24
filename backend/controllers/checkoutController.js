@@ -88,34 +88,8 @@ export const createCheckoutSession = async (req, res) => {
       });
     }
     
-    // Calculate shipping cost
-    let shippingCost = 0;
-    if (req.body.shipping) {
-      // Get shipping cost from the shipping API endpoint
-      const shippingResponse = await fetch(`${process.env.BACKEND_URL || 'http://localhost:5000'}/api/shipping/calculate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          items: validatedItems,
-          shippingInfo: req.body.shipping
-        })
-      }).then(res => res.json());
-
-      if (shippingResponse.success) {
-        shippingCost = shippingResponse.data.shippingCost || 0;
-        console.log('🔍 DEBUG - Shipping calculation in checkout:', {
-          subtotal,
-          shippingCost,
-          shipping: req.body.shipping,
-          response: shippingResponse
-        });
-      }
-    }
-
-    // Calculate final total with shipping
-    const total = subtotal + shippingCost;
+    // Calculate totals (simplified for now, can be enhanced with shipping/coupons)
+    const total = subtotal;
     
     // Generate session ID
     const sessionId = randomUUID();
@@ -129,7 +103,6 @@ export const createCheckoutSession = async (req, res) => {
       guestToken: !userId ? randomUUID() : undefined,
       items: validatedItems,
       subtotal,
-      shippingCost,
       total,
       currency: 'INR',
       status: 'pending',
@@ -160,7 +133,6 @@ export const createCheckoutSession = async (req, res) => {
       source,
       items: validatedItems,
       subtotal,
-      shippingCost,
       total,
       currency: 'INR',
       expiresAt: checkoutSession.expiresAt,

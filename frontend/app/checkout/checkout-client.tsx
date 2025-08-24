@@ -650,18 +650,7 @@ export default function CheckoutClient() {
           size: item.size,
           quantity: item.quantity
         })),
-        email: form.email || user.email,
-        shipping: {
-          fullName: `${form.firstName} ${form.lastName}`,
-          email: form.email || user.email,
-          phone: form.phone,
-          addressLine1: form.address1 || "",
-          addressLine2: form.address2 || "",
-          city: form.city,
-          state: form.state,
-          postalCode: form.pincode || "",
-          country: form.country || "India"
-        }
+        email: form.email || user.email
       };
 
       console.log('🔍 DEBUG: Source value being sent:', sourceValue);
