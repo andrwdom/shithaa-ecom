@@ -60,7 +60,19 @@ export const calculateShipping = async (req, res) => {
 
         // Normalize state name by removing spaces and converting to lowercase
         const normalizedState = shippingInfo.state.trim().toLowerCase().replace(/\s+/g, '');
-        const isTamilNadu = ['tamilnadu', 'tamil nadu'].includes(normalizedState);
+        console.log('🔍 DEBUG - Shipping calculation:', {
+            original: shippingInfo.state,
+            normalized: normalizedState,
+            validOptions: ['tamilnadu', 'tamil nadu', 'tamilnaadu'],
+            matches: ['tamilnadu', 'tamil nadu', 'tamilnaadu'].includes(normalizedState),
+            items: items.map(item => ({
+                name: item.name,
+                quantity: item.quantity,
+                size: item.size
+            })),
+            shippingInfo
+        });
+        const isTamilNadu = ['tamilnadu', 'tamil nadu', 'tamilnaadu'].includes(normalizedState);
         
         // Helper function to identify free shipping categories in Tamil Nadu
         const isFreeShippingCategory = (category, categorySlug) => {
