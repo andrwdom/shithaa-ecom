@@ -11,21 +11,12 @@ router.post('/add', verifyToken, wishlistController.addToWishlist);
 router.delete('/remove/:productId', verifyToken, wishlistController.removeFromWishlist);
 
 // Get user's wishlist
-router.get('/', (req, res, next) => {
-  // Allow without auth for now - return empty wishlist for unauthenticated users
-  if (!req.user) {
-    return res.json({ success: true, items: [] });
-  }
-  next();
-}, wishlistController.getWishlist);
+// 🔑 FIX: Replaced custom middleware with standard `verifyToken` to ensure `req.user` is always populated correctly.
+// The frontend already prevents this call for logged-out users.
+router.get('/', verifyToken, wishlistController.getWishlist);
 
 // Get wishlist count
-router.get('/count', (req, res, next) => {
-  // Allow without auth for now - return 0 for unauthenticated users
-  if (!req.user) {
-    return res.json({ success: true, count: 0 });
-  }
-  next();
-}, wishlistController.getWishlistCount);
+// 🔑 FIX: Replaced custom middleware with standard `verifyToken` for consistency and correctness.
+router.get('/count', verifyToken, wishlistController.getWishlistCount);
 
 export default router; 

@@ -17,15 +17,16 @@ function OrderSuccessContent() {
   const params = useSearchParams();
   const router = useRouter();
   const orderId = params.get("orderId");
+  const transactionId = params.get("transactionId"); // 🔑 ADDED: Get transactionId from URL
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [checkoutSummary, setCheckoutSummary] = useState<any>(null);
 
   useEffect(() => {
-    // If no orderId is provided, show error
-    if (!orderId) {
-      setError("No order ID provided. Please check your order confirmation email or contact support.");
+    // If no ID is provided, show error
+    if (!orderId && !transactionId) {
+      setError("No order or transaction ID provided. Please check your order confirmation email or contact support.");
       setLoading(false);
       return;
     }
@@ -35,29 +36,38 @@ function OrderSuccessContent() {
         setLoading(true);
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
         
-        // 🔑 FIX: Fetch order details using the correct, newly created endpoint for public order IDs.
-        const orderRes = await authenticatedFetch(`${apiUrl}/api/orders/by-orderid/${orderId}`);
-        const orderData = await orderRes.json();
-        
-        if (orderRes.ok && orderData.success) {
-          setOrder(orderData.data);
-        } else {
-          setError(orderData.message || 'Failed to fetch order details');
-          return;
+        let endpoint = '';
+        if (orderId) {
+          // Use the existing endpoint for public order IDs
+          endpoint = `${apiUrl}/api/orders/by-orderid/${orderId}`;
+        } else if (transactionId) {
+          // Use the new endpoint for fetching by transaction ID
+          endpoint = `${apiUrl}/api/payment/order/${transactionId}`;
         }
+
+        const orderRes = await authenticatedFetch(endpoint);
+        const responseData = await orderRes.json();
         
-        // 🔑 REMOVED: Fetching checkout session summary is redundant.
-        // The required data is already in the order object.
-        
+        if (orderRes.ok && responseData.success) {
+          // The data structure is slightly different for each endpoint
+          const orderDetails = responseData.data || responseData.order;
+          if (orderDetails) {
+            setOrder(orderDetails);
+          } else {
+            throw new Error("Order data not found in API response.");
+          }
+        } else {
+          setError(responseData.message || 'Failed to fetch order details');
+        }
       } catch (error: any) {
-        setError(error.message || 'Failed to fetch order details');
+        setError(error.message || 'An unknown error occurred while fetching order details');
       } finally {
         setLoading(false);
       }
     };
 
     fetchOrderDetails();
-  }, [orderId, router]);
+  }, [orderId, transactionId, router]);
 
   if (loading) {
     return (
@@ -67,12 +77,13 @@ function OrderSuccessContent() {
       </div>
     );
   }
-  if (error) {
+  if (!order) {
+    // This can happen if the fetch completes but the order is still null (e.g., API error)
     return (
       <div className="max-w-xl mx-auto p-8 text-center">
         <div className="text-4xl text-red-500 mb-4">❌</div>
         <h1 className="text-2xl font-bold mb-4">Order Not Found</h1>
-        <p className="mb-6 text-gray-600">{error}</p>
+        <p className="mb-6 text-gray-600">{error || "The order details could not be loaded."}</p>
         <a href="/" className="btn btn-primary">Back to Home</a>
       </div>
     );

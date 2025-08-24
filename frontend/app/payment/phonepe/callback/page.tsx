@@ -138,49 +138,24 @@ function PhonePeCallbackInner() {
           )
          
           if (isSuccess) {
+            // 🔑 SIMPLIFIED LOGIC:
+            // 1. Stop polling immediately.
+            // 2. Set status to success to show a confirmation message.
+            // 3. Redirect to the order success page with the transactionId.
+            // The success page will be responsible for fetching the final order details.
+            // This is more robust and avoids the race condition that caused the previous error.
+            if (interval) clearInterval(interval);
+            stopped = true;
             setStatus('success');
-            setMessage('Payment verified! Fetching your order details...');
+            setMessage('Payment successful! Redirecting to your order summary...');
+            
+            // Redirect to the success page, which will handle fetching the order.
+            setTimeout(() => {
+              router.push(`/order-success?transactionId=${transactionId}`);
+            }, 1500); // Wait 1.5 seconds before redirecting
+            
+            return; // Stop further processing
 
-            // Directly fetch order details from backend using transactionId
-            // This removes the dependency on localStorage which is causing the failure
-            try {
-              console.log(`Fetching order details for transactionId: ${transactionId}`);
-              // 🔑 FIX: Use the new, correct, and secure endpoint.
-              const orderRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/payment/order/${transactionId}`, {
-                method: 'GET',
-                credentials: 'include',
-                headers: {
-                  'Content-Type': 'application/json'
-                }
-              });
-
-              if (orderRes.ok) {
-                const orderData = await orderRes.json();
-                if (orderData.success && orderData.order) {
-                  console.log('Successfully fetched order:', orderData.order);
-                  setMessage('Payment successful! Redirecting...');
-                  setOrderId(orderData.order.orderId); // Use the public order ID
-
-                  // Clear temporary data now that we have the final order
-                  clearTemporaryOrderData();
-
-                  // Redirect to the success page
-                  router.push(`/order-success?orderId=${orderData.order.orderId}`);
-                  return; // Stop further execution
-                } else {
-                  // API call was fine, but backend couldn't find the order
-                  throw new Error(orderData.message || 'Order not found on server for this transaction.');
-                }
-              } else {
-                // API call itself failed
-                throw new Error(`Failed to fetch order details (HTTP ${orderRes.status})`);
-              }
-            } catch (error) {
-              console.error('❌ Failed to retrieve order after successful payment:', error);
-              // Redirect to failure page with a specific error message
-              redirectToPaymentFailed(transactionId, (error as Error).message, null, null);
-              return;
-            }
           } else if (isPending) {
             setStatus('pending')
             setMessage('Processing your payment, please wait...')
