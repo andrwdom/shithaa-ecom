@@ -88,8 +88,32 @@ export const createCheckoutSession = async (req, res) => {
       });
     }
     
-    // Calculate totals (simplified for now, can be enhanced with shipping/coupons)
-    const total = subtotal;
+    // Calculate shipping cost
+    let shippingCost = 0;
+    if (req.body.shipping) {
+      const { calculateShipping } = await import('./shippingController.js');
+      const shippingResponse = await calculateShipping({
+        body: {
+          items: validatedItems,
+          shippingInfo: req.body.shipping
+        }
+      }, {
+        json: (data) => data
+      });
+
+      if (shippingResponse.success) {
+        shippingCost = shippingResponse.data.shippingCost || 0;
+        console.log('🔍 DEBUG - Shipping calculation in checkout:', {
+          subtotal,
+          shippingCost,
+          shipping: req.body.shipping,
+          response: shippingResponse
+        });
+      }
+    }
+
+    // Calculate final total with shipping
+    const total = subtotal + shippingCost;
     
     // Generate session ID
     const sessionId = randomUUID();
@@ -103,6 +127,7 @@ export const createCheckoutSession = async (req, res) => {
       guestToken: !userId ? randomUUID() : undefined,
       items: validatedItems,
       subtotal,
+      shippingCost,
       total,
       currency: 'INR',
       status: 'pending',
@@ -133,6 +158,7 @@ export const createCheckoutSession = async (req, res) => {
       source,
       items: validatedItems,
       subtotal,
+      shippingCost,
       total,
       currency: 'INR',
       expiresAt: checkoutSession.expiresAt,
