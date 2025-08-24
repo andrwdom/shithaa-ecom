@@ -91,15 +91,17 @@ export const createCheckoutSession = async (req, res) => {
     // Calculate shipping cost
     let shippingCost = 0;
     if (req.body.shipping) {
-      const { calculateShipping } = await import('./shippingController.js');
-      const shippingResponse = await calculateShipping({
-        body: {
+      // Get shipping cost from the shipping API endpoint
+      const shippingResponse = await fetch(`${process.env.BACKEND_URL || 'http://localhost:5000'}/api/shipping/calculate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
           items: validatedItems,
           shippingInfo: req.body.shipping
-        }
-      }, {
-        json: (data) => data
-      });
+        })
+      }).then(res => res.json());
 
       if (shippingResponse.success) {
         shippingCost = shippingResponse.data.shippingCost || 0;
