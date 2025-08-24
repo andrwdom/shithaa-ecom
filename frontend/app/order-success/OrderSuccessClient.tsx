@@ -32,39 +32,57 @@ function OrderSuccessContent() {
     }
 
     const fetchOrderDetails = async () => {
-      try {
-        setLoading(true);
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-        
-        let endpoint = '';
-        if (orderId) {
-          // Use the existing endpoint for public order IDs
-          endpoint = `${apiUrl}/api/orders/by-orderid/${orderId}`;
-        } else if (transactionId) {
-          // Use the new endpoint for fetching by transaction ID
-          endpoint = `${apiUrl}/api/payment/order/${transactionId}`;
-        }
-
-        const orderRes = await authenticatedFetch(endpoint);
-        const responseData = await orderRes.json();
-        
-        if (orderRes.ok && responseData.success) {
-          // 🔑 FIX: Consistently use `responseData.data` to get the order details,
-          // matching the updated backend response format.
-          const orderDetails = responseData.data;
-          if (orderDetails) {
-            setOrder(orderDetails);
-          } else {
-            throw new Error("Order data not found in API response.");
-          }
-        } else {
-          setError(responseData.message || 'Failed to fetch order details');
-        }
-      } catch (error: any) {
-        setError(error.message || 'An unknown error occurred while fetching order details');
-      } finally {
-        setLoading(false);
+      setLoading(true);
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+      
+      let endpoint = '';
+      if (orderId) {
+        endpoint = `${apiUrl}/api/orders/by-orderid/${orderId}`;
+      } else if (transactionId) {
+        endpoint = `${apiUrl}/api/payment/order/${transactionId}`;
       }
+
+      // 🔑 FIX: Implement a retry mechanism to handle database update delays (race condition)
+      for (let attempt = 1; attempt <= 5; attempt++) {
+        try {
+          console.log(`Fetching order details, attempt #${attempt}`);
+          const orderRes = await authenticatedFetch(endpoint);
+          const responseData = await orderRes.json();
+          
+          if (orderRes.ok && responseData.success) {
+            const orderDetails = responseData.data;
+            if (orderDetails) {
+              // Check if the order status is final (paid or failed)
+              if (orderDetails.paymentStatus === 'paid' || orderDetails.paymentStatus === 'failed') {
+                setOrder(orderDetails);
+                setLoading(false);
+                return; // Success, exit the loop
+              }
+              // If status is still pending, wait and retry
+              console.log(`Order status is '${orderDetails.paymentStatus}', retrying...`);
+            } else {
+              throw new Error("Order data not found in API response.");
+            }
+          } else {
+            setError(responseData.message || 'Failed to fetch order details');
+            setLoading(false);
+            return;
+          }
+        } catch (error: any) {
+          setError(error.message || 'An unknown error occurred');
+          setLoading(false);
+          return;
+        }
+        
+        // Wait 1 second before the next attempt
+        if (attempt < 5) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+      
+      // If the loop finishes without a final status, show a pending message.
+      setError("Your payment was successful, but we are still confirming the order details. Please check your account page for updates shortly.");
+      setLoading(false);
     };
 
     fetchOrderDetails();
