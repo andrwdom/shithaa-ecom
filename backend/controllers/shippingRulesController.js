@@ -144,7 +144,9 @@ export const calculateShippingWithRules = async (req, res) => {
                 }
             } else {
                 // Fallback to default shipping logic for categories without rules
-                const isTamilNadu = shippingInfo.state.trim().toLowerCase() === 'tamil nadu';
+                // Normalize state name by removing spaces and converting to lowercase
+                const normalizedState = shippingInfo.state.trim().toLowerCase().replace(/\s+/g, '');
+                const isTamilNadu = ['tamilnadu', 'tamil nadu'].includes(normalizedState);
                 let fallbackCost = 0;
                 
                 if (isTamilNadu) {
