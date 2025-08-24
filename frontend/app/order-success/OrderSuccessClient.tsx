@@ -24,22 +24,43 @@ function OrderSuccessContent() {
   const [optimisticOrder, setOptimisticOrder] = useState<any>(null); // For instant UI
 
   useEffect(() => {
-    // 🔑 FIX: Immediately load optimistic data from sessionStorage for an instant UI
-    const optimisticDetailsString = sessionStorage.getItem('optimisticOrderDetails');
-    if (optimisticDetailsString) {
-      try {
-        const details = JSON.parse(optimisticDetailsString);
-        setOptimisticOrder(details);
-        // Now that we've used it, we can remove it.
-        sessionStorage.removeItem('optimisticOrderDetails');
-      } catch (e) {
-        console.error("Failed to parse optimistic order details", e);
+    // 🔑 FIX: Load order details from multiple storage locations for maximum reliability
+    const storageKeys = [
+      'pendingOrderData',
+      'phonepeOrderData',
+      'buyNowOrderData',
+      'cartOrderData',
+      'optimisticOrderDetails'
+    ];
+    
+    // Try to find order data in any storage location
+    for (const key of storageKeys) {
+      const data = sessionStorage.getItem(key) || localStorage.getItem(key);
+      if (data) {
+        try {
+          const details = JSON.parse(data);
+          // Add payment status since we know the payment was successful
+          const orderDetails = {
+            ...details,
+            paymentStatus: 'paid',
+            status: 'Order Placed',
+            orderStatus: 'Confirmed'
+          };
+          setOptimisticOrder(orderDetails);
+          console.log('Found order details in storage:', key);
+          // Clean up storage
+          sessionStorage.removeItem(key);
+          localStorage.removeItem(key);
+          break;
+        } catch (e) {
+          console.error(`Failed to parse order details from ${key}:`, e);
+        }
       }
     }
 
     // If no ID is provided, show error
     if (!orderId && !transactionId) {
-      if (!optimisticDetailsString) { // Only error if there's no optimistic data either
+      if (!optimisticOrder) { // Only error if we have no order data at all
         setError("No order or transaction ID provided. Please check your order confirmation email or contact support.");
         setLoading(false);
       }
@@ -61,7 +82,7 @@ function OrderSuccessContent() {
       }
 
       // 🔑 FIX: Implement a more robust retry mechanism to handle database update delays.
-      for (let attempt = 1; attempt <= 10; attempt++) {
+      for (let attempt = 1; attempt <= 20; attempt++) {
         try {
           console.log(`Fetching order details, attempt #${attempt}`);
           const orderRes = await authenticatedFetch(endpoint);
@@ -98,7 +119,7 @@ function OrderSuccessContent() {
         }
         
         // Wait 1.5 seconds before the next attempt.
-        if (attempt < 10) {
+        if (attempt < 20) {
           await new Promise(resolve => setTimeout(resolve, 1500));
         }
       }

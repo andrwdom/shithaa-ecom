@@ -130,16 +130,28 @@ export const createPhonePeSession = async (req, res) => {
         };
       });
 
+      // Calculate total including shipping
+      const subtotal = orderSummary.subtotal || 0;
+      const shippingCost = orderSummary.shipping || 0;
+      const total = subtotal + shippingCost;
+
+      console.log('🔍 DEBUG: Creating session with amounts:', {
+        subtotal,
+        shippingCost,
+        total,
+        orderSummary
+      });
+
       const sessionData = {
         source: checkoutMode,
         items,
         userId: req.user?.id || userId,
         userEmail: req.user?.email || email || shipping.email,
-        subtotal: orderSummary.subtotal,
-        total: orderSummary.total,
+        subtotal: subtotal,
+        total: total,
         offerDiscount: 0,
         couponDiscount: 0,
-        shippingCost: orderSummary.shipping || 0,
+        shippingCost: shippingCost,
         status: 'awaiting_payment',
         expiresAt: new Date(Date.now() + 30 * 60 * 1000), // 30 minutes from now
         sessionId: `sess_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
@@ -301,9 +313,18 @@ export const createPhonePeSession = async (req, res) => {
     const redirectUrl = `${process.env.FRONTEND_URL || 'https://shithaa.in'}/payment/phonepe/callback?merchantTransactionId=${phonepeTransactionId}`;
     const callbackUrl = `${process.env.VPS_BASE_URL || 'https://shithaa.in'}/api/payment/phonepe/webhook`;
     
+    // Calculate final amount including shipping
+    const finalAmount = checkoutSession.total + (checkoutSession.shippingCost || 0);
+    console.log('🔍 DEBUG: Payment amount calculation:', {
+      subtotal: checkoutSession.subtotal,
+      shipping: checkoutSession.shippingCost,
+      total: checkoutSession.total,
+      finalAmount: finalAmount
+    });
+
     const request = StandardCheckoutPayRequest.builder()
       .merchantOrderId(phonepeTransactionId)
-      .amount(checkoutSession.total * 100) // paise
+      .amount(finalAmount * 100) // paise
       .redirectUrl(redirectUrl)
       // .callbackUrl(callbackUrl) // 🔑 FIX: This method does not exist in the SDK and was causing the crash. The callback is set in the PhonePe dashboard.
       .build();
