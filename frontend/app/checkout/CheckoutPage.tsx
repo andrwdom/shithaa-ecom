@@ -388,6 +388,17 @@ export default function CheckoutPage() {
       
       console.log('[CheckoutPage] 📤 Sending payment data to backend:', paymentData);
       
+      // 🔑 FIX: Store optimistic order details in sessionStorage for instant UI on success page
+      const optimisticOrderDetails = {
+        items: cartItems,
+        total: orderSummary.total,
+        shippingInfo: shipping,
+        paymentMethod: 'PhonePe',
+        status: 'Paid', // Assume success for optimistic UI
+        orderId: 'Processing...' // Placeholder until the real one is fetched
+      };
+      sessionStorage.setItem('optimisticOrderDetails', JSON.stringify(optimisticOrderDetails));
+
       const res = await authenticatedFetch(apiUrl, {
         method: 'POST',
         body: JSON.stringify(paymentData)

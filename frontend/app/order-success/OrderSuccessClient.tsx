@@ -21,18 +21,36 @@ function OrderSuccessContent() {
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [checkoutSummary, setCheckoutSummary] = useState<any>(null);
+  const [optimisticOrder, setOptimisticOrder] = useState<any>(null); // For instant UI
 
   useEffect(() => {
+    // 🔑 FIX: Immediately load optimistic data from sessionStorage for an instant UI
+    const optimisticDetailsString = sessionStorage.getItem('optimisticOrderDetails');
+    if (optimisticDetailsString) {
+      try {
+        const details = JSON.parse(optimisticDetailsString);
+        setOptimisticOrder(details);
+        // Now that we've used it, we can remove it.
+        sessionStorage.removeItem('optimisticOrderDetails');
+      } catch (e) {
+        console.error("Failed to parse optimistic order details", e);
+      }
+    }
+
     // If no ID is provided, show error
     if (!orderId && !transactionId) {
-      setError("No order or transaction ID provided. Please check your order confirmation email or contact support.");
-      setLoading(false);
+      if (!optimisticDetailsString) { // Only error if there's no optimistic data either
+        setError("No order or transaction ID provided. Please check your order confirmation email or contact support.");
+        setLoading(false);
+      }
       return;
     }
 
     const fetchOrderDetails = async () => {
-      setLoading(true);
+      // Don't show main loader if we have optimistic data
+      if (!optimisticOrder) {
+        setLoading(true);
+      }
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
       
       let endpoint = '';
@@ -42,8 +60,8 @@ function OrderSuccessContent() {
         endpoint = `${apiUrl}/api/payment/order/${transactionId}`;
       }
 
-      // 🔑 FIX: Implement a retry mechanism to handle database update delays (race condition)
-      for (let attempt = 1; attempt <= 5; attempt++) {
+      // 🔑 FIX: Implement a more robust retry mechanism to handle database update delays.
+      for (let attempt = 1; attempt <= 10; attempt++) {
         try {
           console.log(`Fetching order details, attempt #${attempt}`);
           const orderRes = await authenticatedFetch(endpoint);
@@ -52,43 +70,48 @@ function OrderSuccessContent() {
           if (orderRes.ok && responseData.success) {
             const orderDetails = responseData.data;
             if (orderDetails) {
-              // Check if the order status is final (paid or failed)
-              if (orderDetails.paymentStatus === 'paid' || orderDetails.paymentStatus === 'failed') {
+              // Check for a final, successful status
+              const isPaid = orderDetails.paymentStatus === 'paid' || orderDetails.status === 'Paid' || orderDetails.status === 'Order Placed';
+              if (isPaid) {
                 setOrder(orderDetails);
+                setError(""); // Clear any previous errors
                 setLoading(false);
-                return; // Success, exit the loop
+                return; // Success! Exit the loop.
               }
-              // If status is still pending, wait and retry
               console.log(`Order status is '${orderDetails.paymentStatus}', retrying...`);
             } else {
-              throw new Error("Order data not found in API response.");
+              // If the API returns success but no data, that's a hard failure.
+              setError("Order data not found for this transaction.");
+              setLoading(false);
+              return;
             }
-          } else {
-            setError(responseData.message || 'Failed to fetch order details');
+          } else if (orderRes.status === 404) {
+            // A 404 is a definitive "not found", so we stop retrying.
+            setError(responseData.message || 'Order not found. It may still be processing.');
             setLoading(false);
             return;
           }
+          // For other non-ok responses, we'll just let it retry.
         } catch (error: any) {
-          setError(error.message || 'An unknown error occurred');
-          setLoading(false);
-          return;
+          console.error(`Attempt ${attempt} failed:`, error.message);
+          // Don't set a fatal error on network issues, just let it retry.
         }
         
-        // Wait 1 second before the next attempt
-        if (attempt < 5) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
+        // Wait 1.5 seconds before the next attempt.
+        if (attempt < 10) {
+          await new Promise(resolve => setTimeout(resolve, 1500));
         }
       }
       
-      // If the loop finishes without a final status, show a pending message.
-      setError("Your payment was successful, but we are still confirming the order details. Please check your account page for updates shortly.");
+      // If all retries fail, show a reassuring fallback message.
+      setError("Your payment was successful and your order is being processed. You can view the final details on your account page shortly.");
       setLoading(false);
     };
 
     fetchOrderDetails();
   }, [orderId, transactionId, router]);
 
-  if (loading) {
+  if (loading && !optimisticOrder) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
         <Loader2 className="h-12 w-12 text-green-500 animate-spin mb-4" />
@@ -96,20 +119,34 @@ function OrderSuccessContent() {
       </div>
     );
   }
-  if (!order) {
-    // This can happen if the fetch completes but the order is still null (e.g., API error)
+
+  // Use the confirmed order if available, otherwise use the optimistic one
+  const displayOrder = order || optimisticOrder;
+
+  if (error && !displayOrder) {
     return (
       <div className="max-w-xl mx-auto p-8 text-center">
         <div className="text-4xl text-red-500 mb-4">❌</div>
-        <h1 className="text-2xl font-bold mb-4">Order Not Found</h1>
-        <p className="mb-6 text-gray-600">{error || "The order details could not be loaded."}</p>
+        <h1 className="text-2xl font-bold mb-4">Order Confirmation Pending</h1>
+        <p className="mb-6 text-gray-600">{error}</p>
         <a href="/" className="btn btn-primary">Back to Home</a>
       </div>
     );
   }
 
-  const isPaid = order.paymentStatus === 'paid' || order.status === 'Paid';
-  const isFailed = order.paymentStatus === 'failed' || order.status === 'Payment Failed';
+  if (!displayOrder) {
+    // This state is hit if there's no optimistic data and the fetch is loading or has an error.
+    // A more specific loading or error screen is shown above. This is a fallback.
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <Loader2 className="h-12 w-12 text-gray-500 animate-spin mb-4" />
+        <div className="text-lg font-semibold text-gray-700">Confirming order details...</div>
+      </div>
+    );
+  }
+
+  const isPaid = displayOrder.paymentStatus === 'paid' || displayOrder.status === 'Paid' || displayOrder.status === 'Order Placed';
+  const isFailed = displayOrder.paymentStatus === 'failed' || displayOrder.status === 'Payment Failed';
 
   return (
     <div className="max-w-2xl mx-auto p-6 sm:p-10 text-center flex flex-col items-center justify-center min-h-[70vh]">
@@ -126,31 +163,31 @@ function OrderSuccessContent() {
       <div className="bg-white rounded-xl shadow p-6 mb-6 w-full max-w-lg mx-auto flex flex-col gap-2">
         <div className="flex flex-wrap justify-between text-left text-gray-800">
           <div className="font-semibold">Order ID:</div>
-          <div className="font-mono">{order.orderId}</div>
+          <div className="font-mono">{displayOrder.orderId}</div>
         </div>
-        {order.phonepeTransactionId && (
+        {displayOrder.phonepeTransactionId && (
           <div className="flex flex-wrap justify-between text-left text-gray-800">
             <div className="font-semibold">Transaction ID:</div>
-            <div className="font-mono">{order.phonepeTransactionId}</div>
+            <div className="font-mono">{displayOrder.phonepeTransactionId}</div>
           </div>
         )}
         <div className="flex flex-wrap justify-between text-left text-gray-800">
           <div className="font-semibold">Amount Paid:</div>
-          <div>₹{order.amountPaid || order.total || order.totalPrice}</div>
+          <div>₹{displayOrder.amountPaid || displayOrder.total || displayOrder.totalPrice}</div>
         </div>
         <div className="flex flex-wrap justify-between text-left text-gray-800">
           <div className="font-semibold">Payment Method:</div>
-          <div className="capitalize">{order.paymentMethod || 'N/A'}</div>
+          <div className="capitalize">{displayOrder.paymentMethod || 'N/A'}</div>
         </div>
         <div className="flex flex-wrap justify-between text-left text-gray-800">
           <div className="font-semibold">Status:</div>
-          <div className={`capitalize font-bold ${isPaid ? 'text-green-700' : 'text-red-700'}`}>{order.paymentStatus || order.status || 'N/A'}</div>
+          <div className={`capitalize font-bold ${isPaid ? 'text-green-700' : 'text-red-700'}`}>{displayOrder.paymentStatus || displayOrder.status || 'N/A'}</div>
         </div>
-        {order.items && order.items.length > 0 && (
+        {displayOrder.items && displayOrder.items.length > 0 && (
           <div className="mt-4 pt-4 border-t border-gray-200">
             <div className="font-semibold text-left text-gray-800 mb-2">Order Items:</div>
             <div className="space-y-2">
-              {order.items.map((item: any, index: number) => (
+              {displayOrder.items.map((item: any, index: number) => (
                 <div key={index} className="flex justify-between text-sm text-gray-700">
                   <span>{item.name} (Size: {item.size}) x {item.quantity}</span>
                   <span>₹{item.price * item.quantity}</span>
