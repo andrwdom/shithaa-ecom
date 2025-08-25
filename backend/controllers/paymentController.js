@@ -63,20 +63,53 @@ const updateProductStock = async (items) => {
 
 // Helper function to restore product stock (for failed payments)
 const restoreProductStock = async (items) => {
-    const { batchChangeStock } = await import('../utils/stock.js');
+    const { batchChangeStock, validateStockForItems } = await import('../utils/stock.js');
     
     try {
-        const operations = items.map(item => ({
-            productId: item._id,
-            size: item.size,
-            quantityChange: item.quantity
-        }));
+        // First validate the items to ensure they exist
+        console.log('Validating items before stock restoration:', items);
+        const validations = await validateStockForItems(items);
+        const invalidItems = validations.filter(v => !v.available);
+        
+        if (invalidItems.length > 0) {
+            console.error('Some items failed validation for stock restoration:', invalidItems);
+            throw new Error(`Invalid items for stock restoration: ${invalidItems.map(i => i.error).join(', ')}`);
+        }
+
+        // Map items to stock operations
+        const operations = items.map(item => {
+            const productId = item.productId || item._id; // Handle both formats
+            if (!productId) {
+                throw new Error(`Missing product ID for item: ${JSON.stringify(item)}`);
+            }
+            return {
+                productId,
+                size: item.size,
+                quantityChange: item.quantity // Positive for restoration
+            };
+        });
+        
+        console.log('Attempting stock restoration with operations:', operations);
         
         const results = await batchChangeStock(operations);
-        console.log('Stock restored successfully for failed payment:', results);
+        console.log('Stock restored successfully:', {
+            operations,
+            results,
+            itemCount: items.length,
+            totalQuantity: items.reduce((sum, item) => sum + item.quantity, 0)
+        });
+        
         return results;
     } catch (error) {
-        console.error('Stock restoration failed for failed payment:', error);
+        console.error('Stock restoration failed:', {
+            error: error.message,
+            stack: error.stack,
+            items: items.map(item => ({
+                productId: item.productId || item._id,
+                size: item.size,
+                quantity: item.quantity
+            }))
+        });
         throw new Error(`Stock restoration failed: ${error.message}`);
     }
 };
@@ -552,11 +585,35 @@ export const phonePeCallback = async (req, res) => {
       
       // Restore product stock using atomic operations
       try {
-        await restoreProductStock(order.items);
-        console.log('Stock restored successfully for failed PhonePe payment');
+        // Only attempt stock restoration if stock was actually reserved
+        if (order.stockReserved) {
+          console.log('Attempting to restore stock for failed payment. Order:', {
+            orderId: order.orderId,
+            items: order.items.map(item => ({
+              productId: item.productId,
+              size: item.size,
+              quantity: item.quantity
+            }))
+          });
+
+          await restoreProductStock(order.items);
+          console.log('Stock restored successfully for failed PhonePe payment');
+          
+          // Mark stock as no longer reserved
+          await orderModel.findByIdAndUpdate(order._id, { stockReserved: false });
+        } else {
+          console.log('No stock restoration needed - stock was not reserved for this order');
+        }
       } catch (error) {
         console.error('Failed to restore stock for failed PhonePe payment:', error);
-        // Don't fail the callback processing if stock restoration fails
+        // Log the error but don't fail the callback processing
+        // We'll handle these cases through monitoring and manual intervention if needed
+        console.error('Stock restoration error details:', {
+          orderId: order.orderId,
+          items: order.items,
+          error: error.message,
+          stack: error.stack
+        });
       }
     }
 
@@ -699,13 +756,39 @@ export const verifyPhonePePayment = async (req, res) => {
 
       // If payment failed or was cancelled, restore stock
       if (isFailed || isCancelled) {
-        if (paymentSession.stockReserved) {
-          console.log('Restoring stock for failed/cancelled payment');
-          // 🔑 FIX: Restore stock from the order's items, not the payment session.
-          await restoreProductStock(order.items);
-          
-          // Mark stock as no longer reserved
-          await PaymentSession.findByIdAndUpdate(paymentSession._id, { stockReserved: false });
+        // Get the order to restore stock
+        const order = await orderModel.findOne({ phonepeTransactionId: merchantTransactionId });
+        if (order && order.stockReserved) {
+          console.log('Attempting to restore stock for failed/cancelled payment. Order:', {
+            orderId: order.orderId,
+            items: order.items.map(item => ({
+              productId: item.productId,
+              size: item.size,
+              quantity: item.quantity
+            }))
+          });
+
+          try {
+            await restoreProductStock(order.items);
+            console.log('Stock restored successfully for failed/cancelled payment');
+            
+            // Mark stock as no longer reserved
+            await orderModel.findByIdAndUpdate(order._id, { stockReserved: false });
+          } catch (error) {
+            console.error('Failed to restore stock for failed/cancelled payment:', error);
+            console.error('Stock restoration error details:', {
+              orderId: order.orderId,
+              items: order.items,
+              error: error.message,
+              stack: error.stack
+            });
+          }
+        } else {
+          console.log('No stock restoration needed - order not found or stock not reserved');
+        }
+
+        // Mark payment session stock as not reserved
+        await PaymentSession.findByIdAndUpdate(paymentSession._id, { stockReserved: false });
         }
       }
 

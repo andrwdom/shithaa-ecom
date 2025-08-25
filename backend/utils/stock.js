@@ -97,7 +97,36 @@ export async function releaseStock(productId, size, quantity, options = {}) {
         throw new Error('Quantity must be positive for release');
     }
     
-    return await changeStock(productId, size, quantity, options);
+    try {
+        // Get current product details for logging
+        const product = await productModel.findById(productId);
+        if (!product) {
+            throw new Error(`Product ${productId} not found for stock release`);
+        }
+
+        const sizeObj = product.sizes.find(s => s.size === size);
+        if (!sizeObj) {
+            throw new Error(`Size ${size} not found for product ${product.name}`);
+        }
+
+        console.log(`Releasing stock for ${product.name} (${size}): Current=${sizeObj.stock}, Releasing=${quantity}`);
+        
+        // Release the stock (increment)
+        const result = await changeStock(productId, size, quantity, options);
+        
+        // Log the successful release
+        console.log(`Stock released successfully for ${product.name} (${size}): New stock=${sizeObj.stock + quantity}`);
+        
+        return {
+            ...result,
+            productName: product.name,
+            previousStock: sizeObj.stock,
+            newStock: sizeObj.stock + quantity
+        };
+    } catch (error) {
+        console.error('Stock release failed:', error);
+        throw new Error(`Failed to release stock: ${error.message}`);
+    }
 }
 
 /**

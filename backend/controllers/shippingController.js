@@ -105,9 +105,17 @@ export const calculateShipping = async (req, res) => {
             // In Tamil Nadu: separate paid vs free shipping items
             items.forEach(item => {
                 const product = productMap[item._id];
-                if (product && isFreeShippingCategory(product.category, product.categorySlug)) {
-                    freeShippingItems.push(item);
+                if (product) {
+                    const isFree = isFreeShippingCategory(product.category, product.categorySlug);
+                    console.log(`[Shipping] Checking product: ${product.name}, Category: ${product.category}, Slug: ${product.categorySlug}, IsFree: ${isFree}`);
+                    if (isFree) {
+                        freeShippingItems.push(item);
+                    } else {
+                        itemsForShippingCalculation.push(item);
+                    }
                 } else {
+                    console.log(`[Shipping] Product not found for item ID: ${item._id}, assuming paid shipping.`);
+                    // If product not found, assume it requires shipping
                     itemsForShippingCalculation.push(item);
                 }
             });
