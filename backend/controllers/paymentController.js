@@ -789,7 +789,6 @@ export const verifyPhonePePayment = async (req, res) => {
 
         // Mark payment session stock as not reserved
         await PaymentSession.findByIdAndUpdate(paymentSession._id, { stockReserved: false });
-        }
       }
 
       // 🔑 CRITICAL FIX: If payment is successful, update the main order as well.
