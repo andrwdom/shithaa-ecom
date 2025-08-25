@@ -972,7 +972,6 @@ export {
     cancelOrder, 
     getAllOrders, 
   updateOrderStatus,
-    generateInvoice,
     createStructuredOrder,
     getUniqueOrderId
 };
