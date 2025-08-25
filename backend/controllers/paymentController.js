@@ -322,9 +322,17 @@ export const createPhonePeSession = async (req, res) => {
       finalAmount: finalAmount
     });
 
+    // Convert amount to paise (1 rupee = 100 paise)
+    const amountInPaise = Math.round(finalAmount * 100);
+    
+    console.log('🔍 DEBUG: Converting amount to paise:', {
+      finalAmountRupees: finalAmount,
+      amountInPaise: amountInPaise
+    });
+
     const request = StandardCheckoutPayRequest.builder()
       .merchantOrderId(phonepeTransactionId)
-      .amount(finalAmount * 100) // paise
+      .amount(amountInPaise)
       .redirectUrl(redirectUrl)
       // .callbackUrl(callbackUrl) // 🔑 FIX: This method does not exist in the SDK and was causing the crash. The callback is set in the PhonePe dashboard.
       .build();
@@ -371,6 +379,15 @@ export const createPhonePeSession = async (req, res) => {
       }
     } catch (error) {
       console.error(`[${correlationId}] PhonePe payment creation failed:`, error);
+      console.error('Amount details:', {
+        finalAmount,
+        amountInPaise,
+        checkoutSession: {
+          subtotal: checkoutSession.subtotal,
+          shipping: checkoutSession.shippingCost,
+          total: checkoutSession.total
+        }
+      });
       return res.status(500).json({
         success: false,
         message: 'Failed to create payment',

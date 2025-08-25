@@ -76,12 +76,24 @@ export const calculateShipping = async (req, res) => {
         const isFreeShippingCategory = (category, categorySlug) => {
             if (!isTamilNadu) return false; // Only free in Tamil Nadu
             
-            return (
-                category === "Zipless Feeding Lounge Wear" ||
-                category === "Non-Feeding Lounge Wear" ||
-                categorySlug === "zipless-feeding-lounge-wear" ||
-                categorySlug === "non-feeding-lounge-wear" ||
-                categorySlug === "zipless-feeding-dupatta-lounge-wear"
+            // Normalize category and categorySlug for comparison
+            const normalizedCategory = (category || '').toLowerCase().trim();
+            const normalizedSlug = (categorySlug || '').toLowerCase().trim();
+            
+            // List of free shipping categories (both names and slugs)
+            const freeCategories = [
+                'zipless feeding lounge wear',
+                'non-feeding lounge wear',
+                'zipless-feeding-lounge-wear',
+                'non-feeding-lounge-wear',
+                'zipless-feeding-dupatta-lounge-wear',
+                'lounge-wear',
+                'loungewear'
+            ];
+            
+            return freeCategories.some(freeCategory => 
+                normalizedCategory.includes(freeCategory.replace(/-/g, ' ')) || 
+                normalizedSlug.includes(freeCategory)
             );
         };
         
