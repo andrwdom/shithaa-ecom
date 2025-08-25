@@ -72,63 +72,38 @@ export const calculateShipping = async (req, res) => {
             isTamilNadu: isTamilNadu
         });
         
-        // Helper function to identify free shipping categories in Tamil Nadu
-        const isFreeShippingCategory = (category, categorySlug) => {
-            if (!isTamilNadu) return false; // Only free in Tamil Nadu
-            
-            // Normalize category and categorySlug for comparison
+        // Helper function to identify ONLY paid shipping categories in Tamil Nadu
+        const isPaidShippingCategoryInTN = (category, categorySlug) => {
+            if (!isTamilNadu) return false; // This logic only applies to Tamil Nadu
             const normalizedCategory = (category || '').toLowerCase().trim();
             const normalizedSlug = (categorySlug || '').toLowerCase().trim();
-            
-            // List of free shipping categories (both names and slugs)
-            const freeCategories = [
-                'zipless feeding lounge wear',
-                'non-feeding lounge wear',
-                'zipless-feeding-lounge-wear',
-                'non-feeding-lounge-wear',
-                'zipless-feeding-dupatta-lounge-wear',
-                'lounge-wear',
-                'loungewear'
-            ];
-            
-            return freeCategories.some(freeCategory => 
-                normalizedCategory.includes(freeCategory.replace(/-/g, ' ')) || 
-                normalizedSlug.includes(freeCategory)
-            );
+            return normalizedCategory === 'maternity feeding wear' || normalizedSlug === 'maternity-feeding-wear';
         };
         
         // Filter items for shipping calculation based on location
         let itemsForShippingCalculation = [];
         let freeShippingItems = [];
         
-        if (isTamilNadu) {
-            // In Tamil Nadu: separate paid vs free shipping items
-            items.forEach(item => {
-                const product = productMap[item._id];
-                if (product) {
-                    const isFree = isFreeShippingCategory(product.category, product.categorySlug);
-                    console.log(`[Shipping] Checking product: ${product.name}, Category: ${product.category}, Slug: ${product.categorySlug}, IsFree: ${isFree}`);
-                    if (isFree) {
-                        freeShippingItems.push(item);
-                    } else {
-                        itemsForShippingCalculation.push(item);
-                    }
+        items.forEach(item => {
+            const product = productMap[item._id];
+            if (product) {
+                // In Tamil Nadu, only "Maternity Feeding Wear" is paid. Everything else is free.
+                if (isTamilNadu && !isPaidShippingCategoryInTN(product.category, product.categorySlug)) {
+                    freeShippingItems.push(item);
                 } else {
-                    console.log(`[Shipping] Product not found for item ID: ${item._id}, assuming paid shipping.`);
-                    // If product not found, assume it requires shipping
                     itemsForShippingCalculation.push(item);
                 }
-            });
-        } else {
-            // Other states: all items count for shipping
-            itemsForShippingCalculation = [...items];
-        }
+            } else {
+                // If product not found, assume it requires shipping for safety
+                itemsForShippingCalculation.push(item);
+            }
+        });
         
         // Count total dresses (items) that actually contribute to shipping cost
         const totalDressesForShipping = itemsForShippingCalculation.reduce((sum, item) => sum + item.quantity, 0);
         const totalFreeShippingItems = freeShippingItems.reduce((sum, item) => sum + item.quantity, 0);
         
-        // Check if any item is from "Maternity Feeding Wear" category
+        // Check if any item from the PAID shipping list is "Maternity Feeding Wear"
         const hasMaternityFeedingWear = itemsForShippingCalculation.some(item => {
             const product = productMap[item._id];
             return product && (
@@ -212,13 +187,14 @@ export const calculateShipping = async (req, res) => {
                 }
             }
         } else {
-            // Regular categories
+            // Regular categories (This block now correctly handles items in "Other States")
             if (isTamilNadu) {
-                // Free shipping for Tamil Nadu (except Maternity Feeding Wear)
+                // This block should now only be entered if there are ONLY free shipping items in the cart for a TN address.
                 shippingCost = 0;
                 isFreeShipping = true;
-                if (totalFreeShippingItems > 0) {
-                    shippingMessage = `Free shipping for ${totalFreeShippingItems} item${totalFreeShippingItems > 1 ? 's' : ''} within Tamil Nadu!`;
+                const totalItemsInCart = items.reduce((sum, item) => sum + item.quantity, 0);
+                if (totalItemsInCart > 0) {
+                    shippingMessage = `Free shipping for ${totalItemsInCart} item${totalItemsInCart > 1 ? 's' : ''} within Tamil Nadu!`;
                 } else {
                     shippingMessage = "Free shipping within Tamil Nadu!";
                 }
