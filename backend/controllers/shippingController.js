@@ -59,8 +59,12 @@ export const calculateShipping = async (req, res) => {
         });
 
         // Normalize state name for robust matching
-        const normalizedState = shippingInfo.state.trim().toLowerCase().replace(/[^a-z]/g, '');
-        const isTamilNadu = ['tamilnadu', 'tamilnaadu'].includes(normalizedState);
+        const normalizedState = shippingInfo.state
+            .trim()
+            .toLowerCase()
+            .replace(/\s+/g, '') // Remove all whitespace
+            .replace(/[^a-z]/g, ''); // Remove non-alphabetic characters
+        const isTamilNadu = ['tamilnadu', 'tamilnaadu', 'tamil'].includes(normalizedState);
 
         console.log('🔍 DEBUG - Shipping calculation:', {
             originalState: shippingInfo.state,

@@ -133,7 +133,7 @@ export const createPhonePeSession = async (req, res) => {
       // Calculate total including shipping
       const subtotal = orderSummary.subtotal || 0;
       const shippingCost = orderSummary.shipping || 0;
-      const total = subtotal + shippingCost;
+      const total = subtotal + shippingCost; // This will be the actual amount charged
 
       console.log('🔍 DEBUG: Creating session with amounts:', {
         subtotal,
@@ -314,20 +314,17 @@ export const createPhonePeSession = async (req, res) => {
     const callbackUrl = `${process.env.VPS_BASE_URL || 'https://shithaa.in'}/api/payment/phonepe/webhook`;
     
     // Calculate final amount including shipping
-    const finalAmount = checkoutSession.total; // This was the bug. It should include shipping. Let's fix it.
-    console.log('🔍 DEBUG: Payment amount calculation (BEFORE FIX):', {
+    const finalAmount = checkoutSession.total; // total already includes shipping from checkout session
+    console.log('🔍 DEBUG: Payment amount calculation:', {
       subtotal: checkoutSession.subtotal,
       shipping: checkoutSession.shippingCost,
       total: checkoutSession.total,
       finalAmount: finalAmount
     });
-    
-    // 🔑 THE FIX: Ensure shipping cost is included in the final amount for payment.
-    const finalAmountWithShipping = checkoutSession.total; // The 'total' from session SHOULD include shipping. If not, the session creation is the problem. Let's log it.
 
     const request = StandardCheckoutPayRequest.builder()
       .merchantOrderId(phonepeTransactionId)
-      .amount(finalAmountWithShipping * 100) // paise
+      .amount(finalAmount * 100) // paise
       .redirectUrl(redirectUrl)
       // .callbackUrl(callbackUrl) // 🔑 FIX: This method does not exist in the SDK and was causing the crash. The callback is set in the PhonePe dashboard.
       .build();

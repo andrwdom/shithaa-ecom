@@ -145,8 +145,12 @@ export const calculateShippingWithRules = async (req, res) => {
             } else {
                 // Fallback to default shipping logic for categories without rules
                 // Normalize state name for robust matching
-                const normalizedState = shippingInfo.state.trim().toLowerCase().replace(/[^a-z]/g, '');
-                const isTamilNadu = ['tamilnadu', 'tamilnaadu'].includes(normalizedState);
+                const normalizedState = shippingInfo.state
+                    .trim()
+                    .toLowerCase()
+                    .replace(/\s+/g, '') // Remove all whitespace
+                    .replace(/[^a-z]/g, ''); // Remove non-alphabetic characters
+                const isTamilNadu = ['tamilnadu', 'tamilnaadu', 'tamil'].includes(normalizedState);
                 let fallbackCost = 0;
                 
                 if (isTamilNadu) {

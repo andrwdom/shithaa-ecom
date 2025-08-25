@@ -88,8 +88,11 @@ export const createCheckoutSession = async (req, res) => {
       });
     }
     
-    // Calculate totals (simplified for now, can be enhanced with shipping/coupons)
-    const total = subtotal;
+    // Calculate shipping cost
+    const shippingCost = req.body.shippingCost || 0;
+    
+    // Calculate total including shipping
+    const total = subtotal + shippingCost;
     
     // Generate session ID
     const sessionId = randomUUID();
@@ -97,6 +100,7 @@ export const createCheckoutSession = async (req, res) => {
     // Create checkout session
     const checkoutSession = new CheckoutSession({
       sessionId,
+      shippingCost,
       source,
       userId,
       userEmail,
