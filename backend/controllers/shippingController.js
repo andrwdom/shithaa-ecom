@@ -58,16 +58,16 @@ export const calculateShipping = async (req, res) => {
             productMap[product._id.toString()] = product;
         });
 
-        // Normalize state name for robust matching
-        const normalizedState = shippingInfo.state
-            .trim()
-            .toLowerCase()
-            .replace(/\s+/g, '') // Remove all whitespace
-            .replace(/[^a-z]/g, ''); // Remove non-alphabetic characters
-        const isTamilNadu = ['tamilnadu', 'tamilnaadu', 'tamil'].includes(normalizedState);
+        const rawState = shippingInfo.state || '';
+        console.log(`[Shipping] Received raw state: "${rawState}"`);
+        console.log(`[Shipping] State character codes: ${Array.from(rawState).map(char => char.charCodeAt(0)).join(', ')}`);
+
+        // Aggressive normalization
+        const normalizedState = rawState.toLowerCase().replace(/[^a-z]/g, '');
+        const isTamilNadu = normalizedState.startsWith('tamilnadu') || normalizedState === 'tamil';
 
         console.log('🔍 DEBUG - Shipping calculation:', {
-            originalState: shippingInfo.state,
+            originalState: rawState,
             normalizedState: normalizedState,
             isTamilNadu: isTamilNadu
         });
