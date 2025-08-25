@@ -72,38 +72,48 @@ export const calculateShipping = async (req, res) => {
             isTamilNadu: isTamilNadu
         });
         
-        // Helper function to identify ONLY paid shipping categories in Tamil Nadu
-        const isPaidShippingCategoryInTN = (category, categorySlug) => {
-            if (!isTamilNadu) return false; // This logic only applies to Tamil Nadu
+        // Helper function to identify ONLY the paid shipping category in Tamil Nadu
+        const isPaidMaternityCategoryInTN = (category, categorySlug) => {
+            // This logic only applies if the state is Tamil Nadu
+            if (!isTamilNadu) {
+                // Outside of TN, this function doesn't apply for determining paid categories,
+                // as all categories outside TN follow the standard rate. Return false.
+                return false; 
+            }
             const normalizedCategory = (category || '').toLowerCase().trim();
             const normalizedSlug = (categorySlug || '').toLowerCase().trim();
+            // The only category with a shipping fee in TN is "Maternity Feeding Wear"
             return normalizedCategory === 'maternity feeding wear' || normalizedSlug === 'maternity-feeding-wear';
         };
-        
-        // Filter items for shipping calculation based on location
+
+        // Filter items into paid and free groups based on the business rules.
         let itemsForShippingCalculation = [];
         let freeShippingItems = [];
-        
+
         items.forEach(item => {
             const product = productMap[item._id];
             if (product) {
-                // In Tamil Nadu, only "Maternity Feeding Wear" is paid. Everything else is free.
-                if (isTamilNadu && !isPaidShippingCategoryInTN(product.category, product.categorySlug)) {
+                // If the state is Tamil Nadu AND the product is NOT the special paid category, it gets free shipping.
+                if (isTamilNadu && !isPaidMaternityCategoryInTN(product.category, product.categorySlug)) {
                     freeShippingItems.push(item);
                 } else {
+                    // This case covers two scenarios:
+                    // 1. The state is NOT Tamil Nadu (all items are subject to shipping fees).
+                    // 2. The state IS Tamil Nadu, and the item IS "Maternity Feeding Wear".
                     itemsForShippingCalculation.push(item);
                 }
             } else {
-                // If product not found, assume it requires shipping for safety
+                // For safety, if product details can't be found, assume it requires shipping.
+                console.log(`[Shipping] Product not found for item ID: ${item._id}, assuming paid shipping.`);
                 itemsForShippingCalculation.push(item);
             }
         });
-        
+
         // Count total dresses (items) that actually contribute to shipping cost
         const totalDressesForShipping = itemsForShippingCalculation.reduce((sum, item) => sum + item.quantity, 0);
         const totalFreeShippingItems = freeShippingItems.reduce((sum, item) => sum + item.quantity, 0);
         
-        // Check if any item from the PAID shipping list is "Maternity Feeding Wear"
+        // Check if any item in the paid list is from "Maternity Feeding Wear" category
         const hasMaternityFeedingWear = itemsForShippingCalculation.some(item => {
             const product = productMap[item._id];
             return product && (
@@ -187,14 +197,13 @@ export const calculateShipping = async (req, res) => {
                 }
             }
         } else {
-            // Regular categories (This block now correctly handles items in "Other States")
+            // Regular categories
             if (isTamilNadu) {
-                // This block should now only be entered if there are ONLY free shipping items in the cart for a TN address.
+                // Free shipping for Tamil Nadu (except Maternity Feeding Wear)
                 shippingCost = 0;
                 isFreeShipping = true;
-                const totalItemsInCart = items.reduce((sum, item) => sum + item.quantity, 0);
-                if (totalItemsInCart > 0) {
-                    shippingMessage = `Free shipping for ${totalItemsInCart} item${totalItemsInCart > 1 ? 's' : ''} within Tamil Nadu!`;
+                if (totalFreeShippingItems > 0) {
+                    shippingMessage = `Free shipping for ${totalFreeShippingItems} item${totalFreeShippingItems > 1 ? 's' : ''} within Tamil Nadu!`;
                 } else {
                     shippingMessage = "Free shipping within Tamil Nadu!";
                 }
