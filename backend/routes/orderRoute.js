@@ -5,7 +5,8 @@ import {
     getOrdersByEmail,
     getUserOrderCount,
     getOrderByTransactionId,
-    getOrderByPublicId
+    getOrderByPublicId,
+    generateInvoice
 } from '../controllers/orderController.js';
 import { getAllOrders, updateOrderStatus } from '../controllers/adminOrderController.js';
 import { 
@@ -18,6 +19,9 @@ const orderRouter = express.Router();
 // Public routes (optional auth for guest users)
 orderRouter.get('/transaction/:transactionId', optionalAuth, getOrderByTransactionId);
 orderRouter.get('/:id', optionalAuth, getOrderById);
+
+// Invoice download route
+orderRouter.get('/:orderId/invoice', optionalAuth, generateInvoice);
 
 // 🔑 NEW: Securely fetch order details by the public orderId string
 orderRouter.get('/by-orderid/:orderId', optionalAuth, getOrderByPublicId);

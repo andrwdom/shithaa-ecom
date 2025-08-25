@@ -743,7 +743,7 @@ const updateOrderStatus = async (req, res) => {
   }
 };
 
-const generateInvoice = async (req, res) => {
+export const generateInvoice = async (req, res) => {
   try {
     const { orderId } = req.params;
     const order = await orderModel.findById(orderId);
