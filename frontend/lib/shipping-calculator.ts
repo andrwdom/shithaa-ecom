@@ -62,60 +62,29 @@ export function calculateShippingCost(
     }
   }
 
-  const isTamilNadu = shippingInfo.state.trim().toLowerCase() === 'tamil nadu'
-  
-  // 🔑 DEBUG: Log shipping calculation inputs
-  console.log('[ShippingCalculator] 🔍 Inputs:', {
-    state: shippingInfo.state,
-    isTamilNadu,
-    cartItemsCount: cartItems.length,
-    cartItems: cartItems.map(item => ({
-      name: item.name,
-      category: item.category,
-      categorySlug: item.categorySlug,
-      quantity: item.quantity
-    }))
-  });
-  
-  // Helper function to identify free shipping categories in Tamil Nadu
-  const isFreeShippingCategory = (category: string, categorySlug: string): boolean => {
-    if (!isTamilNadu) return false; // Only free in Tamil Nadu
-    
-    return (
-      category === "Zipless Feeding Lounge Wear" ||
-      category === "Non-Feeding Lounge Wear" ||
-      categorySlug === "zipless-feeding-lounge-wear" ||
-      categorySlug === "non-feeding-lounge-wear" ||
-      categorySlug === "zipless-feeding-dupatta-lounge-wear"
-    );
+  const normalizedState = (shippingInfo.state || '')
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, ''); // Remove all whitespace
+
+  const isTamilNadu = ['tamilnadu', 'tamilnaadu', 'tamil'].includes(normalizedState);
+
+  // Helper function to identify ONLY paid shipping categories in Tamil Nadu
+  const isPaidMaternityCategoryInTN = (item: any) => {
+      if (!isTamilNadu) return false;
+      const category = (item.category || '').toLowerCase().trim();
+      const categorySlug = (item.categorySlug || '').toLowerCase().trim();
+      return category === 'maternity feeding wear' || categorySlug === 'maternity-feeding-wear';
   };
-  
-  // Filter items for shipping calculation based on location
-  let itemsForShippingCalculation: CartItem[] = [];
-  let freeShippingItems: CartItem[] = [];
-  
-  if (isTamilNadu) {
-    // In Tamil Nadu: separate paid vs free shipping items
-    cartItems.forEach(item => {
-      if (isFreeShippingCategory(item.category || '', item.categorySlug || '')) {
-        freeShippingItems.push(item);
-      } else {
-        itemsForShippingCalculation.push(item);
-      }
-    });
-  } else {
-    // Other states: all items count for shipping
-    itemsForShippingCalculation = [...cartItems];
-  }
-  
-  // Count total dresses (items) that actually contribute to shipping cost
+
+  // Separate items into paid and free groups
+  const itemsForShippingCalculation = cartItems.filter(item => !isTamilNadu || isPaidMaternityCategoryInTN(item));
+  const freeShippingItems = cartItems.filter(item => isTamilNadu && !isPaidMaternityCategoryInTN(item));
+
   const totalDressesForShipping = itemsForShippingCalculation.reduce((sum, item) => sum + item.quantity, 0);
-  const totalFreeShippingItems = freeShippingItems.reduce((sum, item) => sum + item.quantity, 0);
-  
-  // Check if any item is from "Maternity Feeding Wear" category
-  const hasMaternityFeedingWear = itemsForShippingCalculation.some(item => 
-    item.category === "Maternity Feeding Wear" || 
-    item.categorySlug === "maternity-feeding-wear"
+  const hasMaternityFeedingWear = itemsForShippingCalculation.some(item =>
+      (item.category || '').toLowerCase().trim() === 'maternity feeding wear' ||
+      (item.categorySlug || '').toLowerCase().trim() === 'maternity-feeding-wear'
   );
 
   let shippingCost = 0;
@@ -150,8 +119,8 @@ export function calculateShippingCost(
       }
       
       // Add free shipping message if there are free shipping items
-      if (totalFreeShippingItems > 0) {
-        shippingMessage += `, ${totalFreeShippingItems} lounge wear item${totalFreeShippingItems > 1 ? 's' : ''} free`;
+      if (freeShippingItems.length > 0) {
+        shippingMessage += `, ${freeShippingItems.length} lounge wear item${freeShippingItems.length > 1 ? 's' : ''} free`;
       }
       
       // Set isFreeShipping based on whether there are any paid shipping items
@@ -178,16 +147,17 @@ export function calculateShippingCost(
   } else {
     // Regular categories
     if (isTamilNadu) {
-      // Free shipping for Tamil Nadu (except Maternity Feeding Wear)
+      // Free shipping for Tamil Nadu (all non-maternity items)
       shippingCost = 0;
       isFreeShipping = true;
-      if (totalFreeShippingItems > 0) {
-        shippingMessage = `Free shipping for ${totalFreeShippingItems} item${totalFreeShippingItems > 1 ? 's' : ''} within Tamil Nadu!`;
+      const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+      if (totalItems > 0) {
+        shippingMessage = `Free shipping for ${totalItems} item${totalItems > 1 ? 's' : ''} within Tamil Nadu!`;
       } else {
         shippingMessage = "Free shipping within Tamil Nadu!";
       }
     } else {
-      // Other states - charge shipping
+      // Other states - charge shipping based on total items that require shipping
       if (totalDressesForShipping === 1) {
         shippingCost = 39;
         shippingMessage = "₹39 shipping for 1 item";
@@ -213,7 +183,7 @@ export function calculateShippingCost(
     isFreeShipping,
     shippingMessage,
     totalDressesForShipping,
-    totalFreeShippingItems,
+    freeShippingItemsCount: freeShippingItems.length,
     hasMaternityFeedingWear,
     isTamilNadu
   });
