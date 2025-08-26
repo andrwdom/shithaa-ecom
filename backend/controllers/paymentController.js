@@ -268,7 +268,7 @@ export const createPhonePeSession = async (req, res) => {
         cartItems: checkoutSession.items
       },
       status: 'pending',
-      stockReserved: true,
+      stockReserved: false, // Stock is NOT reserved at this stage
       metadata: {
         userAgent: req.headers['user-agent'],
         ipAddress: req.ip || req.connection.remoteAddress,
@@ -303,7 +303,8 @@ export const createPhonePeSession = async (req, res) => {
       checkoutSessionId,
       source: checkoutSession.source,
       placedAt: new Date(),
-      createdAt: new Date()
+      createdAt: new Date(),
+      stockReserved: false // Stock is NOT reserved at this stage
     };
 
     // Execute all database operations in parallel
@@ -322,15 +323,15 @@ export const createPhonePeSession = async (req, res) => {
         throw new Error('Failed to create order or payment session');
       }
 
-      // Reserve stock after successful session creation
-      const { batchChangeStock } = await import('../utils/stock.js');
-      const stockOperations = checkoutSession.items.map(item => ({
-        productId: item.productId,
-        size: item.size,
-        quantityChange: -item.quantity
-      }));
+      // 🔑 REMOVED: Stock reservation is moved to the payment success callback.
+      // const { batchChangeStock } = await import('../utils/stock.js');
+      // const stockOperations = checkoutSession.items.map(item => ({
+      //   productId: item.productId,
+      //   size: item.size,
+      //   quantityChange: -item.quantity
+      // }));
       
-      await batchChangeStock(stockOperations);
+      // await batchChangeStock(stockOperations);
 
     } catch (error) {
       console.error(`[${correlationId}] Database operations failed:`, error);
@@ -554,6 +555,46 @@ export const phonePeCallback = async (req, res) => {
 
     if (isSuccess) {
       console.log('Payment successful, updating order status');
+
+      // -----------------------------------------------------------------
+      // 🔑 CRITICAL FIX: Deduct stock ONLY on successful payment
+      // -----------------------------------------------------------------
+      try {
+        if (!order.stockReserved) {
+          const { batchChangeStockWithTransaction } = await import('../utils/stock.js');
+          const stockOperations = order.items.map(item => ({
+            productId: item.productId,
+            size: item.size,
+            quantityChange: -item.quantity,
+          }));
+
+          await batchChangeStockWithTransaction(stockOperations);
+          console.log(`Stock deducted successfully for order: ${order.orderId}`);
+          
+          // Mark stock as reserved (i.e., deducted)
+          update.stockReserved = true;
+        } else {
+          console.log(`Stock already deducted for order: ${order.orderId}, skipping.`);
+        }
+      } catch (stockError) {
+        console.error(`[CRITICAL] Stock deduction failed for order ${order.orderId} after successful payment!`, stockError);
+        // If stock deduction fails, do NOT mark the order as paid.
+        // It remains 'awaiting_payment' for manual intervention.
+        update.paymentStatus = 'paid_stock_failed';
+        update.orderStatus = 'On Hold';
+        update.status = 'Payment Received, Stock Issue';
+        
+        // Skip invoice generation and cart clearing
+        await orderModel.findByIdAndUpdate(order._id, update);
+        
+        return res.status(500).json({
+          success: false,
+          message: 'Payment successful, but stock update failed. Please contact support.',
+          orderId: order.orderId,
+        });
+      }
+      // -----------------------------------------------------------------
+
       update = {
         ...update,
         payment: true,
@@ -583,38 +624,15 @@ export const phonePeCallback = async (req, res) => {
         status: 'Payment Failed',
       };
       
-      // Restore product stock using atomic operations
-      try {
-        // Only attempt stock restoration if stock was actually reserved
-        if (order.stockReserved) {
-          console.log('Attempting to restore stock for failed payment. Order:', {
-            orderId: order.orderId,
-            items: order.items.map(item => ({
-              productId: item.productId,
-              size: item.size,
-              quantity: item.quantity
-            }))
-          });
-
-          await restoreProductStock(order.items);
-          console.log('Stock restored successfully for failed PhonePe payment');
-          
-          // Mark stock as no longer reserved
-          await orderModel.findByIdAndUpdate(order._id, { stockReserved: false });
-        } else {
-          console.log('No stock restoration needed - stock was not reserved for this order');
-        }
-      } catch (error) {
-        console.error('Failed to restore stock for failed PhonePe payment:', error);
-        // Log the error but don't fail the callback processing
-        // We'll handle these cases through monitoring and manual intervention if needed
-        console.error('Stock restoration error details:', {
-          orderId: order.orderId,
-          items: order.items,
-          error: error.message,
-          stack: error.stack
-        });
-      }
+      // 🔑 REMOVED: No stock restoration needed since stock is not pre-reserved.
+      // try {
+      //   if (order.stockReserved) {
+      //     await restoreProductStock(order.items);
+      //     await orderModel.findByIdAndUpdate(order._id, { stockReserved: false });
+      //   }
+      // } catch (error) {
+      //   console.error('Failed to restore stock for failed PhonePe payment:', error);
+      // }
     }
 
     await orderModel.findByIdAndUpdate(order._id, update);
@@ -756,37 +774,17 @@ export const verifyPhonePePayment = async (req, res) => {
 
       // If payment failed or was cancelled, restore stock
       if (isFailed || isCancelled) {
-        // Get the order to restore stock
-        const order = await orderModel.findOne({ phonepeTransactionId: merchantTransactionId });
-        if (order && order.stockReserved) {
-          console.log('Attempting to restore stock for failed/cancelled payment. Order:', {
-            orderId: order.orderId,
-            items: order.items.map(item => ({
-              productId: item.productId,
-              size: item.size,
-              quantity: item.quantity
-            }))
-          });
-
-          try {
-            await restoreProductStock(order.items);
-            console.log('Stock restored successfully for failed/cancelled payment');
-            
-            // Mark stock as no longer reserved
-            await orderModel.findByIdAndUpdate(order._id, { stockReserved: false });
-          } catch (error) {
-            console.error('Failed to restore stock for failed/cancelled payment:', error);
-            console.error('Stock restoration error details:', {
-              orderId: order.orderId,
-              items: order.items,
-              error: error.message,
-              stack: error.stack
-            });
-          }
-        } else {
-          console.log('No stock restoration needed - order not found or stock not reserved');
-        }
-
+        // 🔑 REMOVED: No stock restoration needed since stock is not pre-reserved.
+        // const order = await orderModel.findOne({ phonepeTransactionId: merchantTransactionId });
+        // if (order && order.stockReserved) {
+        //   try {
+        //     await restoreProductStock(order.items);
+        //     await orderModel.findByIdAndUpdate(order._id, { stockReserved: false });
+        //   } catch (error) {
+        //     console.error('Failed to restore stock for failed/cancelled payment:', error);
+        //   }
+        // }
+        
         // Mark payment session stock as not reserved
         await PaymentSession.findByIdAndUpdate(paymentSession._id, { stockReserved: false });
       }

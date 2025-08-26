@@ -156,6 +156,39 @@ export async function batchChangeStock(operations) {
 }
 
 /**
+ * Batch stock operations WITH a transaction for atomicity.
+ * @param {Array} operations - Array of { productId, size, quantityChange } objects.
+ * @returns {Promise<Array>} - Results of all operations.
+ */
+export async function batchChangeStockWithTransaction(operations) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+        const batchResults = [];
+        
+        for (const op of operations) {
+            const result = await changeStock(
+                op.productId, 
+                op.size, 
+                op.quantityChange,
+                { session }
+            );
+            batchResults.push(result);
+        }
+        
+        await session.commitTransaction();
+        console.log('Batch stock transaction committed successfully.');
+        return batchResults;
+    } catch (error) {
+        await session.abortTransaction();
+        console.error('Batch stock transaction aborted:', error);
+        throw new Error(`Batch stock update failed and was rolled back: ${error.message}`);
+    } finally {
+        session.endSession();
+    }
+}
+
+/**
  * Check stock availability without modifying
  * @param {string} productId - Product ID
  * @param {string} size - Size to check
