@@ -26,12 +26,15 @@ export const config = {
     // JWT Configuration
     jwt_secret: JWT_SECRET,
     
-    // Email Configuration
-    email: {
+    // SMTP Configuration for Nodemailer
+    smtp: {
+        host: process.env.SMTP_HOST,
+        port: parseInt(process.env.SMTP_PORT || '465', 10),
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
-        smtpHost: process.env.SMTP_HOST,
-        smtpPort: process.env.SMTP_PORT,
+        from_name: process.env.SMTP_FROM_NAME || 'Shithaa',
+        from_email: process.env.SMTP_FROM_EMAIL || 'noreply@shithaa.in',
+        support_email: process.env.SUPPORT_EMAIL || 'info.shithaa@gmail.com'
     },
     
     // File Upload Configuration

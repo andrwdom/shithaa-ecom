@@ -27,38 +27,38 @@ export default function ContactSection() {
     }))
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
 
-    try {
-      // Submit to backend API
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/contact`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      })
+    const { name, email, subject, message } = formData
 
-      if (response.ok) {
-        // Reset form
-        setFormData({
-          name: "",
-          email: "",
-          subject: "",
-          message: "",
-        })
-        alert("Thank you for your message! We'll get back to you via email within 24 hours.")
-      } else {
-        throw new Error('Failed to submit contact form')
-      }
-    } catch (error) {
-      console.error('Contact form submission error:', error)
-      alert("Sorry, there was an error submitting your message. Please try again or contact us directly via Instagram.")
-    } finally {
+    // Encode the subject and body for the mailto URL
+    const mailtoSubject = encodeURIComponent(subject)
+    const mailtoBody = encodeURIComponent(
+      `Name: ${name}\nEmail: ${email}\n\nMessage:\n${message}`
+    )
+
+    // The support email address
+    const supportEmail = "info.shithaa@gmail.com"
+    
+    // Construct the mailto URL
+    const mailtoUrl = `mailto:${supportEmail}?subject=${mailtoSubject}&body=${mailtoBody}`
+
+    // Open the user's default email client
+    window.location.href = mailtoUrl
+
+    // Give the browser a moment to open the mail client before resetting
+    setTimeout(() => {
+      alert("Your email client should now be open. Please review and send your message. Thank you!")
+      setFormData({
+        name: "",
+        email: "",
+        subject: "",
+        message: "",
+      })
       setIsSubmitting(false)
-    }
+    }, 1000)
   }
 
   const contactMethods = [
