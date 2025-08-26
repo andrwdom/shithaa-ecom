@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, MouseEvent } from "react";
 import { Clock, Cog, Truck, CheckCircle, Ban, ExternalLink, Package, Phone, Mail } from "lucide-react";
 
 // Complete status configuration with icons and descriptions
@@ -84,54 +84,58 @@ function OrderProgressTracker({ status }: { status: string }) {
     { id: 'shipped', label: 'Shipped', icon: Truck },
     { id: 'delivered', label: 'Delivered', icon: CheckCircle }
   ];
+
+  // Define the order of statuses
+  const statusSequence = ['ordered', 'processing', 'shipped', 'delivered'];
+
+  // Normalize the input status to match our sequence
+  const normalizedStatus = (status || '').toLowerCase();
+  let currentStatusId = 'ordered'; // Default to 'ordered'
+  if (normalizedStatus.includes('processing')) currentStatusId = 'processing';
+  if (normalizedStatus.includes('shipped')) currentStatusId = 'shipped';
+  if (normalizedStatus.includes('delivered')) currentStatusId = 'delivered';
+  // Handle initial states
+  if (normalizedStatus.includes('confirmed') || normalizedStatus.includes('placed') || normalizedStatus.includes('pending')) {
+    currentStatusId = 'ordered';
+  }
   
-  const getStepStatus = (stepId: string) => {
-    const currentStatus = status.toLowerCase();
-    switch (stepId) {
-      case 'ordered':
-        return 'completed';
-      case 'processing':
-        return ['processing', 'shipped', 'delivered'].includes(currentStatus) ? 'completed' : 'pending';
-      case 'shipped':
-        return ['shipped', 'delivered'].includes(currentStatus) ? 'completed' : 
-               currentStatus === 'processing' ? 'pending' : 'inactive';
-      case 'delivered':
-        return currentStatus === 'delivered' ? 'completed' : 
-               ['processing', 'shipped'].includes(currentStatus) ? 'pending' : 'inactive';
-      default:
-        return 'inactive';
-    }
+  const currentStepIndex = statusSequence.findIndex(step => step === currentStatusId);
+
+  const getStepStatus = (stepIndex: number) => {
+    if (stepIndex < currentStepIndex) return 'completed';
+    if (stepIndex === currentStepIndex) return 'current';
+    return 'inactive';
   };
   
   return (
     <div className="w-full py-4">
       <div className="flex items-center justify-between">
         {steps.map((step, index) => {
-          const stepStatus = getStepStatus(step.id);
+          const stepStatus = getStepStatus(index);
           const IconComponent = step.icon;
           
           return (
-            <div key={step.id} className="flex items-center">
+            <div key={step.id} className="flex items-center flex-1">
               <div className="flex flex-col items-center">
                 <div className={`w-10 h-10 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${
                   stepStatus === 'completed' 
                     ? 'bg-[#473C66] border-[#473C66] text-white shadow-lg' 
-                    : stepStatus === 'pending'
-                    ? 'bg-[#473C66]/10 border-[#473C66] text-[#473C66]'
+                    : stepStatus === 'current'
+                    ? 'bg-[#473C66]/10 border-[#473C66] text-[#473C66] ring-4 ring-[#473C66]/20'
                     : 'bg-gray-100 border-gray-300 text-gray-400'
                 }`}>
                   <IconComponent className="w-5 h-5" />
                 </div>
                 <span className={`text-xs mt-2 font-medium text-center ${
                   stepStatus === 'completed' ? 'text-[#473C66] font-semibold' : 
-                  stepStatus === 'pending' ? 'text-[#473C66]' : 'text-gray-400'
+                  stepStatus === 'current' ? 'text-[#473C66] font-bold' : 'text-gray-400'
                 }`}>
                   {step.label}
                 </span>
               </div>
               {index < steps.length - 1 && (
                 <div className={`flex-1 h-0.5 mx-2 transition-all duration-300 ${
-                  getStepStatus(steps[index + 1].id) === 'completed' ? 'bg-[#473C66]' : 'bg-gray-300'
+                  getStepStatus(index) === 'completed' ? 'bg-[#473C66]' : 'bg-gray-300'
                 }`} />
               )}
             </div>
@@ -166,7 +170,7 @@ export default function OrderHistory({ orders }: { orders: any[] }) {
         return (
           <div
             key={order._id}
-            className={`relative flex items-stretch bg-white rounded-3xl shadow-lg border border-gray-100 ${config.borderLeft} transition-all duration-200 hover:shadow-xl hover:-translate-y-1 group overflow-hidden`}
+            className={`relative flex flex-col bg-white rounded-3xl shadow-lg border border-gray-100 ${config.borderLeft} transition-all duration-200 hover:shadow-xl hover:-translate-y-1 group overflow-hidden`}
           >
             {/* Cancelled sticker */}
             {status.toLowerCase() === "cancelled" && (
@@ -174,21 +178,21 @@ export default function OrderHistory({ orders }: { orders: any[] }) {
                 <span className="bg-red-600 text-white text-xs font-bold px-4 py-1 rounded shadow-lg drop-shadow-lg border-2 border-white">Cancelled</span>
               </div>
             )}
-            <div className="flex flex-1 flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 p-6">
-              {/* Product thumbnail - larger size */}
+            <div className="flex flex-col sm:flex-row items-start gap-4 p-4">
+              {/* Product thumbnail */}
               {items[0]?.image && (
                 <img
                   src={Array.isArray(items[0].image) ? items[0].image[0] : items[0].image}
                   alt={items[0].name}
-                  className="w-24 h-24 object-cover rounded-2xl border-2 border-gray-100 shadow-sm bg-gray-50"
+                  className="w-full sm:w-24 h-auto sm:h-24 object-cover rounded-2xl border-2 border-gray-100 shadow-sm bg-gray-50"
                 />
               )}
               
               {/* Order details */}
-              <div className="flex-1 min-w-0 w-full sm:w-auto">
-                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+              <div className="flex-1 min-w-0 w-full">
+                <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-gray-900 text-lg mb-2">
+                    <h3 className="font-semibold text-gray-900 text-lg mb-2 truncate">
                       {items.length > 0 ? items[0].name : "Order"}
                     </h3>
                     <p className="text-sm text-gray-500 mb-2">
@@ -213,17 +217,17 @@ export default function OrderHistory({ orders }: { orders: any[] }) {
                   </div>
                   
                   {/* Status badge and actions */}
-                  <div className="flex flex-col sm:items-end gap-3">
+                  <div className="flex flex-col items-start sm:items-end gap-3 w-full sm:w-auto">
                     <StatusBadge status={status} />
                     
-                    {/* Shipping tracking info if available */}
+                    {/* Shipping tracking info */}
                     {order.shippingTracking && order.shippingTracking.partner && order.shippingTracking.trackingId && (
                       <div className="flex items-center gap-1 text-xs text-[#473C66] bg-[#473C66]/10 px-3 py-1 rounded-full border border-[#473C66]/20 w-fit">
                         <Truck className="w-3 h-3" />
                         <span>{order.shippingTracking.partner}</span>
                         {order.shippingTracking.trackingUrl && (
                           <ExternalLink className="w-3 h-3 ml-1 cursor-pointer" 
-                            onClick={(e) => {
+                            onClick={(e: MouseEvent) => {
                               e.stopPropagation();
                               window.open(order.shippingTracking.trackingUrl, '_blank');
                             }}
@@ -257,7 +261,7 @@ export default function OrderHistory({ orders }: { orders: any[] }) {
           aria-modal="true"
           aria-labelledby="order-modal-title"
         >
-          <div className="bg-white rounded-3xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-3xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e: MouseEvent) => e.stopPropagation()}>
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
                 <h2 id="order-modal-title" className="text-2xl font-bold text-gray-900">Order Details</h2>
@@ -280,61 +284,10 @@ export default function OrderHistory({ orders }: { orders: any[] }) {
                     <p className="font-mono text-xl font-bold text-[#473C66]">{selectedOrder.orderId || selectedOrder._id}</p>
                   </div>
                   <div className="text-right">
-                    {(() => {
-                      const status = (selectedOrder.status || selectedOrder.orderStatus || selectedOrder.paymentStatus).toLowerCase();
-                      
-                      if (status === 'delivered') {
-                        return (
-                          <>
-                            <p className="text-sm text-gray-500 font-medium">Status</p>
-                            <p className="text-lg font-semibold text-green-600 flex items-center gap-1">
-                              <CheckCircle className="w-4 h-4" />
-                              Successfully Delivered
-                            </p>
-                          </>
-                        );
-                      } else if (status === 'shipped') {
-                        return (
-                          <>
-                            <p className="text-sm text-gray-500 font-medium">Tracking</p>
-                            <p className="text-lg font-semibold text-[#473C66] flex items-center gap-1">
-                              <Truck className="w-4 h-4" />
-                              Track Your Package
-                            </p>
-                          </>
-                        );
-                      } else if (status === 'processing') {
-                        return (
-                          <>
-                            <p className="text-sm text-gray-500 font-medium">Status</p>
-                            <p className="text-lg font-semibold text-[#473C66] flex items-center gap-1">
-                              <Cog className="w-4 h-4" />
-                              Being Prepared
-                            </p>
-                          </>
-                        );
-                      } else if (status === 'cancelled') {
-                        return (
-                          <>
-                            <p className="text-sm text-gray-500 font-medium">Status</p>
-                            <p className="text-lg font-semibold text-red-600 flex items-center gap-1">
-                              <Ban className="w-4 h-4" />
-                              Order Cancelled
-                            </p>
-                          </>
-                        );
-                      } else {
-                        return (
-                          <>
-                            <p className="text-sm text-gray-500 font-medium">Status</p>
-                            <p className="text-lg font-semibold text-amber-600 flex items-center gap-1">
-                              <Clock className="w-4 h-4" />
-                              Order Confirmed
-                            </p>
-                          </>
-                        );
-                      }
-                    })()}
+                    <p className="text-sm text-gray-500 font-medium">Status</p>
+                    <div className="mt-1">
+                      <StatusBadge status={selectedOrder.orderStatus || selectedOrder.status || selectedOrder.paymentStatus} />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -354,8 +307,8 @@ export default function OrderHistory({ orders }: { orders: any[] }) {
                   </span>
                 </div>
                 
-                {/* Shipping Tracking Information */}
-                {selectedOrder.shippingTracking && selectedOrder.shippingTracking.partner && selectedOrder.shippingTracking.trackingId && (
+                {/* Shipping Tracking Information - Display only when shipped or delivered */}
+                {(['shipped', 'delivered'].includes((selectedOrder.status || selectedOrder.orderStatus || '').toLowerCase())) && selectedOrder.shippingTracking && selectedOrder.shippingTracking.partner && selectedOrder.shippingTracking.trackingId && (
                   <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
                     <h3 className="font-semibold text-blue-900 mb-2">📦 Shipping Details</h3>
                     <div className="space-y-2 text-sm">
