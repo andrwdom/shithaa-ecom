@@ -91,7 +91,7 @@ export default function WishlistPageClient() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="bg-gray-50 flex-1">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
           <div className="text-center">
             <div className="w-24 h-24 bg-pink-100 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -115,7 +115,7 @@ export default function WishlistPageClient() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <>
       {/* Header */}
       <div className="sticky top-20 z-40 bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -134,8 +134,9 @@ export default function WishlistPageClient() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {isLoading ? (
+      <div className="bg-gray-50 flex-1">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {isLoading ? (
           <div className="text-center py-12">
             <div className="loading loading-spinner loading-lg text-pink-600"></div>
             <p className="mt-4 text-gray-600 font-medium">Loading your wishlist...</p>
@@ -272,6 +273,6 @@ export default function WishlistPageClient() {
       </div>
 
       <LoginModal open={showLogin} onClose={() => setShowLogin(false)} onSuccess={() => setShowLogin(false)} />
-    </div>
+    </>
   )
 } 

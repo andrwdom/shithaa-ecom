@@ -33,24 +33,23 @@ export default function ContactSection() {
 
     const { name, email, subject, message } = formData
 
-    // Encode the subject and body for the mailto URL
-    const mailtoSubject = encodeURIComponent(subject)
-    const mailtoBody = encodeURIComponent(
+    const supportEmail = "info.shithaa@gmail.com"
+    
+    // Encode the subject and body for the URL
+    const gmailSubject = encodeURIComponent(subject)
+    const gmailBody = encodeURIComponent(
       `Name: ${name}\nEmail: ${email}\n\nMessage:\n${message}`
     )
 
-    // The support email address
-    const supportEmail = "info.shithaa@gmail.com"
-    
-    // Construct the mailto URL
-    const mailtoUrl = `mailto:${supportEmail}?subject=${mailtoSubject}&body=${mailtoBody}`
+    // Construct the Gmail compose URL
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${supportEmail}&su=${gmailSubject}&body=${gmailBody}`
 
-    // Open the user's default email client
-    window.location.href = mailtoUrl
+    // Open Gmail in a new tab
+    window.open(gmailUrl, '_blank')
 
-    // Give the browser a moment to open the mail client before resetting
+    // Give the browser a moment to open the new tab before resetting
     setTimeout(() => {
-      alert("Your email client should now be open. Please review and send your message. Thank you!")
+      alert("A new tab should now be open with Gmail. Please review and send your message. Thank you!")
       setFormData({
         name: "",
         email: "",
