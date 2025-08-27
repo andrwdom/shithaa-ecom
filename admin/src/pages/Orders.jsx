@@ -88,7 +88,18 @@ const DashboardSummary = ({ orders }) => {
     .filter(order => {
       const orderDate = new Date(order.createdAt || order.placedAt).toDateString();
       const status = order.orderStatus || order.status || order.paymentStatus;
-      return orderDate === today && status !== 'Cancelled';
+      const paymentStatus = order.paymentStatus?.toLowerCase() || '';
+      
+      // Only include orders that are:
+      // 1. Created today
+      // 2. Not cancelled
+      // 3. Not failed payments
+      // 4. Not awaiting payment
+      return orderDate === today && 
+             status !== 'Cancelled' && 
+             !paymentStatus.includes('failed') &&
+             !paymentStatus.includes('awaiting') &&
+             status !== 'Payment Failed';
     })
     .reduce((sum, order) => {
       const total = order.totalAmount || order.total || order.totalPrice || order.amount || 0;

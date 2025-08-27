@@ -1,156 +1,91 @@
 import Coupon from '../models/Coupon.js';
 
-// Generate a random coupon code
-const generateCouponCode = () => {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let code = '';
-  for (let i = 0; i < 8; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return code;
-};
-
-// Create a new coupon
-export const createCoupon = async (req, res) => {
-  try {
-    const { code, discountPercentage, validFrom, validUntil, usageLimit } = req.body;
-    
-    // If code is provided, use it (after checking uniqueness), else generate one
-    let couponCode = code ? code.toUpperCase() : generateCouponCode();
-    if (code) {
-      const existingCoupon = await Coupon.findOne({ code: couponCode });
-      if (existingCoupon) {
-        return res.status(400).json({ message: 'Coupon code already exists' });
-      }
-    } else {
-      let isUnique = false;
-      while (!isUnique) {
-        couponCode = generateCouponCode();
-        const existingCoupon = await Coupon.findOne({ code: couponCode });
-        if (!existingCoupon) isUnique = true;
-      }
-    }
-
-    // Normalize date range: if validUntil is provided without time (00:00:00),
-    // treat it as end-of-day to avoid premature expiry due to timezone.
-    const validFromDate = new Date(validFrom)
-    const validUntilDate = new Date(validUntil)
-    if (
-      validUntilDate.getHours() === 0 &&
-      validUntilDate.getMinutes() === 0 &&
-      validUntilDate.getSeconds() === 0 &&
-      validUntilDate.getMilliseconds() === 0
-    ) {
-      validUntilDate.setHours(23, 59, 59, 999)
-    }
-
-    const coupon = new Coupon({
-      code: couponCode,
-      discountPercentage,
-      validFrom: validFromDate,
-      validUntil: validUntilDate,
-      usageLimit: usageLimit || null
-    });
-
-    await coupon.save();
-    res.status(201).json(coupon);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
-};
-
-// Get all coupons
+// Get all coupons (admin only)
 export const getAllCoupons = async (req, res) => {
-  try {
-    const coupons = await Coupon.find().sort({ createdAt: -1 });
-    res.json(coupons);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// Get a single coupon
-export const getCoupon = async (req, res) => {
-  try {
-    const coupon = await Coupon.findById(req.params.id);
-    if (!coupon) {
-      return res.status(404).json({ message: 'Coupon not found' });
+    try {
+        const coupons = await Coupon.find().sort({ createdAt: -1 });
+        res.json(coupons);
+    } catch (error) {
+        console.error('Error fetching coupons:', error);
+        res.status(500).json({ message: 'Failed to fetch coupons' });
     }
-    res.json(coupon);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
 };
 
-// Update a coupon
-export const updateCoupon = async (req, res) => {
-  try {
-    const coupon = await Coupon.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true, runValidators: true }
-    );
-    if (!coupon) {
-      return res.status(404).json({ message: 'Coupon not found' });
+// Create a new coupon (admin only)
+export const createCoupon = async (req, res) => {
+    try {
+        const { code, discountPercentage, validFrom, validUntil, usageLimit } = req.body;
+
+        // Generate a random code if none provided
+        const couponCode = code || generateRandomCode();
+
+        const coupon = new Coupon({
+            code: couponCode,
+            discountPercentage,
+            validFrom,
+            validUntil,
+            usageLimit: usageLimit || null,
+            usedCount: 0
+        });
+
+        await coupon.save();
+        res.status(201).json(coupon);
+    } catch (error) {
+        console.error('Error creating coupon:', error);
+        res.status(500).json({ message: 'Failed to create coupon' });
     }
-    res.json(coupon);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
 };
 
-// Delete a coupon
+// Delete a coupon (admin only)
 export const deleteCoupon = async (req, res) => {
-  try {
-    const coupon = await Coupon.findByIdAndDelete(req.params.id);
-    if (!coupon) {
-      return res.status(404).json({ message: 'Coupon not found' });
+    try {
+        const { id } = req.params;
+        await Coupon.findByIdAndDelete(id);
+        res.json({ message: 'Coupon deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting coupon:', error);
+        res.status(500).json({ message: 'Failed to delete coupon' });
     }
-    res.json({ message: 'Coupon deleted successfully' });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
 };
 
-// Validate a coupon
+// Validate a coupon code (public)
 export const validateCoupon = async (req, res) => {
-  try {
-    // Always use uppercase for code
-    const { code } = req.body;
-    const coupon = await Coupon.findOne({ code: code.toUpperCase() });
+    try {
+        const { code } = req.body;
+        const coupon = await Coupon.findOne({ code });
 
-    if (!coupon) {
-      return res.status(404).json({ message: 'Invalid coupon code' });
-    }
+        if (!coupon) {
+            return res.status(404).json({ message: 'Coupon not found' });
+        }
 
-    if (!coupon.isActive) {
-      return res.status(400).json({ message: 'Coupon is inactive' });
-    }
+        // Check if coupon is expired
+        const now = new Date();
+        if (now < new Date(coupon.validFrom) || now > new Date(coupon.validUntil)) {
+            return res.status(400).json({ message: 'Coupon is not valid at this time' });
+        }
 
-    const now = new Date();
-    // Treat same-day 'validUntil' without time as end-of-day
-    const validUntil = new Date(coupon.validUntil)
-    if (
-      validUntil.getHours() === 0 &&
-      validUntil.getMinutes() === 0 &&
-      validUntil.getSeconds() === 0 &&
-      validUntil.getMilliseconds() === 0
-    ) {
-      validUntil.setHours(23, 59, 59, 999)
-    }
-    if (now < coupon.validFrom || now > validUntil) {
-      return res.status(400).json({ message: 'Coupon is expired' });
-    }
+        // Check usage limit
+        if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit) {
+            return res.status(400).json({ message: 'Coupon usage limit reached' });
+        }
 
-    if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit) {
-      return res.status(400).json({ message: 'Coupon usage limit reached' });
+        res.json({
+            valid: true,
+            discount: coupon.discountPercentage,
+            code: coupon.code
+        });
+    } catch (error) {
+        console.error('Error validating coupon:', error);
+        res.status(500).json({ message: 'Failed to validate coupon' });
     }
+};
 
-    res.json({
-      valid: true,
-      discountPercentage: coupon.discountPercentage
-    });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-}; 
+// Helper function to generate random coupon code
+function generateRandomCode(length = 8) {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let code = '';
+    for (let i = 0; i < length; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
+}
