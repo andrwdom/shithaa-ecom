@@ -88,16 +88,43 @@ function OrderProgressTracker({ status }: { status: string }) {
   // Define the order of statuses
   const statusSequence = ['ordered', 'processing', 'shipped', 'delivered'];
 
-  // Normalize the input status to match our sequence
-  const normalizedStatus = (status || '').toLowerCase();
-  let currentStatusId = 'ordered'; // Default to 'ordered'
-  if (normalizedStatus.includes('processing')) currentStatusId = 'processing';
-  if (normalizedStatus.includes('shipped')) currentStatusId = 'shipped';
-  if (normalizedStatus.includes('delivered')) currentStatusId = 'delivered';
-  // Handle initial states
-  if (normalizedStatus.includes('confirmed') || normalizedStatus.includes('placed') || normalizedStatus.includes('pending')) {
-    currentStatusId = 'ordered';
-  }
+  /*
+   * Normalize backend status variations to one of:
+   *   ordered → processing → shipped → delivered
+   * We get many possible strings from the backend e.g.:
+   *   "Pending", "Order Placed", "Confirmed", "Processing", "Packed",
+   *   "Shipped", "Out for Delivery", "Delivered", etc.
+   */
+  const normalizedStatus = (status || '').trim().toLowerCase();
+
+  const mapStatusToId = () => {
+    if (!normalizedStatus) return 'ordered';
+
+    if (
+      normalizedStatus.includes('processing') ||
+      normalizedStatus.includes('packed') ||
+      normalizedStatus.includes('preparing')
+    ) {
+      return 'processing';
+    }
+
+    if (
+      normalizedStatus.includes('shipped') ||
+      normalizedStatus.includes('in transit') ||
+      normalizedStatus.includes('out for delivery')
+    ) {
+      return 'shipped';
+    }
+
+    if (normalizedStatus.includes('delivered')) {
+      return 'delivered';
+    }
+
+    // Default / initial states (pending, confirmed, placed, etc.)
+    return 'ordered';
+  };
+
+  const currentStatusId = mapStatusToId();
   
   const currentStepIndex = statusSequence.findIndex(step => step === currentStatusId);
 
