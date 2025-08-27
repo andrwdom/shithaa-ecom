@@ -156,10 +156,10 @@ function formatDateTime(date: string | number | undefined): string {
 // Progress Tracker Component
 function OrderProgressTracker({ status }: { status: string }): JSX.Element {
   const steps = [
-    { id: 'ordered', label: 'Ordered', icon: Package },
-    { id: 'processing', label: 'Processing', icon: Cog },
-    { id: 'shipped', label: 'Shipped', icon: Truck },
-    { id: 'delivered', label: 'Delivered', icon: CheckCircle }
+    { id: 'ordered', label: 'Ordered', icon: Package, status: 'Pending' },
+    { id: 'processing', label: 'Processing', icon: Cog, status: 'Processing' },
+    { id: 'shipped', label: 'Shipped', icon: Truck, status: 'Shipped' },
+    { id: 'delivered', label: 'Delivered', icon: CheckCircle, status: 'Delivered' }
   ];
 
   // Define the order of statuses
@@ -177,29 +177,17 @@ function OrderProgressTracker({ status }: { status: string }): JSX.Element {
   const mapStatusToId = () => {
     if (!normalizedStatus) return 'ordered';
 
-    // Check for shipped first since it's most specific
-    if (
-      normalizedStatus.includes('shipped') ||
-      normalizedStatus.includes('in transit') ||
-      normalizedStatus.includes('out for delivery')
-    ) {
-      return 'shipped';
-    }
+    // Find the matching step based on status
+    const matchingStep = steps.find(step => 
+      normalizedStatus === step.status.toLowerCase() ||
+      (step.id === 'ordered' && (
+        normalizedStatus.includes('pending') ||
+        normalizedStatus.includes('confirmed') ||
+        normalizedStatus.includes('placed')
+      ))
+    );
 
-    if (
-      normalizedStatus.includes('processing') ||
-      normalizedStatus.includes('packed') ||
-      normalizedStatus.includes('preparing')
-    ) {
-      return 'processing';
-    }
-
-    if (normalizedStatus.includes('delivered')) {
-      return 'delivered';
-    }
-
-    // Default / initial states (pending, confirmed, placed, etc.)
-    return 'ordered';
+    return matchingStep ? matchingStep.id : 'ordered';
   };
 
   const currentStatusId = mapStatusToId();
@@ -207,6 +195,12 @@ function OrderProgressTracker({ status }: { status: string }): JSX.Element {
   const currentStepIndex = statusSequence.findIndex(step => step === currentStatusId);
 
   const getStepStatus = (stepIndex: number) => {
+    // For delivered status, mark all steps as completed
+    if (currentStatusId === 'delivered') {
+      return 'completed';
+    }
+    
+    // For other statuses, show progress up to current step
     if (stepIndex < currentStepIndex) return 'completed';
     if (stepIndex === currentStepIndex) return 'current';
     return 'inactive';
