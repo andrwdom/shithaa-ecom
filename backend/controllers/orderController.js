@@ -785,7 +785,7 @@ export const generateInvoice = async (req, res) => {
     // PDF generation
     const doc = new PDFDocument({ size: "A4", margin: 40 });
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename=Invoice_${order._id}.pdf`);
+    res.setHeader("Content-Disposition", `attachment; filename=Invoice_${order.orderId || order._id}.pdf`);
     doc.pipe(res);
 
     // --- HEADER ---
@@ -799,7 +799,7 @@ export const generateInvoice = async (req, res) => {
     }
     doc.moveTo(40, doc.y).lineTo(555, doc.y).strokeColor('#E1D5F6').lineWidth(1.2).stroke();
     doc.moveDown(0.7);
-    doc.font('Helvetica-Bold').fontSize(11).fillColor('#333').text(`Order ID: `, { continued: true }).font('Helvetica').text(order._id);
+    doc.font('Helvetica-Bold').fontSize(11).fillColor('#333').text(`Order #`, { continued: true }).font('Helvetica').text(order.orderId || order._id);
     doc.font('Helvetica-Bold').text(`Order Date: `, { continued: true }).font('Helvetica').text(new Date(order.createdAt).toLocaleDateString('en-IN'));
     doc.moveDown(0.7);
     doc.moveTo(40, doc.y).lineTo(555, doc.y).strokeColor('#E1D5F6').lineWidth(1.2).stroke();
