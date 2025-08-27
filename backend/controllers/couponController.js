@@ -13,24 +13,24 @@ export const getAllCoupons = async (req, res) => {
 
 // Create a new coupon (admin only)
 export const createCoupon = async (req, res) => {
-    try {
-        const { code, discountPercentage, validFrom, validUntil, usageLimit } = req.body;
-
+  try {
+    const { code, discountPercentage, validFrom, validUntil, usageLimit } = req.body;
+    
         // Generate a random code if none provided
         const couponCode = code || generateRandomCode();
 
-        const coupon = new Coupon({
-            code: couponCode,
-            discountPercentage,
+    const coupon = new Coupon({
+      code: couponCode,
+      discountPercentage,
             validFrom,
             validUntil,
             usageLimit: usageLimit || null,
             usedCount: 0
-        });
+    });
 
-        await coupon.save();
-        res.status(201).json(coupon);
-    } catch (error) {
+    await coupon.save();
+    res.status(201).json(coupon);
+  } catch (error) {
         console.error('Error creating coupon:', error);
         res.status(500).json({ message: 'Failed to create coupon' });
     }
@@ -38,43 +38,43 @@ export const createCoupon = async (req, res) => {
 
 // Delete a coupon (admin only)
 export const deleteCoupon = async (req, res) => {
-    try {
+  try {
         const { id } = req.params;
         await Coupon.findByIdAndDelete(id);
-        res.json({ message: 'Coupon deleted successfully' });
-    } catch (error) {
+    res.json({ message: 'Coupon deleted successfully' });
+  } catch (error) {
         console.error('Error deleting coupon:', error);
         res.status(500).json({ message: 'Failed to delete coupon' });
-    }
+  }
 };
 
 // Validate a coupon code (public)
 export const validateCoupon = async (req, res) => {
-    try {
-        const { code } = req.body;
+  try {
+    const { code } = req.body;
         const coupon = await Coupon.findOne({ code });
 
-        if (!coupon) {
+    if (!coupon) {
             return res.status(404).json({ message: 'Coupon not found' });
-        }
+    }
 
         // Check if coupon is expired
-        const now = new Date();
+    const now = new Date();
         if (now < new Date(coupon.validFrom) || now > new Date(coupon.validUntil)) {
             return res.status(400).json({ message: 'Coupon is not valid at this time' });
         }
 
         // Check usage limit
-        if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit) {
-            return res.status(400).json({ message: 'Coupon usage limit reached' });
-        }
+    if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit) {
+      return res.status(400).json({ message: 'Coupon usage limit reached' });
+    }
 
-        res.json({
-            valid: true,
+    res.json({
+      valid: true,
             discount: coupon.discountPercentage,
             code: coupon.code
-        });
-    } catch (error) {
+    });
+  } catch (error) {
         console.error('Error validating coupon:', error);
         res.status(500).json({ message: 'Failed to validate coupon' });
     }
