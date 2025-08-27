@@ -22,14 +22,36 @@ export const updateOrderStatus = async (req, res) => {
             });
         }
 
-        const updateData = { orderStatus: status };
+        const updateData = {
+            status: status,
+            orderStatus: status
+        };
+
+        // Optionally update paymentStatus if delivered
+        if (status === 'Delivered') updateData.paymentStatus = 'paid';
         
         // Add shipping details if provided
         if (status === 'Shipped' && shippingPartner && trackingId) {
-            updateData.shippingDetails = {
+            // Generate tracking URL
+            const courierTrackingUrls = {
+                'DTDC': 'https://www.dtdc.in/trace.asp',
+                'ST Courier': 'https://stcourier.com/track/shipment',
+                'XpressBees': 'https://www.xpressbees.com/shipment/tracking',
+                'India Post': 'https://www.indiapost.gov.in/_layouts/15/dop.portal.tracking/trackconsignment.aspx',
+                'Delhivery': 'https://www.delhivery.com/track/package',
+                'Blue Dart': 'https://www.bluedart.com/tracking',
+                'Ecom Express': 'https://ecomexpress.in/tracking/',
+                'Other': null
+            };
+
+            const baseUrl = courierTrackingUrls[shippingPartner];
+            const trackingUrl = baseUrl ? `${baseUrl}?tracking_id=${trackingId}` : null;
+
+            updateData.shippingTracking = {
                 partner: shippingPartner,
                 trackingId: trackingId,
-                shippedAt: new Date()
+                shippedAt: new Date(),
+                trackingUrl: trackingUrl
             };
         }
 
