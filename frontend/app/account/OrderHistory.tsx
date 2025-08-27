@@ -1,6 +1,81 @@
 "use client";
-import { useState, MouseEvent } from "react";
+import React, { useState, MouseEvent } from "react";
 import { Clock, Cog, Truck, CheckCircle, Ban, ExternalLink, Package, Phone, Mail } from "lucide-react";
+
+import type { JSX } from 'react';
+
+interface Order {
+  _id: string;
+  orderId?: string;
+  items?: Array<{
+    name: string;
+    quantity: number;
+    price: number;
+    image?: string | string[];
+    size?: string;
+  }>;
+  cartItems?: Array<{
+    name: string;
+    quantity: number;
+    price: number;
+    image?: string | string[];
+    size?: string;
+  }>;
+  status?: string;
+  orderStatus?: string;
+  paymentStatus?: string;
+  paymentMethod?: string;
+  totalAmount?: number;
+  total?: number;
+  totalPrice?: number;
+  amount?: number;
+  createdAt?: string;
+  date?: string;
+  orderDate?: string;
+  updatedAt?: string;
+  shippingTracking?: {
+    partner: string;
+    trackingId: string;
+    trackingUrl?: string;
+  };
+  shippingInfo?: {
+    fullName: string;
+    email: string;
+    phone: string;
+    addressLine1: string;
+    addressLine2?: string;
+    city: string;
+    state: string;
+    postalCode: string;
+    country: string;
+    name?: string;
+  };
+  shippingAddress?: {
+    fullName: string;
+    name?: string;
+    email: string;
+    phone: string;
+    flatHouseNo?: string;
+    areaLocality?: string;
+    streetAddress?: string;
+    landmark?: string;
+    city: string;
+    state: string;
+    pincode: string;
+    country: string;
+  };
+  address?: {
+    line1: string;
+    line2?: string;
+    city: string;
+    state: string;
+    pincode: string;
+    country?: string;
+  };
+  customerName?: string;
+  email?: string;
+  phone?: string;
+}
 
 // Complete status configuration with icons and descriptions
 const STATUS_CONFIG = {
@@ -51,7 +126,7 @@ const STATUS_CONFIG = {
   }
 };
 
-function StatusBadge({ status }: { status: string }) {
+function StatusBadge({ status }: { status: string }): JSX.Element {
   const config = STATUS_CONFIG[status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.Pending;
   const IconComponent = config.icon;
   
@@ -63,12 +138,14 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-function formatDate(date: string | number) {
+function formatDate(date: string | number | undefined): string {
+  if (!date) return '-';
   const d = new Date(date);
   return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
 }
 
-function formatDateTime(date: string | number) {
+function formatDateTime(date: string | number | undefined): string {
+  if (!date) return '-';
   const d = new Date(date);
   return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) +
     ' • ' + d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
@@ -77,7 +154,7 @@ function formatDateTime(date: string | number) {
 
 
 // Progress Tracker Component
-function OrderProgressTracker({ status }: { status: string }) {
+function OrderProgressTracker({ status }: { status: string }): JSX.Element {
   const steps = [
     { id: 'ordered', label: 'Ordered', icon: Package },
     { id: 'processing', label: 'Processing', icon: Cog },
@@ -100,20 +177,21 @@ function OrderProgressTracker({ status }: { status: string }) {
   const mapStatusToId = () => {
     if (!normalizedStatus) return 'ordered';
 
-    if (
-      normalizedStatus.includes('processing') ||
-      normalizedStatus.includes('packed') ||
-      normalizedStatus.includes('preparing')
-    ) {
-      return 'processing';
-    }
-
+    // Check for shipped first since it's most specific
     if (
       normalizedStatus.includes('shipped') ||
       normalizedStatus.includes('in transit') ||
       normalizedStatus.includes('out for delivery')
     ) {
       return 'shipped';
+    }
+
+    if (
+      normalizedStatus.includes('processing') ||
+      normalizedStatus.includes('packed') ||
+      normalizedStatus.includes('preparing')
+    ) {
+      return 'processing';
     }
 
     if (normalizedStatus.includes('delivered')) {
@@ -173,9 +251,9 @@ function OrderProgressTracker({ status }: { status: string }) {
   );
 }
 
-export default function OrderHistory({ orders }: { orders: any[] }) {
-  const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
-  if (!orders) return null;
+export default function OrderHistory({ orders }: { orders: Order[] }): JSX.Element {
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  if (!orders) return <div>No orders found</div>;
 
   return (
     <div className="space-y-6">
@@ -189,7 +267,7 @@ export default function OrderHistory({ orders }: { orders: any[] }) {
       <div className="flex flex-col gap-6">
       {orders.map((order) => {
         const items = order.items || order.cartItems || [];
-        const status = order.orderStatus || order.status || order.paymentStatus;
+        const status = order.orderStatus || order.status || order.paymentStatus || 'Pending';
         const orderDate = order.createdAt || order.date || order.orderDate || order.updatedAt;
         const config = STATUS_CONFIG[status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.Pending;
         
@@ -248,7 +326,7 @@ export default function OrderHistory({ orders }: { orders: any[] }) {
                     <StatusBadge status={status} />
                     
                     {/* Shipping tracking info */}
-                    {order.shippingTracking && order.shippingTracking.partner && order.shippingTracking.trackingId && (
+                    {order.shippingTracking?.partner && order.shippingTracking?.trackingId && (
                       <div className="flex items-center gap-1 text-xs text-[#473C66] bg-[#473C66]/10 px-3 py-1 rounded-full border border-[#473C66]/20 w-fit">
                         <Truck className="w-3 h-3" />
                         <span>{order.shippingTracking.partner}</span>
@@ -256,7 +334,7 @@ export default function OrderHistory({ orders }: { orders: any[] }) {
                           <ExternalLink className="w-3 h-3 ml-1 cursor-pointer" 
                             onClick={(e: MouseEvent) => {
                               e.stopPropagation();
-                              window.open(order.shippingTracking.trackingUrl, '_blank');
+                              window.open(order.shippingTracking?.trackingUrl || '#', '_blank');
                             }}
                           />
                         )}
@@ -313,7 +391,7 @@ export default function OrderHistory({ orders }: { orders: any[] }) {
                   <div className="text-right">
                     <p className="text-sm text-gray-500 font-medium">Status</p>
                     <div className="mt-1">
-                      <StatusBadge status={selectedOrder.orderStatus || selectedOrder.status || selectedOrder.paymentStatus} />
+                      <StatusBadge status={selectedOrder.orderStatus || selectedOrder.status || selectedOrder.paymentStatus || 'Pending'} />
                     </div>
                   </div>
                 </div>
@@ -322,20 +400,20 @@ export default function OrderHistory({ orders }: { orders: any[] }) {
               {/* Order Progress Tracker */}
               <div className="mb-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Order Progress</h3>
-                <OrderProgressTracker status={selectedOrder.status || selectedOrder.orderStatus || selectedOrder.paymentStatus} />
+                <OrderProgressTracker status={selectedOrder.status || selectedOrder.orderStatus || selectedOrder.paymentStatus || 'Pending'} />
               </div>
               
               {/* Status with description */}
               <div className="mb-6">
                 <div className="flex items-center gap-2 mb-2">
-                  <StatusBadge status={selectedOrder.status || selectedOrder.orderStatus || selectedOrder.paymentStatus} />
+                  <StatusBadge status={selectedOrder.status || selectedOrder.orderStatus || selectedOrder.paymentStatus || 'Pending'} />
                   <span className="text-xs text-gray-500">
                     {STATUS_CONFIG[selectedOrder.status as keyof typeof STATUS_CONFIG]?.description || 'Status updated'}
                   </span>
                 </div>
                 
-                {/* Shipping Tracking Information - Display only when shipped or delivered */}
-                {(['shipped', 'delivered'].includes((selectedOrder.status || selectedOrder.orderStatus || '').toLowerCase())) && selectedOrder.shippingTracking && selectedOrder.shippingTracking.partner && selectedOrder.shippingTracking.trackingId && (
+                {/* Shipping Tracking Information - Display when shipping details exist */}
+                {selectedOrder.shippingTracking?.partner && selectedOrder.shippingTracking?.trackingId && (
                   <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
                     <h3 className="font-semibold text-blue-900 mb-2">📦 Shipping Details</h3>
                     <div className="space-y-2 text-sm">
@@ -368,24 +446,24 @@ export default function OrderHistory({ orders }: { orders: any[] }) {
                       <div key={index} className="flex items-center gap-4 p-4 bg-white rounded-lg shadow-sm border border-gray-100">
                         {item.image && (
                           <img
-                            src={Array.isArray(item.image) ? item.image[0] : item.image}
-                            alt={item.name}
+                            src={Array.isArray(item.image) ? item.image[0] : (item.image || '')}
+                            alt={item.name || 'Product image'}
                             className="w-16 h-16 object-cover rounded-lg border border-gray-200"
                           />
                         )}
                         <div className="flex-1 min-w-0">
-                          <h4 className="font-semibold text-gray-900 text-lg">{item.name}</h4>
+                          <h4 className="font-semibold text-gray-900 text-lg">{item.name || 'Untitled Product'}</h4>
                           <div className="flex items-center gap-4 mt-1">
                             <p className="text-sm text-gray-600">
                               <span className="font-medium">Qty:</span> {item.quantity}
                             </p>
                             {item.size && (
                               <p className="text-sm text-gray-600">
-                                <span className="font-medium">Size:</span> {item.size}
+                                <span className="font-medium">Size:</span> {item.size || '-'}
                               </p>
                             )}
                             <p className="text-sm text-gray-600">
-                              <span className="font-medium">Price:</span> ₹{item.price}
+                              <span className="font-medium">Price:</span> ₹{item.price || 0}
                             </p>
                           </div>
                         </div>
@@ -503,7 +581,7 @@ export default function OrderHistory({ orders }: { orders: any[] }) {
                 {/* Track Package Button */}
                 {selectedOrder.shippingTracking && selectedOrder.shippingTracking.trackingUrl && (
                   <button
-                    onClick={() => window.open(selectedOrder.shippingTracking.trackingUrl, '_blank')}
+                    onClick={() => window.open(selectedOrder.shippingTracking?.trackingUrl || '#', '_blank')}
                     className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-sm"
                   >
                     <Truck className="w-4 h-4" />
