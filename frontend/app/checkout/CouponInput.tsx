@@ -21,7 +21,9 @@ export default function CouponInput({ value, onApply }: any) {
       })
       const data = await res.json()
       if (res.ok && data.valid) {
-        onApply({ code: input.toUpperCase(), discountPercentage: data.discountPercentage })
+        // Support both discountPercentage (new) and discount (legacy) keys
+        const discount = data.discountPercentage ?? data.discount;
+        onApply({ code: input.toUpperCase(), discountPercentage: discount })
         setSuccess('Coupon applied successfully')
         setError('')
       } else {

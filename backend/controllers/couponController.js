@@ -52,7 +52,11 @@ export const deleteCoupon = async (req, res) => {
 export const validateCoupon = async (req, res) => {
   try {
     const { code } = req.body;
-        const coupon = await Coupon.findOne({ code });
+    if (!code) {
+      return res.status(400).json({ message: 'Coupon code is required' });
+    }
+    const normalizedCode = code.toUpperCase().trim();
+    const coupon = await Coupon.findOne({ code: normalizedCode });
 
     if (!coupon) {
             return res.status(404).json({ message: 'Coupon not found' });
@@ -71,8 +75,8 @@ export const validateCoupon = async (req, res) => {
 
     res.json({
       valid: true,
-            discount: coupon.discountPercentage,
-            code: coupon.code
+      discountPercentage: coupon.discountPercentage,
+      code: coupon.code
     });
   } catch (error) {
         console.error('Error validating coupon:', error);
