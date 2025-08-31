@@ -757,35 +757,4 @@ export const getOrderByTransactionId = async (req, res) => {
   }
 }; 
 
-/**
- * Helper function to release stock reservation for an order
- */
-async function releaseStockReservationForOrder(orderId) {
-  try {
-    const order = await orderModel.findById(orderId);
-    if (!order) {
-      throw new Error('Order not found');
-    }
-    
-    // Release stock reservation for all items
-    const releasePromises = order.items.map(item =>
-      releaseStockReservation(item.productId, item.size, item.quantity)
-    );
-    
-    await Promise.all(releasePromises);
-    
-    // Update reservation status
-    const reservation = await Reservation.findOne({ 
-      checkoutSessionId: order.metadata?.checkoutSessionId 
-    });
-    
-    if (reservation && reservation.status === 'active') {
-      await reservation.expire();
-    }
-    
-    console.log(`Stock reservation released for order: ${orderId}`);
-  } catch (error) {
-    console.error('Error releasing stock reservation:', error);
-    throw error;
-  }
-} 
+// Helper function moved to webhookController.js to avoid duplication 

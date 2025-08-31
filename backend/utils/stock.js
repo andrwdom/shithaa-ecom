@@ -288,8 +288,8 @@ export async function batchStockOperations(operations, options = {}) {
  * Legacy function for backward compatibility
  * @deprecated Use reserveStock instead
  */
-export async function reserveStock(productId, size, quantity, options = {}) {
-    console.warn('reserveStock is deprecated. Use reserveStock from the new reservation system.');
+export async function reserveStockLegacy(productId, size, quantity, options = {}) {
+    console.warn('reserveStockLegacy is deprecated. Use reserveStock from the new reservation system.');
     return await reserveStock(productId, size, quantity, options);
 }
 
