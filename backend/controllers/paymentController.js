@@ -562,11 +562,25 @@ export const phonePeCallback = async (req, res) => {
       try {
         if (!order.stockReserved) {
           const { batchChangeStockWithTransaction } = await import('../utils/stock.js');
-          const stockOperations = order.items.map(item => ({
-            productId: item.productId || item._id,
-            size: item.size,
-            quantityChange: -item.quantity,
-          }));
+          // Map order items to stock operations with proper ID handling
+          const stockOperations = order.items.map(item => {
+            // Get the correct product ID - try all possible fields
+            const productId = item.productId || item._id || item.id;
+            if (!productId) {
+              throw new Error(`No product ID found for item: ${item.name}`);
+            }
+            console.log('Stock operation:', {
+              productId,
+              size: item.size,
+              quantity: item.quantity,
+              itemName: item.name
+            });
+            return {
+              productId,
+              size: item.size,
+              quantityChange: -item.quantity,
+            };
+          });
 
           await batchChangeStockWithTransaction(stockOperations);
           console.log(`Stock deducted successfully for order: ${order.orderId}`);

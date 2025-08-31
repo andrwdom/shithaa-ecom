@@ -23,6 +23,14 @@ export async function changeStock(productId, size, quantityChange, options = {})
         ? { 'sizes.stock': { $gte: 0 } }  // Allow any increment
         : { 'sizes.stock': { $gte: -quantityChange } };  // Ensure sufficient stock for decrement
     
+    // Log the stock update attempt
+    console.log('Attempting stock update:', {
+        productId,
+        size,
+        quantityChange,
+        stockCondition
+    });
+
     const result = await productModel.updateOne(
         {
             _id: productId,
@@ -34,6 +42,15 @@ export async function changeStock(productId, size, quantityChange, options = {})
         },
         { session }
     );
+
+    // Log the result
+    console.log('Stock update result:', {
+        productId,
+        size,
+        quantityChange,
+        modifiedCount: result.modifiedCount,
+        matchedCount: result.matchedCount
+    });
     
     if (result.modifiedCount === 0) {
         const errorMsg = quantityChange > 0 
