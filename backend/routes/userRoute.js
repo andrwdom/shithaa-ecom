@@ -21,9 +21,9 @@ userRouter.post('/logout', logout); // POST /api/user/logout
 // Admin routes
 userRouter.post('/admin', adminLogin); // POST /api/user/admin
 
-// Profile routes
-userRouter.get('/auth/profile', optionalAuth, getProfile); // GET /api/auth/profile
-userRouter.put('/auth/profile', verifyToken, updateProfile); // PUT /api/auth/profile
+// Profile routes - 🔧 FIX: Corrected route path to match frontend expectations
+userRouter.get('/auth/profile', optionalAuth, getProfile); // GET /api/user/auth/profile
+userRouter.put('/auth/profile', verifyToken, updateProfile); // PUT /api/user/auth/profile
 userRouter.get('/info', verifyToken, getUserInfo); // GET /api/user/info
 userRouter.get('/public-profile', getPublicProfile); // GET /api/user/public-profile
 

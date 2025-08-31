@@ -125,5 +125,16 @@ const orderSchema = new mongoose.Schema({
 // Add explicit unique index for orderId
 orderSchema.index({ orderId: 1 }, { unique: true });
 
+// 🔧 FIX: Add performance indexes for frequently queried fields
+orderSchema.index({ userId: 1 }); // For user-specific order queries
+orderSchema.index({ 'userInfo.userId': 1 }); // For new user structure
+orderSchema.index({ 'userInfo.email': 1 }); // For email-based queries
+orderSchema.index({ orderStatus: 1 }); // For status-based queries
+orderSchema.index({ paymentStatus: 1 }); // For payment status queries
+orderSchema.index({ placedAt: -1 }); // For date-based sorting
+orderSchema.index({ checkoutSessionId: 1 }); // For session lookups
+orderSchema.index({ phonepeTransactionId: 1 }); // For payment lookups
+orderSchema.index({ createdAt: -1 }); // For creation date queries
+
 const orderModel = mongoose.models.order || mongoose.model('order',orderSchema)
 export default orderModel;

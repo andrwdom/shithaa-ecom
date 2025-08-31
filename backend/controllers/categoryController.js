@@ -4,18 +4,30 @@ import { successResponse, errorResponse, paginatedResponse } from '../utils/resp
 
 export const getAllCategories = async (req, res) => {
     try {
-        const categories = await Category.find().sort({ name: 1 });
-        
-        // Update product count for each category
-        const categoriesWithCount = await Promise.all(
-            categories.map(async (category) => {
-                const productCount = await productModel.countDocuments({ categorySlug: category.slug });
-                return {
-                    ...category.toObject(),
-                    productCount
-                };
-            })
-        );
+        // 🔧 FIX: Use aggregation pipeline for better performance instead of multiple DB calls
+        const categoriesWithCount = await Category.aggregate([
+            {
+                $lookup: {
+                    from: 'products', // Collection name for products
+                    localField: 'slug',
+                    foreignField: 'categorySlug',
+                    as: 'products'
+                }
+            },
+            {
+                $addFields: {
+                    productCount: { $size: '$products' }
+                }
+            },
+            {
+                $project: {
+                    products: 0 // Remove the products array from response
+                }
+            },
+            {
+                $sort: { name: 1 }
+            }
+        ]);
         
         successResponse(res, categoriesWithCount, 'Categories fetched successfully');
     } catch (error) {
@@ -26,19 +38,36 @@ export const getAllCategories = async (req, res) => {
 
 export const getCategoryBySlug = async (req, res) => {
     try {
-        const category = await Category.findOne({ slug: req.params.slug });
-        if (!category) {
+        // 🔧 FIX: Use aggregation pipeline for better performance
+        const categoriesWithCount = await Category.aggregate([
+            {
+                $match: { slug: req.params.slug }
+            },
+            {
+                $lookup: {
+                    from: 'products',
+                    localField: 'slug',
+                    foreignField: 'categorySlug',
+                    as: 'products'
+                }
+            },
+            {
+                $addFields: {
+                    productCount: { $size: '$products' }
+                }
+            },
+            {
+                $project: {
+                    products: 0
+                }
+            }
+        ]);
+        
+        if (categoriesWithCount.length === 0) {
             return errorResponse(res, 404, 'Category not found');
         }
         
-        // Get product count for this category
-        const productCount = await productModel.countDocuments({ categorySlug: category.slug });
-        const categoryWithCount = {
-            ...category.toObject(),
-            productCount
-        };
-        
-        successResponse(res, categoryWithCount, 'Category fetched successfully');
+        successResponse(res, categoriesWithCount[0], 'Category fetched successfully');
     } catch (error) {
         console.error('Get Category By Slug Error:', error);
         errorResponse(res, 500, error.message);

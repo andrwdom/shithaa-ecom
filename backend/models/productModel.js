@@ -67,6 +67,17 @@ productSchema.pre('save', function(next) {
 // Add explicit unique index for customId
 productSchema.index({ customId: 1 }, { unique: true });
 
+// 🔧 FIX: Add performance indexes for frequently queried fields
+productSchema.index({ categorySlug: 1 }); // For category-based queries
+productSchema.index({ category: 1 }); // For category name queries
+productSchema.index({ price: 1 }); // For price range queries
+productSchema.index({ createdAt: -1 }); // For sorting by creation date
+productSchema.index({ isNewArrival: 1 }); // For new arrival filters
+productSchema.index({ isBestSeller: 1 }); // For best seller filters
+productSchema.index({ inStock: 1 }); // For stock availability queries
+productSchema.index({ 'sizes.stock': 1 }); // For stock queries
+productSchema.index({ name: 'text', description: 'text' }); // Text search index
+
 const productModel = mongoose.models.product || mongoose.model("product", productSchema);
 
 export default productModel
