@@ -23,7 +23,7 @@ const productSchema = new mongoose.Schema({
         required: true,
         min: [100, 'Price must be at least ₹100 to prevent offer calculation issues'],
         validate: {
-            validator: function(price: number) {
+            validator: function(price) {
                 // 🔧 FIX: Prevent extremely low prices that can cause negative totals
                 return price >= 100;
             },
