@@ -427,7 +427,16 @@ try {
 // Graceful shutdown
 process.on('SIGTERM', () => {
     console.log('Received SIGTERM. Performing graceful shutdown...');
-    app.close(() => {
+    server.close(() => {
+        console.log('Server closed. Exiting process.');
+        process.exit(0);
+    });
+});
+
+// Also handle SIGINT (Ctrl+C) for development
+process.on('SIGINT', () => {
+    console.log('Received SIGINT. Performing graceful shutdown...');
+    server.close(() => {
         console.log('Server closed. Exiting process.');
         process.exit(0);
     });
