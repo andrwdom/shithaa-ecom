@@ -570,34 +570,11 @@ export const phonePeCallback = async (req, res) => {
       // -----------------------------------------------------------------
       try {
         if (!order.stockReserved) {
-          const { batchChangeStockWithTransaction } = await import('../utils/stock.js');
-          // Map order items to stock operations with proper ID handling
-          // First get the checkout session to get the correct product IDs
-          const checkoutSession = await CheckoutSession.findOne({ phonepeTransactionId: merchantTransactionId });
-          if (!checkoutSession) {
-            throw new Error('Checkout session not found for order');
-          }
-
-          // Map checkout session items to stock operations
-          const stockOperations = checkoutSession.items.map(item => {
-            if (!item.productId) {
-              throw new Error(`No product ID found for item: ${item.name}`);
-            }
-            console.log('Stock operation:', {
-              productId: item.productId,
-              size: item.size,
-              quantity: item.quantity,
-              itemName: item.name
-            });
-            return {
-              productId: item.productId,
-              size: item.size,
-              quantityChange: -item.quantity,
-            };
-          });
-
-          await batchChangeStockWithTransaction(stockOperations);
-          console.log(`Stock deducted successfully for order: ${order.orderId}`);
+          // Import and call confirmOrderStock to handle stock reduction
+          const { confirmOrderStock } = await import('../controllers/orderController.js');
+          console.log('Reducing stock for order:', order._id);
+          await confirmOrderStock(order._id);
+          console.log('Stock reduction completed successfully');
           
           // Mark stock as reserved (i.e., deducted)
           update.stockReserved = true;
@@ -823,6 +800,18 @@ export const verifyPhonePePayment = async (req, res) => {
         const order = await orderModel.findOne({ phonepeTransactionId: merchantTransactionId });
         if (order && order.paymentStatus !== 'paid') {
           console.log(`[verify] Webhook was slow, updating order ${order.orderId} to paid.`);
+          
+          // Import and call confirmOrderStock to handle stock reduction
+          const { confirmOrderStock } = await import('../controllers/orderController.js');
+          try {
+            console.log('Reducing stock for order:', order._id);
+            await confirmOrderStock(order._id);
+            console.log('Stock reduction completed successfully');
+          } catch (stockError) {
+            console.error('Failed to reduce stock:', stockError);
+            // Continue with order update even if stock reduction fails
+          }
+          
           order.payment = true;
           order.paymentStatus = 'paid';
           order.orderStatus = 'Confirmed';
