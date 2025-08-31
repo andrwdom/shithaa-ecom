@@ -163,7 +163,6 @@ export const createCheckoutSession = async (req, res) => {
     // 🔑 CRITICAL FIX: Stock reservation has been REMOVED from this controller.
     // Stock is now exclusively handled in the payment controller to prevent double-deduction.
     // The session is marked as awaiting_payment immediately.
-    checkoutSession.stockReserved = true; // Explicitly set to true
     checkoutSession.status = 'awaiting_payment';
     await checkoutSession.save();
     

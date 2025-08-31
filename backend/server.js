@@ -34,8 +34,6 @@ import wishlistRouter from './routes/wishlistRoutes.js'
 import shippingRouter from './routes/shippingRoute.js'
 import shippingRulesRouter from './routes/shippingRulesRoute.js'
 import heroImagesRouter from './routes/heroImagesRoute.js'
-import reservationRouter from './routes/reservationRoute.js'
-import webhookRouter from './routes/webhookRoute.js'
 import admin from 'firebase-admin'
 import orderModel from './models/orderModel.js'
 import Category from './models/Category.js'
@@ -213,8 +211,6 @@ app.use('/api/wishlist', wishlistRouter)
 app.use('/api/shipping', shippingRouter)
 app.use('/api/shipping-rules', shippingRulesRouter)
 app.use('/api/hero-images', heroImagesRouter)
-app.use('/api/checkout', reservationRouter)
-app.use('/api/webhook', webhookRouter)
 
 // Legacy routes for backward compatibility
 app.use('/api/product', productRouter)

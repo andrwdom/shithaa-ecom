@@ -103,12 +103,18 @@ const orderSchema = new mongoose.Schema({
     }],
     // Legacy payment field
     payment: { type: Boolean, default: false },
+    
+    // Stock management fields
+    stockConfirmed: { type: Boolean, default: false },
+    stockConfirmedAt: { type: Date },
+    
     // Shipping tracking information
     shippingTracking: {
-        partner: { type: String, enum: ['DTDC', 'ST Courier', 'XpressBees', 'India Post', 'Delhivery', 'Blue Dart', 'Ecom Express', 'Other'] },
-        trackingId: { type: String },
-        shippedAt: { type: Date },
-        trackingUrl: { type: String }
+        trackingNumber: String,
+        carrier: String,
+        status: String,
+        estimatedDelivery: Date,
+        actualDelivery: Date
     },
     // Legacy fields for backward compatibility
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'user' },

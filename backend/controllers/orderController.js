@@ -939,13 +939,39 @@ export const confirmOrderStock = async (orderId) => {
             throw new Error('Order not found');
         }
         
+        // Check if stock is already confirmed
+        if (order.stockConfirmed) {
+            console.log('Stock already confirmed for order:', order.orderId);
+            return { message: 'Stock already confirmed', orderId: order._id };
+        }
+        
+        // Validate order items
+        if (!order.items || order.items.length === 0) {
+            throw new Error('Order has no items to process');
+        }
+        
         // Decrement stock using atomic operations
         const { batchChangeStock } = await import('../utils/stock.js');
-        const operations = order.items.map(item => ({
-            productId: item.productId || item._id || item.id,
-            size: item.size,
-            quantityChange: -item.quantity
-        }));
+        const operations = order.items.map(item => {
+            const productId = item.productId || item._id || item.id;
+            if (!productId) {
+                throw new Error(`Missing product ID for item: ${item.name}`);
+            }
+            if (!item.size) {
+                throw new Error(`Missing size for item: ${item.name}`);
+            }
+            if (!item.quantity || item.quantity <= 0) {
+                throw new Error(`Invalid quantity for item: ${item.name}`);
+            }
+            
+            return {
+                productId,
+                size: item.size,
+                quantityChange: -item.quantity
+            };
+        });
+        
+        console.log('Processing stock operations for order:', order.orderId, 'Operations:', operations);
         
         const results = await batchChangeStock(operations);
         console.log('Stock decremented successfully after payment confirmation:', results);
@@ -953,12 +979,20 @@ export const confirmOrderStock = async (orderId) => {
         // Update order to mark stock as confirmed
         await orderModel.findByIdAndUpdate(orderId, { 
             stockConfirmed: true,
-            stockConfirmedAt: new Date()
+            stockConfirmedAt: new Date(),
+            updatedAt: new Date()
         });
         
-        return results;
+        console.log('Order stock confirmation completed successfully for order:', order.orderId);
+        
+        return {
+            success: true,
+            message: 'Stock confirmed successfully',
+            orderId: order._id,
+            results
+        };
     } catch (error) {
-        console.error('Failed to confirm order stock:', error);
+        console.error('Failed to confirm order stock for order:', orderId, 'Error:', error);
         throw error;
     }
 };
