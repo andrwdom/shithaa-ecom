@@ -74,7 +74,7 @@ export const updateProfile = async (req, res) => {
 };
 
 // Route for user login
-const loginUser = async (req, res) => {
+export const loginUser = async (req, res) => {
     try {
         const { email, password } = req.body;
 
@@ -139,7 +139,7 @@ const loginUser = async (req, res) => {
 }
 
 // Route for user register
-const registerUser = async (req, res) => {
+export const registerUser = async (req, res) => {
     try {
         const { name, email, password } = req.body;
 
@@ -217,7 +217,7 @@ const registerUser = async (req, res) => {
 }
 
 // Route for admin login
-const adminLogin = async (req, res) => {
+export const adminLogin = async (req, res) => {
     try {
         const {email, password} = req.body
 
@@ -532,4 +532,3 @@ export const logout = async (req, res) => {
     }
 };
 
-export { loginUser, registerUser, adminLogin }
