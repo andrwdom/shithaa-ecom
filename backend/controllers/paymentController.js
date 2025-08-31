@@ -563,7 +563,7 @@ export const phonePeCallback = async (req, res) => {
         if (!order.stockReserved) {
           const { batchChangeStockWithTransaction } = await import('../utils/stock.js');
           const stockOperations = order.items.map(item => ({
-            productId: item.productId,
+            productId: item.productId || item._id,
             size: item.size,
             quantityChange: -item.quantity,
           }));
