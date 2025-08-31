@@ -277,20 +277,29 @@ export const createPhonePeSession = async (req, res) => {
       }
     };
 
-    const orderPayload = {
-      orderId,
-      userInfo: {
+          const orderPayload = {
+        orderId,
+        userInfo: {
+          userId: checkoutSession.userId,
+          name: shipping.fullName,
+          email: userEmail
+        },
         userId: checkoutSession.userId,
-        name: shipping.fullName,
-        email: userEmail
-      },
-      userId: checkoutSession.userId,
-      shippingInfo: {
-        ...shipping,
-        addressLine2: shipping.addressLine2 || '',
-        country: shipping.country || 'India'
-      },
-      items: checkoutSession.items,
+        shippingInfo: {
+          ...shipping,
+          addressLine2: shipping.addressLine2 || '',
+          country: shipping.country || 'India'
+        },
+        items: checkoutSession.items.map(item => ({
+          productId: item.productId, // Ensure productId is copied
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+          image: item.image,
+          size: item.size,
+          categorySlug: item.categorySlug,
+          category: item.category
+        })),
       totalPrice: checkoutSession.total,
       subtotal: checkoutSession.subtotal,
       total: checkoutSession.total,
@@ -563,20 +572,25 @@ export const phonePeCallback = async (req, res) => {
         if (!order.stockReserved) {
           const { batchChangeStockWithTransaction } = await import('../utils/stock.js');
           // Map order items to stock operations with proper ID handling
-          const stockOperations = order.items.map(item => {
-            // Get the correct product ID - try all possible fields
-            const productId = item.productId || item._id || item.id;
-            if (!productId) {
+          // First get the checkout session to get the correct product IDs
+          const checkoutSession = await CheckoutSession.findOne({ phonepeTransactionId: merchantTransactionId });
+          if (!checkoutSession) {
+            throw new Error('Checkout session not found for order');
+          }
+
+          // Map checkout session items to stock operations
+          const stockOperations = checkoutSession.items.map(item => {
+            if (!item.productId) {
               throw new Error(`No product ID found for item: ${item.name}`);
             }
             console.log('Stock operation:', {
-              productId,
+              productId: item.productId,
               size: item.size,
               quantity: item.quantity,
               itemName: item.name
             });
             return {
-              productId,
+              productId: item.productId,
               size: item.size,
               quantityChange: -item.quantity,
             };
