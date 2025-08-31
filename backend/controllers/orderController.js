@@ -942,7 +942,7 @@ export const confirmOrderStock = async (orderId) => {
         // Decrement stock using atomic operations
         const { batchChangeStock } = await import('../utils/stock.js');
         const operations = order.items.map(item => ({
-            productId: item._id,
+            productId: item.productId || item._id || item.id,
             size: item.size,
             quantityChange: -item.quantity
         }));
