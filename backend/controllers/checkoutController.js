@@ -467,7 +467,37 @@ export const cancelCheckoutSession = async (req, res) => {
     
     // Release stock if reserved
     if (session.stockReserved) {
-      await releaseStockForSession(req, res);
+      try {
+        // Release stock for all items
+        const stockOperations = [];
+        for (const item of session.items) {
+          try {
+            await releaseStockReservation(item.productId, item.size, item.quantity);
+            stockOperations.push({
+              productId: item.productId,
+              size: item.size,
+              quantity: item.quantity,
+              success: true
+            });
+          } catch (error) {
+            stockOperations.push({
+              productId: item.productId,
+              size: item.size,
+              quantity: item.quantity,
+              success: false,
+              error: error.message
+            });
+          }
+        }
+        
+        // Mark session as no longer having reserved stock
+        session.stockReserved = false;
+        await session.save();
+        
+        console.log(`Stock released for cancelled session: ${sessionId}`);
+      } catch (error) {
+        console.error(`Error releasing stock for cancelled session:`, error);
+      }
     }
     
     // Mark session as cancelled
