@@ -256,6 +256,102 @@ export const getCheckoutSession = async (req, res) => {
 };
 
 /**
+ * Reserve stock for checkout session
+ */
+export const reserveStockForSession = async (req, res) => {
+  const correlationId = req.headers['x-request-id'] || `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  
+  try {
+    const { sessionId } = req.params;
+    
+    if (!sessionId) {
+      return errorResponse(res, 400, 'Session ID is required');
+    }
+    
+    const session = await CheckoutSession.findOne({ sessionId });
+    if (!session) {
+      return errorResponse(res, 404, 'Checkout session not found');
+    }
+    
+    if (session.isExpired()) {
+      return errorResponse(res, 410, 'Checkout session has expired');
+    }
+    
+    if (session.stockReserved) {
+      return successResponse(res, { message: 'Stock already reserved for this session' });
+    }
+    
+    // Validate stock availability for all items
+    const stockValidations = [];
+    for (const item of session.items) {
+      const validation = await checkStockAvailability(item.productId, item.size, item.quantity);
+      stockValidations.push({
+        productId: item.productId,
+        size: item.size,
+        quantity: item.quantity,
+        ...validation
+      });
+      
+      if (!validation.available) {
+        return errorResponse(res, 409, 'Stock not available', validation.error);
+      }
+    }
+    
+    // Reserve stock for all items
+    const reservationPromises = session.items.map(item =>
+      reserveStock(item.productId, item.size, item.quantity)
+    );
+    await Promise.all(reservationPromises);
+    
+    // Mark session as having reserved stock
+    session.stockReserved = true;
+    session.status = 'awaiting_payment';
+    await session.save();
+    
+    // Log stock reservation
+    await PaymentEvent.createEvent({
+      correlationId,
+      eventType: 'stock_reserved',
+      source: 'backend',
+      checkoutSessionId: sessionId,
+      userId: session.userId,
+      userEmail: session.userEmail,
+      status: 'success',
+      data: { stockValidations }
+    });
+    
+    console.log(`[${correlationId}] Stock reserved for session: ${sessionId}`);
+    
+    return successResponse(res, {
+      message: 'Stock reserved successfully',
+      stockReserved: true,
+      expiresAt: session.expiresAt
+    });
+    
+  } catch (error) {
+    console.error(`[${correlationId}] Error reserving stock:`, error);
+    
+    // Log failed event
+    await PaymentEvent.createEvent({
+      correlationId,
+      eventType: 'stock_reserved',
+      source: 'backend',
+      checkoutSessionId: req.params.sessionId,
+      userId: req.user?.id,
+      userEmail: req.user?.email,
+      status: 'failed',
+      error: {
+        message: error.message,
+        code: error.code || 'UNKNOWN',
+        stack: error.stack
+      }
+    });
+    
+    return errorResponse(res, 500, 'Failed to reserve stock', error.message);
+  }
+};
+
+/**
  * Release stock reservation for checkout session
  */
 export const releaseStockForSession = async (req, res) => {
