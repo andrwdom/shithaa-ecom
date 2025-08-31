@@ -87,8 +87,14 @@ export default function CheckoutPage() {
       // Offer discount from backend calculation
       const offerDiscount = offerDetails?.offerDiscount || 0;
 
+      // 🔧 FIX: Safety check - ensure offer discount is never negative or exceeds subtotal
+      const safeOfferDiscount = Math.max(0, Math.min(offerDiscount, rawSubtotal));
+      if (offerDiscount !== safeOfferDiscount) {
+        console.log(`🔧 Frontend safety fix: Adjusted offer discount from ₹${offerDiscount} to ₹${safeOfferDiscount}`);
+      }
+
       // Apply coupon on the amount after offer discount
-      const amountAfterOffer = rawSubtotal - offerDiscount;
+      const amountAfterOffer = rawSubtotal - safeOfferDiscount;
       const couponDiscount = coupon ? Math.round((amountAfterOffer * coupon.discountPercentage) / 100) : 0;
 
       // Calculate shipping using new shipping logic
@@ -109,11 +115,17 @@ export default function CheckoutPage() {
       }
 
       // Final total: use computed values to avoid drift
-      const total = amountAfterOffer - couponDiscount + shippingCost;
+      let total = amountAfterOffer - couponDiscount + shippingCost;
+
+      // 🔧 FIX: Final safety check - ensure total is never negative
+      if (total < 0) {
+        console.log(`🔧 CRITICAL: Frontend negative total detected: ₹${total}, setting to 0`);
+        total = 0;
+      }
 
       const newOrderSummary = { 
         subtotal: rawSubtotal,
-        offerDiscount, // Pass the offer discount down
+        offerDiscount: safeOfferDiscount, // Use the safe offer discount
         couponDiscount,
         shipping: shippingCost, 
         total,

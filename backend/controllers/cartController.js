@@ -200,12 +200,28 @@ const calculateCartTotal = async (req, res) => {
         // Calculate totals with safety caps
         const subtotal = loungewearCategoryOffer.originalTotal + otherItemsTotal;
 
+        // 🔧 FIX: Enhanced logging for debugging
+        console.log(`🔧 Cart calculation summary:`, {
+            loungewearOriginalTotal: loungewearCategoryOffer.originalTotal,
+            otherItemsTotal,
+            subtotal,
+            rawDiscount: loungewearCategoryOffer.discount,
+            offerApplied: loungewearCategoryOffer.offerApplied,
+            loungewearItemCount: loungewearCategoryItems.length
+        });
+
         // Never let the discount exceed the subtotal (prevents negative totals on tiny orders)
         const rawDiscount = loungewearCategoryOffer.discount;
         const offerDiscount = Math.min(rawDiscount, subtotal);
 
         // Final payable amount (can never go below 0)
         const finalTotal = Math.max(0, subtotal - offerDiscount);
+
+        console.log(`🔧 Final calculation:`, {
+            subtotal,
+            offerDiscount,
+            finalTotal
+        });
 
         const response = {
             success: true,
@@ -249,7 +265,9 @@ const calculateCartTotal = async (req, res) => {
 
 // Helper function to calculate loungewear category offer
 function calculateLoungewearCategoryOffer(loungewearCategoryItems) {
-    if (loungewearCategoryItems.length < 3) {       // No offer applied
+    // 🔧 FIX: Offer ONLY applies when there are 3 or more loungewear items
+    if (loungewearCategoryItems.length < 3) {
+        console.log(`🔧 No loungewear offer applied: Only ${loungewearCategoryItems.length} item(s), need 3+ for offer`);
         const originalTotal = loungewearCategoryItems.reduce((sum, item) => sum + item.originalPrice, 0);
         return {
             originalTotal,
@@ -263,10 +281,47 @@ function calculateLoungewearCategoryOffer(loungewearCategoryItems) {
     const completeSets = Math.floor(loungewearCategoryItems.length / 3);
     const remainingItems = loungewearCategoryItems.length % 3;
     
+    console.log(`🔧 Loungewear offer calculation: ${loungewearCategoryItems.length} items = ${completeSets} complete sets + ${remainingItems} remaining`);
+    
     // Calculate totals
     const originalTotal = loungewearCategoryItems.reduce((sum, item) => sum + item.originalPrice, 0);
-    const offerTotal = (completeSets * 1299 + (remainingItems * 450));
+    
+    // 🔧 FIX: The offer is: "3 for ₹1299" + remaining items at ₹450 each
+    // This should only apply when we have 3+ items, which we already checked above
+    
+    // Calculate offer total based on the rule:
+    // - Complete sets of 3: ₹1299 each
+    // - Remaining items: ₹450 each
+    const offerTotal = (completeSets * 1299) + (remainingItems * 450);
+    
+    console.log(`🔧 Offer calculation: ${completeSets} × ₹1299 + ${remainingItems} × ₹450 = ₹${offerTotal}`);
+    console.log(`🔧 Original total: ₹${originalTotal}, Offer total: ₹${offerTotal}`);
+    
+    // 🔧 FIX: Ensure offer total is never higher than original total
+    if (offerTotal >= originalTotal) {
+        console.log(`🔧 Offer validation failed: Offer total ₹${offerTotal} >= Original total ₹${originalTotal}`);
+        return {
+            originalTotal,
+            discount: 0,
+            offerApplied: false,
+            offerDetails: null
+        };
+    }
+    
     const discount = originalTotal - offerTotal;
+    
+    console.log(`🔧 Final discount: ₹${originalTotal} - ₹${offerTotal} = ₹${discount}`);
+    
+    // 🔧 FIX: Additional safety check - discount should be positive
+    if (discount <= 0) {
+        console.log(`🔧 Offer validation failed: Invalid discount ₹${discount}`);
+        return {
+            originalTotal,
+            discount: 0,
+            offerApplied: false,
+            offerDetails: null
+        };
+    }
     
     const offerDetails = {     
         completeSets,

@@ -18,8 +18,22 @@ sizeSchema.set('toObject', { virtuals: true });
 const productSchema = new mongoose.Schema({
     customId: { type: String, required: true },
     name: { type: String, required: true },
-    price: { type: Number, required: true },
-    originalPrice: { type: Number },
+    price: { 
+        type: Number, 
+        required: true,
+        min: [100, 'Price must be at least ₹100 to prevent offer calculation issues'],
+        validate: {
+            validator: function(price: number) {
+                // 🔧 FIX: Prevent extremely low prices that can cause negative totals
+                return price >= 100;
+            },
+            message: 'Price must be at least ₹100 to prevent offer calculation issues'
+        }
+    },
+    originalPrice: { 
+        type: Number,
+        min: [100, 'Original price must be at least ₹100']
+    },
     description: { type: String, required: true },
     images: [{ type: String, required: true }],
     category: { type: String, required: true },

@@ -615,6 +615,23 @@ export const updateProduct = async (req, res) => {
             }
         }
 
+        // 🔧 FIX: Validate price if provided to prevent negative totals
+        if (price !== undefined) {
+            const numericPrice = Number(price);
+            if (isNaN(numericPrice) || numericPrice <= 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Price must be a positive number"
+                });
+            }
+            if (numericPrice < 100) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Price must be at least ₹100 to prevent offer calculation issues"
+                });
+            }
+        }
+
         // Handle image uploads if provided
         let imagesUrl = product.images;
         let imageOptimizationStats = null;
