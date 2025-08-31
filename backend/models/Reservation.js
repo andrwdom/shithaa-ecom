@@ -1,60 +1,60 @@
 import mongoose from 'mongoose';
 
 const reservationSchema = new mongoose.Schema({
-    userId: { 
-        type: mongoose.Schema.Types.ObjectId, 
-        ref: 'user', 
-        required: true 
+    userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'user',
+        required: true
     },
     items: [{
-        productId: { 
-            type: mongoose.Schema.Types.ObjectId, 
-            ref: 'product', 
-            required: true 
+        productId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'product',
+            required: true
         },
-        qty: { 
-            type: Number, 
-            required: true, 
-            min: 1 
+        qty: {
+            type: Number,
+            required: true,
+            min: 1
         },
-        priceAtReserve: { 
-            type: Number, 
-            required: true, 
-            min: 0 
+        priceAtReserve: {
+            type: Number,
+            required: true,
+            min: 0
         },
-        size: { 
-            type: String, 
-            required: true 
+        size: {
+            type: String,
+            required: true
         }
     }],
-    status: { 
-        type: String, 
-        enum: ['reserved', 'confirmed', 'expired', 'cancelled'], 
-        default: 'reserved' 
+    status: {
+        type: String,
+        enum: ['reserved', 'confirmed', 'expired', 'cancelled'],
+        default: 'reserved'
     },
-    idempotencyKey: { 
-        type: String, 
-        required: true, 
-        unique: true 
+    idempotencyKey: {
+        type: String,
+        required: true,
+        unique: true
     },
-    paymentId: { 
-        type: String 
+    paymentId: {
+        type: String
     },
-    expiresAt: { 
-        type: Date, 
-        required: true 
+    expiresAt: {
+        type: Date,
+        required: true
     },
-    holdMinutes: { 
-        type: Number, 
-        default: 15 
+    holdMinutes: {
+        type: Number,
+        default: 15
     },
-    totalAmount: { 
-        type: Number, 
-        required: true, 
-        min: 0 
+    totalAmount: {
+        type: Number,
+        required: true,
+        min: 0
     },
-    metadata: { 
-        type: mongoose.Schema.Types.Mixed 
+    metadata: {
+        type: mongoose.Schema.Types.Mixed
     }
 }, {
     timestamps: true

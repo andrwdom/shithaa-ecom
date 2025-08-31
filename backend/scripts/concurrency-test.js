@@ -73,13 +73,13 @@ async function makeReservationRequest(idempotencyKey, requestId) {
  */
 async function runConcurrencyTest() {
     console.log('🚀 Starting concurrency test for reservation system');
-    console.log('=' .repeat(60));
+    console.log('='.repeat(60));
     console.log(`Base URL: ${BASE_URL}`);
     console.log(`Concurrent requests: ${CONCURRENT_REQUESTS}`);
     console.log(`Product ID: ${PRODUCT_ID}`);
     console.log(`Size: ${SIZE}`);
     console.log(`User ID: ${testUserId}`);
-    console.log('=' .repeat(60));
+    console.log('='.repeat(60));
     
     const results = [];
     const promises = [];
@@ -137,7 +137,7 @@ async function runConcurrencyTest() {
     
     // Print results
     console.log('\n📊 Test Results:');
-    console.log('=' .repeat(60));
+    console.log('='.repeat(60));
     console.log(`Total requests: ${allResults.length}`);
     console.log(`Successful: ${successful.length}`);
     console.log(`Failed: ${failed.length}`);
@@ -159,7 +159,7 @@ async function runConcurrencyTest() {
     
     // Print detailed results
     console.log('\n📋 Detailed Results:');
-    console.log('=' .repeat(60));
+    console.log('='.repeat(60));
     
     for (const result of allResults) {
         const status = result.success ? '✅' : '❌';
@@ -176,7 +176,7 @@ async function runConcurrencyTest() {
     
     // Summary
     console.log('\n🏁 Summary:');
-    console.log('=' .repeat(60));
+    console.log('='.repeat(60));
     
     if (successful.length === allResults.length) {
         console.log('🎉 All requests succeeded!');
@@ -220,7 +220,7 @@ async function runSingleTest() {
     const result = await makeReservationRequest(idempotencyKey, 1);
     
     console.log('\n📋 Single Test Result:');
-    console.log('=' .repeat(40));
+    console.log('='.repeat(40));
     console.log(`Status: ${result.success ? '✅ Success' : '❌ Failed'}`);
     console.log(`HTTP Status: ${result.status}`);
     console.log(`Duration: ${result.duration}ms`);
