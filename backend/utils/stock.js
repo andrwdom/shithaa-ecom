@@ -1,75 +1,97 @@
 import mongoose from 'mongoose';
 import productModel from '../models/productModel.js';
+import Reservation from '../models/Reservation.js';
 
 /**
- * Atomic stock change utility
+ * Check stock availability considering reservations
  * @param {string} productId - Product ID
- * @param {string} size - Size to modify
- * @param {number} quantityChange - Positive for increment, negative for decrement
- * @param {Object} options - Additional options like session for transactions
- * @returns {Promise<Object>} - Result of the operation
+ * @param {string} size - Size to check
+ * @param {number} quantity - Quantity needed
+ * @param {string} excludeSessionId - Session ID to exclude from reservation check
+ * @returns {Promise<Object>} - Stock availability info
  */
-export async function changeStock(productId, size, quantityChange, options = {}) {
-    const { session } = options;
-    
-    // Validate inputs
-    if (!productId || !size || typeof quantityChange !== 'number') {
-        throw new Error('Invalid parameters: productId, size, and quantityChange are required');
-    }
-    
-    // For decrements, ensure we have enough stock
-    // For increments, ensure we don't go negative
-    const stockCondition = quantityChange > 0 
-        ? { 'sizes.stock': { $gte: 0 } }  // Allow any increment
-        : { 'sizes.stock': { $gte: -quantityChange } };  // Ensure sufficient stock for decrement
-    
-    // Log the stock update attempt
-    console.log('Attempting stock update:', {
-        productId,
-        size,
-        quantityChange,
-        stockCondition
-    });
+export async function checkStockAvailability(productId, size, quantity, excludeSessionId = null) {
+    try {
+        const product = await productModel.findById(productId);
+        if (!product) {
+            return {
+                available: false,
+                error: 'Product not found',
+                productName: 'Unknown',
+                currentStock: 0,
+                currentReserved: 0,
+                availableStock: 0
+            };
+        }
 
-    const result = await productModel.updateOne(
-        {
-            _id: productId,
-            'sizes.size': size,
-            ...stockCondition
-        },
-        {
-            $inc: { 'sizes.$.stock': quantityChange }
-        },
-        { session }
-    );
+        const sizeObj = product.sizes.find(s => s.size === size);
+        if (!sizeObj) {
+            return {
+                available: false,
+                error: `Size ${size} not available for this product`,
+                productName: product.name,
+                currentStock: 0,
+                currentReserved: 0,
+                availableStock: 0
+            };
+        }
 
-    // Log the result
-    console.log('Stock update result:', {
-        productId,
-        size,
-        quantityChange,
-        modifiedCount: result.modifiedCount,
-        matchedCount: result.matchedCount
-    });
-    
-    if (result.modifiedCount === 0) {
-        const errorMsg = quantityChange > 0 
-            ? 'Stock increment failed: product or size not found'
-            : 'Stock decrement failed: insufficient stock or concurrent change';
-        throw new Error(errorMsg);
+        // Calculate total reserved stock for this product/size
+        let totalReserved = 0;
+        if (excludeSessionId) {
+            // Exclude current session's reservations when checking availability
+            const otherReservations = await Reservation.find({
+                'items.productId': productId,
+                'items.size': size,
+                status: 'active',
+                checkoutSessionId: { $ne: excludeSessionId }
+            });
+            
+            totalReserved = otherReservations.reduce((sum, res) => {
+                const item = res.items.find(i => i.productId.toString() === productId.toString() && i.size === size);
+                return sum + (item ? item.quantity : 0);
+            }, 0);
+        } else {
+            // Get all active reservations for this product/size
+            const reservations = await Reservation.find({
+                'items.productId': productId,
+                'items.size': size,
+                status: 'active'
+            });
+            
+            totalReserved = reservations.reduce((sum, res) => {
+                const item = res.items.find(i => i.productId.toString() === productId.toString() && i.size === size);
+                return sum + (item ? item.quantity : 0);
+            }, 0);
+        }
+
+        const availableStock = Math.max(0, sizeObj.stock - totalReserved);
+        const isAvailable = availableStock >= quantity;
+
+        return {
+            available: isAvailable,
+            error: isAvailable ? null : `Insufficient stock. Available: ${availableStock}, Requested: ${quantity}`,
+            productName: product.name,
+            currentStock: sizeObj.stock,
+            currentReserved: totalReserved,
+            availableStock: availableStock,
+            requestedQuantity: quantity
+        };
+    } catch (error) {
+        console.error('Error checking stock availability:', error);
+        return {
+            available: false,
+            error: `Error checking stock: ${error.message}`,
+            productName: 'Unknown',
+            currentStock: 0,
+            currentReserved: 0,
+            availableStock: 0
+        };
     }
-    
-    return {
-        success: true,
-        modifiedCount: result.modifiedCount,
-        productId,
-        size,
-        quantityChange
-    };
 }
 
 /**
- * Atomic stock reservation (decrement with validation)
+ * Reserve stock for checkout session (increment reserved field)
  * @param {string} productId - Product ID
  * @param {string} size - Size to reserve
  * @param {number} quantity - Quantity to reserve
@@ -81,184 +103,282 @@ export async function reserveStock(productId, size, quantity, options = {}) {
         throw new Error('Quantity must be positive for reservation');
     }
     
-    // First check if stock is available before attempting reservation
-    const stockCheck = await checkStockAvailability(productId, size, quantity);
-    if (!stockCheck.available) {
-        throw new Error(`Stock reservation failed: ${stockCheck.error}`);
-    }
-    
-    // Additional validation: ensure stock is not negative
-    if (stockCheck.currentStock < 0) {
-        throw new Error(`Stock reservation failed: Product ${stockCheck.productName} size ${size} has corrupted stock (${stockCheck.currentStock}). Please contact admin.`);
-    }
+    const { session } = options;
     
     try {
-        return await changeStock(productId, size, -quantity, options);
+        // Check if we have enough available stock
+        const stockCheck = await checkStockAvailability(productId, size, quantity);
+        if (!stockCheck.available) {
+            throw new Error(`Stock reservation failed: ${stockCheck.error}`);
+        }
+        
+        // Increment the reserved field atomically
+        const result = await productModel.updateOne(
+            {
+                _id: productId,
+                'sizes.size': size,
+                'sizes.stock': { $gte: quantity } // Ensure we have physical stock
+            },
+            {
+                $inc: { 'sizes.$.reserved': quantity }
+            },
+            { session }
+        );
+        
+        if (result.modifiedCount === 0) {
+            throw new Error(`Failed to reserve stock for product ${productId} size ${size}`);
+        }
+        
+        console.log(`Stock reserved successfully: ${quantity} units for product ${productId} size ${size}`);
+        
+        return {
+            success: true,
+            productId,
+            size,
+            quantity,
+            reserved: quantity
+        };
     } catch (error) {
-        // Enhanced error message with stock details
-        const currentStock = await checkStockAvailability(productId, size, 1);
-        throw new Error(`Stock reservation failed for ${currentStock.productName} size ${size}: ${error.message}. Current stock: ${currentStock.currentStock}, Requested: ${quantity}`);
+        console.error('Stock reservation failed:', error);
+        throw error;
     }
 }
 
 /**
- * Atomic stock release (increment for failed payments/cancellations)
+ * Confirm stock reservation (decrement stock and reserved fields)
+ * @param {string} productId - Product ID
+ * @param {string} size - Size to confirm
+ * @param {number} quantity - Quantity to confirm
+ * @param {Object} options - Additional options
+ * @returns {Promise<Object>} - Result of the confirmation
+ */
+export async function confirmStockReservation(productId, size, quantity, options = {}) {
+    if (quantity <= 0) {
+        throw new Error('Quantity must be positive for confirmation');
+    }
+    
+    const { session } = options;
+    
+    try {
+        // Decrement both stock and reserved fields atomically
+        const result = await productModel.updateOne(
+            {
+                _id: productId,
+                'sizes.size': size,
+                'sizes.stock': { $gte: quantity },
+                'sizes.reserved': { $gte: quantity }
+            },
+            {
+                $inc: { 
+                    'sizes.$.stock': -quantity,
+                    'sizes.$.reserved': -quantity
+                }
+            },
+            { session }
+        );
+        
+        if (result.modifiedCount === 0) {
+            throw new Error(`Failed to confirm stock reservation for product ${productId} size ${size}`);
+        }
+        
+        console.log(`Stock reservation confirmed: ${quantity} units for product ${productId} size ${size}`);
+        
+        return {
+            success: true,
+            productId,
+            size,
+            quantity,
+            stockDecremented: quantity,
+            reservedDecremented: quantity
+        };
+    } catch (error) {
+        console.error('Stock confirmation failed:', error);
+        throw error;
+    }
+}
+
+/**
+ * Release stock reservation (decrement reserved field only)
  * @param {string} productId - Product ID
  * @param {string} size - Size to release
  * @param {number} quantity - Quantity to release
  * @param {Object} options - Additional options
  * @returns {Promise<Object>} - Result of the release
  */
-export async function releaseStock(productId, size, quantity, options = {}) {
+export async function releaseStockReservation(productId, size, quantity, options = {}) {
     if (quantity <= 0) {
         throw new Error('Quantity must be positive for release');
     }
     
+    const { session } = options;
+    
     try {
-        // Get current product details for logging
-        const product = await productModel.findById(productId);
-        if (!product) {
-            throw new Error(`Product ${productId} not found for stock release`);
-        }
-
-        const sizeObj = product.sizes.find(s => s.size === size);
-        if (!sizeObj) {
-            throw new Error(`Size ${size} not found for product ${product.name}`);
-        }
-
-        console.log(`Releasing stock for ${product.name} (${size}): Current=${sizeObj.stock}, Releasing=${quantity}`);
+        // Decrement only the reserved field
+        const result = await productModel.updateOne(
+            {
+                _id: productId,
+                'sizes.size': size,
+                'sizes.reserved': { $gte: quantity }
+            },
+            {
+                $inc: { 'sizes.$.reserved': -quantity }
+            },
+            { session }
+        );
         
-        // Release the stock (increment)
-        const result = await changeStock(productId, size, quantity, options);
+        if (result.modifiedCount === 0) {
+            throw new Error(`Failed to release stock reservation for product ${productId} size ${size}`);
+        }
         
-        // Log the successful release
-        console.log(`Stock released successfully for ${product.name} (${size}): New stock=${sizeObj.stock + quantity}`);
+        console.log(`Stock reservation released: ${quantity} units for product ${productId} size ${size}`);
         
         return {
-            ...result,
-            productName: product.name,
-            previousStock: sizeObj.stock,
-            newStock: sizeObj.stock + quantity
+            success: true,
+            productId,
+            size,
+            quantity,
+            reservedDecremented: quantity
         };
     } catch (error) {
-        console.error('Stock release failed:', error);
-        throw new Error(`Failed to release stock: ${error.message}`);
-    }
-}
-
-/**
- * Batch stock operations without transactions (for standalone MongoDB)
- * @param {Array} operations - Array of { productId, size, quantityChange } objects
- * @returns {Promise<Array>} - Results of all operations
- */
-export async function batchChangeStock(operations) {
-    try {
-        const batchResults = [];
-        
-        // Process operations sequentially without transactions
-        for (const op of operations) {
-            const result = await changeStock(
-                op.productId, 
-                op.size, 
-                op.quantityChange
-            );
-            batchResults.push(result);
-        }
-        
-        return batchResults;
-    } catch (error) {
-        console.error('Batch stock operation failed:', error);
+        console.error('Stock reservation release failed:', error);
         throw error;
     }
 }
 
 /**
- * Batch stock operations WITH a transaction for atomicity.
- * @param {Array} operations - Array of { productId, size, quantityChange } objects.
- * @returns {Promise<Array>} - Results of all operations.
+ * Batch stock operations with reservations
+ * @param {Array} operations - Array of { productId, size, quantityChange, operationType } objects
+ * @param {Object} options - Additional options
+ * @returns {Promise<Array>} - Results of all operations
  */
-export async function batchChangeStockWithTransaction(operations) {
-    const session = await mongoose.startSession();
-    session.startTransaction();
+export async function batchStockOperations(operations, options = {}) {
+    const { session } = options;
+    
     try {
         const batchResults = [];
         
         for (const op of operations) {
-            const result = await changeStock(
-                op.productId, 
-                op.size, 
-                op.quantityChange,
-                { session }
-            );
+            let result;
+            
+            switch (op.operationType) {
+                case 'reserve':
+                    result = await reserveStock(op.productId, op.size, op.quantity, { session });
+                    break;
+                case 'confirm':
+                    result = await confirmStockReservation(op.productId, op.size, op.quantity, { session });
+                    break;
+                case 'release':
+                    result = await releaseStockReservation(op.productId, op.size, op.quantity, { session });
+                    break;
+                default:
+                    throw new Error(`Unknown operation type: ${op.operationType}`);
+            }
+            
             batchResults.push(result);
         }
         
-        await session.commitTransaction();
-        console.log('Batch stock transaction committed successfully.');
         return batchResults;
     } catch (error) {
-        await session.abortTransaction();
-        console.error('Batch stock transaction aborted:', error);
-        throw new Error(`Batch stock update failed and was rolled back: ${error.message}`);
-    } finally {
-        session.endSession();
+        console.error('Batch stock operations failed:', error);
+        throw error;
     }
 }
 
 /**
- * Check stock availability without modifying
- * @param {string} productId - Product ID
- * @param {string} size - Size to check
- * @param {number} quantity - Quantity needed
- * @returns {Promise<Object>} - Stock availability info
+ * Legacy function for backward compatibility
+ * @deprecated Use reserveStock instead
  */
-export async function checkStockAvailability(productId, size, quantity) {
-    const product = await productModel.findById(productId);
-    if (!product) {
-        return { available: false, error: 'Product not found' };
-    }
-    
-    const sizeObj = product.sizes.find(s => s.size === size);
-    if (!sizeObj) {
-        return { available: false, error: 'Size not available' };
-    }
-    
-    const available = sizeObj.stock >= quantity;
-    console.log(`Stock check for ${product.name} (${size}): Available=${sizeObj.stock}, Requested=${quantity}`);
-    return {
-        available,
-        currentStock: sizeObj.stock,
-        requestedQuantity: quantity,
-        productName: product.name,
-        error: available ? null : `Insufficient stock for ${product.name} (${size}). Available: ${sizeObj.stock}, Requested: ${quantity}`
-    };
+export async function reserveStock(productId, size, quantity, options = {}) {
+    console.warn('reserveStock is deprecated. Use reserveStock from the new reservation system.');
+    return await reserveStock(productId, size, quantity, options);
 }
 
 /**
- * Validate multiple items for stock availability
- * @param {Array} items - Array of { _id, size, quantity } objects
+ * Legacy function for backward compatibility
+ * @deprecated Use releaseStockReservation instead
+ */
+export async function releaseStock(productId, size, quantity, options = {}) {
+    console.warn('releaseStock is deprecated. Use releaseStockReservation from the new reservation system.');
+    return await releaseStockReservation(productId, size, quantity, options);
+}
+
+/**
+ * Legacy function for backward compatibility
+ * @deprecated Use changeStock with proper operation type instead
+ */
+export async function changeStock(productId, size, quantityChange, options = {}) {
+    console.warn('changeStock is deprecated. Use the new reservation-aware functions instead.');
+    
+    if (quantityChange > 0) {
+        // Increment stock
+        const result = await productModel.updateOne(
+            {
+                _id: productId,
+                'sizes.size': size
+            },
+            {
+                $inc: { 'sizes.$.stock': quantityChange }
+            },
+            { session: options.session }
+        );
+        
+        if (result.modifiedCount === 0) {
+            throw new Error('Stock increment failed: product or size not found');
+        }
+        
+        return {
+            success: true,
+            modifiedCount: result.modifiedCount,
+            productId,
+            size,
+            quantityChange
+        };
+    } else {
+        // Decrement stock (legacy behavior)
+        const result = await productModel.updateOne(
+            {
+                _id: productId,
+                'sizes.size': size,
+                'sizes.stock': { $gte: -quantityChange }
+            },
+            {
+                $inc: { 'sizes.$.stock': quantityChange }
+            },
+            { session: options.session }
+        );
+        
+        if (result.modifiedCount === 0) {
+            throw new Error('Stock decrement failed: insufficient stock or concurrent change');
+        }
+        
+        return {
+            success: true,
+            modifiedCount: result.modifiedCount,
+            productId,
+            size,
+            quantityChange
+        };
+    }
+}
+
+/**
+ * Validate stock for multiple items considering reservations
+ * @param {Array} items - Array of items to validate
+ * @param {string} excludeSessionId - Session ID to exclude from reservation check
  * @returns {Promise<Array>} - Validation results for each item
  */
-export async function validateStockForItems(items) {
+export async function validateStockForItems(items, excludeSessionId = null) {
     const validations = [];
     
     for (const item of items) {
-        // 🔑 CRITICAL FIX: Prioritize `productId` from the session item schema.
-        // The subdocument `_id` is NOT the product ID.
-        const productId = item.productId || item._id || item.id;
-        if (!productId) {
-            validations.push({
-                item,
-                available: false,
-                error: `Product ID not found for item: ${item.name}`
-            });
-            continue;
-        }
-
-        const validation = await checkStockAvailability(productId, item.size, item.quantity);
+        const productId = item.productId || item._id;
+        const validation = await checkStockAvailability(productId, item.size, item.quantity, excludeSessionId);
         validations.push({
-            item,
-            ...validation
+            ...validation,
+            itemId: item._id || item.id,
+            productId,
+            size: item.size,
+            quantity: item.quantity
         });
     }
     

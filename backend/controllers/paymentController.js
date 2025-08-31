@@ -126,82 +126,23 @@ export const createPhonePeSession = async (req, res) => {
   const correlationId = req.headers['x-request-id'] || `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   
   try {
-    let {
-      checkoutSessionId,
-      shipping,
-      cartItems,
-      userId,
-      email,
-      checkoutMode,
-      orderSummary
-    } = req.body;
-
-    // Fast path: Create session immediately without validation
-    if (!checkoutSessionId) {
-      if (!cartItems || !shipping || !checkoutMode || !orderSummary) {
-        return res.status(400).json({
-          success: false,
-          message: 'Missing required fields: cartItems, shipping, checkoutMode, and orderSummary are required.'
-        });
-      }
-
-      // Normalize item data to match schema
-      const items = cartItems.map(item => {
-        const productId = item._id || item.productId || item.id;
-        if (!productId) {
-          throw new Error(`Product ID not found for item: ${item.name}`);
-        }
-        return {
-          productId, // Required by schema
-          name: item.name,
-          quantity: item.quantity,
-          price: item.price,
-          image: item.image,
-          size: item.size,
-          categorySlug: item.categorySlug,
-          category: item.category
-        };
-      });
-
-      // Calculate total including shipping
-      const subtotal = orderSummary.subtotal || 0;
-      const shippingCost = orderSummary.shipping || 0;
-      const total = subtotal + shippingCost; // This will be the actual amount charged
-
-      console.log('🔍 DEBUG: Creating session with amounts:', {
-        subtotal,
-        shippingCost,
-        total,
-        orderSummary
-      });
-
-      const sessionData = {
-        source: checkoutMode,
-        items,
-        userId: req.user?.id || userId,
-        userEmail: req.user?.email || email || shipping.email,
-        subtotal: subtotal,
-        total: total,
-        offerDiscount: 0,
-        couponDiscount: 0,
-        shippingCost: shippingCost,
-        status: 'awaiting_payment',
-        expiresAt: new Date(Date.now() + 30 * 60 * 1000), // 30 minutes from now
-        sessionId: `sess_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-      };
-
-      const checkoutSession = new CheckoutSession(sessionData);
-      await checkoutSession.save();
-      checkoutSessionId = checkoutSession.sessionId;
-    }
-
-    // Validate session after creation
-    const checkoutSession = await CheckoutSession.findOne({ sessionId: checkoutSessionId });
+    console.log(`[${correlationId}] Creating PhonePe payment session`);
     
+    const { checkoutSessionId, shipping, cartItems, orderSummary, userId, email, checkoutMode } = req.body;
+    
+    if (!checkoutSessionId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Checkout session ID is required'
+      });
+    }
+    
+    // Get checkout session
+    const checkoutSession = await CheckoutSession.findOne({ sessionId: checkoutSessionId });
     if (!checkoutSession) {
       return res.status(404).json({
         success: false,
-        message: 'Checkout session not found.'
+        message: 'Checkout session not found'
       });
     }
     
@@ -212,39 +153,20 @@ export const createPhonePeSession = async (req, res) => {
       });
     }
     
-    if (checkoutSession.status !== 'awaiting_payment') {
+    if (!checkoutSession.stockReserved) {
       return res.status(400).json({
         success: false,
-        message: 'Checkout session is not ready for payment'
+        message: 'Stock must be reserved before creating payment session'
       });
     }
     
-    const userEmail = checkoutSession.userEmail;
+    const userEmail = email || checkoutSession.userEmail;
     console.log(`[${correlationId}] User email:`, userEmail);
     
-    // First validate stock availability
-    try {
-      const { validateStockForItems } = await import('../utils/stock.js');
-      const stockValidations = await validateStockForItems(checkoutSession.items);
-      
-      // Check if any items have insufficient stock
-      const stockIssues = stockValidations.filter(v => !v.available);
-      if (stockIssues.length > 0) {
-        const errorMessages = stockIssues.map(issue => issue.error).join(', ');
-        return res.status(400).json({
-          success: false,
-          message: `Some items are out of stock: ${errorMessages}`
-        });
-      }
-    } catch (error) {
-      console.error(`[${correlationId}] Stock validation failed:`, error);
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to validate stock availability',
-        error: error.message
-      });
-    }
-
+    // 🔑 NEW: Stock is already reserved, so we don't need to validate again
+    // The reservation system ensures stock availability
+    console.log(`[${correlationId}] Stock already reserved for session, proceeding with payment`);
+    
     // Generate unique transaction ID and prepare data
     const phonepeTransactionId = randomUUID();
     const orderId = await getUniqueOrderId();
@@ -268,7 +190,7 @@ export const createPhonePeSession = async (req, res) => {
         cartItems: checkoutSession.items
       },
       status: 'pending',
-      stockReserved: false, // Stock is NOT reserved at this stage
+      stockReserved: true, // Stock is already reserved
       metadata: {
         userAgent: req.headers['user-agent'],
         ipAddress: req.ip || req.connection.remoteAddress,
@@ -277,43 +199,38 @@ export const createPhonePeSession = async (req, res) => {
       }
     };
 
-          const orderPayload = {
-        orderId,
-        userInfo: {
-          userId: checkoutSession.userId,
-          name: shipping.fullName,
-          email: userEmail
-        },
+    const orderPayload = {
+      orderId,
+      userInfo: {
         userId: checkoutSession.userId,
-        shippingInfo: {
-          ...shipping,
-          addressLine2: shipping.addressLine2 || '',
-          country: shipping.country || 'India'
-        },
-        items: checkoutSession.items.map(item => ({
-          productId: item.productId, // Ensure productId is copied
-          name: item.name,
-          quantity: item.quantity,
-          price: item.price,
-          image: item.image,
-          size: item.size,
-          categorySlug: item.categorySlug,
-          category: item.category
-        })),
-      totalPrice: checkoutSession.total,
-      subtotal: checkoutSession.subtotal,
-      total: checkoutSession.total,
-      amount: checkoutSession.total,
-      paymentMethod: 'PhonePe',
+        email: userEmail,
+        name: shipping.fullName,
+        phone: shipping.phone
+      },
+      shippingInfo: {
+        fullName: shipping.fullName,
+        email: userEmail,
+        phone: shipping.phone,
+        addressLine1: shipping.addressLine1,
+        addressLine2: shipping.addressLine2 || '',
+        city: shipping.city,
+        state: shipping.state,
+        postalCode: shipping.postalCode,
+        country: shipping.country || 'India'
+      },
+      items: checkoutSession.items,
+      totalAmount: checkoutSession.total,
       status: 'Pending',
-      paymentStatus: 'awaiting_payment',
-      orderStatus: 'awaiting_payment',
+      orderStatus: 'Pending',
+      paymentStatus: 'Pending',
+      paymentMethod: 'PhonePe',
       phonepeTransactionId,
-      checkoutSessionId,
-      source: checkoutSession.source,
-      placedAt: new Date(),
-      createdAt: new Date(),
-      stockReserved: false // Stock is NOT reserved at this stage
+      stockConfirmed: false, // Stock will be confirmed on payment success
+      metadata: {
+        checkoutSessionId,
+        correlationId,
+        source: checkoutSession.source
+      }
     };
 
     // Execute all database operations in parallel
@@ -453,8 +370,10 @@ export const createPhonePeSession = async (req, res) => {
 
 // PhonePe payment callback using SDK
 export const phonePeCallback = async (req, res) => {
+  const correlationId = req.headers['x-request-id'] || `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  
   try {
-    console.log('PhonePe Callback received:', req.body);
+    console.log(`[${correlationId}] PhonePe callback received:`, req.body);
     
     const { merchantTransactionId, state, responseCode, responseMessage } = req.body;
     
@@ -600,6 +519,8 @@ export const phonePeCallback = async (req, res) => {
 
 // Verify PhonePe payment status using SDK
 export const verifyPhonePePayment = async (req, res) => {
+  const correlationId = req.headers['x-request-id'] || `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  
   try {
     const { merchantTransactionId } = req.params;
     
@@ -835,3 +756,36 @@ export const getOrderByTransactionId = async (req, res) => {
     return errorResponse(res, 500, 'Failed to retrieve order details', error.message);
   }
 }; 
+
+/**
+ * Helper function to release stock reservation for an order
+ */
+async function releaseStockReservationForOrder(orderId) {
+  try {
+    const order = await orderModel.findById(orderId);
+    if (!order) {
+      throw new Error('Order not found');
+    }
+    
+    // Release stock reservation for all items
+    const releasePromises = order.items.map(item =>
+      releaseStockReservation(item.productId, item.size, item.quantity)
+    );
+    
+    await Promise.all(releasePromises);
+    
+    // Update reservation status
+    const reservation = await Reservation.findOne({ 
+      checkoutSessionId: order.metadata?.checkoutSessionId 
+    });
+    
+    if (reservation && reservation.status === 'active') {
+      await reservation.expire();
+    }
+    
+    console.log(`Stock reservation released for order: ${orderId}`);
+  } catch (error) {
+    console.error('Error releasing stock reservation:', error);
+    throw error;
+  }
+} 

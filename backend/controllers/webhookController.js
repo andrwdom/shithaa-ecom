@@ -2,6 +2,8 @@ import orderModel from '../models/orderModel.js';
 import PaymentSession from '../models/paymentSessionModel.js';
 import { successResponse, errorResponse } from '../utils/response.js';
 import crypto from 'crypto';
+import Reservation from '../models/Reservation.js';
+import { releaseStockReservation } from '../utils/stock.js';
 
 // POST /phonepe/webhook
 export async function phonePeWebhookHandler(req, res) {
@@ -180,5 +182,38 @@ export async function phonePeWebhookHandler(req, res) {
   } catch (error) {
     console.error('🔔 WEBHOOK: Error processing webhook:', error);
     return errorResponse(res, 500, 'Webhook processing failed', error.message);
+  }
+} 
+
+/**
+ * Helper function to release stock reservation for an order
+ */
+async function releaseStockReservationForOrder(orderId) {
+  try {
+    const order = await orderModel.findById(orderId);
+    if (!order) {
+      throw new Error('Order not found');
+    }
+    
+    // Release stock reservation for all items
+    const releasePromises = order.items.map(item =>
+      releaseStockReservation(item.productId, item.size, item.quantity)
+    );
+    
+    await Promise.all(releasePromises);
+    
+    // Update reservation status
+    const reservation = await Reservation.findOne({ 
+      checkoutSessionId: order.metadata?.checkoutSessionId 
+    });
+    
+    if (reservation && reservation.status === 'active') {
+      await reservation.expire();
+    }
+    
+    console.log(`Stock reservation released for order: ${orderId}`);
+  } catch (error) {
+    console.error('Error releasing stock reservation:', error);
+    throw error;
   }
 } 

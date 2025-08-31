@@ -2,8 +2,18 @@ import mongoose from "mongoose";
 
 const sizeSchema = new mongoose.Schema({
     size: { type: String, required: true },
-    stock: { type: Number, required: true }
+    stock: { type: Number, required: true },
+    reserved: { type: Number, default: 0 } // Track temporarily reserved stock
 }, { _id: false });
+
+// Virtual for available stock (stock - reserved)
+sizeSchema.virtual('availableStock').get(function() {
+    return Math.max(0, this.stock - this.reserved);
+});
+
+// Ensure virtuals are serialized
+sizeSchema.set('toJSON', { virtuals: true });
+sizeSchema.set('toObject', { virtuals: true });
 
 const productSchema = new mongoose.Schema({
     customId: { type: String, required: true },

@@ -80,6 +80,13 @@ export const config = {
   
     // Frontend URL for emails
     frontend_url: process.env.FRONTEND_URL,
+    
+    // Reservation System Configuration
+    reservation: {
+        enabled: process.env.RESERVATION_ENABLED === 'true' || false,
+        expiryMinutes: parseInt(process.env.RESERVATION_EXPIRY_MINUTES || '15', 10),
+        autoExpiryEnabled: process.env.RESERVATION_AUTO_EXPIRY === 'true' || true
+    },
 };
 
 // Log configuration on startup

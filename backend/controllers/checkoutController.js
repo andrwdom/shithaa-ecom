@@ -1,9 +1,10 @@
 import { randomUUID } from 'crypto';
 import CheckoutSession from '../models/CheckoutSession.js';
 import PaymentEvent from '../models/PaymentEvent.js';
+import Reservation from '../models/Reservation.js';
 import productModel from '../models/productModel.js';
 import { successResponse, errorResponse } from '../utils/response.js';
-import { checkStockAvailability, reserveStock, releaseStock } from '../utils/stock.js';
+import { checkStockAvailability, reserveStock, releaseStockReservation } from '../utils/stock.js';
 
 /**
  * Create a checkout session for cart or buy-now items
@@ -46,81 +47,43 @@ export const createCheckoutSession = async (req, res) => {
       data: { source, itemCount: items.length }
     });
     
-    // Fetch authoritative product data and validate stock
+    // Fetch authoritative product data and validate stock availability
     const validatedItems = [];
     let subtotal = 0;
     
     for (const item of items) {
-      const productId = item.productId || item._id; // 🔑 FIX: Use item._id as the product identifier
+      const productId = item.productId || item._id;
       if (!productId) {
-        return errorResponse(res, 400, `Item is missing a product identifier.`, { item });
+        return errorResponse(res, 400, `Missing product ID for item: ${item.name}`);
       }
-
+      
       const product = await productModel.findById(productId);
       if (!product) {
-        return errorResponse(res, 400, `Product not found: ${productId}`);
+        return errorResponse(res, 404, `Product not found: ${item.name}`);
       }
       
-      const sizeObj = product.sizes.find(s => s.size === item.size);
-      if (!sizeObj) {
-        return errorResponse(res, 400, `Size ${item.size} not available for ${product.name}`);
+      // Validate stock availability (but don't reserve yet)
+      const stockCheck = await checkStockAvailability(productId, item.size, item.quantity);
+      if (!stockCheck.available) {
+        return errorResponse(res, 409, `Insufficient stock for ${product.name} (${item.size}): ${stockCheck.error}`);
       }
       
-      // Validate stock availability
-      if (sizeObj.stock < item.quantity) {
-        return errorResponse(res, 409, `Insufficient stock for ${product.name} size ${item.size}. Available: ${sizeObj.stock}, Requested: ${item.quantity}`);
-      }
-      
-      // Use server-verified price
-      const itemPrice = product.price * item.quantity;
-      subtotal += itemPrice;
-      
+      // Use server-verified data
       validatedItems.push({
         productId: product._id,
-        variantId: item.size,
         name: product.name,
-        price: product.price, // Unit price
+        price: product.price,
         quantity: item.quantity,
         size: item.size,
         image: product.images?.[0] || '',
         categorySlug: product.categorySlug,
         category: product.category
       });
-    }
-
-    /* ------------------------------------------------------------------
-     * 🔒  Reserve stock IMMEDIATELY so no other parallel session can grab
-     *     the same units. This prevents the race that was causing the
-     *     “insufficient stock or concurrent change” error later.
-     * ------------------------------------------------------------------*/
-
-    try {
-      const reservationPromises = validatedItems.map(it =>
-        reserveStock(it.productId, it.size, it.quantity)
-      );
-      await Promise.all(reservationPromises);
-      console.log(`[${correlationId}] Stock reserved successfully for session items`);
-    } catch (err) {
-      console.error(`[${correlationId}] Stock reservation failed – releasing any partial reservations`, err);
-
-      // Best-effort release of any partial reservations
-      try {
-        await Promise.all(
-          validatedItems.map(it =>
-            releaseStock(it.productId, it.size, it.quantity).catch(() => {})
-          )
-        );
-      } catch (_) {/* ignored */}
-
-      return errorResponse(
-        res,
-        409,
-        'Stock reservation failed',
-        err.message
-      );
+      
+      subtotal += product.price * item.quantity;
     }
     
-    // Calculate totals (simplified for now, can be enhanced with shipping/coupons)
+    // Calculate totals
     const shippingCost = req.body.orderSummary?.shipping || req.body.shippingCost || 0;
     const total = subtotal + shippingCost;
     
@@ -160,13 +123,63 @@ export const createCheckoutSession = async (req, res) => {
     // Save session first to get the ID
     await checkoutSession.save();
     
-    // 🔑 CRITICAL FIX: Stock reservation has been REMOVED from this controller.
-    // Stock is now exclusively handled in the payment controller to prevent double-deduction.
-    // The session is marked as awaiting_payment immediately.
-    checkoutSession.status = 'awaiting_payment';
-    await checkoutSession.save();
+    // 🔑 NEW: Create stock reservation (increment reserved field, don't decrement stock)
+    try {
+      console.log(`[${correlationId}] Creating stock reservation for session: ${sessionId}`);
+      
+      // Create reservation document
+      const reservation = await Reservation.createReservation({
+        reservationId: `res_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        userId,
+        userEmail,
+        checkoutSessionId: sessionId,
+        items: validatedItems.map(item => ({
+          productId: item.productId,
+          size: item.size,
+          quantity: item.quantity,
+          productName: item.name
+        })),
+        source: source === 'buy-now' ? 'buynow' : 'cart',
+        expiresAt: new Date(Date.now() + 15 * 60 * 1000), // 15 minutes
+        status: 'active'
+      });
+      
+      // Reserve stock for all items (increment reserved field)
+      const reservationPromises = validatedItems.map(item =>
+        reserveStock(item.productId, item.size, item.quantity)
+      );
+      await Promise.all(reservationPromises);
+      
+      console.log(`[${correlationId}] Stock reserved successfully for session items`);
+      
+      // Mark session as having reserved stock
+      checkoutSession.stockReserved = true;
+      checkoutSession.status = 'awaiting_payment';
+      await checkoutSession.save();
+      
+    } catch (err) {
+      console.error(`[${correlationId}] Stock reservation failed – releasing any partial reservations`, err);
+      
+      // Best-effort release of any partial reservations
+      try {
+        const releasePromises = validatedItems.map(item =>
+          releaseStockReservation(item.productId, item.size, item.quantity).catch(() => {})
+        );
+        await Promise.all(releasePromises);
+      } catch (_) {/* ignored */}
+      
+      // Delete the checkout session since reservation failed
+      await CheckoutSession.findByIdAndDelete(checkoutSession._id);
+      
+      return errorResponse(
+        res,
+        409,
+        'Stock reservation failed',
+        err.message
+      );
+    }
     
-    console.log(`[${correlationId}] Checkout session created and ready: ${sessionId}`);
+    console.log(`[${correlationId}] Checkout session created and stock reserved: ${sessionId}`);
     
     // Return session data (without sensitive info)
     return successResponse(res, {
@@ -177,7 +190,7 @@ export const createCheckoutSession = async (req, res) => {
       total,
       currency: 'INR',
       expiresAt: checkoutSession.expiresAt,
-      message: 'Checkout session created successfully'
+      message: 'Checkout session created successfully with stock reserved'
     });
     
   } catch (error) {
@@ -220,12 +233,10 @@ export const getCheckoutSession = async (req, res) => {
       return errorResponse(res, 404, 'Checkout session not found');
     }
     
-    // Check if session is expired
     if (session.isExpired()) {
       return errorResponse(res, 410, 'Checkout session has expired');
     }
     
-    // Return session data
     return successResponse(res, {
       sessionId: session.sessionId,
       source: session.source,
@@ -239,126 +250,13 @@ export const getCheckoutSession = async (req, res) => {
     });
     
   } catch (error) {
-    console.error(`[${correlationId}] Error getting checkout session:`, error);
-    return errorResponse(res, 500, 'Failed to get checkout session', error.message);
+    console.error(`[${correlationId}] Error retrieving checkout session:`, error);
+    return errorResponse(res, 500, 'Failed to retrieve checkout session', error.message);
   }
 };
 
 /**
- * Reserve stock for checkout session
- */
-export const reserveStockForSession = async (req, res) => {
-  const correlationId = req.headers['x-request-id'] || `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  
-  try {
-    const { sessionId } = req.params;
-    
-    if (!sessionId) {
-      return errorResponse(res, 400, 'Session ID is required');
-    }
-    
-    const session = await CheckoutSession.findOne({ sessionId });
-    if (!session) {
-      return errorResponse(res, 404, 'Checkout session not found');
-    }
-    
-    if (session.isExpired()) {
-      return errorResponse(res, 410, 'Checkout session has expired');
-    }
-    
-    if (session.stockReserved) {
-      return successResponse(res, { message: 'Stock already reserved for this session' });
-    }
-    
-    // Reserve stock for all items
-    const stockOperations = [];
-    for (const item of session.items) {
-      try {
-        await reserveStock(item.productId, item.size, item.quantity);
-        stockOperations.push({
-          productId: item.productId,
-          size: item.size,
-          quantity: item.quantity,
-          success: true
-        });
-      } catch (error) {
-        stockOperations.push({
-          productId: item.productId,
-          size: item.size,
-          quantity: item.quantity,
-          success: false,
-          error: error.message
-        });
-      }
-    }
-    
-    // Check if all stock operations succeeded
-    const failedOperations = stockOperations.filter(op => !op.success);
-    if (failedOperations.length > 0) {
-      // Release any successfully reserved stock
-      for (const op of stockOperations) {
-        if (op.success) {
-          try {
-            await releaseStock(op.productId, op.size, op.quantity);
-          } catch (releaseError) {
-            console.error(`[${correlationId}] Failed to release stock after reservation failure:`, releaseError);
-          }
-        }
-      }
-      
-      return errorResponse(res, 409, 'Stock reservation failed for some items', { failedOperations });
-    }
-    
-    // Mark session as having reserved stock
-    session.stockReserved = true;
-    session.status = 'awaiting_payment';
-    await session.save();
-    
-    // Log successful stock reservation
-    await PaymentEvent.createEvent({
-      correlationId,
-      eventType: 'stock_reserved',
-      source: 'backend',
-      checkoutSessionId: sessionId,
-      userId: session.userId,
-      userEmail: session.userEmail,
-      status: 'success',
-      data: { stockOperations }
-    });
-    
-    console.log(`[${correlationId}] Stock reserved for session: ${sessionId}`);
-    
-    return successResponse(res, {
-      message: 'Stock reserved successfully',
-      stockReserved: true,
-      status: session.status
-    });
-    
-  } catch (error) {
-    console.error(`[${correlationId}] Error reserving stock:`, error);
-    
-    // Log failed event
-    await PaymentEvent.createEvent({
-      correlationId,
-      eventType: 'stock_reserved',
-      source: 'backend',
-      checkoutSessionId: req.params.sessionId,
-      userId: req.user?.id,
-      userEmail: req.user?.email,
-      status: 'failed',
-      error: {
-        message: error.message,
-        code: error.code || 'UNKNOWN',
-        stack: error.stack
-      }
-    });
-    
-    return errorResponse(res, 500, 'Failed to reserve stock', error.message);
-  }
-};
-
-/**
- * Release stock for checkout session
+ * Release stock reservation for checkout session
  */
 export const releaseStockForSession = async (req, res) => {
   const correlationId = req.headers['x-request-id'] || `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -379,11 +277,17 @@ export const releaseStockForSession = async (req, res) => {
       return successResponse(res, { message: 'No stock reserved for this session' });
     }
     
-    // Release stock for all items
+    // Find and update the reservation
+    const reservation = await Reservation.findOne({ checkoutSessionId: sessionId });
+    if (reservation && reservation.status === 'active') {
+      await reservation.expire();
+    }
+    
+    // Release stock for all items (decrement reserved field only)
     const stockOperations = [];
     for (const item of session.items) {
       try {
-        await releaseStock(item.productId, item.size, item.quantity);
+        await releaseStockReservation(item.productId, item.size, item.quantity);
         stockOperations.push({
           productId: item.productId,
           size: item.size,
