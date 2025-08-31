@@ -21,8 +21,8 @@ module.exports = {
     },
     {
       name: 'shithaa-backend',
-      script: 'backend/server.js',
-      cwd: '/var/www/shithaa-ecom',
+      script: 'server.js',
+      cwd: '/var/www/shithaa-ecom/backend',
       instances: 1,
       autorestart: true,
       watch: false,
@@ -31,9 +31,9 @@ module.exports = {
         NODE_ENV: 'production',
         PORT: 4000
       },
-      error_file: './backend/logs/backend-err.log',
-      out_file: './backend/logs/backend-out.log',
-      log_file: './backend/logs/backend-combined.log',
+      error_file: './logs/backend-err.log',
+      out_file: './logs/backend-out.log',
+      log_file: './logs/backend-combined.log',
       time: true
     },
     {
