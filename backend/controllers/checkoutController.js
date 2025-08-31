@@ -87,6 +87,38 @@ export const createCheckoutSession = async (req, res) => {
         category: product.category
       });
     }
+
+    /* ------------------------------------------------------------------
+     * 🔒  Reserve stock IMMEDIATELY so no other parallel session can grab
+     *     the same units. This prevents the race that was causing the
+     *     “insufficient stock or concurrent change” error later.
+     * ------------------------------------------------------------------*/
+
+    try {
+      const reservationPromises = validatedItems.map(it =>
+        reserveStock(it.productId, it.size, it.quantity)
+      );
+      await Promise.all(reservationPromises);
+      console.log(`[${correlationId}] Stock reserved successfully for session items`);
+    } catch (err) {
+      console.error(`[${correlationId}] Stock reservation failed – releasing any partial reservations`, err);
+
+      // Best-effort release of any partial reservations
+      try {
+        await Promise.all(
+          validatedItems.map(it =>
+            releaseStock(it.productId, it.size, it.quantity).catch(() => {})
+          )
+        );
+      } catch (_) {/* ignored */}
+
+      return errorResponse(
+        res,
+        409,
+        'Stock reservation failed',
+        err.message
+      );
+    }
     
     // Calculate totals (simplified for now, can be enhanced with shipping/coupons)
     const shippingCost = req.body.orderSummary?.shipping || req.body.shippingCost || 0;
@@ -131,7 +163,7 @@ export const createCheckoutSession = async (req, res) => {
     // 🔑 CRITICAL FIX: Stock reservation has been REMOVED from this controller.
     // Stock is now exclusively handled in the payment controller to prevent double-deduction.
     // The session is marked as awaiting_payment immediately.
-    checkoutSession.stockReserved = false; // Explicitly set to false
+    checkoutSession.stockReserved = true; // Explicitly set to true
     checkoutSession.status = 'awaiting_payment';
     await checkoutSession.save();
     

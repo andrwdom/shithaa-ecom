@@ -8,7 +8,6 @@ import Coupon from '../models/Coupon.js';
 import mongoose from 'mongoose';
 import crypto from 'crypto';
 import counterModel from '../models/counterModel.js';
-import CheckoutSession from '../models/CheckoutSession.js';
 
 // global variables
 const currency = 'inr'
@@ -939,48 +938,25 @@ export const confirmOrderStock = async (orderId) => {
         if (!order) {
             throw new Error('Order not found');
         }
-
-        // For each item in the order, reduce its stock
-        for (const item of order.items) {
-            // Get the product ID from the item
-            const productId = item.productId || item._id;
-            if (!productId) {
-                console.error(`No product ID found for item: ${item.name}`);
-                continue;
-            }
-
-            // Find the product
-            const product = await productModel.findById(productId);
-            if (!product) {
-                console.error(`Product not found: ${productId}`);
-                continue;
-            }
-
-            // Find the size and reduce its stock
-            const sizeIndex = product.sizes.findIndex(s => s.size === item.size);
-            if (sizeIndex !== -1) {
-                // Ensure we have enough stock
-                if (product.sizes[sizeIndex].stock < item.quantity) {
-                    console.error(`Insufficient stock for ${product.name} size ${item.size}. Available: ${product.sizes[sizeIndex].stock}, Requested: ${item.quantity}`);
-                    continue;
-                }
-
-                // Reduce the stock
-                product.sizes[sizeIndex].stock -= item.quantity;
-                await product.save();
-                console.log(`Reduced stock for ${product.name} size ${item.size} by ${item.quantity}. New stock: ${product.sizes[sizeIndex].stock}`);
-            } else {
-                console.error(`Size ${item.size} not found for product ${product.name}`);
-            }
-        }
-
-        // Mark the order as stock confirmed
-        await orderModel.findByIdAndUpdate(orderId, {
+        
+        // Decrement stock using atomic operations
+        const { batchChangeStock } = await import('../utils/stock.js');
+        const operations = order.items.map(item => ({
+            productId: item._id,
+            size: item.size,
+            quantityChange: -item.quantity
+        }));
+        
+        const results = await batchChangeStock(operations);
+        console.log('Stock decremented successfully after payment confirmation:', results);
+        
+        // Update order to mark stock as confirmed
+        await orderModel.findByIdAndUpdate(orderId, { 
             stockConfirmed: true,
             stockConfirmedAt: new Date()
         });
-
-        return true;
+        
+        return results;
     } catch (error) {
         console.error('Failed to confirm order stock:', error);
         throw error;

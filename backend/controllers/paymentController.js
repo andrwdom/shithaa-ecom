@@ -801,15 +801,18 @@ export const verifyPhonePePayment = async (req, res) => {
         if (order && order.paymentStatus !== 'paid') {
           console.log(`[verify] Webhook was slow, updating order ${order.orderId} to paid.`);
           
-          // Import and call confirmOrderStock to handle stock reduction
-          const { confirmOrderStock } = await import('../controllers/orderController.js');
-          try {
-            console.log('Reducing stock for order:', order._id);
-            await confirmOrderStock(order._id);
-            console.log('Stock reduction completed successfully');
-          } catch (stockError) {
-            console.error('Failed to reduce stock:', stockError);
-            // Continue with order update even if stock reduction fails
+          if (!order.stockReserved) {
+            const { confirmOrderStock } = await import('../controllers/orderController.js');
+            try {
+              console.log('Reducing stock for order (verify path):', order._id);
+              await confirmOrderStock(order._id);
+              console.log('Stock reduction completed successfully');
+            } catch (stockError) {
+              console.error('Failed to reduce stock during verify:', stockError);
+              // Continue with order update even if stock reduction fails
+            }
+          } else {
+            console.log('Stock already reserved for order; skipping deduction in verify path');
           }
           
           order.payment = true;
