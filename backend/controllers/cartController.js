@@ -197,10 +197,15 @@ const calculateCartTotal = async (req, res) => {
             return sum + (price * item.quantity);
         }, 0);
 
-        // Calculate totals
+        // Calculate totals with safety caps
         const subtotal = loungewearCategoryOffer.originalTotal + otherItemsTotal;
-        const offerDiscount = loungewearCategoryOffer.discount;
-        const finalTotal = subtotal - offerDiscount;
+
+        // Never let the discount exceed the subtotal (prevents negative totals on tiny orders)
+        const rawDiscount = loungewearCategoryOffer.discount;
+        const offerDiscount = Math.min(rawDiscount, subtotal);
+
+        // Final payable amount (can never go below 0)
+        const finalTotal = Math.max(0, subtotal - offerDiscount);
 
         const response = {
             success: true,
