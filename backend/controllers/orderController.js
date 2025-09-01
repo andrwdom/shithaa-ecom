@@ -951,8 +951,10 @@ export const confirmOrderStock = async (orderId) => {
         }
         
         // Decrement stock using atomic operations
-        const { batchChangeStock } = await import('../utils/stock.js');
-        const operations = order.items.map(item => {
+        const { confirmStockReservation } = await import('../utils/stock.js');
+        const results = [];
+        
+        for (const item of order.items) {
             const productId = item.productId || item._id || item.id;
             if (!productId) {
                 throw new Error(`Missing product ID for item: ${item.name}`);
@@ -964,17 +966,18 @@ export const confirmOrderStock = async (orderId) => {
                 throw new Error(`Invalid quantity for item: ${item.name}`);
             }
             
-            return {
+            console.log('Processing stock confirmation for item:', item.name, 'Product:', productId, 'Size:', item.size, 'Qty:', item.quantity);
+            
+            const result = await confirmStockReservation(productId, item.size, item.quantity);
+            results.push({
                 productId,
                 size: item.size,
-                quantityChange: -item.quantity
-            };
-        });
+                quantity: item.quantity,
+                success: result
+            });
+        }
         
-        console.log('Processing stock operations for order:', order.orderId, 'Operations:', operations);
-        
-        const results = await batchChangeStock(operations);
-        console.log('Stock decremented successfully after payment confirmation:', results);
+        console.log('Stock confirmation results for order:', order.orderId, 'Results:', results);
         
         // Update order to mark stock as confirmed
         await orderModel.findByIdAndUpdate(orderId, { 

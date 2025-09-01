@@ -145,7 +145,7 @@ export async function phonePeWebhookHandler(req, res) {
         
         // Send invoice email (non-blocking)
         try {
-          const { generateInvoiceBuffer, sendInvoiceEmail } = await import('../utils/invoice.js');
+          const { generateInvoiceBuffer, sendInvoiceEmail } = await import('../utils/invoiceGenerator.js');
           const freshOrder = await orderModel.findById(order._id);
           const pdfBuffer = await generateInvoiceBuffer(freshOrder);
           await sendInvoiceEmail(freshOrder, pdfBuffer);
