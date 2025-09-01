@@ -955,15 +955,31 @@ export const confirmOrderStock = async (orderId) => {
         const results = [];
         
         for (const item of order.items) {
-            const productId = item.productId || item._id || item.id;
+            // 🔧 CRITICAL FIX: Handle all possible product ID field names
+            let productId = null;
+            if (item.productId) {
+                productId = item.productId;
+            } else if (item._id) {
+                productId = item._id;
+            } else if (item.id) {
+                productId = item.id;
+            } else if (item.product) {
+                productId = item.product;
+            }
+            
             if (!productId) {
-                throw new Error(`Missing product ID for item: ${item.name}`);
+                console.error('Item missing product ID:', item);
+                throw new Error(`Missing product ID for item: ${item.name || 'Unknown'}`);
             }
+            
             if (!item.size) {
-                throw new Error(`Missing size for item: ${item.name}`);
+                console.error('Item missing size:', item);
+                throw new Error(`Missing size for item: ${item.name || 'Unknown'}`);
             }
+            
             if (!item.quantity || item.quantity <= 0) {
-                throw new Error(`Invalid quantity for item: ${item.name}`);
+                console.error('Item missing or invalid quantity:', item);
+                throw new Error(`Invalid quantity for item: ${item.name || 'Unknown'}`);
             }
             
             console.log('Processing stock confirmation for item:', item.name, 'Product:', productId, 'Size:', item.size, 'Qty:', item.quantity);

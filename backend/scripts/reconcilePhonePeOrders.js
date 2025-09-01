@@ -20,7 +20,16 @@ async function reconcilePendingOrders() {
   const pendingOrders = await orderModel.find({ paymentStatus: 'pending', phonepeTransactionId: { $exists: true, $ne: null } });
   for (const order of pendingOrders) {
     try {
-      const response = await phonepeClient.getOrderStatus(order.phonepeTransactionId);
+      // 🔧 CRITICAL FIX: Try both method names for PhonePe SDK compatibility
+      let response;
+      if (typeof phonepeClient.getOrderStatus === 'function') {
+          response = await phonepeClient.getOrderStatus(order.phonepeTransactionId);
+      } else if (typeof phonepeClient.getStatus === 'function') {
+          response = await phonepeClient.getStatus(order.phonepeTransactionId);
+      } else {
+          console.error('PhonePe client missing both getOrderStatus and getStatus methods');
+          continue;
+      }
       if (response && response.state) {
         order.paymentStatus = response.state === 'COMPLETED' ? 'paid' : response.state.toLowerCase();
         order.orderStatus = response.state === 'COMPLETED' ? 'Confirmed' : response.state.toLowerCase();

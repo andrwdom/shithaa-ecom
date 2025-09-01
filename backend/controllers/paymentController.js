@@ -40,11 +40,15 @@ const initializePhonePeClient = () => {
             phonepe.env === 'PRODUCTION' ? Env.PRODUCTION : Env.SANDBOX
         );
         
-        // 🔧 CRITICAL FIX: Validate client structure
-        if (!client || typeof client.getOrderStatus !== 'function') {
+        // 🔧 CRITICAL FIX: Validate client structure - check for both method names
+        const hasGetOrderStatus = client && typeof client.getOrderStatus === 'function';
+        const hasGetStatus = client && typeof client.getStatus === 'function';
+        
+        if (!client || (!hasGetOrderStatus && !hasGetStatus)) {
             console.error('PhonePe client initialized but missing required methods:', {
                 clientExists: !!client,
-                hasGetOrderStatus: client && typeof client.getOrderStatus === 'function',
+                hasGetOrderStatus,
+                hasGetStatus,
                 clientKeys: client ? Object.keys(client) : 'NO_CLIENT'
             });
             return null;
@@ -586,7 +590,20 @@ export const verifyPhonePePayment = async (req, res) => {
     // Check payment status
     let paymentStatus;
     try {
-        paymentStatus = await phonePeClient.getOrderStatus(merchantTransactionId);
+        // 🔧 CRITICAL FIX: Try both method names for PhonePe SDK compatibility
+        if (typeof phonePeClient.getOrderStatus === 'function') {
+            paymentStatus = await phonePeClient.getOrderStatus(merchantTransactionId);
+        } else if (typeof phonePeClient.getStatus === 'function') {
+            paymentStatus = await phonePeClient.getStatus(merchantTransactionId);
+        } else {
+            console.error('PhonePe client missing both getOrderStatus and getStatus methods');
+            return res.status(500).json({
+                success: false,
+                message: 'Payment verification failed - PhonePe client method not found',
+                error: 'Missing getOrderStatus/getStatus method'
+            });
+        }
+        
         console.log('PhonePe payment status:', paymentStatus);
         
         if (!paymentStatus) {
@@ -598,7 +615,7 @@ export const verifyPhonePePayment = async (req, res) => {
             });
         }
     } catch (statusError) {
-        console.error('PhonePe getOrderStatus failed:', statusError);
+        console.error('PhonePe getOrderStatus/getStatus failed:', statusError);
         return res.status(500).json({
             success: false,
             message: 'Payment verification failed - PhonePe API error',
