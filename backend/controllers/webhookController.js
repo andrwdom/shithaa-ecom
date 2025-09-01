@@ -46,21 +46,31 @@ export async function phonePeWebhookHandler(req, res) {
       
       // Find the order by PhonePe transaction ID
       const order = await orderModel.findOne({ phonepeTransactionId: payload.orderId });
+      
+      // ---------- IDP GUARD (INSERT HERE) ----------
+      const state = (payload?.state || payload?.status || payload?.transactionStatus || '').toString().toUpperCase();
+      const isSuccess = ['COMPLETED','SUCCESS','PAID','CAPTURED','OK'].includes(state);
+
+      // Ensure order exists
       if (!order) {
-        console.error('🔔 WEBHOOK: Order not found for transaction:', payload.orderId);
-        return errorResponse(res, 404, 'Order not found');
+        console.warn('🔔 WEBHOOK: order not found for payload', payload);
+        return res.status(404).json({ success: false, message: 'order_not_found' });
       }
+
+      // Idempotency guard: skip if already confirmed
+      if (order.stockConfirmed) {
+        console.log('🔔 WEBHOOK: stock already confirmed for order', order._id.toString());
+        // If payment success reported but order.status isn't 'paid', fix that without touching stock
+        if (isSuccess && order.status !== 'paid') {
+          order.status = 'paid';
+          order.paymentId = payload.paymentId || payload.transactionId || order.paymentId;
+          await order.save();
+        }
+        return res.status(200).json({ success: true, message: 'already_processed' });
+      }
+      // ---------- END IDP GUARD ----------
       
       console.log('🔔 WEBHOOK: Found order:', order.orderId, 'Current status:', order.paymentStatus);
-      
-      // Determine if payment was successful
-      const isSuccess = (
-        payload.state === 'PAID' ||
-        payload.state === 'COMPLETED' ||
-        payload.state === 'SUCCESS' ||
-        payload.responseCode === 'SUCCESS' ||
-        payload.responseCode === '000'
-      );
       
       if (isSuccess) {
         console.log('🔔 WEBHOOK: Payment successful, updating order and reducing stock');
@@ -185,35 +195,17 @@ export async function phonePeWebhookHandler(req, res) {
   }
 } 
 
-/**
- * Helper function to release stock reservation for an order
- */
-async function releaseStockReservationForOrder(orderId) {
+// Rename to avoid shadowing imported util
+async function releaseOrderStockReservation(orderId) {
   try {
-    const order = await orderModel.findById(orderId);
-    if (!order) {
-      throw new Error('Order not found');
+    const order = await orderModel.findById(orderId).lean();
+    if (!order || !order.items) return;
+    for (const it of order.items) {
+      // reuse the utility that releases reserved qty for a product
+      // ensure releaseStockReservation(productId, size, qty) exists in utils/stock.js
+      await releaseStockReservation(it.productId, it.size, it.qty);
     }
-    
-    // Release stock reservation for all items
-    const releasePromises = order.items.map(item =>
-      releaseStockReservation(item.productId, item.size, item.quantity)
-    );
-    
-    await Promise.all(releasePromises);
-    
-    // Update reservation status
-    const reservation = await Reservation.findOne({ 
-      checkoutSessionId: order.metadata?.checkoutSessionId 
-    });
-    
-    if (reservation && reservation.status === 'active') {
-      await reservation.expire();
-    }
-    
-    console.log(`Stock reservation released for order: ${orderId}`);
-  } catch (error) {
-    console.error('Error releasing stock reservation:', error);
-    throw error;
+  } catch (err) {
+    console.error('releaseOrderStockReservation error', err);
   }
 } 
