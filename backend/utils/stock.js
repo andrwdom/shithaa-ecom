@@ -237,13 +237,6 @@ export async function releaseStockReservation(productId, size, quantity, options
         return false; // 🔑 CRITICAL: Return false instead of throwing for idempotency
     }
 }
-            reservedDecremented: quantity
-        };
-    } catch (error) {
-        console.error('Stock reservation release failed:', error);
-        throw error;
-    }
-}
 
 /**
  * Batch stock operations with reservations
