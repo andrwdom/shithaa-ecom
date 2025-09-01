@@ -187,8 +187,14 @@ const calculateCartTotal = async (req, res) => {
             }
         });
 
+        // 🔧 CRITICAL FIX: Log the actual count for debugging
+        console.log(`🔧 Loungewear items count: ${loungewearCategoryItems.length}`);
+        console.log(`🔧 Loungewear items:`, loungewearCategoryItems.map(item => `${item.name} (${item.size}) x${item.quantity}`));
+
         // Calculate loungewear category offer
         const loungewearCategoryOffer = calculateLoungewearCategoryOffer(loungewearCategoryItems);
+        
+        console.log(`🔧 CRITICAL: loungewearCategoryOffer result:`, loungewearCategoryOffer);
         
         // Calculate other items total
         const otherItemsTotal = otherItems.reduce((sum, item) => {
@@ -199,6 +205,13 @@ const calculateCartTotal = async (req, res) => {
 
         // Calculate totals with safety caps
         const subtotal = loungewearCategoryOffer.originalTotal + otherItemsTotal;
+        
+        console.log(`🔧 CRITICAL: Calculation breakdown:`, {
+            loungewearOriginalTotal: loungewearCategoryOffer.originalTotal,
+            loungewearDiscount: loungewearCategoryOffer.discount,
+            otherItemsTotal,
+            subtotal
+        });
 
         // 🔧 FIX: Enhanced logging for debugging
         console.log(`🔧 Cart calculation summary:`, {
@@ -265,16 +278,25 @@ const calculateCartTotal = async (req, res) => {
 
 // Helper function to calculate loungewear category offer
 function calculateLoungewearCategoryOffer(loungewearCategoryItems) {
-    // 🔧 FIX: Offer ONLY applies when there are 3 or more loungewear items
+    console.log(`🔧 CRITICAL DEBUG: calculateLoungewearCategoryOffer called with ${loungewearCategoryItems.length} items`);
+    console.log(`🔧 CRITICAL DEBUG: Items:`, loungewearCategoryItems.map(item => `${item.name} (${item.size}) - ₹${item.originalPrice}`));
+    
+    // 🔧 CRITICAL FIX: Offer ONLY applies when there are 3 or more loungewear items
     if (loungewearCategoryItems.length < 3) {
-        console.log(`🔧 No loungewear offer applied: Only ${loungewearCategoryItems.length} item(s), need 3+ for offer`);
+        console.log(`🔧 CRITICAL: No loungewear offer applied: Only ${loungewearCategoryItems.length} item(s), need 3+ for offer`);
         const originalTotal = loungewearCategoryItems.reduce((sum, item) => sum + item.originalPrice, 0);
-        return {
+        console.log(`🔧 CRITICAL DEBUG: Returning no offer, originalTotal: ₹${originalTotal}, discount: ₹0`);
+        
+        // 🔧 TRIPLE CHECK: Ensure discount is absolutely zero
+        const result = {
             originalTotal,
             discount: 0,
             offerApplied: false,
             offerDetails: null
         };
+        
+        console.log(`🔧 FINAL RESULT FOR < 3 ITEMS:`, result);
+        return result;
     }
 
     // Calculate how many complete sets of 3
