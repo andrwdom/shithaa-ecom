@@ -160,6 +160,27 @@ export async function confirmStockReservation(productId, size, quantity, options
     const { session } = options;
     
     try {
+        // 🔍 DEBUG: First check if product and size exist
+        const product = await productModel.findById(productId);
+        if (!product) {
+            console.error(`Stock confirmation failed - Product not found: ${productId}`);
+            return false;
+        }
+        
+        const sizeData = product.sizes.find(s => s.size === size);
+        if (!sizeData) {
+            console.error(`Stock confirmation failed - Size '${size}' not found in product ${productId}. Available sizes:`, product.sizes.map(s => s.size));
+            return false;
+        }
+        
+        console.log(`🔍 Stock confirmation debug for product ${product.name} (${productId}) size ${size}:`, {
+            currentStock: sizeData.stock,
+            currentReserved: sizeData.reserved,
+            requiredQuantity: quantity,
+            stockSufficient: sizeData.stock >= quantity,
+            reservedSufficient: sizeData.reserved >= quantity
+        });
+        
         // 🔑 CRITICAL: Use atomic update with both stock and reserved validation
         const result = await productModel.updateOne(
             {
@@ -181,14 +202,15 @@ export async function confirmStockReservation(productId, size, quantity, options
         const success = !!(result && (result.modifiedCount > 0 || result.nModified > 0));
         
         if (success) {
-            console.log(`Stock reservation confirmed: ${quantity} units for product ${productId} size ${size}`);
+            console.log(`✅ Stock reservation confirmed: ${quantity} units for product ${productId} size ${size}`);
         } else {
-            console.warn(`Stock confirmation failed - no matching document: product ${productId} size ${size}`);
+            console.warn(`❌ Stock confirmation failed - no matching document: product ${productId} size ${size}`);
+            console.warn(`   This usually means stock (${sizeData.stock}) or reserved (${sizeData.reserved}) is insufficient for quantity ${quantity}`);
         }
         
         return success;
     } catch (error) {
-        console.error('Stock confirmation failed:', error);
+        console.error('❌ Stock confirmation failed:', error);
         return false; // 🔑 CRITICAL: Return false instead of throwing for idempotency
     }
 }
