@@ -23,6 +23,7 @@ dotenv.config({ path: path.join(__dirname, '.env') });
 
 // Import models
 const productModel = (await import('./models/productModel.js')).default;
+const orderModel = (await import('./models/orderModel.js')).default;
 
 async function connectDB() {
     try {
@@ -105,7 +106,8 @@ async function fixStockConfirmation() {
         const similarProducts = await productModel.find({
             $or: [
                 { name: { $regex: 'gsdsdfs', $options: 'i' } },
-                { _id: { $regex: testProductId.substring(0, 8), $options: 'i' } }
+                { name: { $regex: 'test', $options: 'i' } },
+                { name: { $regex: 'product', $options: 'i' } }
             ]
         }).limit(5);
         
@@ -120,6 +122,26 @@ async function fixStockConfirmation() {
             });
         } else {
             console.log('❌ No similar products found');
+        }
+        
+        // Check recent orders to see what product IDs are being used
+        console.log('\n🔍 Checking recent orders for product IDs...');
+        const recentOrders = await orderModel.find({
+            createdAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } // Last 24 hours
+        }).limit(5);
+        
+        if (recentOrders.length > 0) {
+            console.log('📦 Recent orders with product IDs:');
+            recentOrders.forEach(order => {
+                console.log(`Order: ${order.orderId} (${order._id})`);
+                if (order.items && order.items.length > 0) {
+                    order.items.forEach(item => {
+                        console.log(`  - ${item.name}: ${item._id || item.productId || item.product}`);
+                    });
+                }
+            });
+        } else {
+            console.log('❌ No recent orders found');
         }
     }
     
