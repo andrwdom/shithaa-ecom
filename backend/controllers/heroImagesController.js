@@ -354,6 +354,21 @@ function normalizeImagePath(imagePath) {
 }
 
 function shuffleArray(array) {
+  // Input validation: handle undefined, null, or non-array inputs
+  if (!Array.isArray(array)) {
+    console.warn('shuffleArray: Invalid input received:', {
+      type: typeof array,
+      value: array,
+      stack: new Error().stack
+    })
+    return []
+  }
+  
+  // Handle empty array case
+  if (array.length === 0) {
+    return []
+  }
+  
   const shuffled = [...array]
   for (let i = shuffled.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1))

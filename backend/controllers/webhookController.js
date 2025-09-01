@@ -120,13 +120,28 @@ export async function phonePeWebhookHandler(req, res) {
         await orderModel.findByIdAndUpdate(order._id, updateData);
         console.log('🔔 WEBHOOK: Order updated successfully to paid status');
         
-        // Clear user's cart (non-blocking)
+        // Clear user's cart and clean up reservations (non-blocking)
         if (order.userId) {
           try {
             const { userModel } = await import('../models/userModel.js');
             await userModel.findByIdAndUpdate(order.userId, { cartData: {} });
             console.log('🔔 WEBHOOK: User cart cleared successfully');
           } catch (cartError) {
+            console.warn('🔔 WEBHOOK: Failed to clear user cart:', cartError);
+          }
+        }
+        
+        // 🔑 CRITICAL: Clean up reservation after successful payment
+        try {
+          const { Reservation } = await import('../models/Reservation.js');
+          await Reservation.findOneAndUpdate(
+            { checkoutSessionId: order.metadata?.checkoutSessionId },
+            { status: 'confirmed', updatedAt: new Date() }
+          );
+          console.log('🔔 WEBHOOK: Reservation marked as confirmed');
+        } catch (reservationError) {
+          console.warn('🔔 WEBHOOK: Failed to update reservation status:', reservationError);
+        }
             console.error('🔔 WEBHOOK: Failed to clear user cart:', cartError);
           }
         }

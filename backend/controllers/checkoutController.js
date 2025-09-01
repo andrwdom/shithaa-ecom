@@ -127,6 +127,32 @@ export const createCheckoutSession = async (req, res) => {
     try {
       console.log(`[${correlationId}] Creating stock reservation for session: ${sessionId}`);
       
+      // 🔑 CRITICAL: Clean up any existing expired reservations first
+      try {
+        const expiredReservations = await Reservation.find({
+          status: 'active',
+          expiresAt: { $lt: new Date() }
+        }).lean();
+        
+        if (expiredReservations.length > 0) {
+          console.log(`[${correlationId}] Cleaning up ${expiredReservations.length} expired reservations`);
+          for (const expired of expiredReservations) {
+            try {
+              // Release stock for expired reservations
+              for (const item of expired.items) {
+                await releaseStockReservation(item.productId, item.size, item.quantity);
+              }
+              // Mark reservation as expired
+              await Reservation.findByIdAndUpdate(expired._id, { status: 'expired' });
+            } catch (cleanupError) {
+              console.warn(`[${correlationId}] Failed to cleanup expired reservation ${expired.reservationId}:`, cleanupError);
+            }
+          }
+        }
+      } catch (cleanupError) {
+        console.warn(`[${correlationId}] Failed to cleanup expired reservations:`, cleanupError);
+      }
+      
       // Create reservation document
       const reservation = await Reservation.createReservation({
         reservationId: `res_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,

@@ -160,7 +160,7 @@ export async function confirmStockReservation(productId, size, quantity, options
     const { session } = options;
     
     try {
-        // Decrement both stock and reserved fields atomically
+        // 🔑 CRITICAL: Use atomic update with both stock and reserved validation
         const result = await productModel.updateOne(
             {
                 _id: productId,
@@ -177,23 +177,19 @@ export async function confirmStockReservation(productId, size, quantity, options
             { session }
         );
         
-        if (result.modifiedCount === 0) {
-            throw new Error(`Failed to confirm stock reservation for product ${productId} size ${size}`);
+        // 🔑 CRITICAL: Return boolean success indicator for idempotency
+        const success = !!(result && (result.modifiedCount > 0 || result.nModified > 0));
+        
+        if (success) {
+            console.log(`Stock reservation confirmed: ${quantity} units for product ${productId} size ${size}`);
+        } else {
+            console.warn(`Stock confirmation failed - no matching document: product ${productId} size ${size}`);
         }
         
-        console.log(`Stock reservation confirmed: ${quantity} units for product ${productId} size ${size}`);
-        
-        return {
-            success: true,
-            productId,
-            size,
-            quantity,
-            stockDecremented: quantity,
-            reservedDecremented: quantity
-        };
+        return success;
     } catch (error) {
         console.error('Stock confirmation failed:', error);
-        throw error;
+        return false; // 🔑 CRITICAL: Return false instead of throwing for idempotency
     }
 }
 
@@ -213,7 +209,7 @@ export async function releaseStockReservation(productId, size, quantity, options
     const { session } = options;
     
     try {
-        // Decrement only the reserved field
+        // 🔑 CRITICAL: Decrement only the reserved field atomically
         const result = await productModel.updateOne(
             {
                 _id: productId,
@@ -226,17 +222,21 @@ export async function releaseStockReservation(productId, size, quantity, options
             { session }
         );
         
-        if (result.modifiedCount === 0) {
-            throw new Error(`Failed to release stock reservation for product ${productId} size ${size}`);
+        // 🔑 CRITICAL: Return boolean success indicator for idempotency
+        const success = !!(result && (result.modifiedCount > 0 || result.nModified > 0));
+        
+        if (success) {
+            console.log(`Stock reservation released: ${quantity} units for product ${productId} size ${size}`);
+        } else {
+            console.warn(`Stock release failed - no matching document: product ${productId} size ${size}`);
         }
         
-        console.log(`Stock reservation released: ${quantity} units for product ${productId} size ${size}`);
-        
-        return {
-            success: true,
-            productId,
-            size,
-            quantity,
+        return success;
+    } catch (error) {
+        console.error('Stock release failed:', error);
+        return false; // 🔑 CRITICAL: Return false instead of throwing for idempotency
+    }
+}
             reservedDecremented: quantity
         };
     } catch (error) {
