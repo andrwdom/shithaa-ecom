@@ -99,6 +99,28 @@ async function fixStockConfirmation() {
         console.log('✅ Stock confirmation should work for this product');
     } else {
         console.log('❌ Stock confirmation will fail for this product');
+        
+        // Try to find similar products or the correct product ID
+        console.log('\n🔍 Searching for similar products...');
+        const similarProducts = await productModel.find({
+            $or: [
+                { name: { $regex: 'gsdsdfs', $options: 'i' } },
+                { _id: { $regex: testProductId.substring(0, 8), $options: 'i' } }
+            ]
+        }).limit(5);
+        
+        if (similarProducts.length > 0) {
+            console.log('📦 Found similar products:');
+            similarProducts.forEach(product => {
+                console.log(`- ${product.name} (${product._id})`);
+                const sizeS = product.sizes.find(s => s.size === 'S');
+                if (sizeS) {
+                    console.log(`  Size S: stock=${sizeS.stock}, reserved=${sizeS.reserved}`);
+                }
+            });
+        } else {
+            console.log('❌ No similar products found');
+        }
     }
     
     // Find all products with potential stock issues
@@ -121,10 +143,26 @@ async function fixStockConfirmation() {
         console.log('✅ No products with negative stock found');
     }
     
-    // Find products with reserved > stock
-    const overReservedProducts = await productModel.find({
-        'sizes.reserved': { $gt: '$sizes.stock' }
-    });
+    // Find products with reserved > stock (using aggregation)
+    const overReservedProducts = await productModel.aggregate([
+        {
+            $unwind: '$sizes'
+        },
+        {
+            $match: {
+                $expr: {
+                    $gt: ['$sizes.reserved', '$sizes.stock']
+                }
+            }
+        },
+        {
+            $group: {
+                _id: '$_id',
+                name: { $first: '$name' },
+                sizes: { $push: '$sizes' }
+            }
+        }
+    ]);
     
     if (overReservedProducts.length > 0) {
         console.log(`⚠️ Found ${overReservedProducts.length} products with over-reserved stock:`);
