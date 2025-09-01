@@ -69,7 +69,8 @@ const orderSchema = new mongoose.Schema({
         productId: mongoose.Schema.Types.ObjectId,
         name: String,
         price: Number,
-        quantity: Number
+        quantity: Number,
+        size: String
     }],
     subtotal: Number,
     discount: {
