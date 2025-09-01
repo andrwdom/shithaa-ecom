@@ -92,7 +92,7 @@ reservationSchema.pre('save', function(next) {
 reservationSchema.index({ userId: 1, status: 1 });
 reservationSchema.index({ checkoutSessionId: 1 });
 reservationSchema.index({ 'items.productId': 1, 'items.size': 1 });
-reservationSchema.index({ expiresAt: 1 });
+// Note: expiresAt index already exists via TTL index in schema
 
 // Static method to create reservation
 reservationSchema.statics.createReservation = async function(reservationData) {

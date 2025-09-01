@@ -132,7 +132,7 @@ orderSchema.index({ 'userInfo.email': 1 }); // For email-based queries
 orderSchema.index({ orderStatus: 1 }); // For status-based queries
 orderSchema.index({ paymentStatus: 1 }); // For payment status queries
 orderSchema.index({ placedAt: -1 }); // For date-based sorting
-orderSchema.index({ checkoutSessionId: 1 }); // For session lookups
+// Note: checkoutSessionId index already exists via unique: true in schema
 orderSchema.index({ phonepeTransactionId: 1 }); // For payment lookups
 orderSchema.index({ createdAt: -1 }); // For creation date queries
 

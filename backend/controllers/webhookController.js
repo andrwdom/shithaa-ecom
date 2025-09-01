@@ -142,9 +142,6 @@ export async function phonePeWebhookHandler(req, res) {
         } catch (reservationError) {
           console.warn('🔔 WEBHOOK: Failed to update reservation status:', reservationError);
         }
-            console.error('🔔 WEBHOOK: Failed to clear user cart:', cartError);
-          }
-        }
         
         // Send invoice email (non-blocking)
         try {
