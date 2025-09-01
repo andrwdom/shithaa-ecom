@@ -945,8 +945,9 @@ export const confirmOrderStock = async (orderId) => {
             return { message: 'Stock already confirmed', orderId: order._id };
         }
         
-        // Validate order items
-        if (!order.items || order.items.length === 0) {
+        // Validate order items - check both items and cartItems fields
+        const itemsToProcess = order.cartItems && order.cartItems.length > 0 ? order.cartItems : order.items;
+        if (!itemsToProcess || itemsToProcess.length === 0) {
             throw new Error('Order has no items to process');
         }
         
@@ -954,7 +955,7 @@ export const confirmOrderStock = async (orderId) => {
         const { confirmStockReservation } = await import('../utils/stock.js');
         const results = [];
         
-        for (const item of order.items) {
+        for (const item of itemsToProcess) {
             // 🔧 CRITICAL FIX: Handle all possible product ID field names
             let productId = null;
             if (item.productId) {
