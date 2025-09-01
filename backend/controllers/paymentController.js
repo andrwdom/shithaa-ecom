@@ -230,6 +230,9 @@ export const createPhonePeSession = async (req, res) => {
       }
     };
 
+    // 🔍 DEBUG: Log checkout session items to see if size is present
+    console.log(`[${correlationId}] Checkout session items:`, JSON.stringify(checkoutSession.items, null, 2));
+    
     const orderPayload = {
       orderId,
       userInfo: {
