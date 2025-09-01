@@ -16,6 +16,10 @@ export async function initiatePhonePeRefund(req, res) {
     if (existing) return errorResponse(res, 400, 'A refund is already in progress for this order');
     
     // Initialize PhonePe client locally
+    if (!process.env.PHONEPE_MERCHANT_ID || !process.env.PHONEPE_API_KEY) {
+      return errorResponse(res, 500, 'PhonePe credentials not configured');
+    }
+    
     const phonepeClient = StandardCheckoutClient.getInstance(
       process.env.PHONEPE_MERCHANT_ID,
       process.env.PHONEPE_API_KEY,
@@ -63,6 +67,10 @@ export async function getPhonePeRefundStatus(req, res) {
     if (!refund) return errorResponse(res, 404, 'Refund not found');
     
     // Initialize PhonePe client locally
+    if (!process.env.PHONEPE_MERCHANT_ID || !process.env.PHONEPE_API_KEY) {
+      return errorResponse(res, 500, 'PhonePe credentials not configured');
+    }
+    
     const phonepeClient = StandardCheckoutClient.getInstance(
       process.env.PHONEPE_MERCHANT_ID,
       process.env.PHONEPE_API_KEY,

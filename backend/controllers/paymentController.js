@@ -546,6 +546,16 @@ export const verifyPhonePePayment = async (req, res) => {
     // Initialize PhonePe client
     const phonePeClient = await initializePhonePeClient();
     
+    // 🔧 CRITICAL FIX: Check if PhonePe client was initialized successfully
+    if (!phonePeClient) {
+      console.error('PhonePe client initialization failed - cannot verify payment');
+      return res.status(500).json({
+        success: false,
+        message: 'Payment verification service unavailable',
+        error: 'PhonePe client not initialized'
+      });
+    }
+    
     // Check payment status
     const paymentStatus = await phonePeClient.payment.getStatus(merchantTransactionId);
     console.log('PhonePe payment status:', paymentStatus);
