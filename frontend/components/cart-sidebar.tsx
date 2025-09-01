@@ -224,8 +224,25 @@ export default function CartSidebar() {
             </div>
           ) : cartItemsCount > 0 ? (
             <div className="p-4 sm:p-6 space-y-5">
-              {/* Special Offer Banner */}
-              {offerDetails?.offerApplied && (
+              {/* Special Offer Banner - CRITICAL FIX: Only show for 3+ items */}
+              {(() => {
+                const loungewearItems = cartItems.filter((item: any) => 
+                  item.categorySlug === 'zipless-feeding-lounge-wear' || 
+                  item.categorySlug === 'non-feeding-lounge-wear'
+                );
+                const totalLoungewearQuantity = loungewearItems.reduce((sum: number, item: any) => sum + item.quantity, 0);
+                
+                // 🔧 CRITICAL FIX: Only show offer if there are 3+ loungewear items
+                const shouldShowOffer = totalLoungewearQuantity >= 3 && offerDetails?.offerApplied;
+                
+                console.log('[CartSidebar] 🔧 Loungewear offer check:', {
+                  loungewearItemsCount: loungewearItems.length,
+                  totalLoungewearQuantity,
+                  shouldShowOffer,
+                  offerDetailsApplied: offerDetails?.offerApplied
+                });
+                
+                return shouldShowOffer ? (
                 <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-3 sm:p-4 shadow-sm">
                   <div className="flex items-start gap-2 sm:gap-3">
                     <div className="bg-green-100 p-2 rounded-lg">
@@ -247,7 +264,8 @@ export default function CartSidebar() {
                     </div>
                   </div>
                 </div>
-              )}
+              ) : null;
+              })()}
               
               {/* Progress to Next Offer */}
               {offerDetails?.loungewearCategoryCount && offerDetails.loungewearCategoryCount > 0 && offerDetails.loungewearCategoryCount < 3 && (

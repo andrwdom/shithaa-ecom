@@ -87,8 +87,22 @@ export default function CheckoutPage() {
       // Offer discount from backend calculation
       const offerDiscount = offerDetails?.offerDiscount || 0;
 
+      // 🔧 CRITICAL FIX: Check loungewear items count and force zero discount for < 3 items
+      const loungewearItems = displayItems.filter((item: any) => 
+        item.categorySlug === 'zipless-feeding-lounge-wear' || 
+        item.categorySlug === 'non-feeding-lounge-wear'
+      );
+      const totalLoungewearQuantity = loungewearItems.reduce((sum: number, item: any) => sum + item.quantity, 0);
+      
+      // 🔧 CRITICAL FIX: Force zero discount if less than 3 loungewear items
+      let finalOfferDiscount = offerDiscount;
+      if (totalLoungewearQuantity < 3) {
+        console.log(`🔧 CRITICAL: Forcing zero discount for ${totalLoungewearQuantity} loungewear items (need 3+)`);
+        finalOfferDiscount = 0;
+      }
+
       // 🔧 FIX: Safety check - ensure offer discount is never negative or exceeds subtotal
-      const safeOfferDiscount = Math.max(0, Math.min(offerDiscount, rawSubtotal));
+      const safeOfferDiscount = Math.max(0, Math.min(finalOfferDiscount, rawSubtotal));
       if (offerDiscount !== safeOfferDiscount) {
         console.log(`🔧 Frontend safety fix: Adjusted offer discount from ₹${offerDiscount} to ₹${safeOfferDiscount}`);
       }

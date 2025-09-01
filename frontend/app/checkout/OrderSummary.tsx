@@ -46,16 +46,35 @@ export default function OrderSummary({
           <span>Subtotal</span><span>₹{subtotal}</span>
         </div>
         
-        {/* Loungewear Offer */}
-        {offerDetails?.offerApplied && (
-          <div className="flex justify-between text-green-700 font-semibold">
-            <div className="flex items-center gap-1">
-              <Gift className="h-3 w-3"/>
-              <span>Loungewear Offer</span>
+        {/* Loungewear Offer - CRITICAL FIX: Only show for 3+ items */}
+        {(() => {
+          const loungewearItems = displayItems.filter((item: any) => 
+            item.categorySlug === 'zipless-feeding-lounge-wear' || 
+            item.categorySlug === 'non-feeding-lounge-wear'
+          );
+          const totalLoungewearQuantity = loungewearItems.reduce((sum: number, item: any) => sum + item.quantity, 0);
+          
+          // 🔧 CRITICAL FIX: Only show offer if there are 3+ loungewear items
+          const shouldShowOffer = totalLoungewearQuantity >= 3 && offerDetails?.offerApplied;
+          
+          console.log('[OrderSummary] 🔧 Loungewear offer check:', {
+            loungewearItemsCount: loungewearItems.length,
+            totalLoungewearQuantity,
+            shouldShowOffer,
+            offerDetailsApplied: offerDetails?.offerApplied,
+            offerDiscount
+          });
+          
+          return shouldShowOffer ? (
+            <div className="flex justify-between text-green-700 font-semibold">
+              <div className="flex items-center gap-1">
+                <Gift className="h-3 w-3"/>
+                <span>Loungewear Offer</span>
+              </div>
+              <span>-₹{Math.abs(offerDiscount)}</span>
             </div>
-            <span>-₹{Math.abs(offerDiscount)}</span>
-          </div>
-        )}
+          ) : null;
+        })()}
         
         {/* Coupon Discount */}
         {coupon && couponDiscount > 0 && (
@@ -90,19 +109,30 @@ export default function OrderSummary({
           <span>Total</span><span>₹{total}</span>
         </div>
         
-        {/* Offer Details */}
-        {offerDetails?.offerApplied && (
-          <div className="mt-3 bg-green-50 border border-green-200 rounded p-3">
-            <div className="text-xs text-green-800 space-y-1">
-              <p className="font-semibold">🎉 Loungewear Offer Applied!</p>
-              <p>• {offerDetails.offerDetails?.completeSets} set(s) of 3 for ₹1299 each</p>
-              {offerDetails.offerDetails?.remainingItems > 0 && (
-                <p>• {offerDetails.offerDetails.remainingItems} item(s) at ₹450 each</p>
-              )}
-              <p className="font-semibold">You saved ₹{Math.abs(offerDiscount)}!</p>
+        {/* Offer Details - CRITICAL FIX: Only show for 3+ items */}
+        {(() => {
+          const loungewearItems = displayItems.filter((item: any) => 
+            item.categorySlug === 'zipless-feeding-lounge-wear' || 
+            item.categorySlug === 'non-feeding-lounge-wear'
+          );
+          const totalLoungewearQuantity = loungewearItems.reduce((sum: number, item: any) => sum + item.quantity, 0);
+          
+          // 🔧 CRITICAL FIX: Only show offer details if there are 3+ loungewear items
+          const shouldShowOfferDetails = totalLoungewearQuantity >= 3 && offerDetails?.offerApplied;
+          
+          return shouldShowOfferDetails ? (
+            <div className="mt-3 bg-green-50 border border-green-200 rounded p-3">
+              <div className="text-xs text-green-800 space-y-1">
+                <p className="font-semibold">🎉 Loungewear Offer Applied!</p>
+                <p>• {offerDetails.offerDetails?.completeSets} set(s) of 3 for ₹1299 each</p>
+                {offerDetails.offerDetails?.remainingItems > 0 && (
+                  <p>• {offerDetails.offerDetails.remainingItems} item(s) at ₹450 each</p>
+                )}
+                <p className="font-semibold">You saved ₹{Math.abs(offerDiscount)}!</p>
+              </div>
             </div>
-          </div>
-        )}
+          ) : null;
+        })()}
       </div>
     </div>
   )
