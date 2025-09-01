@@ -561,7 +561,8 @@ export const verifyPhonePePayment = async (req, res) => {
     if (!merchantTransactionId) {
       return res.status(400).json({
         success: false,
-        message: 'Merchant transaction ID is required'
+        message: 'Merchant transaction ID is required',
+        data: null
       });
     }
 
@@ -573,7 +574,8 @@ export const verifyPhonePePayment = async (req, res) => {
     if (!order) {
       return res.status(404).json({
         success: false,
-        message: 'Order not found for this transaction'
+        message: 'Order not found for this transaction',
+        data: null
       });
     }
 
@@ -586,7 +588,8 @@ export const verifyPhonePePayment = async (req, res) => {
       return res.status(500).json({
         success: false,
         message: 'Payment verification service unavailable',
-        error: 'PhonePe client not initialized'
+        error: 'PhonePe client not initialized',
+        data: null
       });
     }
     
@@ -603,7 +606,8 @@ export const verifyPhonePePayment = async (req, res) => {
             return res.status(500).json({
                 success: false,
                 message: 'Payment verification failed - PhonePe client method not found',
-                error: 'Missing getOrderStatus/getStatus method'
+                error: 'Missing getOrderStatus/getStatus method',
+                data: null
             });
         }
         
@@ -614,7 +618,8 @@ export const verifyPhonePePayment = async (req, res) => {
             return res.status(500).json({
                 success: false,
                 message: 'Payment verification failed - no status received from PhonePe',
-                error: 'Null payment status'
+                error: 'Null payment status',
+                data: null
             });
         }
     } catch (statusError) {
@@ -622,7 +627,8 @@ export const verifyPhonePePayment = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Payment verification failed - PhonePe API error',
-            error: statusError.message
+            error: statusError.message,
+            data: null
         });
     }
 
@@ -692,10 +698,21 @@ export const verifyPhonePePayment = async (req, res) => {
 
     return res.json({
       success: true,
-      orderId: order._id,
-      orderStatus: order.orderStatus,
-      paymentStatus: order.paymentStatus,
-      phonepeStatus: paymentStatus,
+      data: {
+        orderId: order._id,
+        orderStatus: order.orderStatus,
+        paymentStatus: order.paymentStatus,
+        // Return PhonePe data in the format frontend expects
+        state: paymentStatus?.state || paymentStatus?.status,
+        code: paymentStatus?.responseCode || paymentStatus?.code,
+        status: paymentStatus?.state || paymentStatus?.status,
+        paymentState: paymentStatus?.state || paymentStatus?.status,
+        message: paymentStatus?.responseMessage || paymentStatus?.message,
+        amount: paymentStatus?.amount,
+        transactionId: paymentStatus?.transactionId || paymentStatus?.orderId,
+        // Include the full PhonePe response for debugging
+        phonepeResponse: paymentStatus
+      },
       isSuccess
     });
 
@@ -704,7 +721,8 @@ export const verifyPhonePePayment = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Payment verification failed',
-      error: error.message
+      error: error.message,
+      data: null
     });
   }
 };
