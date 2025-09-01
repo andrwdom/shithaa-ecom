@@ -500,16 +500,16 @@ export const phonePeCallback = async (req, res) => {
         }
       }
       
-      // Generate and send invoice PDF via email (non-blocking)
-      try {
-        const { generateInvoiceBuffer, sendInvoiceEmail } = await import('../utils/invoice.js');
-        const freshOrder = await orderModel.findById(order._id); // get latest
-        const pdfBuffer = await generateInvoiceBuffer(freshOrder);
-        await sendInvoiceEmail(freshOrder, pdfBuffer);
-        console.log('Invoice email sent successfully');
-      } catch (err) {
-        console.error('Invoice email error:', err);
-      }
+              // Generate and send invoice PDF via email (non-blocking)
+        try {
+          const { generateInvoiceBuffer, sendInvoiceEmail } = await import('../utils/invoiceGenerator.js');
+          const freshOrder = await orderModel.findById(order._id); // get latest
+          const pdfBuffer = await generateInvoiceBuffer(freshOrder);
+          await sendInvoiceEmail(freshOrder, pdfBuffer);
+          console.log('Invoice email sent successfully');
+        } catch (err) {
+          console.error('Invoice email error:', err);
+        }
     } else {
       console.log('Payment failed, updating order status');
       update = {
@@ -677,7 +677,7 @@ export const verifyPhonePePayment = async (req, res) => {
 
         // Send invoice email (non-blocking)
         try {
-          const { generateInvoiceBuffer, sendInvoiceEmail } = await import('../utils/invoice.js');
+          const { generateInvoiceBuffer, sendInvoiceEmail } = await import('../utils/invoiceGenerator.js');
           generateInvoiceBuffer(order)
             .then(pdfBuffer => sendInvoiceEmail(order, pdfBuffer))
             .catch(err => console.error('Error sending invoice from verify endpoint:', err));
