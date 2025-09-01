@@ -23,6 +23,12 @@ const initializePhonePeClient = () => {
 
     if (!phonepe.merchant_id || !phonepe.api_key) {
         console.error('PhonePe credentials missing, cannot initialize client');
+        console.error('Available config:', {
+            merchant_id: phonepe.merchant_id ? 'SET' : 'MISSING',
+            api_key: phonepe.api_key ? 'SET' : 'MISSING',
+            salt_index: phonepe.salt_index,
+            env: phonepe.env
+        });
         return null;
     }
 
@@ -33,10 +39,31 @@ const initializePhonePeClient = () => {
             phonepe.salt_index,
             phonepe.env === 'PRODUCTION' ? Env.PRODUCTION : Env.SANDBOX
         );
-        console.log('PhonePe client initialized successfully');
+        
+        // 🔧 CRITICAL FIX: Validate client structure
+        if (!client || typeof client.getOrderStatus !== 'function') {
+            console.error('PhonePe client initialized but missing required methods:', {
+                clientExists: !!client,
+                hasGetOrderStatus: client && typeof client.getOrderStatus === 'function',
+                clientKeys: client ? Object.keys(client) : 'NO_CLIENT'
+            });
+            return null;
+        }
+        
+        console.log('PhonePe client initialized successfully with required methods');
         return client;
     } catch (initError) {
         console.error('PhonePe client initialization failed:', initError);
+        console.error('Initialization error details:', {
+            message: initError.message,
+            stack: initError.stack,
+            config: {
+                merchant_id: phonepe.merchant_id ? 'SET' : 'MISSING',
+                api_key: phonepe.api_key ? 'SET' : 'MISSING',
+                salt_index: phonepe.salt_index,
+                env: phonepe.env
+            }
+        });
         return null;
     }
 };
@@ -557,8 +584,27 @@ export const verifyPhonePePayment = async (req, res) => {
     }
     
     // Check payment status
-    const paymentStatus = await phonePeClient.payment.getStatus(merchantTransactionId);
-    console.log('PhonePe payment status:', paymentStatus);
+    let paymentStatus;
+    try {
+        paymentStatus = await phonePeClient.getOrderStatus(merchantTransactionId);
+        console.log('PhonePe payment status:', paymentStatus);
+        
+        if (!paymentStatus) {
+            console.error('PhonePe returned null/undefined payment status');
+            return res.status(500).json({
+                success: false,
+                message: 'Payment verification failed - no status received from PhonePe',
+                error: 'Null payment status'
+            });
+        }
+    } catch (statusError) {
+        console.error('PhonePe getOrderStatus failed:', statusError);
+        return res.status(500).json({
+            success: false,
+            message: 'Payment verification failed - PhonePe API error',
+            error: statusError.message
+        });
+    }
 
     const isSuccess = (
       paymentStatus.state === 'PAID' ||
