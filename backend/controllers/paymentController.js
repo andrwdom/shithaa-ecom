@@ -728,32 +728,42 @@ export const getPaymentStatus = async (req, res) => {
 }; 
 
 /**
- * Get order details by PhonePe transaction ID
- * This is used by the frontend callback page to get order details after payment.
+ * Get order by transaction id / payment id (robust search across possible fields)
+ * Used by routes that expect getOrderByTransactionId to exist.
  */
 export const getOrderByTransactionId = async (req, res) => {
-  const correlationId = req.headers['x-request-id'] || `req_${Date.now()}`;
   try {
-    const { transactionId } = req.params;
+    // transactionId can come from params, query, or body
+    const transactionId =
+      (req.params && req.params.transactionId) ||
+      req.query?.transactionId ||
+      req.body?.transactionId ||
+      req.body?.phonepeTransactionId ||
+      req.body?.paymentId;
 
     if (!transactionId) {
-      return errorResponse(res, 400, 'Transaction ID is required');
+      return res.status(400).json({ success: false, error: 'missing_transaction_id' });
     }
 
-    // Find the order using the PhonePe transaction ID
-    const order = await orderModel.findOne({ phonepeTransactionId: transactionId });
+    // Attempt common locations where transaction id might be stored
+    const order = await orderModel.findOne({
+      $or: [
+        { paymentId: transactionId },
+        { phonepeTransactionId: transactionId },
+        { 'payments.transactionId': transactionId },
+        { 'payment.transactionId': transactionId },
+        { transactionId: transactionId }
+      ]
+    }).lean();
 
     if (!order) {
-      return errorResponse(res, 404, 'Order not found for this transaction');
+      return res.status(404).json({ success: false, error: 'order_not_found' });
     }
 
-    // 🔑 FIX: Return the order data in the same format as the other order endpoints (`data` property)
-    // This ensures consistency for the frontend.
-    return successResponse(res, { data: order });
-
-  } catch (error) {
-    console.error(`[${correlationId}] Error getting order by transaction ID:`, error);
-    return errorResponse(res, 500, 'Failed to retrieve order details', error.message);
+    return res.status(200).json({ success: true, order });
+  } catch (err) {
+    console.error('getOrderByTransactionId error', err);
+    return res.status(500).json({ success: false, error: 'server_error' });
   }
 }; 
 
