@@ -90,7 +90,7 @@ reservationSchema.pre('save', function(next) {
 
 // Indexes for performance
 reservationSchema.index({ userId: 1, status: 1 });
-reservationSchema.index({ checkoutSessionId: 1 });
+// Note: checkoutSessionId index already exists via unique: true in schema
 reservationSchema.index({ 'items.productId': 1, 'items.size': 1 });
 // Note: expiresAt index already exists via TTL index in schema
 

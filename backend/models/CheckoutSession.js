@@ -105,7 +105,7 @@ checkoutSessionSchema.pre('save', function(next) {
 });
 
 // Indexes for performance
-checkoutSessionSchema.index({ sessionId: 1 }, { unique: true });
+checkoutSessionSchema.index({ sessionId: 1 }, { unique: true }); // sessionId is not unique in schema
 checkoutSessionSchema.index({ phonepeTransactionId: 1 });
 checkoutSessionSchema.index({ userId: 1 });
 checkoutSessionSchema.index({ status: 1 });
