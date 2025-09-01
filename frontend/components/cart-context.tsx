@@ -231,8 +231,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       try {
         const { safeFetch } = await import('@/lib/api-utils')
         
+        // 🔧 FIX: Clear cache for cart calculations to ensure fresh results
+        const { apiManager } = await import('@/lib/api-utils')
+        apiManager.clearCache()
+        
+        // 🔧 FIX: Add cache-busting timestamp to ensure fresh API calls
+        const timestamp = Date.now()
         const response = await safeFetch(
-          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/cart/calculate-total`,
+          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/cart/calculate-total?t=${timestamp}`,
           {
             method: 'POST',
             headers: {
@@ -240,16 +246,18 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             },
             body: JSON.stringify({ items: cartItems }),
           },
-          `cart-total-${cartHash}`,
-          2 * 60 * 1000
+          undefined, // 🔧 FIX: Disable caching for cart calculations
+          0 // 🔧 FIX: No cache TTL
         )
 
         if (response.ok) {
           const data = await response.json()
+          console.log("[CartContext] 🔧 API Response:", data)
           if (data.success) {
             // 🔧 FIX: Only update if the cart hasn't changed during calculation
             if (cartHash === lastCartHashRef.current) {
               console.log("[CartContext] 🔧 Updating total with offer:", data.data.total, "discount:", data.data.offerDiscount)
+              console.log("[CartContext] 🔧 Offer details:", data.data.offerDetails)
               setCartTotal(data.data.total)
               setCartSubtotal(data.data.subtotal)
               setOfferDetails({

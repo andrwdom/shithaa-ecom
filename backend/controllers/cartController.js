@@ -144,13 +144,10 @@ const calculateCartTotal = async (req, res) => {
         // 🔧 FIX: Create a stable hash for caching
         const itemsHash = items.map(item => `${item._id}-${item.size}-${item.quantity}`).join('|');
         
-        // 🔧 FIX: Add request deduplication to prevent multiple calculations
-        if (global.cartCalculationCache && global.cartCalculationCache[itemsHash]) {
-            const cached = global.cartCalculationCache[itemsHash];
-            if (Date.now() - cached.timestamp < 5000) { // 5 second cache
-                console.log('🔧 Using cached cart calculation result');
-                return res.json(cached.result);
-            }
+        // 🔧 FIX: Clear cache to ensure fresh calculations
+        if (global.cartCalculationCache) {
+            console.log('🔧 Clearing cart calculation cache for fresh results');
+            global.cartCalculationCache = {};
         }
 
         // Fetch product details for all items to get category information
@@ -249,21 +246,8 @@ const calculateCartTotal = async (req, res) => {
             }
         };
 
-        // 🔧 FIX: Cache the result to prevent recalculation
-        if (!global.cartCalculationCache) {
-            global.cartCalculationCache = {};
-        }
-        global.cartCalculationCache[itemsHash] = {
-            result: response,
-            timestamp: Date.now()
-        };
-
-        // 🔧 FIX: Clean up old cache entries (keep only last 10)
-        const cacheKeys = Object.keys(global.cartCalculationCache);
-        if (cacheKeys.length > 10) {
-            const oldestKey = cacheKeys[0];
-            delete global.cartCalculationCache[oldestKey];
-        }
+        // 🔧 FIX: No caching - always return fresh results
+        console.log('🔧 Returning fresh cart calculation result');
 
         res.json(response);
 
