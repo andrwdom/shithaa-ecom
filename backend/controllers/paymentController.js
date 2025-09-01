@@ -249,7 +249,7 @@ export const createPhonePeSession = async (req, res) => {
         postalCode: shipping.postalCode,
         country: shipping.country || 'India'
       },
-      items: checkoutSession.items,
+      cartItems: checkoutSession.items,
       totalAmount: checkoutSession.total,
       status: 'Pending',
       orderStatus: 'Pending',
