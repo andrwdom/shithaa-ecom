@@ -615,12 +615,16 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
                           <SelectValue placeholder="Filter by Sleeve Type" />
                         </SelectTrigger>
                         <SelectContent 
-                          position="item-aligned" 
+                          position="popper" 
                           side="bottom" 
                           align="start" 
                           className="w-[var(--radix-select-trigger-width)] z-[9999]"
                           sideOffset={4}
                           alignOffset={0}
+                          avoidCollisions={false}
+                          collisionBoundary={undefined}
+                          sticky="always"
+                          onCloseAutoFocus={(e) => e.preventDefault()}
                         >
                           <SelectItem value="all">All Sleeve Types</SelectItem>
                           {(availableSleeveTypes.length > 0 ? availableSleeveTypes : ['Puff Sleeve', 'Normal Sleeve']).map((sleeveType) => (
@@ -645,28 +649,17 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
                         <SlidersHorizontal className="h-4 w-4 mr-2" />
                         <SelectValue placeholder="Sort By" />
                       </SelectTrigger>
-                      {/* Mobile SelectContent */}
                       <SelectContent 
-                        position="item-aligned" 
+                        position="popper" 
                         side="bottom" 
                         align="end" 
-                        className="w-48 z-[9999] sm:hidden"
+                        className="w-48 sm:w-[var(--radix-select-trigger-width)] z-[9999]"
                         sideOffset={4}
                         alignOffset={0}
-                      >
-                        <SelectItem value="featured">Featured</SelectItem>
-                        <SelectItem value="price-low">Price: Low to High</SelectItem>
-                        <SelectItem value="price-high">Price: High to Low</SelectItem>
-                        <SelectItem value="name">Name: A to Z</SelectItem>
-                      </SelectContent>
-                      {/* Desktop SelectContent */}
-                      <SelectContent 
-                        position="item-aligned" 
-                        side="bottom" 
-                        align="end" 
-                        className="w-[var(--radix-select-trigger-width)] z-[9999] hidden sm:block"
-                        sideOffset={4}
-                        alignOffset={0}
+                        avoidCollisions={false}
+                        collisionBoundary={undefined}
+                        sticky="always"
+                        onCloseAutoFocus={(e) => e.preventDefault()}
                       >
                         <SelectItem value="featured">Featured</SelectItem>
                         <SelectItem value="price-low">Price: Low to High</SelectItem>
@@ -686,12 +679,16 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
                           <SelectValue placeholder="Filter by Sleeve Type" />
                         </SelectTrigger>
                         <SelectContent 
-                          position="item-aligned" 
+                          position="popper" 
                           side="bottom" 
                           align="start" 
                           className="w-[var(--radix-select-trigger-width)] z-[9999]"
                           sideOffset={4}
                           alignOffset={0}
+                          avoidCollisions={false}
+                          collisionBoundary={undefined}
+                          sticky="always"
+                          onCloseAutoFocus={(e) => e.preventDefault()}
                         >
                           <SelectItem value="all">All Sleeve Types</SelectItem>
                           {(availableSleeveTypes.length > 0 ? availableSleeveTypes : ['Puff Sleeve', 'Normal Sleeve']).map((sleeveType) => (
