@@ -66,8 +66,10 @@ export default function OptimizedHeroCard({
       setIsTransitioning(true)
       setTimeout(() => {
         setCurrentImageIndex(prev => (prev + 1) % images.length)
-        setIsTransitioning(false)
-      }, 300) // Half of the transition duration
+        setTimeout(() => {
+          setIsTransitioning(false)
+        }, 50) // Small delay to ensure state update
+      }, 500) // Half of the transition duration
     }, 5000) // Change image every 5 seconds
 
     return () => clearInterval(interval)
@@ -154,7 +156,7 @@ export default function OptimizedHeroCard({
       {/* Background Images with Smooth Transitions */}
       <div className="absolute inset-0">
         {/* Current Image */}
-        <div className={`absolute inset-0 transition-opacity duration-600 ${
+        <div className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
           isLoading || isTransitioning ? 'opacity-0' : 'opacity-100'
         }`}>
           <OptimizedImage
@@ -172,7 +174,7 @@ export default function OptimizedHeroCard({
 
         {/* Next Image (for smooth transitions) */}
         {images.length > 1 && (
-          <div className={`absolute inset-0 transition-opacity duration-600 ${
+          <div className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
             isTransitioning ? 'opacity-100' : 'opacity-0'
           }`}>
             <OptimizedImage

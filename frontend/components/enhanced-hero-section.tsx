@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from "react"
 import HeroCategoryCard from "./HeroCategoryCard"
-import OptimizedMobileHeroCard from "./optimized-mobile-hero-card"
 import OptimizedImagePreloader from "./optimized-image-preloader"
 import { HERO_SECTION_CATEGORIES } from "@/lib/hero-section-images"
 
@@ -107,11 +106,13 @@ const EnhancedHeroSection = () => {
               className="transition-all duration-700 ease-out opacity-100 translate-y-0"
               style={{ transitionDelay: `${index * 100}ms` }}
             >
-              <OptimizedMobileHeroCard
+              <HeroCategoryCard
+                categoryId={category.id.toString()}
                 categorySlug={category.slug}
                 title={category.title}
                 ctaText={category.ctaText}
                 isComingSoon={category.isComingSoon}
+                maxImages={6}
                 onClick={() => !category.isComingSoon && handleCategoryClick(category.slug)}
               />
             </div>

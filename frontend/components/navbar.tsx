@@ -8,8 +8,6 @@ import { useWishlist } from "@/components/wishlist-context"
 import { useAuth } from "@/components/auth/useAuth"
 import LoginModal from "@/components/auth/LoginModal"
 import '@/styles/banner-animation.css'
-import '@/styles/mobile-optimized-animations.css'
-import { DefaultBannerTicker } from './optimized-banner-ticker'
 
 interface NavbarProps {
   onCategoriesClick?: () => void
@@ -19,7 +17,7 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
   const [bannerPosition, setBannerPosition] = useState(0)
-  const { cartItems, openCartSidebar } = useCart()
+  const { cartItems, openCartSidebar, restoreCartFromStorage } = useCart()
   const { wishlistItems } = useWishlist()
   const { user, logout } = useAuth()
 
@@ -31,19 +29,32 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
   console.log("Navbar - Is menu open:", isMenuOpen)
   console.log("Navbar - Login modal open:", isLoginModalOpen)
 
-  // JavaScript-based banner animation fallback for mobile
+  // JavaScript-based banner animation fallback for mobile (smooth 60fps)
   useEffect(() => {
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
     
     if (isMobile) {
-      const interval = setInterval(() => {
-        setBannerPosition(prev => {
-          const newPosition = prev - 0.5
-          return newPosition <= -75 ? 0 : newPosition
-        })
-      }, 50)
+      let animationId: number
+      let startTime: number
       
-      return () => clearInterval(interval)
+      const animate = (currentTime: number) => {
+        if (!startTime) startTime = currentTime
+        
+        const elapsed = currentTime - startTime
+        const progress = (elapsed % 24000) / 24000 // 24 second cycle
+        const newPosition = -75 * progress
+        
+        setBannerPosition(newPosition)
+        animationId = requestAnimationFrame(animate)
+      }
+      
+      animationId = requestAnimationFrame(animate)
+      
+      return () => {
+        if (animationId) {
+          cancelAnimationFrame(animationId)
+        }
+      }
     }
   }, [])
 
@@ -74,9 +85,30 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
 
   return (
     <>
-      {/* Optimized Animated Top Banner */}
+      {/* Animated Top Banner */}
       <div className="bg-[rgb(71,60,102)] text-white py-3 overflow-hidden relative">
-        <DefaultBannerTicker />
+        <div className="banner-ticker-container">
+          <div 
+            className="banner-ticker"
+            style={{
+              transform: `translate3d(${bannerPosition}%, 0, 0)`,
+              animation: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ? 'none' : 'ticker 24s linear infinite'
+            }}
+          >
+            <div className="banner-message">
+              ‼ FREE DELIVERY FOR LOUNGE WEAR WITHIN TAMIL NADU ‼
+            </div>
+            <div className="banner-message">
+              🔥 BUY 3 LOUNGE WEAR @1299RS 🔥
+            </div>
+            <div className="banner-message">
+              🎉 PREMIUM MATERNITY WEAR - ELEGANT & COMFORTABLE 🎉
+            </div>
+            <div className="banner-message">
+              ‼ FREE DELIVERY FOR LOUNGE WEAR WITHIN TAMIL NADU ‼
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Main Navbar */}
@@ -88,7 +120,9 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
             <div className="navbar-left">
               {/* Mobile menu button */}
               <Button
-                className="md:hidden text-gray-600 hover:text-[rgb(71,60,102)] p-2 bg-transparent hover:bg-gray-100"
+                variant="ghost"
+                size="sm"
+                className="md:hidden text-gray-600 hover:text-[rgb(71,60,102)] p-2"
                 onClick={(e) => {
                   e.preventDefault()
                   e.stopPropagation()

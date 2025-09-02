@@ -88,7 +88,9 @@ export default function DynamicHeroCard({
       setIsTransitioning(true)
       setTimeout(() => {
         setCurrentImageIndex(prev => (prev + 1) % productImages.length)
-        setIsTransitioning(false)
+        setTimeout(() => {
+          setIsTransitioning(false)
+        }, 50) // Small delay to ensure state update
       }, 500) // Half of the transition duration
     }, 4000) // Change image every 4 seconds
 

@@ -168,8 +168,8 @@ export default function HeroCategoryCard({
         // Wait for the new image to be set, then fade in
         setTimeout(() => {
           setIsTransitioning(false)
-        }, 100) // Small delay to ensure state update
-      }, 1000) // Full transition duration
+        }, 50) // Small delay to ensure state update
+      }, 500) // Half of the transition duration
     }
 
     // Stagger transitions between 4-6 seconds for a calmer feel
