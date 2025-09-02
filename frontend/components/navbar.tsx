@@ -58,10 +58,16 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
       <div className="bg-[rgb(71,60,102)] text-white py-3 overflow-hidden relative">
         <div className="banner-ticker">
           <div className="banner-message">
-        ‼ FREE DELIVERY FOR LOUNGE WEAR WITHIN TAMIL NADU ‼
+            ‼ FREE DELIVERY FOR LOUNGE WEAR WITHIN TAMIL NADU ‼
           </div>
           <div className="banner-message">
             🔥 BUY 3 LOUNGE WEAR @1299RS 🔥
+          </div>
+          <div className="banner-message">
+            🎉 PREMIUM MATERNITY WEAR - ELEGANT & COMFORTABLE 🎉
+          </div>
+          <div className="banner-message">
+            ‼ FREE DELIVERY FOR LOUNGE WEAR WITHIN TAMIL NADU ‼
           </div>
         </div>
       </div>
@@ -266,13 +272,14 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
       <style jsx>{`
         .banner-ticker {
           display: flex;
-          animation: ticker 12s linear infinite;
+          animation: ticker 24s linear infinite;
           white-space: nowrap;
+          width: 400%;
         }
         
         .banner-message {
           flex-shrink: 0;
-          width: 100%;
+          width: 25%;
           text-align: center;
           font-weight: 500;
           font-size: 0.875rem;
@@ -283,11 +290,8 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
           0% {
             transform: translateX(0);
           }
-          50% {
-            transform: translateX(-100%);
-          }
           100% {
-            transform: translateX(-200%);
+            transform: translateX(-75%);
           }
         }
         
@@ -301,6 +305,20 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
           .banner-message {
             font-size: 0.75rem;
             padding: 0 0.5rem;
+          }
+        }
+        
+        /* Ensure animation works on all devices */
+        @media (prefers-reduced-motion: no-preference) {
+          .banner-ticker {
+            animation: ticker 24s linear infinite;
+          }
+        }
+        
+        /* Fallback for devices that don't support animations */
+        @media (prefers-reduced-motion: reduce) {
+          .banner-ticker {
+            animation: none;
           }
         }
       `}</style>
