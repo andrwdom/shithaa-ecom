@@ -33,7 +33,7 @@ export async function phonePeWebhookHandler(req, res) {
     if (payload.orderId && payload.state) {
       console.log('🔔 WEBHOOK: Processing payment update for orderId:', payload.orderId, 'state:', payload.state);
       
-      // First update PaymentSession if it exists
+      // Find the payment session by PhonePe transaction ID
       const paymentSession = await PaymentSession.findOne({ phonepeTransactionId: payload.orderId });
       if (paymentSession) {
         console.log('🔔 WEBHOOK: Found payment session, updating status to:', payload.state);
@@ -44,22 +44,25 @@ export async function phonePeWebhookHandler(req, res) {
         console.log('🔔 WEBHOOK: No payment session found for orderId:', payload.orderId);
       }
       
-      // Find the order by PhonePe transaction ID
-      const order = await orderModel.findOne({ phonepeTransactionId: payload.orderId });
-      
       // ---------- IDP GUARD (INSERT HERE) ----------
       const state = (payload?.state || payload?.status || payload?.transactionStatus || '').toString().toUpperCase();
       const isSuccess = ['COMPLETED','SUCCESS','PAID','CAPTURED','OK'].includes(state);
 
-      // Ensure order exists
-      if (!order) {
-        console.warn('🔔 WEBHOOK: order not found for payload', payload);
-        return res.status(404).json({ success: false, message: 'order_not_found' });
+      // Ensure payment session exists
+      if (!paymentSession) {
+        console.warn('🔔 WEBHOOK: payment session not found for payload', payload);
+        return res.status(404).json({ success: false, message: 'payment_session_not_found' });
       }
 
-      // Idempotency guard: skip if already confirmed
-      if (order.stockConfirmed) {
-        console.log('🔔 WEBHOOK: stock already confirmed for order', order._id.toString());
+      // Check if order already exists (created on successful payment)
+      let order = null;
+      if (paymentSession.orderId) {
+        order = await orderModel.findById(paymentSession.orderId);
+      }
+
+      // Idempotency guard: skip if order already exists and is confirmed
+      if (order && order.stockConfirmed) {
+        console.log('🔔 WEBHOOK: order already exists and stock confirmed for payment session', paymentSession._id.toString());
         // If payment success reported but order.status isn't 'paid', fix that without touching stock
         if (isSuccess && order.status !== 'paid') {
           order.status = 'paid';
@@ -70,10 +73,40 @@ export async function phonePeWebhookHandler(req, res) {
       }
       // ---------- END IDP GUARD ----------
       
-      console.log('🔔 WEBHOOK: Found order:', order.orderId, 'Current status:', order.paymentStatus);
+      console.log('🔔 WEBHOOK: Found payment session:', paymentSession._id, 'Order exists:', !!order);
       
       if (isSuccess) {
-        console.log('🔔 WEBHOOK: Payment successful, updating order and reducing stock');
+        console.log('🔔 WEBHOOK: Payment successful, creating order and reducing stock');
+        
+        // Create order if it doesn't exist
+        if (!order) {
+          try {
+            // Create order from payment session data
+            const orderPayload = paymentSession.orderPayload;
+            orderPayload.paymentStatus = 'paid';
+            orderPayload.orderStatus = 'Confirmed';
+            orderPayload.status = 'Order Placed';
+            orderPayload.paidAt = new Date();
+            orderPayload.phonepeResponse = req.body;
+
+            order = await orderModel.create(orderPayload);
+            console.log('🔔 WEBHOOK: Order created successfully:', order.orderId);
+
+            // Update payment session with order ID
+            paymentSession.orderId = order._id;
+            paymentSession.status = 'success';
+            await paymentSession.save();
+          } catch (orderCreationError) {
+            console.error('🔔 WEBHOOK: Failed to create order after successful payment:', orderCreationError);
+            
+            // Update payment session to failed since order creation failed
+            paymentSession.status = 'failed';
+            paymentSession.error = orderCreationError.message;
+            await paymentSession.save();
+            
+            return errorResponse(res, 500, 'Payment successful but order creation failed. Please contact support.');
+          }
+        }
         
         // Check if stock is already confirmed
         if (!order.stockConfirmed) {
@@ -106,7 +139,7 @@ export async function phonePeWebhookHandler(req, res) {
           console.log('🔔 WEBHOOK: Stock already confirmed for order:', order.orderId);
         }
         
-        // Update order status to paid
+        // Update order status to paid (if not already updated)
         const updateData = {
           payment: true,
           paymentStatus: 'paid',
@@ -155,19 +188,18 @@ export async function phonePeWebhookHandler(req, res) {
         }
         
       } else {
-        console.log('🔔 WEBHOOK: Payment failed, updating order status');
+        console.log('🔔 WEBHOOK: Payment failed, updating payment session status');
         
-        // Update order to failed status
-        await orderModel.findByIdAndUpdate(order._id, {
-          paymentStatus: 'failed',
-          orderStatus: 'Failed',
-          status: 'Payment Failed',
-          failedAt: new Date(),
-          phonepeResponse: req.body,
-          updatedAt: new Date()
-        });
+        // Update payment session status to failed
+        paymentSession.status = 'failed';
+        paymentSession.phonepeResponse = req.body;
+        paymentSession.failedAt = new Date();
+        await paymentSession.save();
+        console.log('🔔 WEBHOOK: Payment session updated to failed status');
         
-        console.log('🔔 WEBHOOK: Order updated to failed status');
+        // 🔑 CRITICAL: No order creation for failed payments
+        // No stock restoration needed since stock is not pre-reserved
+        // Stock is only deducted after successful payment confirmation
       }
     }
     

@@ -202,10 +202,11 @@ export const createPhonePeSession = async (req, res) => {
     const phonepeTransactionId = randomUUID();
     const orderId = await getUniqueOrderId();
     
-    // 🔑 CRITICAL FIX: Declare order and paymentSession in a higher scope
-    let order, paymentSession;
+    // 🔑 CRITICAL FIX: Only create payment session, NOT the order yet
+    // Order will be created only after successful payment verification
+    let paymentSession;
 
-    // Prepare all data objects for parallel creation
+    // Prepare payment session data (order data will be created later on payment success)
     const paymentSessionData = {
       sessionId: checkoutSessionId,
       phonepeTransactionId,
@@ -233,6 +234,7 @@ export const createPhonePeSession = async (req, res) => {
     // 🔍 DEBUG: Log checkout session items to see if size is present
     console.log(`[${correlationId}] Checkout session items:`, JSON.stringify(checkoutSession.items, null, 2));
     
+    // Prepare order data for later creation (only on payment success)
     const orderPayload = {
       orderId,
       userInfo: {
@@ -274,51 +276,34 @@ export const createPhonePeSession = async (req, res) => {
       }
     };
 
-    // 🔍 DEBUG: Log order payload before creation
-    console.log(`[${correlationId}] Creating order with payload:`, JSON.stringify(orderPayload, null, 2));
+    // Store order payload in payment session for later creation
+    paymentSessionData.orderPayload = orderPayload;
 
-    // Execute all database operations in parallel
+    // 🔍 DEBUG: Log order payload that will be created on payment success
+    console.log(`[${correlationId}] Order payload prepared for payment success:`, JSON.stringify(orderPayload, null, 2));
+
+    // Execute database operations (NO ORDER CREATION YET)
     try {
-      [order, paymentSession] = await Promise.all([
-        orderModel.create(orderPayload),
-        PaymentSession.create(paymentSessionData),
-        CheckoutSession.findByIdAndUpdate(checkoutSession._id, {
-          orderId,
-          phonepeTransactionId,
-          status: 'awaiting_payment'
-        })
-      ]);
-
-      if (!order || !paymentSession) {
-        throw new Error('Failed to create order or payment session');
-      }
-
-      // 🔍 DEBUG: Log created order to verify fields
-      console.log(`[${correlationId}] Order created successfully:`, {
-        orderId: order.orderId,
-        totalAmount: order.totalAmount,
-        total: order.total,
-        totalPrice: order.totalPrice,
-        amount: order.amount,
-        cartItemsCount: order.cartItems?.length,
-        itemsCount: order.items?.length
+      paymentSession = await PaymentSession.create(paymentSessionData);
+      
+      // Update checkout session with transaction ID
+      await CheckoutSession.findByIdAndUpdate(checkoutSession._id, {
+        orderId,
+        phonepeTransactionId,
+        status: 'awaiting_payment'
       });
 
-      // 🔑 REMOVED: Stock reservation is moved to the payment success callback.
-      // const { batchChangeStock } = await import('../utils/stock.js');
-      // const stockOperations = checkoutSession.items.map(item => ({
-      //   productId: item.productId,
-      //   size: item.size,
-      //   quantityChange: -item.quantity
-      // }));
-      
-      // await batchChangeStock(stockOperations);
+      if (!paymentSession) {
+        throw new Error('Failed to create payment session');
+      }
+
+      console.log(`[${correlationId}] Payment session created successfully, order will be created on payment success`);
 
     } catch (error) {
       console.error(`[${correlationId}] Database operations failed:`, error);
       return res.status(500).json({
         success: false,
-        message: 'Failed to create order and payment session',
+        message: 'Failed to create payment session',
         error: error.message
       });
     }
@@ -439,18 +424,18 @@ export const phonePeCallback = async (req, res) => {
       });
     }
 
-    // Find the order by PhonePe transaction ID
-    const order = await orderModel.findOne({ phonepeTransactionId: merchantTransactionId });
+    // Find the payment session by PhonePe transaction ID
+    const paymentSession = await PaymentSession.findOne({ phonepeTransactionId: merchantTransactionId });
     
-    if (!order) {
-      console.error('Order not found for PhonePe transaction:', merchantTransactionId);
+    if (!paymentSession) {
+      console.error('Payment session not found for PhonePe transaction:', merchantTransactionId);
       return res.status(404).json({
         success: false,
-        message: 'Order not found'
+        message: 'Payment session not found'
       });
     }
 
-    console.log('Found order:', order.orderId, 'Current status:', order.paymentStatus);
+    console.log('Found payment session:', paymentSession._id, 'Status:', paymentSession.status);
 
     // Determine if payment was successful
     const isSuccess = (
@@ -460,19 +445,32 @@ export const phonePeCallback = async (req, res) => {
       responseCode === '000'
     );
 
-    let update = {
-      phonepeResponse: req.body,
-      updatedAt: new Date()
-    };
-
     if (isSuccess) {
-      console.log('Payment successful, updating order status and reducing stock');
+      console.log('Payment successful, creating order and reducing stock');
 
-      // -----------------------------------------------------------------
-      // 🔑 CRITICAL FIX: Deduct stock ONLY on successful payment
-      // -----------------------------------------------------------------
+      // 🔑 CRITICAL FIX: Create order ONLY on successful payment
+      let order;
       try {
-        if (!order.stockConfirmed) {
+        // Create order from payment session data
+        const orderPayload = paymentSession.orderPayload;
+        orderPayload.paymentStatus = 'paid';
+        orderPayload.orderStatus = 'Confirmed';
+        orderPayload.status = 'Order Placed';
+        orderPayload.paidAt = new Date();
+        orderPayload.phonepeResponse = req.body;
+
+        order = await orderModel.create(orderPayload);
+        console.log('Order created successfully:', order.orderId);
+
+        // Update payment session status
+        paymentSession.status = 'success';
+        paymentSession.orderId = order._id;
+        await paymentSession.save();
+
+        // -----------------------------------------------------------------
+        // 🔑 CRITICAL FIX: Deduct stock ONLY on successful payment
+        // -----------------------------------------------------------------
+        try {
           // Import and call confirmOrderStock to handle stock reduction
           const { confirmOrderStock } = await import('../controllers/orderController.js');
           console.log('Reducing stock for order:', order._id);
@@ -480,88 +478,92 @@ export const phonePeCallback = async (req, res) => {
           console.log('Stock reduction completed successfully');
           
           // Mark stock as confirmed (i.e., deducted)
-          update.stockConfirmed = true;
-          update.stockConfirmedAt = new Date();
-        } else {
-          console.log(`Stock already confirmed for order: ${order.orderId}, skipping.`);
+          order.stockConfirmed = true;
+          order.stockConfirmedAt = new Date();
+          await order.save();
+        } catch (stockError) {
+          console.error(`[CRITICAL] Stock deduction failed for order ${order.orderId} after successful payment!`, stockError);
+          // If stock deduction fails, mark the order for manual intervention
+          order.paymentStatus = 'paid_stock_failed';
+          order.orderStatus = 'On Hold';
+          order.status = 'Payment Received, Stock Issue';
+          await order.save();
+          
+          return res.status(500).json({
+            success: false,
+            message: 'Payment successful, but stock update failed. Please contact support.',
+            orderId: order.orderId,
+          });
         }
-      } catch (stockError) {
-        console.error(`[CRITICAL] Stock deduction failed for order ${order.orderId} after successful payment!`, stockError);
-        // If stock deduction fails, do NOT mark the order as paid.
-        // It remains 'awaiting_payment' for manual intervention.
-        update.paymentStatus = 'paid_stock_failed';
-        update.orderStatus = 'On Hold';
-        update.status = 'Payment Received, Stock Issue';
+        // -----------------------------------------------------------------
         
-        // Skip invoice generation and cart clearing
-        await orderModel.findByIdAndUpdate(order._id, update);
-        
-        return res.status(500).json({
-          success: false,
-          message: 'Payment successful, but stock update failed. Please contact support.',
-          orderId: order.orderId,
-        });
-      }
-      // -----------------------------------------------------------------
-
-      update = {
-        ...update,
-        payment: true,
-        paymentStatus: 'paid',
-        orderStatus: 'Confirmed',
-        status: 'Order Placed',
-        paidAt: new Date()
-      };
-      
-      // Clear user's cart (non-blocking)
-      if (order.userId) {
-        try {
-          const { userModel } = await import('../models/userModel.js');
-          await userModel.findByIdAndUpdate(order.userId, { cartData: {} });
-          console.log('User cart cleared successfully');
-        } catch (cartError) {
-          console.error('Failed to clear user cart:', cartError);
+        // Clear user's cart (non-blocking)
+        if (order.userId) {
+          try {
+            const { userModel } = await import('../models/userModel.js');
+            await userModel.findByIdAndUpdate(order.userId, { cartData: {} });
+            console.log('User cart cleared successfully');
+          } catch (cartError) {
+            console.error('Failed to clear user cart:', cartError);
+          }
         }
-      }
-      
-              // Generate and send invoice PDF via email (non-blocking)
+        
+        // Generate and send invoice PDF via email (non-blocking)
         try {
           const { generateInvoiceBuffer, sendInvoiceEmail } = await import('../utils/invoiceGenerator.js');
-          const freshOrder = await orderModel.findById(order._id); // get latest
-          const pdfBuffer = await generateInvoiceBuffer(freshOrder);
-          await sendInvoiceEmail(freshOrder, pdfBuffer);
+          const pdfBuffer = await generateInvoiceBuffer(order);
+          await sendInvoiceEmail(order, pdfBuffer);
           console.log('Invoice email sent successfully');
         } catch (err) {
           console.error('Invoice email error:', err);
         }
+
+        // Determine redirect URL for successful payment
+        const redirectUrl = `${process.env.FRONTEND_URL || 'https://shithaa.in'}/order-success?orderId=${order.orderId}`;
+
+        res.json({
+          success: true,
+          message: 'Payment successful',
+          orderId: order._id,
+          redirectUrl
+        });
+
+      } catch (orderCreationError) {
+        console.error('Failed to create order after successful payment:', orderCreationError);
+        
+        // Update payment session to failed since order creation failed
+        paymentSession.status = 'failed';
+        paymentSession.error = orderCreationError.message;
+        await paymentSession.save();
+        
+        return res.status(500).json({
+          success: false,
+          message: 'Payment successful but order creation failed. Please contact support.',
+          error: orderCreationError.message
+        });
+      }
     } else {
-      console.log('Payment failed, updating order status');
-      update = {
-        ...update,
-        paymentStatus: 'failed',
-        orderStatus: 'Failed',
-        status: 'Payment Failed',
-        failedAt: new Date()
-      };
+      console.log('Payment failed, updating payment session status');
       
-      // 🔑 CRITICAL: No stock restoration needed since stock is not pre-reserved
+      // Update payment session status to failed
+      paymentSession.status = 'failed';
+      paymentSession.phonepeResponse = req.body;
+      paymentSession.failedAt = new Date();
+      await paymentSession.save();
+      
+      // 🔑 CRITICAL: No order creation for failed payments
+      // No stock restoration needed since stock is not pre-reserved
       // Stock is only deducted after successful payment confirmation
+
+      // Determine redirect URL for failed payment
+      const redirectUrl = `${process.env.FRONTEND_URL || 'https://shithaa.in'}/payment-failed`;
+
+      res.json({
+        success: false,
+        message: 'Payment failed',
+        redirectUrl
+      });
     }
-
-    await orderModel.findByIdAndUpdate(order._id, update);
-    console.log('Order updated successfully:', order._id);
-
-    // Determine redirect URL based on payment status
-    const redirectUrl = isSuccess
-      ? `${process.env.FRONTEND_URL || 'https://shithaa.in'}/order-success?orderId=${order.orderId}`
-      : `${process.env.FRONTEND_URL || 'https://shithaa.in'}/payment-failed?orderId=${order.orderId}`;
-
-    res.json({
-      success: isSuccess,
-      message: isSuccess ? 'Payment successful' : 'Payment failed',
-      orderId: order._id,
-      redirectUrl
-    });
   } catch (error) {
     console.error('PhonePe Callback Error:', error);
     res.status(500).json({
@@ -589,15 +591,21 @@ export const verifyPhonePePayment = async (req, res) => {
 
     console.log('Verifying PhonePe payment for transaction:', merchantTransactionId);
 
-    // Find the order by PhonePe transaction ID
-    const order = await orderModel.findOne({ phonepeTransactionId: merchantTransactionId });
+    // Find the payment session by PhonePe transaction ID
+    const paymentSession = await PaymentSession.findOne({ phonepeTransactionId: merchantTransactionId });
     
-    if (!order) {
+    if (!paymentSession) {
       return res.status(404).json({
         success: false,
-        message: 'Order not found for this transaction',
+        message: 'Payment session not found for this transaction',
         data: null
       });
+    }
+
+    // Check if order already exists (created on successful payment)
+    let order = null;
+    if (paymentSession.orderId) {
+      order = await orderModel.findById(paymentSession.orderId);
     }
 
     // Initialize PhonePe client
@@ -660,69 +668,92 @@ export const verifyPhonePePayment = async (req, res) => {
       paymentStatus.responseCode === '000'
     );
 
-    // 🔑 CRITICAL FIX: If payment is successful, update the main order as well.
+    // 🔑 CRITICAL FIX: If payment is successful, create order if it doesn't exist
     // This makes the verification endpoint a reliable fallback for the webhook.
     if (isSuccess) {
-      if (order.paymentStatus !== 'paid') {
-        console.log(`[verify] Webhook was slow, updating order ${order.orderId} to paid.`);
+      if (!order) {
+        console.log(`[verify] Creating order from payment session ${paymentSession._id} (webhook was slow).`);
         
-        if (!order.stockConfirmed) {
+        try {
+          // Create order from payment session data
+          const orderPayload = paymentSession.orderPayload;
+          orderPayload.paymentStatus = 'paid';
+          orderPayload.orderStatus = 'Confirmed';
+          orderPayload.status = 'Order Placed';
+          orderPayload.paidAt = new Date();
+          orderPayload.phonepeResponse = paymentStatus;
+
+          order = await orderModel.create(orderPayload);
+          console.log('Order created successfully from verify endpoint:', order.orderId);
+
+          // Update payment session with order ID
+          paymentSession.orderId = order._id;
+          paymentSession.status = 'success';
+          await paymentSession.save();
+          
+          // Reduce stock
           const { confirmOrderStock } = await import('../controllers/orderController.js');
           try {
             console.log('Reducing stock for order (verify path):', order._id);
             await confirmOrderStock(order._id);
             console.log('Stock reduction completed successfully');
+            
+            // Mark stock as confirmed
+            order.stockConfirmed = true;
+            order.stockConfirmedAt = new Date();
+            await order.save();
           } catch (stockError) {
             console.error('Failed to reduce stock during verify:', stockError);
             // Continue with order update even if stock reduction fails
           }
-        } else {
-          console.log('Stock already confirmed for order; skipping deduction in verify path');
-        }
-        
-        // Update order status
-        const updateData = {
-          payment: true,
-          paymentStatus: 'paid',
-          orderStatus: 'Confirmed',
-          status: 'Order Placed',
-          paidAt: new Date(),
-          stockConfirmed: true,
-          stockConfirmedAt: new Date(),
-          updatedAt: new Date()
-        };
-        
-        await orderModel.findByIdAndUpdate(order._id, updateData);
 
-        // Clear user's cart (non-blocking)
-        if (order.userId) {
-          try {
-            const { userModel } = await import('../models/userModel.js');
-            await userModel.findByIdAndUpdate(order.userId, { cartData: {} });
-            console.log('User cart cleared successfully');
-          } catch (cartError) {
-            console.error('Failed to clear user cart:', cartError);
+          // Clear user's cart (non-blocking)
+          if (order.userId) {
+            try {
+              const { userModel } = await import('../models/userModel.js');
+              await userModel.findByIdAndUpdate(order.userId, { cartData: {} });
+              console.log('User cart cleared successfully');
+            } catch (cartError) {
+              console.error('Failed to clear user cart:', cartError);
+            }
           }
-        }
 
-        // Send invoice email (non-blocking)
-        try {
-          const { generateInvoiceBuffer, sendInvoiceEmail } = await import('../utils/invoiceGenerator.js');
-          generateInvoiceBuffer(order)
-            .then(pdfBuffer => sendInvoiceEmail(order, pdfBuffer))
-            .catch(err => console.error('Error sending invoice from verify endpoint:', err));
-        } catch (err) {
-          console.error('Error preparing invoice from verify endpoint:', err);
+          // Send invoice email (non-blocking)
+          try {
+            const { generateInvoiceBuffer, sendInvoiceEmail } = await import('../utils/invoiceGenerator.js');
+            generateInvoiceBuffer(order)
+              .then(pdfBuffer => sendInvoiceEmail(order, pdfBuffer))
+              .catch(err => console.error('Error sending invoice from verify endpoint:', err));
+          } catch (err) {
+            console.error('Error preparing invoice from verify endpoint:', err);
+          }
+        } catch (orderCreationError) {
+          console.error('Failed to create order from verify endpoint:', orderCreationError);
+          // Update payment session to failed since order creation failed
+          paymentSession.status = 'failed';
+          paymentSession.error = orderCreationError.message;
+          await paymentSession.save();
         }
+      } else {
+        console.log(`[verify] Order already exists for payment session ${paymentSession._id}`);
+      }
+    } else {
+      // Payment failed - update payment session status
+      if (paymentSession.status !== 'failed') {
+        paymentSession.status = 'failed';
+        paymentSession.phonepeResponse = paymentStatus;
+        paymentSession.failedAt = new Date();
+        await paymentSession.save();
+        console.log('Payment session marked as failed');
       }
     }
 
     return res.json({
       success: true,
       data: {
-        orderId: order._id,
-        orderStatus: order.orderStatus,
-        paymentStatus: order.paymentStatus,
+        orderId: order?._id || null,
+        orderStatus: order?.orderStatus || (isSuccess ? 'Confirmed' : 'Failed'),
+        paymentStatus: order?.paymentStatus || (isSuccess ? 'paid' : 'failed'),
         // Return PhonePe data in the format frontend expects
         state: paymentStatus?.state || paymentStatus?.status,
         code: paymentStatus?.responseCode || paymentStatus?.code,
