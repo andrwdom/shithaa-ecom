@@ -7,6 +7,7 @@ import { useCart } from "@/components/cart-context"
 import { useWishlist } from "@/components/wishlist-context"
 import { useAuth } from "@/components/auth/useAuth"
 import LoginModal from "@/components/auth/LoginModal"
+import '@/styles/banner-animation.css'
 
 interface NavbarProps {
   onCategoriesClick?: () => void
@@ -15,6 +16,7 @@ interface NavbarProps {
 export default function Navbar({ onCategoriesClick }: NavbarProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
+  const [bannerPosition, setBannerPosition] = useState(0)
   const { cartItems, openCartSidebar, restoreCartFromStorage } = useCart()
   const { wishlistItems } = useWishlist()
   const { user, logout } = useAuth()
@@ -26,6 +28,22 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
   console.log("Navbar - User state:", user)
   console.log("Navbar - Is menu open:", isMenuOpen)
   console.log("Navbar - Login modal open:", isLoginModalOpen)
+
+  // JavaScript-based banner animation fallback for mobile
+  useEffect(() => {
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+    
+    if (isMobile) {
+      const interval = setInterval(() => {
+        setBannerPosition(prev => {
+          const newPosition = prev - 0.5
+          return newPosition <= -75 ? 0 : newPosition
+        })
+      }, 50)
+      
+      return () => clearInterval(interval)
+    }
+  }, [])
 
   // Cart restoration is now handled by CartProvider context - removed to prevent conflicts
   // useEffect(() => {
@@ -56,18 +74,26 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
     <>
       {/* Animated Top Banner */}
       <div className="bg-[rgb(71,60,102)] text-white py-3 overflow-hidden relative">
-        <div className="banner-ticker">
-          <div className="banner-message">
-            ‼ FREE DELIVERY FOR LOUNGE WEAR WITHIN TAMIL NADU ‼
-          </div>
-          <div className="banner-message">
-            🔥 BUY 3 LOUNGE WEAR @1299RS 🔥
-          </div>
-          <div className="banner-message">
-            🎉 PREMIUM MATERNITY WEAR - ELEGANT & COMFORTABLE 🎉
-          </div>
-          <div className="banner-message">
-            ‼ FREE DELIVERY FOR LOUNGE WEAR WITHIN TAMIL NADU ‼
+        <div className="banner-ticker-container">
+          <div 
+            className="banner-ticker"
+            style={{
+              transform: `translate3d(${bannerPosition}%, 0, 0)`,
+              animation: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ? 'none' : 'ticker 24s linear infinite'
+            }}
+          >
+            <div className="banner-message">
+              ‼ FREE DELIVERY FOR LOUNGE WEAR WITHIN TAMIL NADU ‼
+            </div>
+            <div className="banner-message">
+              🔥 BUY 3 LOUNGE WEAR @1299RS 🔥
+            </div>
+            <div className="banner-message">
+              🎉 PREMIUM MATERNITY WEAR - ELEGANT & COMFORTABLE 🎉
+            </div>
+            <div className="banner-message">
+              ‼ FREE DELIVERY FOR LOUNGE WEAR WITHIN TAMIL NADU ‼
+            </div>
           </div>
         </div>
       </div>
@@ -268,60 +294,7 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
         }}
       />
 
-      {/* CSS for animated banner */}
-      <style jsx>{`
-        .banner-ticker {
-          display: flex;
-          animation: ticker 24s linear infinite;
-          white-space: nowrap;
-          width: 400%;
-        }
-        
-        .banner-message {
-          flex-shrink: 0;
-          width: 25%;
-          text-align: center;
-          font-weight: 500;
-          font-size: 0.875rem;
-          padding: 0 1rem;
-        }
-        
-        @keyframes ticker {
-          0% {
-            transform: translateX(0);
-          }
-          100% {
-            transform: translateX(-75%);
-          }
-        }
-        
-        /* Pause animation on hover */
-        .banner-ticker:hover {
-          animation-play-state: paused;
-        }
-        
-        /* Mobile responsive */
-        @media (max-width: 640px) {
-          .banner-message {
-            font-size: 0.75rem;
-            padding: 0 0.5rem;
-          }
-        }
-        
-        /* Ensure animation works on all devices */
-        @media (prefers-reduced-motion: no-preference) {
-          .banner-ticker {
-            animation: ticker 24s linear infinite;
-          }
-        }
-        
-        /* Fallback for devices that don't support animations */
-        @media (prefers-reduced-motion: reduce) {
-          .banner-ticker {
-            animation: none;
-          }
-        }
-      `}</style>
+
     </>
   )
 }

@@ -5,6 +5,59 @@
 /* Import Responsive Design System */
 @import '../styles/responsive-system.css';
 
+/* Banner Animation Styles */
+@layer components {
+  .banner-ticker-container {
+    @apply overflow-hidden relative w-full;
+  }
+  
+  .banner-ticker {
+    @apply flex whitespace-nowrap;
+    width: 400%;
+    animation: ticker 24s linear infinite;
+  }
+  
+  .banner-message {
+    @apply flex-shrink-0 text-center font-medium text-sm px-4;
+    width: 25%;
+  }
+  
+  @keyframes ticker {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(-75%);
+    }
+  }
+  
+  /* Pause animation on hover */
+  .banner-ticker:hover {
+    animation-play-state: paused;
+  }
+  
+  /* Mobile responsive */
+  @media (max-width: 640px) {
+    .banner-message {
+      @apply text-xs px-2;
+    }
+  }
+  
+  /* Ensure animation works on all devices */
+  @media (prefers-reduced-motion: no-preference) {
+    .banner-ticker {
+      animation: ticker 24s linear infinite;
+    }
+  }
+  
+  /* Fallback for devices that don't support animations */
+  @media (prefers-reduced-motion: reduce) {
+    .banner-ticker {
+      animation: none;
+    }
+  }
+}
+
 @layer base {
   * {
     margin: 0;

@@ -1,0 +1,113 @@
+/* Banner Animation Styles - Mobile Optimized */
+
+.banner-ticker-container {
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+
+.banner-ticker {
+  display: flex;
+  white-space: nowrap;
+  width: 400%;
+  animation: ticker 24s linear infinite;
+  will-change: transform;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  -webkit-perspective: 1000;
+  perspective: 1000;
+}
+
+.banner-message {
+  flex-shrink: 0;
+  width: 25%;
+  text-align: center;
+  font-weight: 500;
+  font-size: 0.875rem;
+  padding: 0 1rem;
+  display: inline-block;
+}
+
+@keyframes ticker {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-75%, 0, 0);
+  }
+}
+
+/* Alternative keyframes for better mobile support */
+@-webkit-keyframes ticker {
+  0% {
+    -webkit-transform: translate3d(0, 0, 0);
+  }
+  100% {
+    -webkit-transform: translate3d(-75%, 0, 0);
+  }
+}
+
+/* Pause animation on hover */
+.banner-ticker:hover {
+  animation-play-state: paused;
+}
+
+/* Mobile responsive */
+@media (max-width: 640px) {
+  .banner-message {
+    font-size: 0.75rem;
+    padding: 0 0.5rem;
+  }
+  
+  .banner-ticker {
+    animation: ticker 20s linear infinite;
+  }
+}
+
+/* Tablet responsive */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .banner-message {
+    font-size: 0.875rem;
+    padding: 0 0.75rem;
+  }
+}
+
+/* Ensure animation works on all devices */
+@media (prefers-reduced-motion: no-preference) {
+  .banner-ticker {
+    animation: ticker 24s linear infinite;
+  }
+}
+
+/* Fallback for devices that don't support animations */
+@media (prefers-reduced-motion: reduce) {
+  .banner-ticker {
+    animation: none;
+  }
+}
+
+/* Force hardware acceleration for better mobile performance */
+.banner-ticker {
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  -webkit-perspective: 1000;
+  perspective: 1000;
+}
+
+/* Alternative animation for older mobile browsers */
+@supports not (animation: ticker 24s linear infinite) {
+  .banner-ticker {
+    animation: ticker-fallback 24s linear infinite;
+  }
+}
+
+@keyframes ticker-fallback {
+  0% {
+    left: 0;
+  }
+  100% {
+    left: -75%;
+  }
+}
