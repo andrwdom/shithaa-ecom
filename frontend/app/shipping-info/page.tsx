@@ -72,61 +72,7 @@ export default function ShippingInfoPage() {
           </div>
         </div>
 
-        <div className={styles.infoCard}>
-          <div className={styles.cardHeader}>
-            <svg className={styles.cardIcon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-            </svg>
-            <h3 className={styles.cardTitle}>Shipping Cost Structure</h3>
-          </div>
-          <div className="space-y-4">
-            <div>
-              <h4 className={styles.emphasis}>Regular Categories (Lounge Wear, Dupatta, etc.)</h4>
-              <div className={styles.cardGrid}>
-                <div>
-                  <p className={styles.strong}>Tamil Nadu:</p>
-                  <p className={styles.cardContent}>Free shipping for all quantities</p>
-                </div>
-                <div>
-                  <p className={styles.strong}>Other States:</p>
-                  <ul className={styles.cardList}>
-                    <li className={styles.cardListItem}>1 item: ₹39</li>
-                    <li className={styles.cardListItem}>2 items: ₹59</li>
-                    <li className={styles.cardListItem}>3 items: ₹89</li>
-                    <li className={styles.cardListItem}>4+ items: ₹105</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-            
-            <div>
-              <h4 className={styles.emphasis}>Maternity Feeding Wear (Special Category)</h4>
-              <div className={styles.cardGrid}>
-                <div>
-                  <p className={styles.strong}>Tamil Nadu:</p>
-                  <ul className={styles.cardList}>
-                    <li className={styles.cardListItem}>1 item: ₹39</li>
-                    <li className={styles.cardListItem}>2 items: ₹49</li>
-                    <li className={styles.cardListItem}>3 items: ₹59</li>
-                    <li className={styles.cardListItem}>4 items: ₹69</li>
-                    <li className={styles.cardListItem}>5 items: ₹79</li>
-                    <li className={styles.cardListItem}>6 items: ₹89</li>
-                    <li className={styles.cardListItem}>7+ items: ₹99</li>
-                  </ul>
-                </div>
-                <div>
-                  <p className={styles.strong}>Other States:</p>
-                  <ul className={styles.cardList}>
-                    <li className={styles.cardListItem}>1 item: ₹49</li>
-                    <li className={styles.cardListItem}>2 items: ₹69</li>
-                    <li className={styles.cardListItem}>3 items: ₹89</li>
-                    <li className={styles.cardListItem}>4+ items: ₹109</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+
 
         <div className={styles.infoCard}>
           <div className={styles.cardHeader}>

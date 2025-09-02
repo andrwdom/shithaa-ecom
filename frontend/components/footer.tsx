@@ -1,6 +1,6 @@
 "use client"
 
-import { Facebook, Instagram, Twitter, Mail, Shield, RotateCcw, Truck } from "lucide-react"
+import { Instagram, Mail, Shield, RotateCcw, Truck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 export default function Footer() {
@@ -49,22 +49,9 @@ export default function Footer() {
                 size="sm"
                 variant="ghost"
                 className="text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg p-3"
-              >
-                <Facebook className="h-5 w-5" />
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg p-3"
+                onClick={() => window.open('https://instagram.com/shithaa.in', '_blank')}
               >
                 <Instagram className="h-5 w-5" />
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg p-3"
-              >
-                <Twitter className="h-5 w-5" />
               </Button>
             </div>
           </div>

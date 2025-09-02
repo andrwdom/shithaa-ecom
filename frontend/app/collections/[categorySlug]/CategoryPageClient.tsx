@@ -614,7 +614,7 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
                         <SelectTrigger className="w-48 h-12 border-2 border-gray-200 focus:border-[rgb(71,60,102)] rounded-lg">
                           <SelectValue placeholder="Filter by Sleeve Type" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent position="popper" side="bottom" align="start" className="w-[var(--radix-select-trigger-width)]">
                           <SelectItem value="all">All Sleeve Types</SelectItem>
                           {(availableSleeveTypes.length > 0 ? availableSleeveTypes : ['Puff Sleeve', 'Normal Sleeve']).map((sleeveType) => (
                             <SelectItem key={sleeveType} value={sleeveType}>
@@ -638,7 +638,7 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
                       <SlidersHorizontal className="h-4 w-4 mr-2" />
                       <SelectValue placeholder="Sort By" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent position="popper" side="bottom" align="end" className="w-[var(--radix-select-trigger-width)]">
                       <SelectItem value="featured">Featured</SelectItem>
                       <SelectItem value="price-low">Price: Low to High</SelectItem>
                       <SelectItem value="price-high">Price: High to Low</SelectItem>
@@ -656,7 +656,7 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
                         <SelectTrigger className="h-12 border-2 border-gray-200 focus:border-[rgb(71,60,102)] rounded-lg">
                           <SelectValue placeholder="Filter by Sleeve Type" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent position="popper" side="bottom" align="start" className="w-[var(--radix-select-trigger-width)]">
                           <SelectItem value="all">All Sleeve Types</SelectItem>
                           {(availableSleeveTypes.length > 0 ? availableSleeveTypes : ['Puff Sleeve', 'Normal Sleeve']).map((sleeveType) => (
                             <SelectItem key={sleeveType} value={sleeveType}>
