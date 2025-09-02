@@ -47,6 +47,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'monthly' as const,
       priority: 0.5,
     },
+    {
+      url: `${baseUrl}/sizing-guide`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly' as const,
+      priority: 0.7,
+    },
   ]
 
   // Category pages
@@ -81,7 +87,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let productPages: MetadataRoute.Sitemap = []
   
   try {
-    const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + '/api/products';
+    const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'https://shithaa.in') + '/api/products';
     const res = await fetch(apiUrl);
     const data = await res.json();
     const products = data.data || data.products || [];
