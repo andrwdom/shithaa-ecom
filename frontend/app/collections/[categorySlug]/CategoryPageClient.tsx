@@ -624,7 +624,7 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
                           avoidCollisions={false}
                           collisionBoundary={undefined}
                           sticky="always"
-                          onCloseAutoFocus={(e) => e.preventDefault()}
+                          onCloseAutoFocus={(e: any) => e.preventDefault()}
                         >
                           <SelectItem value="all">All Sleeve Types</SelectItem>
                           {(availableSleeveTypes.length > 0 ? availableSleeveTypes : ['Puff Sleeve', 'Normal Sleeve']).map((sleeveType) => (
@@ -639,12 +639,32 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
 
                   {/* Sort Dropdown: Icon only on mobile, full on sm+ */}
                   <div className="flex-shrink-0">
+                    {/* Mobile Select */}
                     <Select value={sortBy} onValueChange={setSortBy}>
-                      {/* Mobile: icon only */}
                       <SelectTrigger className="h-12 w-12 border-2 border-gray-200 focus:border-[rgb(71,60,102)] rounded-lg flex items-center justify-center sm:hidden">
                         <SlidersHorizontal className="h-6 w-6" />
                       </SelectTrigger>
-                      {/* Desktop: full dropdown */}
+                      <SelectContent 
+                        position="popper" 
+                        side="bottom" 
+                        align="end" 
+                        className="w-48 z-[9999]"
+                        sideOffset={4}
+                        alignOffset={0}
+                        avoidCollisions={false}
+                        collisionBoundary={undefined}
+                        sticky="always"
+                        onCloseAutoFocus={(e: any) => e.preventDefault()}
+                      >
+                        <SelectItem value="featured">Featured</SelectItem>
+                        <SelectItem value="price-low">Price: Low to High</SelectItem>
+                        <SelectItem value="price-high">Price: High to Low</SelectItem>
+                        <SelectItem value="name">Name: A to Z</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    
+                    {/* Desktop Select */}
+                    <Select value={sortBy} onValueChange={setSortBy}>
                       <SelectTrigger className="hidden sm:flex w-40 h-12 border-2 border-gray-200 focus:border-[rgb(71,60,102)] rounded-lg items-center">
                         <SlidersHorizontal className="h-4 w-4 mr-2" />
                         <SelectValue placeholder="Sort By" />
@@ -653,13 +673,13 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
                         position="popper" 
                         side="bottom" 
                         align="end" 
-                        className="w-48 sm:w-[var(--radix-select-trigger-width)] z-[9999]"
+                        className="w-[var(--radix-select-trigger-width)] z-[9999]"
                         sideOffset={4}
                         alignOffset={0}
                         avoidCollisions={false}
                         collisionBoundary={undefined}
                         sticky="always"
-                        onCloseAutoFocus={(e) => e.preventDefault()}
+                        onCloseAutoFocus={(e: any) => e.preventDefault()}
                       >
                         <SelectItem value="featured">Featured</SelectItem>
                         <SelectItem value="price-low">Price: Low to High</SelectItem>
@@ -688,7 +708,7 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
                           avoidCollisions={false}
                           collisionBoundary={undefined}
                           sticky="always"
-                          onCloseAutoFocus={(e) => e.preventDefault()}
+                          onCloseAutoFocus={(e: any) => e.preventDefault()}
                         >
                           <SelectItem value="all">All Sleeve Types</SelectItem>
                           {(availableSleeveTypes.length > 0 ? availableSleeveTypes : ['Puff Sleeve', 'Normal Sleeve']).map((sleeveType) => (
