@@ -252,8 +252,15 @@ export const createPhonePeSession = async (req, res) => {
         postalCode: shipping.postalCode,
         country: shipping.country || 'India'
       },
+      // 🔧 CRITICAL FIX: Set multiple amount fields for frontend compatibility
       cartItems: checkoutSession.items,
+      items: checkoutSession.items, // Legacy compatibility
       totalAmount: checkoutSession.total,
+      total: checkoutSession.total, // Additional field
+      totalPrice: checkoutSession.total, // Legacy compatibility
+      amount: checkoutSession.total, // Legacy compatibility
+      subtotal: checkoutSession.subtotal,
+      shippingCost: checkoutSession.shippingCost || 0,
       status: 'Pending',
       orderStatus: 'Pending',
       paymentStatus: 'Pending',
@@ -266,6 +273,9 @@ export const createPhonePeSession = async (req, res) => {
         source: checkoutSession.source
       }
     };
+
+    // 🔍 DEBUG: Log order payload before creation
+    console.log(`[${correlationId}] Creating order with payload:`, JSON.stringify(orderPayload, null, 2));
 
     // Execute all database operations in parallel
     try {
@@ -282,6 +292,17 @@ export const createPhonePeSession = async (req, res) => {
       if (!order || !paymentSession) {
         throw new Error('Failed to create order or payment session');
       }
+
+      // 🔍 DEBUG: Log created order to verify fields
+      console.log(`[${correlationId}] Order created successfully:`, {
+        orderId: order.orderId,
+        totalAmount: order.totalAmount,
+        total: order.total,
+        totalPrice: order.totalPrice,
+        amount: order.amount,
+        cartItemsCount: order.cartItems?.length,
+        itemsCount: order.items?.length
+      });
 
       // 🔑 REMOVED: Stock reservation is moved to the payment success callback.
       // const { batchChangeStock } = await import('../utils/stock.js');

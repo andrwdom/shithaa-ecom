@@ -698,23 +698,44 @@ const getAllOrders = async (req, res) => {
         // Always include shippingAddress in each order and ensure price fields are present
         const ordersWithShipping = orders.map(order => {
             const orderObj = order.toObject();
-            // Ensure price fields are present
-            if (!orderObj.totalAmount && !orderObj.total && !orderObj.totalPrice) {
+            
+            // 🔍 DEBUG: Log all available fields for debugging
+            console.log(`Order ${orderObj._id} all fields:`, {
+                totalAmount: orderObj.totalAmount,
+                total: orderObj.total,
+                totalPrice: orderObj.totalPrice,
+                amount: orderObj.amount,
+                cartItems: orderObj.cartItems?.length,
+                items: orderObj.items?.length,
+                orderId: orderObj.orderId
+            });
+            
+            // Ensure price fields are present - check cartItems first, then items
+            const itemsToCheck = orderObj.cartItems && orderObj.cartItems.length > 0 
+                ? orderObj.cartItems 
+                : orderObj.items;
+                
+            if (!orderObj.totalAmount && !orderObj.total && !orderObj.totalPrice && !orderObj.amount) {
                 // Calculate total from items if available
-                if (orderObj.items && Array.isArray(orderObj.items) && orderObj.items.length > 0) {
-                    const calculatedTotal = orderObj.items.reduce((sum, item) => {
+                if (itemsToCheck && Array.isArray(itemsToCheck) && itemsToCheck.length > 0) {
+                    const calculatedTotal = itemsToCheck.reduce((sum, item) => {
                         return sum + (item.price || 0) * (item.quantity || 1);
                     }, 0);
+                    orderObj.totalAmount = calculatedTotal;
                     orderObj.total = calculatedTotal;
+                    orderObj.totalPrice = calculatedTotal;
+                    orderObj.amount = calculatedTotal;
                     console.log(`Calculated total ${calculatedTotal} for order ${orderObj._id}`);
                 }
             }
-            // Log price fields for debugging
-            console.log(`Order ${orderObj._id} price fields:`, {
-                totalAmount: orderObj.totalAmount,
-                totalPrice: orderObj.totalPrice,
-                total: orderObj.total
-            });
+            
+            // Ensure items array is available for frontend
+            if (!orderObj.items && orderObj.cartItems) {
+                orderObj.items = orderObj.cartItems;
+            } else if (!orderObj.cartItems && orderObj.items) {
+                orderObj.cartItems = orderObj.items;
+            }
+            
             return { ...orderObj, shippingAddress: orderObj.shippingAddress || null };
         });
         console.log('Orders fetched:', ordersWithShipping.length);
