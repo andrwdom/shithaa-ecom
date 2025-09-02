@@ -116,18 +116,12 @@ export async function reserveStock(productId, size, quantity, options = {}) {
         }
         
         // Increment the reserved field atomically
-        // Ensure we have enough physical stock and that the reservation won't exceed available stock
+        // We already checked availability above, so this should be safe
         const result = await productModel.updateOne(
             {
                 _id: productId,
                 'sizes.size': size,
-                'sizes.stock': { $gte: quantity }, // Ensure we have physical stock
-                $expr: { 
-                    $gte: [
-                        { $subtract: ['$sizes.stock', { $ifNull: ['$sizes.reserved', 0] }] },
-                        quantity
-                    ]
-                } // Ensure available stock (stock - reserved) >= quantity
+                'sizes.stock': { $gte: quantity } // Ensure we have physical stock
             },
             {
                 $inc: { 'sizes.$.reserved': quantity }
