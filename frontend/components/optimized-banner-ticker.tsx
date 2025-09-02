@@ -21,7 +21,7 @@ export default function OptimizedBannerTicker({
   
   const containerRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
-  const animationRef = useRef<number>()
+  const animationRef = useRef<number | undefined>(undefined)
   const lastTimeRef = useRef<number>(0)
 
   // Detect mobile and setup responsive behavior
@@ -176,6 +176,20 @@ const defaultMessages = [
 
 // Export with default props
 export function DefaultBannerTicker({ className }: { className?: string }) {
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 768
+      setIsMobile(mobile)
+    }
+    
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
   return (
     <OptimizedBannerTicker
       messages={defaultMessages}

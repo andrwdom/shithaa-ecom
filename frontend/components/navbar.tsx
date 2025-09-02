@@ -19,7 +19,7 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
   const [bannerPosition, setBannerPosition] = useState(0)
-  const { cartItems, openCartSidebar, restoreCartFromStorage } = useCart()
+  const { cartItems, openCartSidebar } = useCart()
   const { wishlistItems } = useWishlist()
   const { user, logout } = useAuth()
 
@@ -88,9 +88,7 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
             <div className="navbar-left">
               {/* Mobile menu button */}
               <Button
-                variant="ghost"
-                size="sm"
-                className="md:hidden text-gray-600 hover:text-[rgb(71,60,102)] p-2"
+                className="md:hidden text-gray-600 hover:text-[rgb(71,60,102)] p-2 bg-transparent hover:bg-gray-100"
                 onClick={(e) => {
                   e.preventDefault()
                   e.stopPropagation()
