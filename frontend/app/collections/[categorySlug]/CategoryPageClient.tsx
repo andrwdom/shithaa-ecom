@@ -614,7 +614,14 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
                         <SelectTrigger className="w-48 h-12 border-2 border-gray-200 focus:border-[rgb(71,60,102)] rounded-lg">
                           <SelectValue placeholder="Filter by Sleeve Type" />
                         </SelectTrigger>
-                        <SelectContent position="popper" side="bottom" align="start" className="w-[var(--radix-select-trigger-width)]">
+                        <SelectContent 
+                          position="item-aligned" 
+                          side="bottom" 
+                          align="start" 
+                          className="w-[var(--radix-select-trigger-width)] z-[9999]"
+                          sideOffset={4}
+                          alignOffset={0}
+                        >
                           <SelectItem value="all">All Sleeve Types</SelectItem>
                           {(availableSleeveTypes.length > 0 ? availableSleeveTypes : ['Puff Sleeve', 'Normal Sleeve']).map((sleeveType) => (
                             <SelectItem key={sleeveType} value={sleeveType}>
@@ -632,19 +639,41 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
                       {/* Mobile: icon only */}
                       <SelectTrigger className="h-12 w-12 border-2 border-gray-200 focus:border-[rgb(71,60,102)] rounded-lg flex items-center justify-center sm:hidden">
                         <SlidersHorizontal className="h-6 w-6" />
-                    </SelectTrigger>
+                      </SelectTrigger>
                       {/* Desktop: full dropdown */}
                       <SelectTrigger className="hidden sm:flex w-40 h-12 border-2 border-gray-200 focus:border-[rgb(71,60,102)] rounded-lg items-center">
-                      <SlidersHorizontal className="h-4 w-4 mr-2" />
-                      <SelectValue placeholder="Sort By" />
-                    </SelectTrigger>
-                    <SelectContent position="popper" side="bottom" align="end" className="w-[var(--radix-select-trigger-width)]">
-                      <SelectItem value="featured">Featured</SelectItem>
-                      <SelectItem value="price-low">Price: Low to High</SelectItem>
-                      <SelectItem value="price-high">Price: High to Low</SelectItem>
-                      <SelectItem value="name">Name: A to Z</SelectItem>
-                    </SelectContent>
-                  </Select>
+                        <SlidersHorizontal className="h-4 w-4 mr-2" />
+                        <SelectValue placeholder="Sort By" />
+                      </SelectTrigger>
+                      {/* Mobile SelectContent */}
+                      <SelectContent 
+                        position="item-aligned" 
+                        side="bottom" 
+                        align="end" 
+                        className="w-48 z-[9999] sm:hidden"
+                        sideOffset={4}
+                        alignOffset={0}
+                      >
+                        <SelectItem value="featured">Featured</SelectItem>
+                        <SelectItem value="price-low">Price: Low to High</SelectItem>
+                        <SelectItem value="price-high">Price: High to Low</SelectItem>
+                        <SelectItem value="name">Name: A to Z</SelectItem>
+                      </SelectContent>
+                      {/* Desktop SelectContent */}
+                      <SelectContent 
+                        position="item-aligned" 
+                        side="bottom" 
+                        align="end" 
+                        className="w-[var(--radix-select-trigger-width)] z-[9999] hidden sm:block"
+                        sideOffset={4}
+                        alignOffset={0}
+                      >
+                        <SelectItem value="featured">Featured</SelectItem>
+                        <SelectItem value="price-low">Price: Low to High</SelectItem>
+                        <SelectItem value="price-high">Price: High to Low</SelectItem>
+                        <SelectItem value="name">Name: A to Z</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 
@@ -656,7 +685,14 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
                         <SelectTrigger className="h-12 border-2 border-gray-200 focus:border-[rgb(71,60,102)] rounded-lg">
                           <SelectValue placeholder="Filter by Sleeve Type" />
                         </SelectTrigger>
-                        <SelectContent position="popper" side="bottom" align="start" className="w-[var(--radix-select-trigger-width)]">
+                        <SelectContent 
+                          position="item-aligned" 
+                          side="bottom" 
+                          align="start" 
+                          className="w-[var(--radix-select-trigger-width)] z-[9999]"
+                          sideOffset={4}
+                          alignOffset={0}
+                        >
                           <SelectItem value="all">All Sleeve Types</SelectItem>
                           {(availableSleeveTypes.length > 0 ? availableSleeveTypes : ['Puff Sleeve', 'Normal Sleeve']).map((sleeveType) => (
                             <SelectItem key={sleeveType} value={sleeveType}>
