@@ -36,37 +36,40 @@ export async function checkStockAvailability(productId, size, quantity, excludeS
             };
         }
 
-        // Calculate total reserved stock for this product/size
-        let totalReserved = 0;
+        // Use the reserved field from the product model directly
+        // This is more reliable than querying the Reservation collection
+        let totalReserved = sizeObj.reserved || 0;
+        
+        // If we need to exclude a specific session, we need to subtract its reservations
         if (excludeSessionId) {
-            // Exclude current session's reservations when checking availability
-            const otherReservations = await Reservation.find({
+            const sessionReservations = await Reservation.find({
                 'items.productId': productId,
                 'items.size': size,
                 status: 'active',
-                checkoutSessionId: { $ne: excludeSessionId }
+                checkoutSessionId: excludeSessionId
             });
             
-            totalReserved = otherReservations.reduce((sum, res) => {
+            const sessionReserved = sessionReservations.reduce((sum, res) => {
                 const item = res.items.find(i => i.productId.toString() === productId.toString() && i.size === size);
                 return sum + (item ? item.quantity : 0);
             }, 0);
-        } else {
-            // Get all active reservations for this product/size
-            const reservations = await Reservation.find({
-                'items.productId': productId,
-                'items.size': size,
-                status: 'active'
-            });
             
-            totalReserved = reservations.reduce((sum, res) => {
-                const item = res.items.find(i => i.productId.toString() === productId.toString() && i.size === size);
-                return sum + (item ? item.quantity : 0);
-            }, 0);
+            totalReserved = Math.max(0, totalReserved - sessionReserved);
         }
 
         const availableStock = Math.max(0, sizeObj.stock - totalReserved);
         const isAvailable = availableStock >= quantity;
+
+        // Add debug logging for stock issues
+        if (!isAvailable) {
+            console.log(`🔍 Stock availability check failed for ${product.name} (${productId}) size ${size}:`, {
+                currentStock: sizeObj.stock,
+                currentReserved: totalReserved,
+                availableStock: availableStock,
+                requestedQuantity: quantity,
+                excludeSessionId: excludeSessionId
+            });
+        }
 
         return {
             available: isAvailable,
@@ -113,11 +116,18 @@ export async function reserveStock(productId, size, quantity, options = {}) {
         }
         
         // Increment the reserved field atomically
+        // Ensure we have enough physical stock and that the reservation won't exceed available stock
         const result = await productModel.updateOne(
             {
                 _id: productId,
                 'sizes.size': size,
-                'sizes.stock': { $gte: quantity } // Ensure we have physical stock
+                'sizes.stock': { $gte: quantity }, // Ensure we have physical stock
+                $expr: { 
+                    $gte: [
+                        { $subtract: ['$sizes.stock', { $ifNull: ['$sizes.reserved', 0] }] },
+                        quantity
+                    ]
+                } // Ensure available stock (stock - reserved) >= quantity
             },
             {
                 $inc: { 'sizes.$.reserved': quantity }
@@ -398,4 +408,35 @@ export async function validateStockForItems(items, excludeSessionId = null) {
     }
     
     return validations;
+}
+
+/**
+ * Clean up inconsistent stock data by resetting reserved fields to 0
+ * This is a utility function to fix any products with incorrect reserved values
+ * @returns {Promise<Object>} - Cleanup results
+ */
+export async function cleanupStockReservations() {
+    try {
+        console.log('🧹 Starting stock reservation cleanup...');
+        
+        // Reset all reserved fields to 0
+        const result = await productModel.updateMany(
+            {},
+            { $set: { 'sizes.$[].reserved': 0 } }
+        );
+        
+        console.log(`🧹 Stock cleanup completed: ${result.modifiedCount} products updated`);
+        
+        return {
+            success: true,
+            modifiedCount: result.modifiedCount,
+            message: `Reset reserved fields for ${result.modifiedCount} products`
+        };
+    } catch (error) {
+        console.error('❌ Stock cleanup failed:', error);
+        return {
+            success: false,
+            error: error.message
+        };
+    }
 } 
