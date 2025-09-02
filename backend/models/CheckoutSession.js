@@ -127,11 +127,47 @@ checkoutSessionSchema.methods.extend = function(minutes = 15) {
   return this.save();
 };
 
-// Static method to clean expired sessions
+// Static method to clean expired sessions and release stock
 checkoutSessionSchema.statics.cleanExpired = async function() {
+  // Find expired sessions that have reserved stock
+  const expiredSessions = await this.find({
+    expiresAt: { $lt: new Date() },
+    stockReserved: true
+  });
+  
+  console.log(`Found ${expiredSessions.length} expired sessions with reserved stock`);
+  
+  // Release stock for each expired session
+  for (const session of expiredSessions) {
+    try {
+      // Import stock utilities
+      const { releaseStockReservation } = await import('../utils/stock.js');
+      
+      // Release stock for all items in the session
+      const releasePromises = session.items.map(item =>
+        releaseStockReservation(item.productId, item.size, item.quantity).catch(error => {
+          console.error(`Failed to release stock for product ${item.productId} size ${item.size}:`, error);
+        })
+      );
+      
+      await Promise.all(releasePromises);
+      
+      // Mark session as expired
+      session.status = 'expired';
+      session.stockReserved = false;
+      await session.save();
+      
+      console.log(`Released stock for expired session: ${session.sessionId}`);
+    } catch (error) {
+      console.error(`Error processing expired session ${session.sessionId}:`, error);
+    }
+  }
+  
+  // Delete all expired sessions (including those without stock)
   const result = await this.deleteMany({
     expiresAt: { $lt: new Date() }
   });
+  
   console.log(`Cleaned ${result.deletedCount} expired checkout sessions`);
   return result;
 };

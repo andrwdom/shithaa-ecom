@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import Reservation from '../models/Reservation.js';
+import CheckoutSession from '../models/CheckoutSession.js';
 import { releaseStockReservation } from '../utils/stock.js';
 import { successResponse, errorResponse } from '../utils/response.js';
 
@@ -59,13 +60,18 @@ export const expireOldReservations = async () => {
       }
     }
     
-    console.log(`[${correlationId}] Reservation expiry worker completed. Processed: ${processedCount}, Errors: ${errorCount}`);
+    // Also clean up expired checkout sessions
+    console.log(`[${correlationId}] Cleaning up expired checkout sessions...`);
+    const checkoutCleanupResult = await CheckoutSession.cleanExpired();
+    
+    console.log(`[${correlationId}] Reservation expiry worker completed. Processed: ${processedCount}, Errors: ${errorCount}, Checkout sessions cleaned: ${checkoutCleanupResult.deletedCount}`);
     
     return {
       success: true,
       processed: processedCount,
       errors: errorCount,
-      total: expiredReservations.length
+      total: expiredReservations.length,
+      checkoutSessionsCleaned: checkoutCleanupResult.deletedCount
     };
     
   } catch (error) {
