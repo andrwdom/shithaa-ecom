@@ -8,6 +8,8 @@ import { useWishlist } from "@/components/wishlist-context"
 import { useAuth } from "@/components/auth/useAuth"
 import LoginModal from "@/components/auth/LoginModal"
 import '@/styles/banner-animation.css'
+import '@/styles/mobile-optimized-animations.css'
+import { DefaultBannerTicker } from './optimized-banner-ticker'
 
 interface NavbarProps {
   onCategoriesClick?: () => void
@@ -72,30 +74,9 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
 
   return (
     <>
-      {/* Animated Top Banner */}
+      {/* Optimized Animated Top Banner */}
       <div className="bg-[rgb(71,60,102)] text-white py-3 overflow-hidden relative">
-        <div className="banner-ticker-container">
-          <div 
-            className="banner-ticker"
-            style={{
-              transform: `translate3d(${bannerPosition}%, 0, 0)`,
-              animation: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ? 'none' : 'ticker 24s linear infinite'
-            }}
-          >
-            <div className="banner-message">
-              ‼ FREE DELIVERY FOR LOUNGE WEAR WITHIN TAMIL NADU ‼
-            </div>
-            <div className="banner-message">
-              🔥 BUY 3 LOUNGE WEAR @1299RS 🔥
-            </div>
-            <div className="banner-message">
-              🎉 PREMIUM MATERNITY WEAR - ELEGANT & COMFORTABLE 🎉
-            </div>
-            <div className="banner-message">
-              ‼ FREE DELIVERY FOR LOUNGE WEAR WITHIN TAMIL NADU ‼
-            </div>
-          </div>
-        </div>
+        <DefaultBannerTicker />
       </div>
 
       {/* Main Navbar */}
