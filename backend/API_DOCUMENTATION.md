@@ -1,4 +1,4 @@
-# JJTEX Backend API Documentation
+# Shithaa Backend API Documentation
 
 ## Base URL
 ```

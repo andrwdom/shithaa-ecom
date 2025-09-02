@@ -6,9 +6,9 @@ import { Button } from "@/components/ui/button"
 export default function Footer() {
   return (
     <footer className="bg-gray-900 text-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
+      <div className="container-responsive spacing-section">
         {/* Trust Badges */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 mb-12 lg:mb-16 pb-12 lg:pb-16 border-b border-gray-800">
+        <div className="grid-responsive mb-12 lg:mb-16 pb-12 lg:pb-16 border-b border-gray-800">
           <div className="text-center group">
             <div className="w-12 h-12 lg:w-16 lg:h-16 mx-auto mb-4 lg:mb-6 bg-gray-800 rounded-lg flex items-center justify-center group-hover:bg-gray-700 transition-colors duration-300">
               <Truck className="h-6 w-6 lg:h-8 lg:w-8 text-white" />
@@ -36,7 +36,7 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="grid md:grid-cols-4 gap-6 lg:gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
           {/* Brand */}
           <div className="space-y-4 lg:space-y-6">
             <h3 className="text-2xl lg:text-3xl font-bold text-white tracking-wider font-serif">SHITHAA</h3>

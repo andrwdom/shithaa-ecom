@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Import Responsive Design System */
+@import '../styles/responsive-system.css';
+
 @layer base {
   * {
     margin: 0;
@@ -96,25 +99,7 @@
     -webkit-line-clamp: 2;
   }
 
-  .container-responsive {
-    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
-  }
-
-  .text-responsive-xl {
-    @apply text-2xl sm:text-3xl lg:text-4xl xl:text-5xl;
-  }
-
-  .text-responsive-lg {
-    @apply text-xl sm:text-2xl lg:text-3xl;
-  }
-
-  .text-responsive-base {
-    @apply text-base sm:text-lg lg:text-xl;
-  }
-
-  .spacing-section {
-    @apply py-12 lg:py-16 xl:py-20;
-  }
+  /* Responsive utilities moved to responsive-system.css */
 
   .elev8max-gold {
     color: #F4CE01 !important;
@@ -157,9 +142,7 @@
     animation: elev8max-glow 3s ease-in-out infinite;
   }
 
-  .spacing-component {
-    @apply mb-8 lg:mb-12 xl:mb-16;
-  }
+  /* Spacing utilities moved to responsive-system.css */
 }
 
 /* Improved desktop-specific styles */

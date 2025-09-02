@@ -41,7 +41,7 @@ export default function ProductCardOptimized({ product, onClick, index = 0 }: Pr
         {/* Optimized Image Container - Ideal Fashion Aspect Ratio */}
         <div className="relative w-full bg-gray-50">
           {/* Fashion-optimized aspect ratio: 3:4 for clothing visibility */}
-          <div className="aspect-[3/4] sm:aspect-[2/3] lg:aspect-[3/4]">
+          <div className="aspect-responsive">
             <OptimizedImage
               src={product.image || "/placeholder.svg"}
               alt={`${product.name} - ${product.category}`}
@@ -90,7 +90,7 @@ export default function ProductCardOptimized({ product, onClick, index = 0 }: Pr
         </div>
 
         {/* Product Info - Responsive typography */}
-        <div className="p-3 sm:p-4 space-y-2 sm:space-y-3">
+        <div className="card-responsive space-y-2 sm:space-y-3">
           <div>
             <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">
               {product.category}

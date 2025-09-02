@@ -68,8 +68,8 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
 
       {/* Main Navbar */}
       <nav className="bg-white border-b border-gray-200 sticky top-0 z-[9999] shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="navbar-container flex items-center justify-between h-16 lg:h-18">
+        <div className="container-responsive">
+          <div className="navbar-container flex items-center justify-between navbar-responsive">
             
             {/* Left Section */}
             <div className="navbar-left">
@@ -109,7 +109,7 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
             <div className="navbar-logo">
               <button
                 onClick={() => (window.location.href = "/")}
-                className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold text-[rgb(71,60,102)] tracking-wider font-serif hover:text-[rgb(71,60,102)]/80 transition-colors duration-300 cursor-pointer"
+                className="navbar-logo-responsive font-bold text-[rgb(71,60,102)] tracking-wider font-serif hover:text-[rgb(71,60,102)]/80 transition-colors duration-300 cursor-pointer"
               >
                 SHITHAA
               </button>

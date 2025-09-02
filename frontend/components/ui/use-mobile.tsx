@@ -17,3 +17,6 @@ export function useIsMobile() {
 
   return !!isMobile
 }
+
+// Re-export from the new responsive hook for consistency
+export { useResponsive, useResponsiveUtils } from '@/hooks/use-responsive'

@@ -1,0 +1,577 @@
+/* ========================================
+   SHITHAA RESPONSIVE DESIGN SYSTEM
+   ======================================== */
+
+/* Breakpoint System - Consistent across all components */
+:root {
+  /* Mobile First Breakpoints */
+  --breakpoint-sm: 640px;   /* Small devices (landscape phones) */
+  --breakpoint-md: 768px;   /* Medium devices (tablets) */
+  --breakpoint-lg: 1024px;  /* Large devices (desktops) */
+  --breakpoint-xl: 1280px;  /* Extra large devices */
+  --breakpoint-2xl: 1536px; /* 2X large devices */
+  
+  /* Container Max Widths */
+  --container-sm: 640px;
+  --container-md: 768px;
+  --container-lg: 1024px;
+  --container-xl: 1280px;
+  --container-2xl: 1400px;
+  
+  /* Spacing Scale */
+  --space-xs: 0.5rem;    /* 8px */
+  --space-sm: 0.75rem;   /* 12px */
+  --space-md: 1rem;      /* 16px */
+  --space-lg: 1.5rem;    /* 24px */
+  --space-xl: 2rem;      /* 32px */
+  --space-2xl: 3rem;     /* 48px */
+  --space-3xl: 4rem;     /* 64px */
+  --space-4xl: 6rem;     /* 96px */
+  
+  /* Typography Scale */
+  --text-xs: 0.75rem;    /* 12px */
+  --text-sm: 0.875rem;   /* 14px */
+  --text-base: 1rem;     /* 16px */
+  --text-lg: 1.125rem;   /* 18px */
+  --text-xl: 1.25rem;    /* 20px */
+  --text-2xl: 1.5rem;    /* 24px */
+  --text-3xl: 1.875rem;  /* 30px */
+  --text-4xl: 2.25rem;   /* 36px */
+  --text-5xl: 3rem;      /* 48px */
+  --text-6xl: 3.75rem;   /* 60px */
+}
+
+/* ========================================
+   RESPONSIVE CONTAINER SYSTEM
+   ======================================== */
+
+.container-responsive {
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: var(--space-md);
+  padding-right: var(--space-md);
+}
+
+@media (min-width: 640px) {
+  .container-responsive {
+    max-width: var(--container-sm);
+    padding-left: var(--space-lg);
+    padding-right: var(--space-lg);
+  }
+}
+
+@media (min-width: 768px) {
+  .container-responsive {
+    max-width: var(--container-md);
+    padding-left: var(--space-xl);
+    padding-right: var(--space-xl);
+  }
+}
+
+@media (min-width: 1024px) {
+  .container-responsive {
+    max-width: var(--container-lg);
+    padding-left: var(--space-2xl);
+    padding-right: var(--space-2xl);
+  }
+}
+
+@media (min-width: 1280px) {
+  .container-responsive {
+    max-width: var(--container-xl);
+  }
+}
+
+@media (min-width: 1536px) {
+  .container-responsive {
+    max-width: var(--container-2xl);
+  }
+}
+
+/* ========================================
+   RESPONSIVE GRID SYSTEM
+   ======================================== */
+
+.grid-responsive {
+  display: grid;
+  gap: var(--space-md);
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+  .grid-responsive {
+    gap: var(--space-lg);
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 768px) {
+  .grid-responsive {
+    gap: var(--space-xl);
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .grid-responsive {
+    gap: var(--space-2xl);
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (min-width: 1280px) {
+  .grid-responsive {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+
+@media (min-width: 1536px) {
+  .grid-responsive {
+    grid-template-columns: repeat(6, 1fr);
+  }
+}
+
+/* Product Grid Specific */
+.grid-products {
+  display: grid;
+  gap: var(--space-sm);
+  grid-template-columns: repeat(2, 1fr);
+}
+
+@media (min-width: 640px) {
+  .grid-products {
+    gap: var(--space-md);
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 768px) {
+  .grid-products {
+    gap: var(--space-lg);
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .grid-products {
+    gap: var(--space-xl);
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+
+@media (min-width: 1280px) {
+  .grid-products {
+    grid-template-columns: repeat(6, 1fr);
+  }
+}
+
+/* ========================================
+   RESPONSIVE TYPOGRAPHY SYSTEM
+   ======================================== */
+
+.text-responsive-xs {
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+
+.text-responsive-sm {
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+@media (min-width: 640px) {
+  .text-responsive-sm {
+    font-size: var(--text-base);
+  }
+}
+
+.text-responsive-base {
+  font-size: var(--text-base);
+  line-height: 1.6;
+}
+
+@media (min-width: 640px) {
+  .text-responsive-base {
+    font-size: var(--text-lg);
+  }
+}
+
+@media (min-width: 1024px) {
+  .text-responsive-base {
+    font-size: var(--text-xl);
+  }
+}
+
+.text-responsive-lg {
+  font-size: var(--text-lg);
+  line-height: 1.5;
+}
+
+@media (min-width: 640px) {
+  .text-responsive-lg {
+    font-size: var(--text-xl);
+  }
+}
+
+@media (min-width: 1024px) {
+  .text-responsive-lg {
+    font-size: var(--text-2xl);
+  }
+}
+
+.text-responsive-xl {
+  font-size: var(--text-xl);
+  line-height: 1.4;
+}
+
+@media (min-width: 640px) {
+  .text-responsive-xl {
+    font-size: var(--text-2xl);
+  }
+}
+
+@media (min-width: 1024px) {
+  .text-responsive-xl {
+    font-size: var(--text-3xl);
+  }
+}
+
+@media (min-width: 1280px) {
+  .text-responsive-xl {
+    font-size: var(--text-4xl);
+  }
+}
+
+.text-responsive-2xl {
+  font-size: var(--text-2xl);
+  line-height: 1.3;
+}
+
+@media (min-width: 640px) {
+  .text-responsive-2xl {
+    font-size: var(--text-3xl);
+  }
+}
+
+@media (min-width: 1024px) {
+  .text-responsive-2xl {
+    font-size: var(--text-4xl);
+  }
+}
+
+@media (min-width: 1280px) {
+  .text-responsive-2xl {
+    font-size: var(--text-5xl);
+  }
+}
+
+.text-responsive-3xl {
+  font-size: var(--text-3xl);
+  line-height: 1.2;
+}
+
+@media (min-width: 640px) {
+  .text-responsive-3xl {
+    font-size: var(--text-4xl);
+  }
+}
+
+@media (min-width: 1024px) {
+  .text-responsive-3xl {
+    font-size: var(--text-5xl);
+  }
+}
+
+@media (min-width: 1280px) {
+  .text-responsive-3xl {
+    font-size: var(--text-6xl);
+  }
+}
+
+/* ========================================
+   RESPONSIVE SPACING SYSTEM
+   ======================================== */
+
+.spacing-section {
+  padding-top: var(--space-2xl);
+  padding-bottom: var(--space-2xl);
+}
+
+@media (min-width: 1024px) {
+  .spacing-section {
+    padding-top: var(--space-3xl);
+    padding-bottom: var(--space-3xl);
+  }
+}
+
+@media (min-width: 1280px) {
+  .spacing-section {
+    padding-top: var(--space-4xl);
+    padding-bottom: var(--space-4xl);
+  }
+}
+
+.spacing-component {
+  margin-bottom: var(--space-xl);
+}
+
+@media (min-width: 1024px) {
+  .spacing-component {
+    margin-bottom: var(--space-2xl);
+  }
+}
+
+@media (min-width: 1280px) {
+  .spacing-component {
+    margin-bottom: var(--space-3xl);
+  }
+}
+
+/* ========================================
+   RESPONSIVE LAYOUT UTILITIES
+   ======================================== */
+
+.flex-responsive {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+@media (min-width: 768px) {
+  .flex-responsive {
+    flex-direction: row;
+    gap: var(--space-xl);
+  }
+}
+
+.flex-responsive-reverse {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: var(--space-md);
+}
+
+@media (min-width: 768px) {
+  .flex-responsive-reverse {
+    flex-direction: row;
+    gap: var(--space-xl);
+  }
+}
+
+/* ========================================
+   RESPONSIVE IMAGE SYSTEM
+   ======================================== */
+
+.aspect-responsive {
+  aspect-ratio: 3/4;
+}
+
+@media (min-width: 640px) {
+  .aspect-responsive {
+    aspect-ratio: 2/3;
+  }
+}
+
+@media (min-width: 1024px) {
+  .aspect-responsive {
+    aspect-ratio: 3/4;
+  }
+}
+
+/* ========================================
+   RESPONSIVE NAVIGATION
+   ======================================== */
+
+.navbar-responsive {
+  height: 4rem; /* 64px */
+}
+
+@media (min-width: 1024px) {
+  .navbar-responsive {
+    height: 4.5rem; /* 72px */
+  }
+}
+
+.navbar-logo-responsive {
+  font-size: var(--text-lg);
+}
+
+@media (min-width: 640px) {
+  .navbar-logo-responsive {
+    font-size: var(--text-xl);
+  }
+}
+
+@media (min-width: 1024px) {
+  .navbar-logo-responsive {
+    font-size: var(--text-2xl);
+  }
+}
+
+@media (min-width: 1280px) {
+  .navbar-logo-responsive {
+    font-size: var(--text-3xl);
+  }
+}
+
+/* ========================================
+   RESPONSIVE BUTTONS
+   ======================================== */
+
+.btn-responsive {
+  padding: var(--space-sm) var(--space-md);
+  font-size: var(--text-sm);
+  border-radius: 0.5rem;
+}
+
+@media (min-width: 640px) {
+  .btn-responsive {
+    padding: var(--space-md) var(--space-lg);
+    font-size: var(--text-base);
+  }
+}
+
+@media (min-width: 1024px) {
+  .btn-responsive {
+    padding: var(--space-md) var(--space-xl);
+    border-radius: 0.75rem;
+  }
+}
+
+/* ========================================
+   RESPONSIVE CARDS
+   ======================================== */
+
+.card-responsive {
+  padding: var(--space-md);
+  border-radius: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .card-responsive {
+    padding: var(--space-lg);
+  }
+}
+
+@media (min-width: 1024px) {
+  .card-responsive {
+    padding: var(--space-xl);
+    border-radius: 1rem;
+  }
+}
+
+/* ========================================
+   RESPONSIVE SIDEBAR
+   ======================================== */
+
+.sidebar-responsive {
+  width: 100vw;
+  max-width: 20rem; /* 320px */
+}
+
+@media (min-width: 640px) {
+  .sidebar-responsive {
+    width: 24rem; /* 384px */
+    max-width: 24rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .sidebar-responsive {
+    width: 28rem; /* 448px */
+    max-width: 28rem;
+  }
+}
+
+/* ========================================
+   RESPONSIVE MODAL/DIALOG
+   ======================================== */
+
+.modal-responsive {
+  width: 95vw;
+  max-width: 24rem; /* 384px */
+  margin: var(--space-md);
+}
+
+@media (min-width: 640px) {
+  .modal-responsive {
+    max-width: 32rem; /* 512px */
+    margin: var(--space-xl);
+  }
+}
+
+@media (min-width: 1024px) {
+  .modal-responsive {
+    max-width: 40rem; /* 640px */
+    margin: var(--space-2xl);
+  }
+}
+
+/* ========================================
+   RESPONSIVE UTILITIES
+   ======================================== */
+
+/* Hide/Show utilities */
+.hide-mobile {
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .hide-mobile {
+    display: block;
+  }
+}
+
+.hide-tablet {
+  display: block;
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .hide-tablet {
+    display: none;
+  }
+}
+
+.hide-desktop {
+  display: block;
+}
+
+@media (min-width: 1024px) {
+  .hide-desktop {
+    display: none;
+  }
+}
+
+/* ========================================
+   RESPONSIVE ANIMATIONS
+   ======================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-responsive {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* ========================================
+   RESPONSIVE PRINT STYLES
+   ======================================== */
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  .container-responsive {
+    max-width: none;
+    padding: 0;
+  }
+  
+  .text-responsive-3xl {
+    font-size: var(--text-2xl);
+  }
+  
+  .text-responsive-2xl {
+    font-size: var(--text-xl);
+  }
+}

@@ -180,7 +180,7 @@ export default function CartSidebar() {
       <div className="fixed inset-0 bg-black/50 z-[9998]" onClick={closeCartSidebar} />
       
       {/* Sidebar - Removed problematic transitions */}
-      <div className="fixed right-0 top-0 h-full w-[420px] max-w-[95vw] bg-white shadow-2xl z-[9999] flex flex-col cart-sidebar-mobile">
+      <div className="fixed right-0 top-0 h-full sidebar-responsive bg-white shadow-2xl z-[9999] flex flex-col cart-sidebar-mobile">
         {/* Header */}
         <div className="p-4 sm:p-6 border-b border-gray-100 bg-gradient-to-r from-purple-50 to-white">
           <div className="flex items-center justify-between mb-2">

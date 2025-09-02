@@ -73,15 +73,15 @@ export default function ProductGridOptimized({
   }
 
   return (
-    <section className={`py-8 lg:py-12 ${className}`}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section className={`spacing-section ${className}`}>
+      <div className="container-responsive">
         {title && (
-          <div className="text-center mb-8 lg:mb-12">
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-3 font-serif">
+          <div className="text-center spacing-component">
+            <h2 className="text-responsive-2xl font-bold text-gray-900 mb-3 font-serif">
               {title}
             </h2>
             {subtitle && (
-              <p className="text-base lg:text-lg text-gray-600 max-w-2xl mx-auto">
+              <p className="text-responsive-base text-gray-600 max-w-2xl mx-auto">
                 {subtitle}
               </p>
             )}
@@ -89,7 +89,7 @@ export default function ProductGridOptimized({
         )}
 
         {/* Optimized Product Grid - Responsive Layout */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-6">
+        <div className="grid-products">
           {products.map((product, index) => (
             <ProductCardOptimized
               key={product.id}
