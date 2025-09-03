@@ -97,8 +97,8 @@ export default function CheckoutPage() {
       );
       const totalLoungewearQuantity = loungewearItems.reduce((sum: number, item: any) => sum + item.quantity, 0);
       
-      if (isBuyNowMode || !offerDetails) {
-        // For buy-now mode or when no offer details from cart, calculate offer directly
+      if (isBuyNowMode) {
+        // For buy-now mode, calculate offer directly
         
         if (totalLoungewearQuantity >= 3) {
           // Calculate offer: 3 for ₹1299, remaining at ₹450 each
@@ -124,9 +124,36 @@ export default function CheckoutPage() {
           }
         }
       } else {
-        // Use offer details from cart context
-        offerDiscount = offerDetails?.offerDiscount || 0;
-        calculatedOfferDetails = offerDetails;
+        // For cart mode, use offer details from cart context
+        if (offerDetails && offerDetails.offerApplied) {
+          offerDiscount = offerDetails.offerDiscount || 0;
+          calculatedOfferDetails = offerDetails;
+          console.log('[CheckoutPage] 🔧 Using cart offer details:', offerDetails);
+        } else {
+          // Fallback: calculate offer directly if cart context doesn't have offer details
+          if (totalLoungewearQuantity >= 3) {
+            const completeSets = Math.floor(totalLoungewearQuantity / 3);
+            const remainingItems = totalLoungewearQuantity % 3;
+            const loungewearSubtotal = loungewearItems.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
+            const offerTotal = (completeSets * 1299) + (remainingItems * 450);
+            
+            if (offerTotal < loungewearSubtotal) {
+              offerDiscount = loungewearSubtotal - offerTotal;
+              calculatedOfferDetails = {
+                offerApplied: true,
+                offerDiscount: offerDiscount,
+                offerDetails: {
+                  completeSets,
+                  remainingItems,
+                  offerPrice: offerTotal,
+                  originalPrice: loungewearSubtotal,
+                  savings: offerDiscount
+                }
+              };
+              console.log('[CheckoutPage] 🔧 Fallback: Calculated offer for cart items:', calculatedOfferDetails);
+            }
+          }
+        }
       }
       
       // Set the checkout offer details state

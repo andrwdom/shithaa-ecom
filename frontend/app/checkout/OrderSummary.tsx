@@ -54,15 +54,16 @@ export default function OrderSummary({
           );
           const totalLoungewearQuantity = loungewearItems.reduce((sum: number, item: any) => sum + item.quantity, 0);
           
-          // 🔧 CRITICAL FIX: Only show offer if there are 3+ loungewear items
-          const shouldShowOffer = totalLoungewearQuantity >= 3 && offerDetails?.offerApplied;
+          // 🔧 CRITICAL FIX: Only show offer if there are 3+ loungewear items AND offer discount > 0
+          const shouldShowOffer = totalLoungewearQuantity >= 3 && offerDiscount > 0;
           
           console.log('[OrderSummary] 🔧 Loungewear offer check:', {
             loungewearItemsCount: loungewearItems.length,
             totalLoungewearQuantity,
             shouldShowOffer,
             offerDetailsApplied: offerDetails?.offerApplied,
-            offerDiscount
+            offerDiscount,
+            offerDetails
           });
           
           return shouldShowOffer ? (
