@@ -976,23 +976,47 @@ export default function CheckoutClient() {
                 
                 {/* Loungewear Offer Display */}
                 {offerDiscount > 0 && (
-                  <div className="mb-4 bg-green-50 border border-green-200 rounded-lg p-3">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Gift className="h-4 w-4 text-green-600" />
-                      <span className="text-sm font-semibold text-green-800">Loungewear Offer Applied!</span>
+                  <div className="mb-4 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-xl p-4 shadow-sm">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="bg-green-100 p-2 rounded-full">
+                        <Gift className="h-5 w-5 text-green-600" />
+                      </div>
+                      <div>
+                        <span className="text-lg font-bold text-green-800">🎉 Loungewear Offer Applied!</span>
+                        <div className="text-sm text-green-600">Special pricing for 3+ items</div>
+                      </div>
                     </div>
-                    <div className="text-xs text-green-700 space-y-1">
-                      {offerDetails?.offerDetails ? (
-                        <>
-                          <p>• {offerDetails.offerDetails.completeSets} set(s) of 3 for ₹1299 each</p>
-                          {offerDetails.offerDetails.remainingItems > 0 && (
-                            <p>• {offerDetails.offerDetails.remainingItems} item(s) at ₹450 each</p>
-                          )}
-                        </>
-                      ) : (
-                        <p>• 3+ loungewear items qualify for special pricing</p>
-                      )}
-                      <p className="font-semibold">You saved ₹{offerDiscount}!</p>
+                    <div className="bg-white rounded-lg p-3 border border-green-200">
+                      <div className="text-sm text-green-700 space-y-1">
+                        {(() => {
+                          const totalLoungewearQuantity = loungewearItems.reduce((sum: number, item: any) => sum + item.quantity, 0);
+                          const completeSets = Math.floor(totalLoungewearQuantity / 3);
+                          const remainingItems = totalLoungewearQuantity % 3;
+                          
+                          return (
+                            <>
+                              {completeSets > 0 && (
+                                <p className="flex items-center gap-2">
+                                  <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                                  {completeSets} set(s) of 3 for ₹1299 each
+                                </p>
+                              )}
+                              {remainingItems > 0 && (
+                                <p className="flex items-center gap-2">
+                                  <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                                  {remainingItems} item(s) at ₹450 each
+                                </p>
+                              )}
+                            </>
+                          );
+                        })()}
+                      </div>
+                      <div className="mt-3 pt-3 border-t border-green-200">
+                        <div className="flex justify-between items-center">
+                          <span className="text-green-800 font-semibold">Total Savings:</span>
+                          <span className="text-xl font-bold text-green-800">₹{offerDiscount}</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -1046,10 +1070,33 @@ export default function CheckoutClient() {
                 
                 {/* Offer Discount */}
                 {offerDiscount > 0 && (
-                  <div className="text-right text-green-700 font-semibold mt-2">
-                    <div className="flex items-center justify-end gap-1">
-                      <Gift className="h-3 w-3" />
-                      <span>Loungewear Offer: -₹{offerDiscount}</span>
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-3 my-2">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <Gift className="h-4 w-4 text-green-600"/>
+                        <div>
+                          <span className="text-green-800 font-semibold text-sm">Loungewear Offer Applied!</span>
+                          <div className="text-xs text-green-600">
+                            {(() => {
+                              const totalLoungewearQuantity = loungewearItems.reduce((sum: number, item: any) => sum + item.quantity, 0);
+                              const completeSets = Math.floor(totalLoungewearQuantity / 3);
+                              const remainingItems = totalLoungewearQuantity % 3;
+                              
+                              if (completeSets > 0 && remainingItems === 0) {
+                                return `${completeSets} set(s) of 3 for ₹1299 each`;
+                              } else if (completeSets > 0 && remainingItems > 0) {
+                                return `${completeSets} set(s) of 3 + ${remainingItems} item(s) at ₹450 each`;
+                              } else {
+                                return "3+ loungewear items qualify for special pricing";
+                              }
+                            })()}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-green-800 font-bold text-lg">-₹{offerDiscount}</div>
+                        <div className="text-xs text-green-600">You saved!</div>
+                      </div>
                     </div>
                   </div>
                 )}

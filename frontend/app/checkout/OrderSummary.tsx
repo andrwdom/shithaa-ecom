@@ -46,36 +46,41 @@ export default function OrderSummary({
           <span>Subtotal</span><span>₹{subtotal}</span>
         </div>
         
-        {/* Loungewear Offer - CRITICAL FIX: Only show for 3+ items */}
-        {(() => {
-          const loungewearItems = displayItems.filter((item: any) => 
-            item.categorySlug === 'zipless-feeding-lounge-wear' || 
-            item.categorySlug === 'non-feeding-lounge-wear'
-          );
-          const totalLoungewearQuantity = loungewearItems.reduce((sum: number, item: any) => sum + item.quantity, 0);
-          
-          // 🔧 CRITICAL FIX: Only show offer if there are 3+ loungewear items AND offer discount > 0
-          const shouldShowOffer = totalLoungewearQuantity >= 3 && offerDiscount > 0;
-          
-          console.log('[OrderSummary] 🔧 Loungewear offer check:', {
-            loungewearItemsCount: loungewearItems.length,
-            totalLoungewearQuantity,
-            shouldShowOffer,
-            offerDetailsApplied: offerDetails?.offerApplied,
-            offerDiscount,
-            offerDetails
-          });
-          
-          return shouldShowOffer ? (
-            <div className="flex justify-between text-green-700 font-semibold">
-              <div className="flex items-center gap-1">
-                <Gift className="h-3 w-3"/>
-                <span>Loungewear Offer</span>
+        {/* Loungewear Offer - Show when offer discount is applied */}
+        {offerDiscount > 0 && (
+          <div className="flex justify-between items-center bg-green-50 border border-green-200 rounded-lg p-2 my-2">
+            <div className="flex items-center gap-2">
+              <Gift className="h-4 w-4 text-green-600"/>
+              <div>
+                <span className="text-green-800 font-semibold text-sm">Loungewear Offer Applied!</span>
+                <div className="text-xs text-green-600">
+                  {(() => {
+                    const loungewearItems = displayItems.filter((item: any) => 
+                      item.categorySlug === 'zipless-feeding-lounge-wear' || 
+                      item.categorySlug === 'non-feeding-lounge-wear' ||
+                      (item.name && (item.name.toLowerCase().includes('lounge') || item.name.toLowerCase().includes('loungewear')))
+                    );
+                    const totalLoungewearQuantity = loungewearItems.reduce((sum: number, item: any) => sum + item.quantity, 0);
+                    const completeSets = Math.floor(totalLoungewearQuantity / 3);
+                    const remainingItems = totalLoungewearQuantity % 3;
+                    
+                    if (completeSets > 0 && remainingItems === 0) {
+                      return `${completeSets} set(s) of 3 for ₹1299 each`;
+                    } else if (completeSets > 0 && remainingItems > 0) {
+                      return `${completeSets} set(s) of 3 + ${remainingItems} item(s) at ₹450 each`;
+                    } else {
+                      return "3+ loungewear items qualify for special pricing";
+                    }
+                  })()}
+                </div>
               </div>
-              <span>-₹{Math.abs(offerDiscount)}</span>
             </div>
-          ) : null;
-        })()}
+            <div className="text-right">
+              <div className="text-green-800 font-bold text-lg">-₹{Math.abs(offerDiscount)}</div>
+              <div className="text-xs text-green-600">You saved!</div>
+            </div>
+          </div>
+        )}
         
         {/* Coupon Discount */}
         {coupon && couponDiscount > 0 && (

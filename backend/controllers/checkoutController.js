@@ -6,6 +6,91 @@ import productModel from '../models/productModel.js';
 import { successResponse, errorResponse } from '../utils/response.js';
 import { checkStockAvailability, reserveStock, releaseStockReservation } from '../utils/stock.js';
 
+// Helper function to calculate loungewear category offer
+function calculateLoungewearCategoryOffer(loungewearCategoryItems) {
+    console.log(`🔧 CRITICAL DEBUG: calculateLoungewearCategoryOffer called with ${loungewearCategoryItems.length} items`);
+    console.log(`🔧 CRITICAL DEBUG: Items:`, loungewearCategoryItems.map(item => `${item.name} (${item.size}) - ₹${item.originalPrice}`));
+    
+    // 🔧 CRITICAL FIX: Offer ONLY applies when there are 3 or more loungewear items
+    if (loungewearCategoryItems.length < 3) {
+        console.log(`🔧 CRITICAL: No loungewear offer applied: Only ${loungewearCategoryItems.length} item(s), need 3+ for offer`);
+        const originalTotal = loungewearCategoryItems.reduce((sum, item) => sum + item.originalPrice, 0);
+        console.log(`🔧 CRITICAL DEBUG: Returning no offer, originalTotal: ₹${originalTotal}, discount: ₹0`);
+        
+        // 🔧 TRIPLE CHECK: Ensure discount is absolutely zero
+        const result = {
+            originalTotal,
+            discount: 0,
+            offerApplied: false,
+            offerDetails: null
+        };
+        
+        console.log(`🔧 FINAL RESULT FOR < 3 ITEMS:`, result);
+        return result;
+    }
+
+    // Calculate how many complete sets of 3
+    const completeSets = Math.floor(loungewearCategoryItems.length / 3);
+    const remainingItems = loungewearCategoryItems.length % 3;
+    
+    console.log(`🔧 Loungewear offer calculation: ${loungewearCategoryItems.length} items = ${completeSets} complete sets + ${remainingItems} remaining`);
+    
+    // Calculate totals
+    const originalTotal = loungewearCategoryItems.reduce((sum, item) => sum + item.originalPrice, 0);
+    
+    // 🔧 FIX: The offer is: "3 for ₹1299" + remaining items at ₹450 each
+    // This should only apply when we have 3+ items, which we already checked above
+    
+    // Calculate offer total based on the rule:
+    // - Complete sets of 3: ₹1299 each
+    // - Remaining items: ₹450 each
+    const offerTotal = (completeSets * 1299) + (remainingItems * 450);
+    
+    console.log(`🔧 Offer calculation: ${completeSets} × ₹1299 + ${remainingItems} × ₹450 = ₹${offerTotal}`);
+    console.log(`🔧 Original total: ₹${originalTotal}, Offer total: ₹${offerTotal}`);
+    
+    // 🔧 FIX: Ensure offer total is never higher than original total
+    if (offerTotal >= originalTotal) {
+        console.log(`🔧 Offer validation failed: Offer total ₹${offerTotal} >= Original total ₹${originalTotal}`);
+        return {
+            originalTotal,
+            discount: 0,
+            offerApplied: false,
+            offerDetails: null
+        };
+    }
+    
+    const discount = originalTotal - offerTotal;
+    
+    console.log(`🔧 Final discount: ₹${originalTotal} - ₹${offerTotal} = ₹${discount}`);
+    
+    // 🔧 FIX: Additional safety check - discount should be positive
+    if (discount <= 0) {
+        console.log(`🔧 Offer validation failed: Invalid discount ₹${discount}`);
+        return {
+            originalTotal,
+            discount: 0,
+            offerApplied: false,
+            offerDetails: null
+        };
+    }
+    
+    const offerDetails = {     
+        completeSets,
+        remainingItems,
+        offerPrice: offerTotal,
+        originalPrice: originalTotal,
+        savings: discount
+    };
+
+    return {    
+        originalTotal,
+        discount,
+        offerApplied: true,
+        offerDetails
+    };
+}
+
 /**
  * Create a checkout session for cart or buy-now items
  */
@@ -83,16 +168,48 @@ export const createCheckoutSession = async (req, res) => {
       subtotal += product.price * item.quantity;
     }
     
-    // Calculate totals
+    // Calculate totals with offer discounts
     const shippingCost = req.body.orderSummary?.shipping || req.body.shippingCost || 0;
-    const total = subtotal + shippingCost;
     
-    console.log('📦 [Checkout Session] Creating session with:', {
-      subtotal,
+    // 🔧 CRITICAL FIX: Calculate offer discount using the same logic as cart calculation
+    const loungewearCategoryItems = [];
+    const otherItems = [];
+    
+    validatedItems.forEach(item => {
+      if (item.categorySlug === 'zipless-feeding-lounge-wear' || 
+          item.categorySlug === 'non-feeding-lounge-wear') {
+        // Add item multiple times based on quantity for offer calculation
+        for (let i = 0; i < item.quantity; i++) {
+          loungewearCategoryItems.push({
+            ...item,
+            quantity: 1,
+            originalPrice: item.price
+          });
+        }
+      } else {
+        otherItems.push(item);
+      }
+    });
+    
+    // Calculate loungewear offer
+    const loungewearCategoryOffer = calculateLoungewearCategoryOffer(loungewearCategoryItems);
+    
+    // Calculate other items total
+    const otherItemsTotal = otherItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    
+    // Calculate totals with offer discount
+    const rawSubtotal = loungewearCategoryOffer.originalTotal + otherItemsTotal;
+    const offerDiscount = Math.min(loungewearCategoryOffer.discount, rawSubtotal);
+    const total = Math.max(0, rawSubtotal - offerDiscount) + shippingCost;
+    
+    console.log('📦 [Checkout Session] Creating session with offer calculation:', {
+      rawSubtotal,
+      offerDiscount,
       shippingCost,
       total,
       source,
-      itemCount: items.length
+      itemCount: items.length,
+      loungewearItemsCount: loungewearCategoryItems.length
     });
     
     // Generate session ID
@@ -107,7 +224,12 @@ export const createCheckoutSession = async (req, res) => {
       userEmail,
       guestToken: !userId ? randomUUID() : undefined,
       items: validatedItems,
-      subtotal,
+      subtotal: rawSubtotal, // Store the raw subtotal before discount
+      discount: {
+        type: 'fixed',
+        value: offerDiscount,
+        appliedCouponCode: null
+      },
       total,
       currency: 'INR',
       status: 'pending',
