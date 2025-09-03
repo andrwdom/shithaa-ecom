@@ -42,6 +42,7 @@ export default function CheckoutPage() {
   const [errors, setErrors] = useState<any>({})
   const [loading, setLoading] = useState(false)
   const [orderSummary, setOrderSummary] = useState<any>({ subtotal: 0, discount: 0, shipping: 0, total: 0 })
+  const [checkoutOfferDetails, setCheckoutOfferDetails] = useState<any>(null)
   const router = useRouter()
   const [processing, setProcessing] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
@@ -84,8 +85,49 @@ export default function CheckoutPage() {
     if (displayItems && displayItems.length > 0) {
       const rawSubtotal = displayItems.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
       
-      // Offer discount from backend calculation
-      const offerDiscount = offerDetails?.offerDiscount || 0;
+      // 🔧 CRITICAL FIX: Calculate offer for checkout items if not in cart mode
+      let offerDiscount = 0;
+      let calculatedOfferDetails = null;
+      
+      if (isBuyNowMode || !offerDetails) {
+        // For buy-now mode or when no offer details from cart, calculate offer directly
+        const loungewearItems = displayItems.filter((item: any) => 
+          item.categorySlug === 'zipless-feeding-lounge-wear' || 
+          item.categorySlug === 'non-feeding-lounge-wear'
+        );
+        const totalLoungewearQuantity = loungewearItems.reduce((sum: number, item: any) => sum + item.quantity, 0);
+        
+        if (totalLoungewearQuantity >= 3) {
+          // Calculate offer: 3 for ₹1299, remaining at ₹450 each
+          const completeSets = Math.floor(totalLoungewearQuantity / 3);
+          const remainingItems = totalLoungewearQuantity % 3;
+          const loungewearSubtotal = loungewearItems.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
+          const offerTotal = (completeSets * 1299) + (remainingItems * 450);
+          
+          if (offerTotal < loungewearSubtotal) {
+            offerDiscount = loungewearSubtotal - offerTotal;
+            calculatedOfferDetails = {
+              offerApplied: true,
+              offerDiscount: offerDiscount,
+              offerDetails: {
+                completeSets,
+                remainingItems,
+                offerPrice: offerTotal,
+                originalPrice: loungewearSubtotal,
+                savings: offerDiscount
+              }
+            };
+            console.log('[CheckoutPage] 🔧 Calculated offer for checkout items:', calculatedOfferDetails);
+          }
+        }
+      } else {
+        // Use offer details from cart context
+        offerDiscount = offerDetails?.offerDiscount || 0;
+        calculatedOfferDetails = offerDetails;
+      }
+      
+      // Set the checkout offer details state
+      setCheckoutOfferDetails(calculatedOfferDetails);
 
       // 🔧 CRITICAL FIX: Check loungewear items count and force zero discount for < 3 items
       const loungewearItems = displayItems.filter((item: any) => 
@@ -99,6 +141,8 @@ export default function CheckoutPage() {
       if (totalLoungewearQuantity < 3) {
         console.log(`🔧 CRITICAL: Forcing zero discount for ${totalLoungewearQuantity} loungewear items (need 3+)`);
         finalOfferDiscount = 0;
+        calculatedOfferDetails = null;
+        setCheckoutOfferDetails(null);
       }
 
       // 🔧 FIX: Safety check - ensure offer discount is never negative or exceeds subtotal
@@ -675,7 +719,7 @@ export default function CheckoutPage() {
                 summary={orderSummary}
                 cartItems={displayItems} 
                 coupon={coupon} 
-                offerDetails={offerDetails}
+                offerDetails={checkoutOfferDetails || offerDetails}
                 mode={displayMode}
                 shippingInfo={shipping}
               />
