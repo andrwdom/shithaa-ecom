@@ -394,16 +394,18 @@ export default function CheckoutClient() {
     };
   }, [buyNowItem, clearBuyNowAfterSuccessfulCheckout]);
 
-  // Calculate discounted total using cartTotal from context (which includes loungewear offer)
-  const subtotal = cartTotal || checkoutItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const couponDiscount = appliedCoupon ? Math.round((subtotal * appliedCoupon.discountPercentage) / 100) : 0;
-  const finalTotal = subtotal - couponDiscount;
+  // Calculate totals properly - use raw subtotal for display, apply offer discount separately
+  const rawSubtotal = checkoutItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const offerDiscount = offerDetails?.offerApplied ? (offerDetails.offerDiscount || 0) : 0;
+  const subtotalAfterOffer = rawSubtotal - offerDiscount;
+  const couponDiscount = appliedCoupon ? Math.round((subtotalAfterOffer * appliedCoupon.discountPercentage) / 100) : 0;
+  const finalTotal = subtotalAfterOffer - couponDiscount;
   
   // Debug logging to track total calculation
   console.log('[Checkout] Total calculation:', {
-    cartTotal,
-    checkoutItemsSubtotal: checkoutItems.reduce((sum, item) => sum + item.price * item.quantity, 0),
-    subtotal,
+    rawSubtotal,
+    offerDiscount,
+    subtotalAfterOffer,
     couponDiscount,
     finalTotal,
     offerDetails
@@ -989,6 +991,11 @@ export default function CheckoutClient() {
                     </li>
                   ))}
                 </ul>
+                
+                {/* Subtotal */}
+                <div className="text-right font-semibold mt-2 text-gray-700">
+                  Subtotal: ₹{rawSubtotal}
+                </div>
                 
                 {/* Offer Discount */}
                 {offerDetails?.offerApplied && (

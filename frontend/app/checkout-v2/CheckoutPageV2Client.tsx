@@ -205,7 +205,8 @@ export default function CheckoutPageV2Client() {
   const renderCheckoutSummary = () => {
     const items = currentSession?.items || getCheckoutItems();
     const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const total = subtotal; // Simplified for now
+    const offerDiscount = offerDetails?.offerApplied ? (offerDetails.offerDiscount || 0) : 0;
+    const total = subtotal - offerDiscount;
 
     return (
       <Card>
