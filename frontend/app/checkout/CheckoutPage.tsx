@@ -60,7 +60,15 @@ export default function CheckoutPage() {
     retryRestoreCart 
   } = useCheckoutFlow();
 
-  const { cartItems: originalCartItems, cartTotal, cartSubtotal, offerDetails, notifyCheckoutCartChanged, openCartSidebar } = useCart()
+  const { cartItems: originalCartItems, cartTotal, cartSubtotal, offerDetails, notifyCheckoutCartChanged, openCartSidebar, isLoadingOffer } = useCart()
+  
+  // 🔧 CRITICAL FIX: Trigger cart calculation when checkout page loads
+  useEffect(() => {
+    if (isCartMode && originalCartItems.length > 0) {
+      console.log('[CheckoutPage] 🔧 Triggering cart calculation for checkout...');
+      notifyCheckoutCartChanged();
+    }
+  }, [isCartMode, originalCartItems.length, notifyCheckoutCartChanged]);
 
   // Use checkoutItems from the flow manager for buy-now mode, original cart items for cart mode
   const cartItems = isBuyNowMode ? (checkoutItems || []) : (originalCartItems || []);
@@ -80,8 +88,15 @@ export default function CheckoutPage() {
       displayMode,
       hasOfferDetails: !!offerDetails,
       hasCoupon: !!coupon,
-      hasShipping: !!shipping
+      hasShipping: !!shipping,
+      isLoadingOffer
     });
+    
+    // 🔧 CRITICAL FIX: Wait for offer calculation to complete in cart mode
+    if (isCartMode && isLoadingOffer) {
+      console.log('[CheckoutPage] 🔧 Waiting for offer calculation to complete...');
+      return;
+    }
     
     if (displayItems && displayItems.length > 0) {
       const rawSubtotal = displayItems.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
@@ -91,11 +106,29 @@ export default function CheckoutPage() {
       let calculatedOfferDetails = null;
       
       // Calculate loungewear items count first
+      console.log('[CheckoutPage] 🔧 Display items for offer calculation:', displayItems.map(item => ({
+        name: item.name,
+        categorySlug: item.categorySlug,
+        category: item.category,
+        price: item.price,
+        quantity: item.quantity
+      })));
+      
       const loungewearItems = displayItems.filter((item: any) => 
         item.categorySlug === 'zipless-feeding-lounge-wear' || 
         item.categorySlug === 'non-feeding-lounge-wear'
       );
       const totalLoungewearQuantity = loungewearItems.reduce((sum: number, item: any) => sum + item.quantity, 0);
+      
+      console.log('[CheckoutPage] 🔧 Loungewear items found:', {
+        loungewearItemsCount: loungewearItems.length,
+        totalLoungewearQuantity,
+        loungewearItems: loungewearItems.map(item => ({
+          name: item.name,
+          categorySlug: item.categorySlug,
+          quantity: item.quantity
+        }))
+      });
       
       if (isBuyNowMode) {
         // For buy-now mode, calculate offer directly
@@ -164,9 +197,13 @@ export default function CheckoutPage() {
       console.log('[CheckoutPage] 🔧 Offer calculation debug:', {
         isBuyNowMode,
         hasOfferDetails: !!offerDetails,
+        offerDetails,
         calculatedOfferDetails,
         offerDiscount,
-        totalLoungewearQuantity
+        totalLoungewearQuantity,
+        displayItemsCount: displayItems.length,
+        cartItemsCount: originalCartItems.length,
+        checkoutItemsCount: checkoutItems.length
       });
       
       // 🔧 CRITICAL FIX: Force zero discount if less than 3 loungewear items
@@ -242,7 +279,7 @@ export default function CheckoutPage() {
     } else {
       console.log('[CheckoutPage] ⚠️ No displayItems available for orderSummary calculation');
     }
-  }, [displayItems, coupon, shipping, offerDetails, displayMode, checkoutOfferDetails]);
+  }, [displayItems, coupon, shipping, offerDetails, displayMode, checkoutOfferDetails, isLoadingOffer, isCartMode]);
   
   // 🔑 DEBUG: Additional logging to see raw data sources
   useEffect(() => {
