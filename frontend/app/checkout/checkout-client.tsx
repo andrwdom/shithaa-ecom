@@ -34,9 +34,10 @@ export default function CheckoutClient() {
       isLoading,
       isBuyNowMode,
       isCartMode,
+      offerDetails,
       url: window.location.href
     });
-  }, [cartItems, buyNowItem, checkoutItems, isLoading, isBuyNowMode, isCartMode]);
+  }, [cartItems, buyNowItem, checkoutItems, isLoading, isBuyNowMode, isCartMode, offerDetails]);
 
   const [form, setForm] = useState({
     firstName: '',
@@ -395,14 +396,52 @@ export default function CheckoutClient() {
   }, [buyNowItem, clearBuyNowAfterSuccessfulCheckout]);
 
   // Calculate totals properly - use raw subtotal for display, apply offer discount separately
-  const rawSubtotal = checkoutItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const offerDiscount = offerDetails?.offerApplied ? (offerDetails.offerDiscount || 0) : 0;
+  // 🔧 CRITICAL FIX: Use cartItems for offer calculation, checkoutItems for display
+  const displayItems = isCartMode ? cartItems : checkoutItems;
+  const rawSubtotal = displayItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  
+  // 🔧 CRITICAL FIX: Calculate offer discount based on display items if offer details don't match
+  let offerDiscount = 0;
+  if (offerDetails?.offerApplied && offerDetails.offerDiscount) {
+    offerDiscount = offerDetails.offerDiscount;
+  } else if (isCartMode && displayItems.length >= 3) {
+    // Fallback: Calculate offer directly for cart mode if offer details are missing
+    const loungewearItems = displayItems.filter((item: any) => 
+      item.categorySlug === 'zipless-feeding-lounge-wear' || 
+      item.categorySlug === 'non-feeding-lounge-wear'
+    );
+    const totalLoungewearQuantity = loungewearItems.reduce((sum: number, item: any) => sum + item.quantity, 0);
+    
+    if (totalLoungewearQuantity >= 3) {
+      const completeSets = Math.floor(totalLoungewearQuantity / 3);
+      const remainingItems = totalLoungewearQuantity % 3;
+      const loungewearSubtotal = loungewearItems.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
+      const offerTotal = (completeSets * 1299) + (remainingItems * 450);
+      
+      if (offerTotal < loungewearSubtotal) {
+        offerDiscount = loungewearSubtotal - offerTotal;
+        console.log('[Checkout] 🔧 Fallback offer calculation:', {
+          totalLoungewearQuantity,
+          completeSets,
+          remainingItems,
+          loungewearSubtotal,
+          offerTotal,
+          offerDiscount
+        });
+      }
+    }
+  }
+  
   const subtotalAfterOffer = rawSubtotal - offerDiscount;
   const couponDiscount = appliedCoupon ? Math.round((subtotalAfterOffer * appliedCoupon.discountPercentage) / 100) : 0;
   const finalTotal = subtotalAfterOffer - couponDiscount;
   
   // Debug logging to track total calculation
   console.log('[Checkout] Total calculation:', {
+    isCartMode,
+    displayItemsCount: displayItems.length,
+    cartItemsCount: cartItems.length,
+    checkoutItemsCount: checkoutItems.length,
     rawSubtotal,
     offerDiscount,
     subtotalAfterOffer,
@@ -934,18 +973,24 @@ export default function CheckoutClient() {
                 )}
                 
                 {/* Loungewear Offer Display */}
-                {offerDetails?.offerApplied && (
+                {offerDiscount > 0 && (
                   <div className="mb-4 bg-green-50 border border-green-200 rounded-lg p-3">
                     <div className="flex items-center gap-2 mb-2">
                       <Gift className="h-4 w-4 text-green-600" />
                       <span className="text-sm font-semibold text-green-800">Loungewear Offer Applied!</span>
                     </div>
                     <div className="text-xs text-green-700 space-y-1">
-                      <p>• {offerDetails.offerDetails?.completeSets} set(s) of 3 for ₹1299 each</p>
-                      {offerDetails.offerDetails?.remainingItems > 0 && (
-                        <p>• {offerDetails.offerDetails.remainingItems} item(s) at ₹450 each</p>
+                      {offerDetails?.offerDetails ? (
+                        <>
+                          <p>• {offerDetails.offerDetails.completeSets} set(s) of 3 for ₹1299 each</p>
+                          {offerDetails.offerDetails.remainingItems > 0 && (
+                            <p>• {offerDetails.offerDetails.remainingItems} item(s) at ₹450 each</p>
+                          )}
+                        </>
+                      ) : (
+                        <p>• 3+ loungewear items qualify for special pricing</p>
                       )}
-                      <p className="font-semibold">You saved ₹{offerDetails.offerDiscount}!</p>
+                      <p className="font-semibold">You saved ₹{offerDiscount}!</p>
                     </div>
                   </div>
                 )}
@@ -984,7 +1029,7 @@ export default function CheckoutClient() {
                 {couponError && <div className="text-red-600 text-sm mb-2">{couponError}</div>}
                 {couponSuccess && <div className="text-green-600 text-sm mb-2">{couponSuccess}</div>}
                 <ul className="divide-y">
-                  {checkoutItems.map((item) => (
+                  {displayItems.map((item) => (
                     <li key={`${item.id}-${item.size}`} className="py-2 flex justify-between items-center">
                       <span className="font-medium text-gray-900">{item.name} <span className="text-xs text-gray-500">({item.size})</span> x {item.quantity}</span>
                       <span className="font-semibold text-[rgb(71,60,102)]">₹{item.price * item.quantity}</span>
@@ -998,11 +1043,11 @@ export default function CheckoutClient() {
                 </div>
                 
                 {/* Offer Discount */}
-                {offerDetails?.offerApplied && (
+                {offerDiscount > 0 && (
                   <div className="text-right text-green-700 font-semibold mt-2">
                     <div className="flex items-center justify-end gap-1">
                       <Gift className="h-3 w-3" />
-                      <span>Loungewear Offer: -₹{offerDetails.offerDiscount}</span>
+                      <span>Loungewear Offer: -₹{offerDiscount}</span>
                     </div>
                   </div>
                 )}
