@@ -1,4 +1,5 @@
-Vimport mongoose from 'mongoose';
+V
+import mongoose from 'mongoose';
 import productModel from '../models/productModel.js';
 import dotenv from 'dotenv';
 

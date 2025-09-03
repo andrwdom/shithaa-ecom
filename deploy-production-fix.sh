@@ -1,5 +1,6 @@
 #!/bin/bash
 
+
 # 🚀 Production Fix Deployment Script for Shithaa E-commerce
 # This script fixes the current production issues and deploys the checkout flow fixes
 

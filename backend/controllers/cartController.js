@@ -166,6 +166,33 @@ const calculateCartTotal = async (req, res) => {
         
         items.forEach(item => {
             const product = productMap[item._id];
+            
+            // 🔧 CRITICAL DEBUG: Log each item processing
+            console.log(`🔧 Processing item: ${item.name || item._id}`);
+            console.log(`🔧 Product found: ${!!product}`);
+            if (product) {
+                console.log(`🔧 Product categorySlug: ${product.categorySlug}`);
+                console.log(`🔧 Is loungewear: ${product.categorySlug === 'zipless-feeding-lounge-wear' || product.categorySlug === 'non-feeding-lounge-wear'}`);
+            } else {
+                console.log(`🔧 ⚠️ Product not found in database for _id: ${item._id}`);
+                // Try to use item's categorySlug if product not found in database
+                if (item.categorySlug && (
+                    item.categorySlug === 'zipless-feeding-lounge-wear' || 
+                    item.categorySlug === 'non-feeding-lounge-wear'
+                )) {
+                    console.log(`🔧 Using item's categorySlug: ${item.categorySlug}`);
+                    // Add item multiple times based on quantity for offer calculation
+                    for (let i = 0; i < item.quantity; i++) {
+                        loungewearCategoryItems.push({
+                            ...item,
+                            quantity: 1,
+                            originalPrice: item.price
+                        });
+                    }
+                    return; // Skip the rest of the processing for this item
+                }
+            }
+            
             if (product && (
                 product.categorySlug === 'zipless-feeding-lounge-wear' || 
                 product.categorySlug === 'non-feeding-lounge-wear'
