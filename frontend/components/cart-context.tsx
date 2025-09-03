@@ -81,6 +81,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           if (validItems.length > 0) {
             setCartItems(validItems)
             console.log("[CartContext] ✅ Loaded", validItems.length, "items from localStorage")
+            console.log("[CartContext] 🔧 Loaded cart items:", validItems.map(item => ({
+              name: item.name,
+              categorySlug: item.categorySlug,
+              price: item.price,
+              quantity: item.quantity
+            })))
           }
         }
       }
@@ -193,6 +199,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
     const cartHash = cartItems.map(item => `${item._id}-${item.size}-${item.quantity}`).join('|')
     
+    console.log("[CartContext] 🔧 calculateCartTotalWithOffers called with:", {
+      cartItemsCount: cartItems.length,
+      cartHash,
+      lastCartHash: lastCartHashRef.current,
+      isCalculating: isCalculatingRef.current
+    })
+    
     if (cartHash === lastCartHashRef.current) {
       console.log("[CartContext] 🔧 Skipping calculation - cart hash unchanged")
       return
@@ -258,6 +271,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             if (cartHash === lastCartHashRef.current) {
               console.log("[CartContext] 🔧 Updating total with offer:", data.data.total, "discount:", data.data.offerDiscount)
               console.log("[CartContext] 🔧 Offer details:", data.data.offerDetails)
+              console.log("[CartContext] 🔧 CRITICAL: Setting offer details:", {
+                offerApplied: data.data.offerApplied,
+                offerDiscount: data.data.offerDiscount,
+                offerDetails: data.data.offerDetails
+              })
               setCartTotal(data.data.total)
               setCartSubtotal(data.data.subtotal)
               setOfferDetails({
@@ -270,6 +288,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             } else {
               console.log("[CartContext] 🔧 Cart changed during calculation, skipping update")
             }
+          } else {
+            console.log("[CartContext] 🔧 API returned success: false", data)
           }
         } else {
           // 🔧 FIX: Only update if cart hasn't changed and we need fallback
@@ -303,6 +323,16 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   // Calculate total when cart changes
   useEffect(() => {
+    console.log("[CartContext] 🔧 Cart items changed:", {
+      cartItemsCount: cartItems.length,
+      cartItems: cartItems.map(item => ({
+        name: item.name,
+        categorySlug: item.categorySlug,
+        price: item.price,
+        quantity: item.quantity
+      }))
+    })
+    
     if (cartItems.length > 0) {
       // 🔧 FIX: Add small delay to prevent rapid recalculations
       const timer = setTimeout(() => {
