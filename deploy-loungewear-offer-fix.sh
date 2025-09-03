@@ -2,13 +2,27 @@
 
 echo "🔧 Starting loungewear offer fix deployment..."
 
-# Step 1: Fix product categories in database
-echo "🔧 Step 1: Fixing product categories in database..."
-node fix-loungewear-offer-final.js
+# Step 1: Install dependencies if needed
+echo "🔧 Step 1: Checking dependencies..."
+if ! npm list dotenv > /dev/null 2>&1; then
+    echo "🔧 Installing missing dependencies..."
+    npm install dotenv
+fi
+
+# Step 2: Fix product categories in database
+echo "🔧 Step 2: Fixing product categories in database..."
+node fix-loungewear-offer-production.js
 
 if [ $? -ne 0 ]; then
-    echo "❌ Database fix failed, aborting deployment"
-    exit 1
+    echo "❌ Database fix failed, trying alternative approach..."
+    # Try running from backend directory where dependencies might be available
+    cd backend
+    node ../fix-loungewear-offer-production.js
+    if [ $? -ne 0 ]; then
+        echo "❌ Database fix failed completely, aborting deployment"
+        exit 1
+    fi
+    cd ..
 fi
 
 echo "✅ Database fix completed successfully"
