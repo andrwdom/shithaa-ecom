@@ -47,6 +47,12 @@ const paymentSessionSchema = new mongoose.Schema({
     }]
   },
   
+  // Complete order payload for order creation (stored temporarily)
+  orderPayload: { type: mongoose.Schema.Types.Mixed },
+  
+  // Order ID reference (set after order creation)
+  orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'order' },
+  
   // Payment status
   status: { 
     type: String, 

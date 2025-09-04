@@ -453,6 +453,13 @@ export const phonePeCallback = async (req, res) => {
       try {
         // Create order from payment session data
         const orderPayload = paymentSession.orderPayload;
+        
+        // 🔑 CRITICAL FIX: Check if orderPayload exists
+        if (!orderPayload) {
+          console.error(`[callback] Order payload is missing for payment session ${paymentSession._id}`);
+          throw new Error('Order payload is missing from payment session');
+        }
+        
         orderPayload.paymentStatus = 'paid';
         orderPayload.orderStatus = 'Confirmed';
         orderPayload.status = 'Order Placed';
@@ -677,6 +684,13 @@ export const verifyPhonePePayment = async (req, res) => {
         try {
           // Create order from payment session data
           const orderPayload = paymentSession.orderPayload;
+          
+          // 🔑 CRITICAL FIX: Check if orderPayload exists
+          if (!orderPayload) {
+            console.error(`[verify] Order payload is missing for payment session ${paymentSession._id}`);
+            throw new Error('Order payload is missing from payment session');
+          }
+          
           orderPayload.paymentStatus = 'paid';
           orderPayload.orderStatus = 'Confirmed';
           orderPayload.status = 'Order Placed';
