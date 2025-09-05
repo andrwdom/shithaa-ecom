@@ -51,17 +51,20 @@ cartRouter.post('/validate-stock', async (req, res) => {
           continue;
         }
         
-        // Check if stock is sufficient
-        if (sizeObj.stock < item.quantity) {
+        // Check if stock is sufficient (accounting for reserved stock)
+        const reserved = sizeObj.reserved || 0;
+        const availableStock = Math.max(0, sizeObj.stock - reserved);
+        
+        if (availableStock < item.quantity) {
           outOfStockItems.push({
             ...item,
-            reason: `Insufficient stock. Available: ${sizeObj.stock}, Requested: ${item.quantity}`,
-            availableStock: sizeObj.stock
+            reason: `Insufficient stock. Available: ${availableStock}, Requested: ${item.quantity}`,
+            availableStock: availableStock
           });
         }
         
         // Check for corrupted stock data
-        if (sizeObj.stock < 0) {
+        if (availableStock < 0) {
           outOfStockItems.push({
             ...item,
             reason: `Corrupted stock data: ${sizeObj.stock}`,
