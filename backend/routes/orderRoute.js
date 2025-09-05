@@ -6,9 +6,10 @@ import {
     getUserOrderCount,
     getOrderByTransactionId,
     getOrderByPublicId,
-    generateInvoice
+    generateInvoice,
+    getAllOrders,
+    updateOrderStatus
 } from '../controllers/orderController.js';
-import { getAllOrders, updateOrderStatus } from '../controllers/adminOrderController.js';
 import { 
     verifyToken, 
     optionalAuth 
