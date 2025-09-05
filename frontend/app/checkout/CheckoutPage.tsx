@@ -11,6 +11,7 @@ import PageLoading from '@/components/page-loading';
 import { useAuth } from '@/components/auth/useAuth'
 import { calculateShippingCost, ShippingInfo } from '@/lib/shipping-calculator'
 import { authenticatedFetch, authenticatedFetchJson } from '@/lib/api-utils';
+import { validateStockAvailability } from '@/lib/stock-validator';
 
 function ProductPreviewSection({ items, onEdit }: any) {
   if (!items || items.length === 0) {
@@ -429,6 +430,45 @@ export default function CheckoutPage() {
     }
   }, [])
 
+  // 🚀 NEW: Instant stock release on page exit/cancel
+  useEffect(() => {
+    const handlePageExit = async () => {
+      if (checkoutSessionId && user?.mongoId) {
+        try {
+          console.log('🚀 Releasing stock instantly on page exit...');
+          await fetch(`/api/checkout/session/${checkoutSessionId}/cancel`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${user.token}`,
+            }
+          });
+          console.log('✅ Stock released successfully');
+        } catch (error) {
+          console.log('⚠️ Failed to release stock on exit:', error);
+        }
+      }
+    };
+
+    const handleBeforeUnload = () => {
+      handlePageExit();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        handlePageExit();
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [checkoutSessionId, user?.mongoId, user?.token]);
+
   // We now create the checkout session in handlePhonePePayment when we have all the data
 
   // PhonePe payment handler with debounce
@@ -487,6 +527,27 @@ export default function CheckoutPage() {
         throw new Error('Please complete your shipping information before proceeding.');
       }
 
+      // 🚀 NEW: Validate stock availability before creating session
+      console.log('[CheckoutPage] 🔍 Validating stock availability...');
+      const stockValidationItems = displayItems.map(item => ({
+        productId: item._id || item.id,
+        size: item.size,
+        quantity: item.quantity,
+        name: item.name
+      }));
+      
+      const stockValidation = await validateStockAvailability(stockValidationItems, user?.token);
+      
+      if (!stockValidation.isValid) {
+        const unavailableItems = stockValidation.unavailableItems.map(item => 
+          `${item.name} (${item.size}) - Only ${item.availableQuantity} available, ${item.requestedQuantity} requested`
+        ).join(', ');
+        
+        throw new Error(`❌ Stock unavailable: ${unavailableItems}. Please refresh and try again.`);
+      }
+      
+      console.log('[CheckoutPage] ✅ Stock validation passed');
+
       // 🔑 CRITICAL FIX: Create checkout session with complete data
       console.log('[CheckoutPage] 🔄 Creating checkout session with complete data...');
       const sessionData = {
@@ -505,6 +566,10 @@ export default function CheckoutPage() {
       });
 
       if (!sessionResponse.success || !sessionResponse.data?.sessionId) {
+        // 🚀 NEW: Better error handling for stock issues
+        if (sessionResponse.message?.includes('stock') || sessionResponse.message?.includes('available')) {
+          throw new Error('❌ Sorry! Some items in your cart are no longer available. Please refresh and try again.');
+        }
         throw new Error(sessionResponse.message || 'Failed to create checkout session');
       }
 
@@ -799,29 +864,63 @@ export default function CheckoutPage() {
                 shippingInfo={shipping}
               />
               {/* Payment Buttons */}
-              <button
-                type="button"
-                className="w-full bg-[rgb(71,60,102)] hover:bg-[rgb(71,60,102)]/90 text-white text-lg font-semibold rounded-xl py-3 mt-4 transition disabled:opacity-60 disabled:cursor-not-allowed"
-                onClick={handlePhonePePayment}
-                disabled={
-                  processing || 
-                  !orderSummary?.total || 
-                  orderSummary.total <= 0 || 
-                  !shipping?.fullName || 
-                  !shipping?.email || 
-                  !shipping?.phone
-                }
-              >
-                {processing ? (
-                  <span className="loading loading-spinner loading-md"></span>
-                ) : !orderSummary?.total || orderSummary.total <= 0 ? (
-                  'Complete Order Details'
-                ) : !shipping?.fullName || !shipping?.email || !shipping?.phone ? (
-                  'Complete Shipping Info'
-                ) : (
-                  'Confirm Order'
+              <div className="space-y-3">
+                <button
+                  type="button"
+                  className="w-full bg-[rgb(71,60,102)] hover:bg-[rgb(71,60,102)]/90 text-white text-lg font-semibold rounded-xl py-3 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                  onClick={handlePhonePePayment}
+                  disabled={
+                    processing || 
+                    !orderSummary?.total || 
+                    orderSummary.total <= 0 || 
+                    !shipping?.fullName || 
+                    !shipping?.email || 
+                    !shipping?.phone
+                  }
+                >
+                  {processing ? (
+                    <span className="loading loading-spinner loading-md"></span>
+                  ) : !orderSummary?.total || orderSummary.total <= 0 ? (
+                    'Complete Order Details'
+                  ) : !shipping?.fullName || !shipping?.email || !shipping?.phone ? (
+                    'Complete Shipping Info'
+                  ) : (
+                    'Confirm Order'
+                  )}
+                </button>
+                
+                {/* 🚀 NEW: Cancel Checkout Button */}
+                {checkoutSessionId && (
+                  <button
+                    type="button"
+                    className="w-full bg-gray-500 hover:bg-gray-600 text-white text-sm font-medium rounded-xl py-2 transition"
+                    onClick={async () => {
+                      if (checkoutSessionId && user?.mongoId) {
+                        try {
+                          console.log('🚀 User manually cancelling checkout...');
+                          await fetch(`/api/checkout/session/${checkoutSessionId}/cancel`, {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                              'Authorization': `Bearer ${user.token}`,
+                            }
+                          });
+                          console.log('✅ Checkout cancelled, stock released');
+                          router.push('/');
+                        } catch (error) {
+                          console.log('⚠️ Failed to cancel checkout:', error);
+                          router.push('/');
+                        }
+                      } else {
+                        router.push('/');
+                      }
+                    }}
+                    disabled={processing}
+                  >
+                    Cancel Checkout
+                  </button>
                 )}
-              </button>
+              </div>
               
               {/* Help text when button is disabled */}
               {(!orderSummary?.total || orderSummary.total <= 0) && (

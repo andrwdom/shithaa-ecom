@@ -4,7 +4,8 @@ import {
     getCheckoutSession, 
     reserveStockForSession, 
     releaseStockForSession, 
-    cancelCheckoutSession 
+    cancelCheckoutSession,
+    validateStock
 } from '../controllers/checkoutController.js';
 import { verifyToken, optionalAuth } from '../middleware/auth.js';
 
@@ -24,5 +25,8 @@ checkoutRouter.post('/session/:sessionId/release-stock', verifyToken, releaseSto
 
 // Cancel checkout session (requires authentication)
 checkoutRouter.post('/session/:sessionId/cancel', verifyToken, cancelCheckoutSession);
+
+// 🚀 NEW: Validate stock availability (optional auth for guest users)
+checkoutRouter.post('/validate-stock', optionalAuth, validateStock);
 
 export default checkoutRouter;

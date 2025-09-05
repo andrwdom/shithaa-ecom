@@ -700,3 +700,71 @@ export const cancelCheckoutSession = async (req, res) => {
     return errorResponse(res, 500, 'Failed to cancel checkout session', error.message);
   }
 };
+
+// 🚀 NEW: Stock validation endpoint for frontend
+export const validateStock = async (req, res) => {
+  const correlationId = req.headers['x-request-id'] || `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  
+  try {
+    const { items } = req.body;
+    
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return errorResponse(res, 400, 'Items array is required');
+    }
+
+    console.log(`[ValidateStock:${correlationId}] Validating stock for ${items.length} items`);
+
+    const unavailableItems = [];
+    
+    for (const item of items) {
+      try {
+        const isAvailable = await checkStockAvailability(
+          item.productId, 
+          item.size, 
+          item.quantity
+        );
+        
+        if (!isAvailable) {
+          // Get current stock info for better error message
+          const product = await productModel.findById(item.productId);
+          if (product) {
+            const sizeInfo = product.sizes.find(s => s.size === item.size);
+            const availableStock = sizeInfo ? sizeInfo.stock - (sizeInfo.reserved || 0) : 0;
+            
+            unavailableItems.push({
+              productId: item.productId,
+              name: item.name || product.name,
+              size: item.size,
+              requestedQuantity: item.quantity,
+              availableQuantity: availableStock
+            });
+          }
+        }
+      } catch (error) {
+        console.error(`[ValidateStock:${correlationId}] Error checking stock for ${item.productId}:`, error);
+        unavailableItems.push({
+          productId: item.productId,
+          name: item.name || 'Unknown Product',
+          size: item.size,
+          requestedQuantity: item.quantity,
+          availableQuantity: 0
+        });
+      }
+    }
+
+    const isValid = unavailableItems.length === 0;
+    
+    console.log(`[ValidateStock:${correlationId}] Validation result: ${isValid ? 'valid' : 'invalid'}, ${unavailableItems.length} unavailable items`);
+    
+    return successResponse(res, {
+      isValid,
+      unavailableItems,
+      message: isValid 
+        ? 'All items are available' 
+        : `${unavailableItems.length} item(s) are not available`
+    });
+  } catch (error) {
+    console.error(`[ValidateStock:${correlationId}] Error:`, error);
+    return errorResponse(res, 500, 'Failed to validate stock', error.message);
+  }
+};
