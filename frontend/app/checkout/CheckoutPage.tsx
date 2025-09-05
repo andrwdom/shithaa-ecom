@@ -545,7 +545,7 @@ export default function CheckoutPage() {
       const stockValidation = await validateStockAvailability(stockValidationItems, user?.token);
       
       if (!stockValidation.isValid) {
-        const unavailableItems = stockValidation.unavailableItems && Array.isArray(stockValidation.unavailableItems) 
+        const unavailableItems = stockValidation.unavailableItems && Array.isArray(stockValidation.unavailableItems) && stockValidation.unavailableItems.length > 0
           ? stockValidation.unavailableItems.map(item => 
               `${item.name} (${item.size}) - Only ${item.availableQuantity} available, ${item.requestedQuantity} requested`
             ).join(', ')

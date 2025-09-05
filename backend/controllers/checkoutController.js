@@ -718,27 +718,21 @@ export const validateStock = async (req, res) => {
     
     for (const item of items) {
       try {
-        const isAvailable = await checkStockAvailability(
+        const stockCheck = await checkStockAvailability(
           item.productId, 
           item.size, 
           item.quantity
         );
         
-        if (!isAvailable) {
-          // Get current stock info for better error message
-          const product = await productModel.findById(item.productId);
-          if (product) {
-            const sizeInfo = product.sizes.find(s => s.size === item.size);
-            const availableStock = sizeInfo ? sizeInfo.stock - (sizeInfo.reserved || 0) : 0;
-            
-            unavailableItems.push({
-              productId: item.productId,
-              name: item.name || product.name,
-              size: item.size,
-              requestedQuantity: item.quantity,
-              availableQuantity: availableStock
-            });
-          }
+        if (!stockCheck.available) {
+          // Use the stock check data directly for better error message
+          unavailableItems.push({
+            productId: item.productId,
+            name: item.name || stockCheck.productName,
+            size: item.size,
+            requestedQuantity: item.quantity,
+            availableQuantity: stockCheck.availableStock
+          });
         }
       } catch (error) {
         console.error(`[ValidateStock:${correlationId}] Error checking stock for ${item.productId}:`, error);
