@@ -271,6 +271,7 @@ export const createCheckoutSession = async (req, res) => {
     console.log(`[${correlationId}] Checkout session created without stock reservation: ${sessionId}`);
     
     // Skip stock reservation for now - it will be done when payment starts
+    // Stock reservation code commented out - will be done when payment starts
     /*
     try {
       console.log(`[${correlationId}] Creating stock reservation for session: ${sessionId}`);
@@ -380,7 +381,7 @@ export const createCheckoutSession = async (req, res) => {
       total,
       currency: 'INR',
       expiresAt: checkoutSession.expiresAt,
-      message: 'Checkout session created successfully with stock reserved'
+      message: 'Checkout session created successfully'
     });
     
   } catch (error) {
