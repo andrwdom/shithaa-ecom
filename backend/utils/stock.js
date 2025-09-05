@@ -110,7 +110,7 @@ export async function reserveStock(productId, size, quantity, options = {}) {
     
     try {
         // 🔑 CRITICAL FIX: Atomic reservation with availability check in the same query
-        // This prevents race conditions by checking availability AND reserving in one operation
+        // This prevents race conditions by checking availability AND reserving in one operation    
         const result = await productModel.updateOne(
             {
                 _id: productId,
@@ -118,7 +118,29 @@ export async function reserveStock(productId, size, quantity, options = {}) {
                 // 🔑 CRITICAL: Check that available stock (stock - reserved) >= quantity
                 $expr: {
                     $gte: [
-                        { $subtract: ['$sizes.stock', { $ifNull: ['$sizes.reserved', 0] }] },
+                        {
+                            $let: {
+                                vars: {
+                                    sizeObj: {
+                                        $arrayElemAt: [
+                                            {
+                                                $filter: {
+                                                    input: '$sizes',
+                                                    cond: { $eq: ['$$this.size', size] }
+                                                }
+                                            },
+                                            0
+                                        ]
+                                    }
+                                },
+                                in: {
+                                    $subtract: [
+                                        '$$sizeObj.stock',
+                                        { $ifNull: ['$$sizeObj.reserved', 0] }
+                                    ]
+                                }
+                            }
+                        },
                         quantity
                     ]
                 }
