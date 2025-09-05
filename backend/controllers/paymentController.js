@@ -11,11 +11,72 @@ import { trackPayment } from '../utils/monitoring.js';
 import { StandardCheckoutClient, Env, StandardCheckoutPayRequest } from 'pg-sdk-node';
 import { randomUUID } from 'crypto';
 import { generateInvoiceBuffer, sendInvoiceEmail } from '../utils/invoiceGenerator.js';
+import { releaseStockReservation } from '../utils/stock.js';
 import { config } from '../config.js';
 
 // Helper function to get user email for orders
 const getOrderUserEmail = (req, email) => {
     return req.user?.email || email || `guest@${process.env.BASE_URL?.replace('https://', '').replace('http://', '') || 'shithaa.in'}`;
+};
+
+// Helper function to release stock on payment failure
+const releaseStockOnPaymentFailure = async (paymentSession, correlationId) => {
+  if (!paymentSession.checkoutSessionId) {
+    console.log(`[${correlationId}] No checkout session ID found, skipping stock release`);
+    return;
+  }
+
+  try {
+    console.log(`[${correlationId}] Releasing reserved stock for failed payment session: ${paymentSession.checkoutSessionId}`);
+    
+    // Find the checkout session
+    const checkoutSession = await CheckoutSession.findOne({ sessionId: paymentSession.checkoutSessionId });
+    
+    if (!checkoutSession) {
+      console.log(`[${correlationId}] Checkout session not found: ${paymentSession.checkoutSessionId}`);
+      return;
+    }
+    
+    if (!checkoutSession.stockReserved) {
+      console.log(`[${correlationId}] No stock reserved for session: ${paymentSession.checkoutSessionId}`);
+      return;
+    }
+    
+    // Release stock for all items in the session
+    const stockOperations = [];
+    for (const item of checkoutSession.items) {
+      try {
+        await releaseStockReservation(item.productId, item.size, item.quantity);
+        stockOperations.push({
+          productId: item.productId,
+          size: item.size,
+          quantity: item.quantity,
+          success: true
+        });
+        console.log(`[${correlationId}] Released stock for ${item.name} (${item.size}) x${item.quantity}`);
+      } catch (error) {
+        stockOperations.push({
+          productId: item.productId,
+          size: item.size,
+          quantity: item.quantity,
+          success: false,
+          error: error.message
+        });
+        console.error(`[${correlationId}] Failed to release stock for ${item.name}:`, error);
+      }
+    }
+    
+    // Mark session as no longer having reserved stock
+    checkoutSession.stockReserved = false;
+    checkoutSession.status = 'failed';
+    await checkoutSession.save();
+    
+    console.log(`[${correlationId}] ✅ Reserved stock released for failed payment. Success: ${stockOperations.filter(op => op.success).length}, Failed: ${stockOperations.filter(op => !op.success).length}`);
+    
+  } catch (error) {
+    console.error(`[${correlationId}] ❌ Failed to release stock for failed payment:`, error);
+    // Don't throw - we don't want to fail the entire payment callback
+  }
 };
 
 // Helper function to initialize PhonePe client
@@ -565,9 +626,8 @@ export const phonePeCallback = async (req, res) => {
       paymentSession.failedAt = new Date();
       await paymentSession.save();
       
-      // 🔑 CRITICAL: No order creation for failed payments
-      // No stock restoration needed since stock is not pre-reserved
-      // Stock is only deducted after successful payment confirmation
+      // 🔑 CRITICAL: Release reserved stock on payment failure
+      await releaseStockOnPaymentFailure(paymentSession, correlationId);
 
       // Determine redirect URL for failed payment
       const redirectUrl = `${process.env.FRONTEND_URL || 'https://shithaa.in'}/payment-failed`;
@@ -766,6 +826,9 @@ export const verifyPhonePePayment = async (req, res) => {
         paymentSession.failedAt = new Date();
         await paymentSession.save();
         console.log('Payment session marked as failed');
+        
+        // 🔑 CRITICAL: Release reserved stock on payment failure
+        await releaseStockOnPaymentFailure(paymentSession, correlationId);
       }
     }
 
