@@ -50,10 +50,13 @@ export const validateStockAvailability = async (
       throw new Error(data.message || 'Failed to validate stock');
     }
 
+    // Handle the response format from successResponse wrapper
+    const responseData = data.data || data;
+    
     return {
-      isValid: data.isValid || false,
-      unavailableItems: data.unavailableItems || [],
-      message: data.message || 'Stock validation completed'
+      isValid: responseData.isValid || false,
+      unavailableItems: responseData.unavailableItems || [],
+      message: responseData.message || 'Stock validation completed'
     };
   } catch (error) {
     console.error('Stock validation error:', error);

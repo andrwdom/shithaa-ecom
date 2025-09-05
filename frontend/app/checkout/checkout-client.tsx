@@ -126,7 +126,9 @@ export default function CheckoutClient() {
         
         if (response.ok) {
           const data = await response.json();
-          setOutOfStockItems(data.unavailableItems || []);
+          // Handle the response format from successResponse wrapper
+          const responseData = data.data || data;
+          setOutOfStockItems(responseData.unavailableItems || []);
         }
       } catch (error) {
         console.error('Error checking stock:', error);
