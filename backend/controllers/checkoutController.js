@@ -640,7 +640,8 @@ export const validateStock = async (req, res) => {
             name: item.name || stockCheck.productName,
             size: item.size,
             requestedQuantity: item.quantity,
-            availableQuantity: stockCheck.availableStock
+            availableQuantity: stockCheck.availableStock,
+            reason: `Insufficient stock. Available: ${stockCheck.availableStock}, Requested: ${item.quantity}`
           });
         }
       } catch (error) {
@@ -650,7 +651,8 @@ export const validateStock = async (req, res) => {
           name: item.name || 'Unknown Product',
           size: item.size,
           requestedQuantity: item.quantity,
-          availableQuantity: 0
+          availableQuantity: 0,
+          reason: 'Error checking stock'
         });
       }
     }

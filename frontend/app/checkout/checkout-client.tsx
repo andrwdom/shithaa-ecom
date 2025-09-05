@@ -110,10 +110,18 @@ export default function CheckoutClient() {
   useEffect(() => {
     const checkStock = async () => {
       try {
+        // Map checkoutItems to match the expected format for the checkout endpoint
+        const itemsForValidation = checkoutItems.map(item => ({
+          productId: item._id || item.id,
+          name: item.name,
+          size: item.size,
+          quantity: item.quantity
+        }));
+        
         const response = await fetch(`/api/checkout/validate-stock?t=${Date.now()}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ items: checkoutItems })
+          body: JSON.stringify({ items: itemsForValidation })
         });
         
         if (response.ok) {
