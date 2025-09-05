@@ -593,6 +593,18 @@ export default function CheckoutPage() {
         startCheckoutSession(checkoutSessionId, user.token);
       }
       
+      // 🔑 CRITICAL: Reserve stock before creating payment session
+      console.log('[CheckoutPage] 🔄 Reserving stock for checkout session...');
+      const stockReservationResponse = await authenticatedFetchJson(`/api/checkout/session/${checkoutSessionId}/reserve-stock`, {
+        method: 'POST',
+      });
+
+      if (!stockReservationResponse.success) {
+        throw new Error(stockReservationResponse.message || 'Failed to reserve stock');
+      }
+      
+      console.log('[CheckoutPage] ✅ Stock reserved successfully');
+      
       // 1. Create PhonePe payment session on backend
       const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + '/api/payment/phonepe/create-session';
       
