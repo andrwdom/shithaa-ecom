@@ -12,6 +12,7 @@ import { useAuth } from '@/components/auth/useAuth'
 import { calculateShippingCost, ShippingInfo } from '@/lib/shipping-calculator'
 import { authenticatedFetch, authenticatedFetchJson } from '@/lib/api-utils';
 import { validateStockAvailability } from '@/lib/stock-validator';
+import { startCheckoutSession, stopCheckoutSession } from '@/lib/checkout-session-manager';
 
 function ProductPreviewSection({ items, onEdit }: any) {
   if (!items || items.length === 0) {
@@ -464,6 +465,9 @@ export default function CheckoutPage() {
     document.addEventListener('visibilitychange', handleVisibilityChange);
     
     return () => {
+      // Stop managing the checkout session
+      stopCheckoutSession();
+      
       window.removeEventListener('beforeunload', handleBeforeUnload);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
@@ -583,6 +587,11 @@ export default function CheckoutPage() {
 
       const checkoutSessionId = sessionResponse.data.sessionId;
       console.log('[CheckoutPage] ✅ Checkout session created:', checkoutSessionId);
+      
+      // Start managing the checkout session for cleanup
+      if (user?.token) {
+        startCheckoutSession(checkoutSessionId, user.token);
+      }
       
       // 1. Create PhonePe payment session on backend
       const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + '/api/payment/phonepe/create-session';
@@ -914,6 +923,8 @@ export default function CheckoutPage() {
                             }
                           });
                           console.log('✅ Checkout cancelled, stock released');
+                          // Stop managing the session
+                          stopCheckoutSession();
                           router.push('/');
                         } catch (error) {
                           console.log('⚠️ Failed to cancel checkout:', error);

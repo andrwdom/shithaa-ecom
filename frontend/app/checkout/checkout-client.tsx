@@ -110,7 +110,7 @@ export default function CheckoutClient() {
   useEffect(() => {
     const checkStock = async () => {
       try {
-        const response = await fetch('/api/cart/validate-stock', {
+        const response = await fetch(`/api/cart/validate-stock?t=${Date.now()}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ items: checkoutItems })

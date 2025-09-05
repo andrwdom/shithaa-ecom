@@ -6,6 +6,7 @@ import { useAuth } from "@/components/auth/useAuth";
 import { useCart } from "@/components/cart-context";
 import { useBuyNow } from "@/components/buy-now-context";
 import { useCheckoutSession, CheckoutItem } from "@/hooks/useCheckoutSession";
+import { startCheckoutSession, stopCheckoutSession } from "@/lib/checkout-session-manager";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -79,6 +80,13 @@ export default function CheckoutPageV2Client() {
     }
   }, [user, sessionId, router]);
 
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      stopCheckoutSession();
+    };
+  }, []);
+
   // Create checkout session
   const handleCreateSession = async () => {
     if (!user) return;
@@ -99,6 +107,10 @@ export default function CheckoutPageV2Client() {
       }, token);
 
       if (response.success && response.data) {
+        // Start managing the checkout session for cleanup
+        if (token) {
+          startCheckoutSession(response.data.sessionId, token);
+        }
         // Redirect to checkout with session ID
         router.push(`/checkout-v2?sessionId=${response.data.sessionId}`);
       } else {

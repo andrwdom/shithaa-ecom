@@ -83,7 +83,7 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
       ? product.sizes.map(s => s.size)
       : [];
   const selectedSizeObj = product?.sizes?.find(s => s.size === selectedSize);
-  const selectedSizeStock = selectedSizeObj ? (selectedSizeObj.availableStock || selectedSizeObj.stock || 0) : 0;
+  const selectedSizeStock = selectedSizeObj ? Math.max(0, (selectedSizeObj.stock || 0) - (selectedSizeObj.reserved || 0)) : 0;
 
   // Auto-adjust quantity if it exceeds stock when size changes
   useEffect(() => {

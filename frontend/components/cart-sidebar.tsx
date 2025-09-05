@@ -93,12 +93,14 @@ export default function CartSidebar() {
                 if (data.product && Array.isArray(data.product.sizes)) {
                   stocks[item._id] = {};
                   for (const s of data.product.sizes) {
-                    stocks[item._id][s.size] = s.stock;
+                    // Calculate available stock (stock - reserved)
+                    stocks[item._id][s.size] = Math.max(0, (s.stock || 0) - (s.reserved || 0));
                   }
                 } else if (data.data && Array.isArray(data.data.sizes)) {
                   stocks[item._id] = {};
                   for (const s of data.data.sizes) {
-                    stocks[item._id][s.size] = s.stock;
+                    // Calculate available stock (stock - reserved)
+                    stocks[item._id][s.size] = Math.max(0, (s.stock || 0) - (s.reserved || 0));
                   }
                 }
               }

@@ -2,18 +2,25 @@
 
 import { Button } from "@/components/ui/button"
 import { Minus, Plus } from "lucide-react"
+import { getSizeStockInfo, formatStockInfo, getStockStatus } from "@/lib/stock-utils"
 
 interface QuantitySelectorProps {
   quantity: number
   onQuantityChange: (quantity: number) => void
   max?: number
-  stock?: number // Add stock parameter for validation
+  stock?: number // Raw stock (deprecated, use product and size instead)
+  product?: any // Product object with sizes array
+  size?: string // Size to check
   disabled?: boolean
 }
 
-export default function QuantitySelector({ quantity, onQuantityChange, max = 10, stock, disabled = false }: QuantitySelectorProps) {
-  // Use stock as the maximum if available, otherwise fall back to max prop
-  const actualMax = stock !== undefined ? stock : max;
+export default function QuantitySelector({ quantity, onQuantityChange, max = 10, stock, product, size, disabled = false }: QuantitySelectorProps) {
+  // Get available stock (accounting for reserved stock)
+  const stockInfo = product && size ? getSizeStockInfo(product, size) : { available: stock || 0 };
+  const availableStock = stockInfo.available;
+  
+  // Use available stock as the maximum if available, otherwise fall back to max prop
+  const actualMax = availableStock > 0 ? availableStock : max;
   
   const decreaseQuantity = () => {
     if (quantity > 1 && !disabled) {
@@ -29,7 +36,8 @@ export default function QuantitySelector({ quantity, onQuantityChange, max = 10,
 
   const isAtMax = quantity >= actualMax;
   const isAtMin = quantity <= 1;
-  const isOutOfStock = stock !== undefined && stock <= 0;
+  const isOutOfStock = availableStock <= 0;
+  const stockStatus = getStockStatus(stockInfo);
 
   return (
     <div className="space-y-3">
@@ -61,20 +69,20 @@ export default function QuantitySelector({ quantity, onQuantityChange, max = 10,
       </div>
 
       {/* Stock status and warnings */}
-      {stock !== undefined && (
+      {(availableStock > 0 || isOutOfStock) && (
         <div className="text-sm">
-          {stock === 0 ? (
-            <p className="text-red-500 font-medium">Out of Stock</p>
-          ) : stock <= 5 ? (
-            <p className="text-orange-500 font-medium">Only {stock} left!</p>
-          ) : (
-            <p className="text-green-600 font-medium">In Stock</p>
-          )}
+          <p className={`font-medium ${
+            stockStatus === 'out-of-stock' ? 'text-red-500' :
+            stockStatus === 'low-stock' ? 'text-orange-500' :
+            'text-green-600'
+          }`}>
+            {formatStockInfo(stockInfo)}
+          </p>
         </div>
       )}
 
-      {isAtMax && stock !== undefined && stock > 0 && (
-        <p className="text-xs text-amber-600">Maximum quantity reached ({stock})</p>
+      {isAtMax && availableStock > 0 && (
+        <p className="text-xs text-amber-600">Maximum quantity reached ({availableStock})</p>
       )}
       
       {isOutOfStock && (

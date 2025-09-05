@@ -1,0 +1,57 @@
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "Shithaa",
+  "alternateName": "Shithaa Maternity Wear",
+  "url": "https://shithaa.in",
+  "logo": "https://shithaa.in/shithaa-logo.jpg",
+  "description": "Elegant maternity wear, mom wear, and feeding essentials. Premium quality, comfortable designs for expecting mothers.",
+  "foundingDate": "2024",
+  "founder": {
+    "@type": "Person",
+    "name": "Shithaa Founder"
+  },
+  "address": {
+    "@type": "PostalAddress",
+    "addressCountry": "IN"
+  },
+  "contactPoint": {
+    "@type": "ContactPoint",
+    "contactType": "customer service",
+    "url": "https://shithaa.in/contact"
+  },
+  "sameAs": [
+    "https://instagram.com/shithaa",
+    "https://facebook.com/shithaa"
+  ],
+  "hasOfferCatalog": {
+    "@type": "OfferCatalog",
+    "name": "Maternity Wear Collection",
+    "itemListElement": [
+      {
+        "@type": "Offer",
+        "itemOffered": {
+          "@type": "Product",
+          "name": "Maternity Feeding Wear",
+          "description": "Elegant maternity feeding dresses and tops"
+        }
+      },
+      {
+        "@type": "Offer",
+        "itemOffered": {
+          "@type": "Product",
+          "name": "Zipless Feeding Lounge Wear",
+          "description": "Comfortable zipless feeding lounge wear for new mothers"
+        }
+      },
+      {
+        "@type": "Offer",
+        "itemOffered": {
+          "@type": "Product",
+          "name": "Non-Feeding Lounge Wear",
+          "description": "Stylish non-feeding lounge wear for expecting mothers"
+        }
+      }
+    ]
+  }
+}

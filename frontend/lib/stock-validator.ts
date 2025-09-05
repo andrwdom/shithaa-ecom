@@ -38,7 +38,7 @@ export const validateStockAvailability = async (
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch('/api/checkout/validate-stock', {
+    const response = await fetch(`/api/checkout/validate-stock?t=${Date.now()}`, {
       method: 'POST',
       headers,
       body: JSON.stringify({ items })

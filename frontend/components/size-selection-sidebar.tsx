@@ -61,11 +61,11 @@ export default function SizeSelectionSidebar({
 
   if (!isOpen || !product) return null
 
-  // Use product.sizes as array of { size, stock, availableStock } only
+  // Use product.sizes as array of { size, stock, reserved } only
   const sizeObjs = product.sizes;
   const sizeOptions = sizeObjs.map(s => s.size);
   const selectedSizeObj = sizeObjs.find(s => s.size === selectedSize);
-  const selectedSizeStock = selectedSizeObj ? (selectedSizeObj.availableStock || selectedSizeObj.stock || 0) : 0;
+  const selectedSizeStock = selectedSizeObj ? Math.max(0, (selectedSizeObj.stock || 0) - (selectedSizeObj.reserved || 0)) : 0;
   
   // Enhanced stock status logic
   let stockStatus = '';

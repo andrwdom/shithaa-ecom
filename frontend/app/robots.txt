@@ -1,0 +1,26 @@
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://shithaa.in/sitemap.xml
+
+# Crawl-delay
+Crawl-delay: 1
+
+# Disallow admin and private areas
+Disallow: /admin/
+Disallow: /api/
+Disallow: /_next/
+Disallow: /checkout/
+Disallow: /order-success/
+Disallow: /confirmation/
+
+# Allow important pages
+Allow: /collections/
+Allow: /product/
+Allow: /about
+Allow: /contact
+Allow: /shipping-info
+Allow: /sizing-guide
+Allow: /terms
+Allow: /privacy-policy
