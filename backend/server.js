@@ -75,13 +75,20 @@ const allowedOrigins = [
 
 const corsOptions = {
     origin: (origin, callback) => {
-        console.log('Request origin:', origin);
-        // Allow requests with no origin (like mobile apps or curl requests)
+        // Enhanced logging for debugging
+        console.log('CORS Check:', {
+            origin: origin || 'undefined',
+            referer: origin ? 'N/A' : 'No origin header',
+            userAgent: 'N/A', // Will be filled by caller
+            timestamp: new Date().toISOString()
+        });
+        
+        // Allow requests with no origin (like mobile apps, curl requests, or server-to-server)
         // Also allow all origins in development
         if (!origin || allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
             callback(null, true);
         } else {
-            console.log('CORS blocked origin:', origin);
+            console.log('❌ CORS blocked origin:', origin);
             console.log('Allowed origins:', allowedOrigins);
             callback(new Error('Not allowed by CORS'));
         }

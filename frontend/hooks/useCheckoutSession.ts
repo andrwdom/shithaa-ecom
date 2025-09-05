@@ -254,6 +254,42 @@ export const useCheckoutSession = () => {
     }
   }, []);
 
+  const cancelCheckoutSession = useCallback(async (
+    sessionId: string,
+    token: string
+  ): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const response = await fetch(`/api/checkout/session/${sessionId}/cancel`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'x-request-id': `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+        }
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to cancel checkout session');
+      }
+
+      // Clear current session
+      setCurrentSession(null);
+      
+      return true;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+      setError(errorMessage);
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   const clearSession = useCallback(() => {
     setCurrentSession(null);
     setError(null);
@@ -267,6 +303,7 @@ export const useCheckoutSession = () => {
     getCheckoutSession,
     reserveStock,
     getPaymentStatus,
+    cancelCheckoutSession,
     clearSession
   };
 };

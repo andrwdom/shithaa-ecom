@@ -292,11 +292,26 @@ export const createCheckoutSession = async (req, res) => {
         status: 'active'
       });
       
-      // Reserve stock for all items (increment reserved field)
-      const reservationPromises = validatedItems.map(item =>
-        reserveStock(item.productId, item.size, item.quantity)
-      );
-      await Promise.all(reservationPromises);
+      // 🔑 CRITICAL FIX: Use atomic batch reservation to prevent race conditions
+      const { atomicBatchReservation } = await import('../utils/stock.js');
+      
+      const reservationItems = validatedItems.map(item => ({
+        productId: item.productId,
+        size: item.size,
+        quantity: item.quantity
+      }));
+      
+      const batchResult = await atomicBatchReservation(reservationItems);
+      
+      if (!batchResult.success) {
+        throw new Error(`Failed to reserve stock for checkout session: ${batchResult.error || 'Unknown error'}`);
+      }
+      
+      console.log(`[${correlationId}] Atomic batch reservation completed:`, {
+        totalItems: batchResult.totalItems,
+        successfulItems: batchResult.successfulItems,
+        failedItems: batchResult.failedItems
+      });
       
       console.log(`[${correlationId}] Stock reserved successfully for session items`);
       

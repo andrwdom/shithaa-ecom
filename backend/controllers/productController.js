@@ -19,6 +19,18 @@ export const getProductById = async (req, res) => {
         if (!product) {
             return res.status(404).json({ error: 'Product not found' });
         }
+        
+        // 🔑 CRITICAL FIX: Calculate available stock (stock - reserved) for each size
+        if (product.sizes && Array.isArray(product.sizes)) {
+            product.sizes = product.sizes.map(sizeObj => ({
+                ...sizeObj,
+                availableStock: Math.max(0, (sizeObj.stock || 0) - (sizeObj.reserved || 0)),
+                // Keep original values for reference
+                originalStock: sizeObj.stock || 0,
+                reserved: sizeObj.reserved || 0
+            }));
+        }
+        
         res.status(200).json({ product });
     } catch (error) {
         console.error('Get Product By ID Error:', error);
@@ -105,8 +117,23 @@ export const getAllProducts = async (req, res) => {
             .limit(limitNum)
             .lean();
             
-        // Always include customId in the response
-        const productsWithCustomId = products.map(p => ({ ...p, customId: p.customId }));
+        // Always include customId and calculate available stock in the response
+        const productsWithCustomId = products.map(p => {
+            const product = { ...p, customId: p.customId };
+            
+            // 🔑 CRITICAL FIX: Calculate available stock (stock - reserved) for each size
+            if (product.sizes && Array.isArray(product.sizes)) {
+                product.sizes = product.sizes.map(sizeObj => ({
+                    ...sizeObj,
+                    availableStock: Math.max(0, (sizeObj.stock || 0) - (sizeObj.reserved || 0)),
+                    // Keep original values for reference
+                    originalStock: sizeObj.stock || 0,
+                    reserved: sizeObj.reserved || 0
+                }));
+            }
+            
+            return product;
+        });
         
         console.log('Products returned:', productsWithCustomId.map(p => ({ name: p.name, category: p.category, categorySlug: p.categorySlug, _id: p._id })));
         
