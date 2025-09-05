@@ -21,24 +21,27 @@ const getOrderUserEmail = (req, email) => {
 
 // Helper function to release stock on payment failure
 const releaseStockOnPaymentFailure = async (paymentSession, correlationId) => {
-  if (!paymentSession.checkoutSessionId) {
+  // PaymentSession stores checkout session ID in sessionId field
+  const checkoutSessionId = paymentSession.sessionId;
+  
+  if (!checkoutSessionId) {
     console.log(`[${correlationId}] No checkout session ID found, skipping stock release`);
     return;
   }
 
   try {
-    console.log(`[${correlationId}] Releasing reserved stock for failed payment session: ${paymentSession.checkoutSessionId}`);
+    console.log(`[${correlationId}] Releasing reserved stock for failed payment session: ${checkoutSessionId}`);
     
     // Find the checkout session
-    const checkoutSession = await CheckoutSession.findOne({ sessionId: paymentSession.checkoutSessionId });
+    const checkoutSession = await CheckoutSession.findOne({ sessionId: checkoutSessionId });
     
     if (!checkoutSession) {
-      console.log(`[${correlationId}] Checkout session not found: ${paymentSession.checkoutSessionId}`);
+      console.log(`[${correlationId}] Checkout session not found: ${checkoutSessionId}`);
       return;
     }
     
     if (!checkoutSession.stockReserved) {
-      console.log(`[${correlationId}] No stock reserved for session: ${paymentSession.checkoutSessionId}`);
+      console.log(`[${correlationId}] No stock reserved for session: ${checkoutSessionId}`);
       return;
     }
     
