@@ -279,97 +279,69 @@ export async function releaseStockReservation(productId, size, quantity, options
 }
 
 /**
- * Atomic batch reservation - reserves multiple items in a single transaction
+ * Atomic batch reservation - reserves multiple items (non-transactional for standalone MongoDB)
  * @param {Array} items - Array of { productId, size, quantity } objects
  * @param {Object} options - Additional options
  * @returns {Promise<Object>} - Results of the batch reservation
  */
 export async function atomicBatchReservation(items, options = {}) {
-    const { session } = options;
-    
     try {
-        console.log(`🔄 Starting atomic batch reservation for ${items.length} items`);
+        console.log(`🔄 Starting batch reservation for ${items.length} items`);
         
-        // Use MongoDB transaction for atomicity
-        const mongoSession = session || await mongoose.startSession();
-        const shouldStartTransaction = !session;
+        const results = [];
+        const failedItems = [];
         
-        if (shouldStartTransaction) {
-            mongoSession.startTransaction();
+        // Process each item with atomic individual operations
+        for (const item of items) {
+            try {
+                const result = await reserveStock(item.productId, item.size, item.quantity);
+                results.push({
+                    ...item,
+                    success: true,
+                    ...result
+                });
+                console.log(`✅ Reserved item: ${item.productId} size ${item.size} qty ${item.quantity}`);
+            } catch (error) {
+                console.error(`❌ Failed to reserve item:`, item, error.message);
+                failedItems.push({
+                    ...item,
+                    success: false,
+                    error: error.message
+                });
+            }
         }
         
-        try {
-            const results = [];
-            const failedItems = [];
+        // If any item failed, release all successfully reserved items
+        if (failedItems.length > 0) {
+            console.error(`❌ Batch reservation failed: ${failedItems.length} items failed`);
             
-            // Process each item atomically
-            for (const item of items) {
-                try {
-                    const result = await reserveStock(item.productId, item.size, item.quantity, { session: mongoSession });
-                    results.push({
-                        ...item,
-                        success: true,
-                        ...result
-                    });
-                } catch (error) {
-                    console.error(`❌ Failed to reserve item:`, item, error.message);
-                    failedItems.push({
-                        ...item,
-                        success: false,
-                        error: error.message
-                    });
-                }
-            }
-            
-            // If any item failed, rollback the entire transaction
-            if (failedItems.length > 0) {
-                console.error(`❌ Batch reservation failed: ${failedItems.length} items failed`);
-                
-                // Release any successfully reserved items
-                for (const result of results) {
-                    if (result.success) {
-                        try {
-                            await releaseStockReservation(result.productId, result.size, result.quantity, { session: mongoSession });
-                        } catch (releaseError) {
-                            console.error(`❌ Failed to release reserved item during rollback:`, releaseError);
-                        }
+            // Release any successfully reserved items
+            for (const result of results) {
+                if (result.success) {
+                    try {
+                        await releaseStockReservation(result.productId, result.size, result.quantity);
+                        console.log(`🔄 Released item during rollback: ${result.productId} size ${result.size}`);
+                    } catch (releaseError) {
+                        console.error(`❌ Failed to release reserved item during rollback:`, releaseError);
                     }
                 }
-                
-                if (shouldStartTransaction) {
-                    await mongoSession.abortTransaction();
-                }
-                
-                throw new Error(`Batch reservation failed: ${failedItems.length} items could not be reserved. First error: ${failedItems[0].error}`);
             }
             
-            if (shouldStartTransaction) {
-                await mongoSession.commitTransaction();
-            }
-            
-            console.log(`✅ Atomic batch reservation completed successfully for ${results.length} items`);
-            
-            return {
-                success: true,
-                results,
-                totalItems: items.length,
-                successfulItems: results.length,
-                failedItems: 0
-            };
-            
-        } catch (error) {
-            if (shouldStartTransaction) {
-                await mongoSession.abortTransaction();
-            }
-            throw error;
-        } finally {
-            if (shouldStartTransaction) {
-                mongoSession.endSession();
-            }
+            throw new Error(`Batch reservation failed: ${failedItems.length} items could not be reserved. First error: ${failedItems[0].error}`);
         }
         
+        console.log(`✅ Batch reservation completed successfully for ${results.length} items`);
+        
+        return {
+            success: true,
+            results,
+            totalItems: items.length,
+            successfulItems: results.length,
+            failedItems: 0
+        };
+        
     } catch (error) {
-        console.error('❌ Atomic batch reservation failed:', error);
+        console.error('❌ Batch reservation failed:', error);
         throw error;
     }
 }
