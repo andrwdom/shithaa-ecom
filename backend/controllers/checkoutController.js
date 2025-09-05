@@ -266,7 +266,12 @@ export const createCheckoutSession = async (req, res) => {
     // Save session first to get the ID
     await checkoutSession.save();
     
-    // 🔑 NEW: Create stock reservation (increment reserved field, don't decrement stock)
+    // 🔑 FIXED: Don't reserve stock here - only reserve when payment starts
+    // Stock will be reserved in the reserveStockForSession endpoint when user actually starts payment
+    console.log(`[${correlationId}] Checkout session created without stock reservation: ${sessionId}`);
+    
+    // Skip stock reservation for now - it will be done when payment starts
+    /*
     try {
       console.log(`[${correlationId}] Creating stock reservation for session: ${sessionId}`);
       
@@ -362,8 +367,9 @@ export const createCheckoutSession = async (req, res) => {
         err.message
       );
     }
+    */
     
-    console.log(`[${correlationId}] Checkout session created and stock reserved: ${sessionId}`);
+    console.log(`[${correlationId}] Checkout session created successfully: ${sessionId}`);
     
     // Return session data (without sensitive info)
     return successResponse(res, {
