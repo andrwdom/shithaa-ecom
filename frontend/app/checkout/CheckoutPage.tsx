@@ -529,6 +529,12 @@ export default function CheckoutPage() {
 
       // 🚀 NEW: Validate stock availability before creating session
       console.log('[CheckoutPage] 🔍 Validating stock availability...');
+      
+      // Safety check for displayItems
+      if (!displayItems || !Array.isArray(displayItems) || displayItems.length === 0) {
+        throw new Error('No items found for checkout. Please refresh the page.');
+      }
+      
       const stockValidationItems = displayItems.map(item => ({
         productId: item._id || item.id,
         size: item.size,
@@ -539,9 +545,11 @@ export default function CheckoutPage() {
       const stockValidation = await validateStockAvailability(stockValidationItems, user?.token);
       
       if (!stockValidation.isValid) {
-        const unavailableItems = stockValidation.unavailableItems.map(item => 
-          `${item.name} (${item.size}) - Only ${item.availableQuantity} available, ${item.requestedQuantity} requested`
-        ).join(', ');
+        const unavailableItems = stockValidation.unavailableItems && Array.isArray(stockValidation.unavailableItems) 
+          ? stockValidation.unavailableItems.map(item => 
+              `${item.name} (${item.size}) - Only ${item.availableQuantity} available, ${item.requestedQuantity} requested`
+            ).join(', ')
+          : 'Some items are not available';
         
         throw new Error(`❌ Stock unavailable: ${unavailableItems}. Please refresh and try again.`);
       }
@@ -789,7 +797,7 @@ export default function CheckoutPage() {
                 return null;
               })()}
               
-              <ProductPreviewSection items={displayItems} />
+              <ProductPreviewSection items={displayItems || []} />
               <ShippingForm value={shipping} onChange={setShipping} errors={errors.shipping} />
               {/* CouponInput: show only on mobile/tablet */}
               <div className="block md:hidden">
@@ -828,14 +836,14 @@ export default function CheckoutPage() {
               {/* 🔑 DEBUG: Log data being passed to OrderSummary to ensure consistency */}
               {(() => {
                 console.log('[CheckoutPage] 🔍 DEBUG: Data being passed to OrderSummary:', {
-                  displayItems: displayItems?.map(item => ({ 
+                  displayItems: displayItems && Array.isArray(displayItems) ? displayItems.map(item => ({ 
                     name: item.name, 
                     price: item.price, 
                     quantity: item.quantity, 
                     subtotal: item.price * item.quantity 
-                  })),
+                  })) : [],
                   displayMode,
-                  displayItemsTotal: displayItems?.reduce((sum, item) => sum + (item.price * item.quantity), 0) || 0,
+                  displayItemsTotal: displayItems && Array.isArray(displayItems) ? displayItems.reduce((sum, item) => sum + (item.price * item.quantity), 0) : 0,
                   displayItemsSource: isBuyNowMode ? 'checkoutItems (buy-now)' : 'cartItems (cart)'
                 });
                 return null;
@@ -845,8 +853,8 @@ export default function CheckoutPage() {
               {(() => {
                 console.log("[CheckoutPage] DEBUG passing to OrderSummary:", {
                   mode: displayMode,
-                  displayItems,
-                  displayItemsTotal: displayItems?.reduce((s, i) => s + i.price * i.quantity, 0),
+                  displayItems: displayItems && Array.isArray(displayItems) ? displayItems : [],
+                  displayItemsTotal: displayItems && Array.isArray(displayItems) ? displayItems.reduce((s, i) => s + i.price * i.quantity, 0) : 0,
                   displayItemsSource: isBuyNowMode ? 'checkoutItems (buy-now)' : 'cartItems (cart)',
                   checkoutItemsCount: checkoutItems?.length || 0,
                   cartItemsCount: cartItems?.length || 0
@@ -855,9 +863,9 @@ export default function CheckoutPage() {
               })()}
               
               <OrderSummary 
-                key={`${displayMode}-${displayItems.length}-${displayItems?.[0]?.id || "none"}`}
+                key={`${displayMode}-${displayItems?.length || 0}-${displayItems?.[0]?.id || "none"}`}
                 summary={orderSummary}
-                cartItems={displayItems} 
+                cartItems={displayItems || []} 
                 coupon={coupon} 
                 offerDetails={checkoutOfferDetails || offerDetails}
                 mode={displayMode}
