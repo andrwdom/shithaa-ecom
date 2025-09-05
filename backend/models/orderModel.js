@@ -126,16 +126,32 @@ const orderSchema = new mongoose.Schema({
 // Add explicit unique index for orderId
 orderSchema.index({ orderId: 1 }, { unique: true });
 
-// 🔧 FIX: Add performance indexes for frequently queried fields
+// 🔧 PRODUCTION OPTIMIZED: Comprehensive indexes for high-traffic e-commerce
+// Basic indexes
 orderSchema.index({ userId: 1 }); // For user-specific order queries
 orderSchema.index({ 'userInfo.userId': 1 }); // For new user structure
 orderSchema.index({ 'userInfo.email': 1 }); // For email-based queries
 orderSchema.index({ orderStatus: 1 }); // For status-based queries
 orderSchema.index({ paymentStatus: 1 }); // For payment status queries
 orderSchema.index({ placedAt: -1 }); // For date-based sorting
-// Note: checkoutSessionId index already exists via unique: true in schema
 orderSchema.index({ phonepeTransactionId: 1 }); // For payment lookups
 orderSchema.index({ createdAt: -1 }); // For creation date queries
+
+// Compound indexes for complex queries (CRITICAL for performance)
+orderSchema.index({ userId: 1, orderStatus: 1 }); // User orders by status
+orderSchema.index({ userId: 1, placedAt: -1 }); // User orders by date
+orderSchema.index({ orderStatus: 1, placedAt: -1 }); // Orders by status and date
+orderSchema.index({ paymentStatus: 1, placedAt: -1 }); // Payment status and date
+orderSchema.index({ 'userInfo.email': 1, placedAt: -1 }); // Email and date
+orderSchema.index({ source: 1, placedAt: -1 }); // Source and date for analytics
+orderSchema.index({ isTestOrder: 1, placedAt: -1 }); // Test orders filtering
+
+// Admin and analytics indexes
+orderSchema.index({ total: 1, placedAt: -1 }); // Revenue analysis
+orderSchema.index({ 'shippingInfo.state': 1, placedAt: -1 }); // Geographic analysis
+orderSchema.index({ stockConfirmed: 1, orderStatus: 1 }); // Stock management
+
+// Note: checkoutSessionId index already exists via unique: true in schema
 
 const orderModel = mongoose.models.order || mongoose.model('order',orderSchema)
 export default orderModel;

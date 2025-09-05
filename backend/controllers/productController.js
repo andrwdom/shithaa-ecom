@@ -96,7 +96,7 @@ export const getAllProducts = async (req, res) => {
             filter.sleeveType = sleeveType;
         }
         
-        console.log('Final filter object:', JSON.stringify(filter, null, 2));
+        // Debug logging removed for production performance
         
         // --- Sorting logic update for displayOrder ---
         const sortField = req.query.sortBy || 'createdAt';
@@ -108,14 +108,15 @@ export const getAllProducts = async (req, res) => {
         const limitNum = parseInt(limit);
         const skip = (pageNum - 1) * limitNum;
         
-        // Get total count for pagination
-        const total = await productModel.countDocuments(filter);
-        
-        const products = await productModel.find(filter)
-            .sort(sort)
-            .skip(skip)
-            .limit(limitNum)
-            .lean();
+        // 🔧 PRODUCTION OPTIMIZATION: Use parallel queries for better performance
+        const [total, products] = await Promise.all([
+            productModel.countDocuments(filter),
+            productModel.find(filter)
+                .sort(sort)
+                .skip(skip)
+                .limit(limitNum)
+                .lean()
+        ]);
             
         // Always include customId and calculate available stock in the response
         const productsWithCustomId = products.map(p => {
@@ -135,7 +136,7 @@ export const getAllProducts = async (req, res) => {
             return product;
         });
         
-        console.log('Products returned:', productsWithCustomId.map(p => ({ name: p.name, category: p.category, categorySlug: p.categorySlug, _id: p._id })));
+        // Debug logging removed for production performance
         
         res.status(200).json({ 
             products: productsWithCustomId,

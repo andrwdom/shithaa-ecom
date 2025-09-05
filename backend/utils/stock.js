@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import productModel from '../models/productModel.js';
 import Reservation from '../models/Reservation.js';
+import { trackStockReservation } from './monitoring.js';
 
 /**
  * Check stock availability considering reservations
@@ -169,6 +170,9 @@ export async function reserveStock(productId, size, quantity, options = {}) {
         }
         
         console.log(`✅ Stock reserved successfully: ${quantity} units for product ${productId} size ${size} (modifiedCount: ${result.modifiedCount})`);
+        
+        // Track successful stock reservation
+        trackStockReservation(true);
         
         return {
             success: true,

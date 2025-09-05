@@ -7,6 +7,7 @@ import Payment from "../models/Payment.js";
 import PaymentEvent from "../models/PaymentEvent.js";
 import { successResponse, errorResponse } from '../utils/response.js';
 import { getUniqueOrderId } from './orderController.js';
+import { trackPayment } from '../utils/monitoring.js';
 import { StandardCheckoutClient, Env, StandardCheckoutPayRequest } from 'pg-sdk-node';
 import { randomUUID } from 'crypto';
 import { generateInvoiceBuffer, sendInvoiceEmail } from '../utils/invoiceGenerator.js';
@@ -447,6 +448,9 @@ export const phonePeCallback = async (req, res) => {
 
     if (isSuccess) {
       console.log('Payment successful, creating order and reducing stock');
+      
+      // Track successful payment
+      trackPayment(true);
 
       // 🔑 CRITICAL FIX: Create order ONLY on successful payment
       let order;
@@ -551,6 +555,9 @@ export const phonePeCallback = async (req, res) => {
       }
     } else {
       console.log('Payment failed, updating payment session status');
+      
+      // Track failed payment
+      trackPayment(false);
       
       // Update payment session status to failed
       paymentSession.status = 'failed';

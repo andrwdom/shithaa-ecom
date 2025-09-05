@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { existsSync } from 'fs';
 import cors from 'cors';
+import { trackRequest, trackMemoryUsage, getHealthStatus } from './utils/monitoring.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -148,10 +149,13 @@ app.use((req, res, next) => {
     next();
 });
 
-// Rate limiting - PRODUCTION OPTIMIZED
-const limiter = rateLimit({
+// Rate limiting - PRODUCTION OPTIMIZED FOR E-COMMERCE
+// Different rate limits for different types of requests
+
+// Very lenient rate limiting for product browsing (most common requests)
+const browseLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 200, // 200 requests per 15 minutes (PRODUCTION OPTIMIZED)
+    max: 2000, // 2000 requests per 15 minutes for browsing
     message: 'Too many requests from this IP, please try again later.',
     standardHeaders: true,
     legacyHeaders: false,
@@ -167,8 +171,46 @@ const limiter = rateLimit({
     }
 });
 
-// Apply rate limiting to all routes
-app.use(limiter);
+// General API rate limiting (moderate for cart operations)
+const generalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 500, // 500 requests per 15 minutes for general API calls
+    message: 'Too many requests from this IP, please try again later.',
+    standardHeaders: true,
+    legacyHeaders: false,
+    skip: (req) => {
+        // Skip rate limiting for local dev and OPTIONS requests
+        return (
+            req.headers.origin === 'http://localhost:5174' ||
+            req.headers.origin === 'http://localhost:5173' ||
+            req.headers.origin === 'http://localhost:3000' ||
+            req.headers.origin === 'http://localhost:3001' ||
+            req.method === 'OPTIONS'
+        );
+    }
+});
+
+// Stricter rate limiting for sensitive operations (auth, payments, etc.)
+const strictLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // 100 requests per 15 minutes for sensitive operations
+    message: 'Too many requests for this operation, please try again later.',
+    standardHeaders: true,
+    legacyHeaders: false,
+    skip: (req) => {
+        // Skip rate limiting for local dev and OPTIONS requests
+        return (
+            req.headers.origin === 'http://localhost:5174' ||
+            req.headers.origin === 'http://localhost:5173' ||
+            req.headers.origin === 'http://localhost:3000' ||
+            req.headers.origin === 'http://localhost:3001' ||
+            req.method === 'OPTIONS'
+        );
+    }
+});
+
+// Apply general rate limiting to all routes
+app.use(generalLimiter);
 
 // SECURITY: Helmet for comprehensive security headers
 app.use(helmet({
@@ -199,26 +241,80 @@ app.use(cookieParser());
 // middlewares
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
-app.use('/uploads', express.static('uploads'))
-app.use('/images', express.static('/var/www/shithaa-ecom/uploads'));
-app.use('/gallery', express.static('/var/www/shithaa-ecom/uploads'));
+
+// PRODUCTION MONITORING: Request tracking middleware
+app.use((req, res, next) => {
+    const startTime = Date.now();
+    
+    // Track memory usage
+    trackMemoryUsage();
+    
+    // Override res.end to track response time
+    const originalEnd = res.end;
+    res.end = function(...args) {
+        const responseTime = Date.now() - startTime;
+        const isError = res.statusCode >= 400;
+        
+        // Track request metrics
+        trackRequest(responseTime, isError);
+        
+        // Call original end
+        originalEnd.apply(this, args);
+    };
+    
+    next();
+});
+
+// Performance optimization middleware
+app.use((req, res, next) => {
+    // Add performance headers for API responses
+    if (req.path.startsWith('/api/')) {
+        res.set({
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+        });
+    }
+    next();
+});
+
+// Static file serving with caching headers for better performance
+app.use('/uploads', express.static('uploads', {
+    maxAge: '1d', // Cache for 1 day
+    etag: true,
+    lastModified: true
+}))
+app.use('/images', express.static('/var/www/shithaa-ecom/uploads', {
+    maxAge: '1d', // Cache for 1 day
+    etag: true,
+    lastModified: true
+}));
+app.use('/gallery', express.static('/var/www/shithaa-ecom/uploads', {
+    maxAge: '1d', // Cache for 1 day
+    etag: true,
+    lastModified: true
+}));
 
 // api endpoints
-app.use('/api/user', userRouter)
-app.use('/api/products', productRouter)
+// Apply strict rate limiting to sensitive routes
+app.use('/api/user', strictLimiter, userRouter)
+app.use('/api/payment', strictLimiter, paymentRouter)
+app.use('/api/checkout', strictLimiter, checkoutRouter)
+app.use('/api/orders', strictLimiter, orderRouter)
+
+// Apply browse rate limiting to product browsing (most common requests)
+app.use('/api/products', browseLimiter, productRouter)
+app.use('/api/categories', browseLimiter, categoryRouter)
+app.use('/api/carousel', browseLimiter, carouselRouter)
+app.use('/api/hero-images', browseLimiter, heroImagesRouter)
+
+// Apply general rate limiting to other routes
 app.use('/api/cart', cartRouter)
-app.use('/api/orders', orderRouter)
-app.use('/api/payment', paymentRouter)
-app.use('/api/checkout', checkoutRouter)
 app.use('/api/coupons', couponRouter)
-app.use('/api/carousel', carouselRouter)
-app.use('/api/coupons', couponRouter)
-app.use('/api/categories', categoryRouter)
 app.use('/api/contact', contactRouter)
 app.use('/api/wishlist', wishlistRouter)
 app.use('/api/shipping', shippingRouter)
 app.use('/api/shipping-rules', shippingRulesRouter)
-app.use('/api/hero-images', heroImagesRouter)
 app.use('/api/reservations', reservationRouter)
 
 // Legacy routes for backward compatibility
@@ -250,10 +346,13 @@ app.get('/api/cors-test', (req, res) => {
   });
 });
 
-// Health check endpoint - PRODUCTION OPTIMIZED
+// Health check endpoint - PRODUCTION OPTIMIZED WITH MONITORING
 app.get('/api/health', (req, res) => {
   // Check MongoDB connection
   const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+  
+  // Get comprehensive health status
+  const healthStatus = getHealthStatus();
   
   // Check memory usage
   const memUsage = process.memoryUsage();
@@ -265,12 +364,15 @@ app.get('/api/health', (req, res) => {
   };
   
   res.json({ 
-    status: 'ok',
+    status: healthStatus.healthy ? 'ok' : 'warning',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     database: dbStatus,
     memory: memUsageMB,
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || 'development',
+    monitoring: healthStatus.metrics,
+    issues: healthStatus.issues,
+    alerts: healthStatus.issues.length > 0 ? healthStatus.issues : null
   });
 });
 

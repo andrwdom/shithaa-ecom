@@ -67,7 +67,8 @@ productSchema.pre('save', function(next) {
 // Add explicit unique index for customId
 productSchema.index({ customId: 1 }, { unique: true });
 
-// 🔧 FIX: Add performance indexes for frequently queried fields
+// 🔧 PRODUCTION OPTIMIZED: Comprehensive indexes for high-traffic e-commerce
+// Category and filtering indexes
 productSchema.index({ categorySlug: 1 }); // For category-based queries
 productSchema.index({ category: 1 }); // For category name queries
 productSchema.index({ price: 1 }); // For price range queries
@@ -76,7 +77,23 @@ productSchema.index({ isNewArrival: 1 }); // For new arrival filters
 productSchema.index({ isBestSeller: 1 }); // For best seller filters
 productSchema.index({ inStock: 1 }); // For stock availability queries
 productSchema.index({ 'sizes.stock': 1 }); // For stock queries
+productSchema.index({ 'sizes.size': 1 }); // For size filtering
+productSchema.index({ sleeveType: 1 }); // For sleeve type filtering
+
+// Compound indexes for complex queries (CRITICAL for performance)
+productSchema.index({ categorySlug: 1, inStock: 1 }); // Category + stock
+productSchema.index({ categorySlug: 1, price: 1 }); // Category + price range
+productSchema.index({ categorySlug: 1, isNewArrival: 1 }); // Category + new arrivals
+productSchema.index({ categorySlug: 1, isBestSeller: 1 }); // Category + best sellers
+productSchema.index({ inStock: 1, price: 1 }); // Stock + price range
+productSchema.index({ displayOrder: 1, categorySlug: 1 }); // Display order + category
+
+// Text search index for product search
 productSchema.index({ name: 'text', description: 'text' }); // Text search index
+
+// Performance indexes for admin operations
+productSchema.index({ createdAt: -1, categorySlug: 1 }); // Admin product listing
+productSchema.index({ updatedAt: -1 }); // For recent updates
 
 const productModel = mongoose.models.product || mongoose.model("product", productSchema);
 
