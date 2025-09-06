@@ -514,15 +514,24 @@ html, body {
 /* Mobile-optimized animations */
 @media (max-width: 768px) {
   .image-fade-transition {
-    transition-duration: 1s; /* Smooth transition on mobile */
+    transition-duration: 0.8s !important; /* Smooth transition on mobile */
+    will-change: opacity;
   }
   .image-fade-soft {
-    transition-duration: 1.6s;
+    transition-duration: 1.2s !important;
+    will-change: opacity;
   }
   
   .hero-fade-in,
   .hero-fade-out {
-    animation-duration: 1.2s; /* Slower on mobile */
+    animation-duration: 0.8s !important; /* Optimized for mobile */
+    will-change: opacity, transform;
+  }
+  
+  /* Ensure all hero card transitions work on mobile */
+  .hero-image-transition {
+    transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    will-change: opacity;
   }
 }
 
@@ -574,11 +583,21 @@ html, body {
 
 /* Mobile-specific optimizations to prevent flickering */
 @media (max-width: 768px) {
-  /* Disable animations on mobile for better performance */
-  * {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+  /* Allow specific animations on mobile while maintaining performance */
+  .animate-fade-pulse,
+  .animate-bounce,
+  .animate-pulse,
+  .image-fade-transition,
+  .hero-fade-in,
+  .hero-fade-out,
+  .hero-image-transition,
+  .transition-opacity,
+  .transition-all,
+  .transition-transform,
+  .transition-colors {
+    animation-duration: inherit !important;
+    animation-iteration-count: inherit !important;
+    transition-duration: inherit !important;
   }
   
   /* Optimize cart sidebar for mobile */
@@ -603,5 +622,67 @@ html, body {
   .overflow-y-auto {
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
+  }
+  
+  /* Ensure smooth image transitions on mobile */
+  .image-fade-transition {
+    transition: opacity 0.8s ease-in-out !important;
+    will-change: opacity;
+  }
+  
+  /* Optimize hero card transitions for mobile */
+  .hero-fade-in,
+  .hero-fade-out {
+    animation-duration: 0.8s !important;
+    will-change: opacity, transform;
+  }
+  
+  /* Ensure loading animations work on mobile */
+  .animate-fade-pulse {
+    animation: fade-pulse 2s ease-in-out infinite !important;
+  }
+  
+  .animate-bounce {
+    animation: bounce 1s infinite !important;
+  }
+  
+  /* Force enable transitions for specific elements */
+  .group-hover\:scale-110 {
+    transition: transform 0.7s ease !important;
+  }
+  
+  .group-hover\:translate-x-1 {
+    transition: transform 0.3s ease !important;
+  }
+  
+  .group-hover\:translate-y-2 {
+    transition: transform 0.5s ease !important;
+  }
+  
+  /* Ensure smooth hover effects work on mobile */
+  .hover\:shadow-2xl {
+    transition: box-shadow 0.5s ease !important;
+  }
+  
+  .hover\:border-white\/30 {
+    transition: border-color 0.3s ease !important;
+  }
+  
+  /* Additional mobile performance optimizations */
+  .animate-fade-pulse,
+  .animate-bounce,
+  .animate-pulse {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+  }
+  
+  /* Ensure smooth image transitions */
+  img {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
   }
 }
