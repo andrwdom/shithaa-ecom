@@ -4,7 +4,7 @@ import { Suspense } from 'react'
 import { useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { getCheckoutSessionId, clearCheckoutSessionId } from '@/lib/checkoutSession'
-import { XCircle, RefreshCw, ShoppingBag, AlertTriangle, ArrowLeft } from 'lucide-react'
+import { XCircle, ShoppingBag, AlertTriangle, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 
@@ -86,22 +86,6 @@ function PaymentFailedContent() {
     console.log('Cleared temporary order data due to payment failure')
   }, [])
 
-  const handleTryAgain = () => {
-    // Navigate back to checkout with the same items
-    if (orderItems.length > 0) {
-      // Store the items for checkout to use
-      const checkoutData = {
-        items: orderItems,
-        amount: orderAmount,
-        email: orderEmail,
-        timestamp: Date.now()
-      }
-      localStorage.setItem('retryOrderData', JSON.stringify(checkoutData))
-      router.push('/checkout')
-    } else {
-      router.push('/')
-    }
-  }
 
   const handleContinueShopping = () => {
     router.push('/')
@@ -110,15 +94,15 @@ function PaymentFailedContent() {
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-2xl mx-auto">
-        {/* Back Button */}
+        {/* Home Button */}
         <div className="mb-6">
-          <button
-            onClick={() => router.back()}
+          <Link
+            href="/"
             className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors"
           >
             <ArrowLeft className="h-5 w-5" />
-            Go Back
-          </button>
+            Home
+          </Link>
         </div>
 
         {/* Failure Header */}
@@ -244,16 +228,8 @@ function PaymentFailedContent() {
         {/* Action Buttons */}
         <div className="space-y-4">
           <button
-            onClick={handleTryAgain}
-            className="w-full bg-[#473C66] hover:bg-[#473C66]/90 text-white py-3 px-6 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2"
-          >
-            <RefreshCw className="w-5 h-5" />
-            Try Payment Again
-          </button>
-          
-          <button
             onClick={handleContinueShopping}
-            className="w-full bg-white border-2 border-[#473C66] text-[#473C66] hover:bg-[#473C66] hover:text-white py-3 px-6 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2"
+            className="w-full bg-[#473C66] hover:bg-[#473C66]/90 text-white py-3 px-6 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2"
           >
             <ShoppingBag className="w-5 h-5" />
             Continue Shopping

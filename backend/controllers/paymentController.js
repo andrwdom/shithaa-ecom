@@ -847,7 +847,7 @@ export const verifyPhonePePayment = async (req, res) => {
         status: paymentStatus?.state || paymentStatus?.status,
         paymentState: paymentStatus?.state || paymentStatus?.status,
         message: paymentStatus?.responseMessage || paymentStatus?.message,
-        amount: paymentStatus?.amount,
+        amount: paymentStatus?.amount ? paymentStatus.amount / 100 : null, // Convert from paise to rupees
         transactionId: paymentStatus?.transactionId || paymentStatus?.orderId,
         // Include the full PhonePe response for debugging
         phonepeResponse: paymentStatus
