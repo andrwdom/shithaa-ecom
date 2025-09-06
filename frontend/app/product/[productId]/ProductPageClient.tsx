@@ -88,7 +88,7 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
     if (selectedSize && selectedSizeStock > 0 && quantity > selectedSizeStock) {
       setQuantity(selectedSizeStock)
     }
-  }, [selectedSize, selectedSizeStock, quantity])
+  }, [selectedSize, selectedSizeStock, quantity]);
 
   const handleBuyNow = async () => {
     if (!selectedSize) {
@@ -144,7 +144,7 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
       console.log('🚀 Navigating to buy-now checkout');
       window.location.href = '/checkout?mode=buynow';
     }, 100);
-  }
+  };
 
   // Safety check - ensure product exists before rendering
   if (loading) {
