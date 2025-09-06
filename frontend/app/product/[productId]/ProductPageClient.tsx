@@ -72,7 +72,7 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
     };
 
     fetchProduct();
-  }, [productId])
+  }, [productId]);
 
   // Per-size stock logic
   const sizeOptions = Array.isArray(product?.availableSizes) && product.availableSizes.length > 0
