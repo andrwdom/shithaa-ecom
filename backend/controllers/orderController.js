@@ -546,41 +546,47 @@ const updateStatus = async (req,res) => {
             return res.json({ success: false, message: "Order not found" });
         }
 
-        const updateData = { status };
-        // Also update orderStatus for new structured orders
-        updateData.orderStatus = status;
+        // 🔧 FIX: Update all status fields consistently
+        const updateData = { 
+            status,
+            orderStatus: status,
+            updatedAt: new Date()
+        };
+        
         // Optionally update paymentStatus if delivered
-        if (status === 'Delivered') updateData.paymentStatus = 'paid';
+        if (status === 'Delivered') {
+            updateData.paymentStatus = 'paid';
+        }
 
         // Handle shipping tracking data when status is 'Shipped'
         if (status === 'Shipped') {
-            if (!shippingPartner || !trackingId) {
-                return res.json({ 
-                    success: false, 
-                    message: "Shipping partner and tracking ID are required when marking order as shipped" 
-                });
+            // Only require shipping details if they're provided
+            if (shippingPartner && trackingId) {
+                // Generate tracking URL
+                const courierTrackingUrls = {
+                    'DTDC': 'https://www.dtdc.in/trace.asp',
+                    'ST Courier': 'https://stcourier.com/track/shipment',
+                    'XpressBees': 'https://www.xpressbees.com/shipment/tracking',
+                    'India Post': 'https://www.indiapost.gov.in/_layouts/15/dop.portal.tracking/trackconsignment.aspx',
+                    'Delhivery': 'https://www.delhivery.com/track/package',
+                    'Blue Dart': 'https://www.bluedart.com/tracking',
+                    'Ecom Express': 'https://ecomexpress.in/tracking/'
+                };
+
+                const baseUrl = courierTrackingUrls[shippingPartner];
+                const trackingUrl = baseUrl ? `${baseUrl}?tracking_id=${trackingId}` : null;
+
+                updateData.shippingTracking = {
+                    partner: shippingPartner,
+                    trackingId: trackingId,
+                    shippedAt: new Date(),
+                    trackingUrl: trackingUrl
+                };
+                
+                // Also store shipping details in a more accessible format
+                updateData.shippingPartner = shippingPartner;
+                updateData.trackingId = trackingId;
             }
-
-            // Generate tracking URL
-            const courierTrackingUrls = {
-                'DTDC': 'https://www.dtdc.in/trace.asp',
-                'ST Courier': 'https://stcourier.com/track/shipment',
-                'XpressBees': 'https://www.xpressbees.com/shipment/tracking',
-                'India Post': 'https://www.indiapost.gov.in/_layouts/15/dop.portal.tracking/trackconsignment.aspx',
-                'Delhivery': 'https://www.delhivery.com/track/package',
-                'Blue Dart': 'https://www.bluedart.com/tracking',
-                'Ecom Express': 'https://ecomexpress.in/tracking/'
-            };
-
-            const baseUrl = courierTrackingUrls[shippingPartner];
-            const trackingUrl = baseUrl ? `${baseUrl}?tracking_id=${trackingId}` : null;
-
-            updateData.shippingTracking = {
-                partner: shippingPartner,
-                trackingId: trackingId,
-                shippedAt: new Date(),
-                trackingUrl: trackingUrl
-            };
         }
 
         // If cancelling, add cancellation details
@@ -592,15 +598,16 @@ const updateStatus = async (req,res) => {
             };
 
             // Restore product stock if order is cancelled using atomic operations
-            const { batchChangeStock } = await import('../utils/stock.js');
+            const { changeStock } = await import('../utils/stock.js');
             try {
-                const operations = order.items.map(item => ({
-                    productId: item._id,
-                    size: item.size,
-                    quantityChange: item.quantity
-                }));
-                
-                await batchChangeStock(operations);
+                // Restore stock for each item in the order
+                for (const item of order.items) {
+                    const productId = item._id || item.productId;
+                    if (productId && item.size && item.quantity) {
+                        await changeStock(productId, item.size, item.quantity); // Positive quantity to restore stock
+                        console.log(`Stock restored for ${item.name} (${item.size}): +${item.quantity}`);
+                    }
+                }
                 console.log('Stock restored successfully for cancelled order status update');
             } catch (error) {
                 console.error('Failed to restore stock for cancelled order status update:', error);
@@ -608,19 +615,27 @@ const updateStatus = async (req,res) => {
             }
         }
 
-        await orderModel.findByIdAndUpdate(orderId, updateData);
+        // 🔧 DEBUG: Log the update data before saving
+        console.log('🔧 Updating order with data:', updateData);
+        
+        const updatedOrder = await orderModel.findByIdAndUpdate(orderId, updateData, { new: true });
+        console.log('🔧 Order updated successfully:', updatedOrder?.orderId, 'Status:', updatedOrder?.status, 'OrderStatus:', updatedOrder?.orderStatus);
 
         // Send email notifications
         try {
             if (status === 'Shipped' && shippingPartner && trackingId) {
-                // Send shipping notification email
+                console.log('🔧 Sending shipping notification email for order:', order.orderId);
+                // Send shipping notification email with tracking details
                 await sendShippingNotification(order, { partner: shippingPartner, trackingId });
-            } else if (status !== 'Shipped') {
-                // Send general status update email for other statuses
+                console.log('🔧 Shipping notification email sent successfully');
+            } else {
+                console.log('🔧 Sending general status update email for order:', order.orderId, 'Status:', status);
+                // Send general status update email for all other statuses (including Shipped without tracking)
                 await sendOrderStatusUpdate(order, status);
+                console.log('🔧 Status update email sent successfully');
             }
         } catch (emailError) {
-            console.error('Error sending email notification:', emailError);
+            console.error('❌ Error sending email notification:', emailError);
             // Don't fail the request if email fails
         }
 

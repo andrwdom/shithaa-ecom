@@ -115,8 +115,15 @@ const orderSchema = new mongoose.Schema({
         carrier: String,
         status: String,
         estimatedDelivery: Date,
-        actualDelivery: Date
+        actualDelivery: Date,
+        partner: String,
+        trackingId: String,
+        shippedAt: Date,
+        trackingUrl: String
     },
+    // Direct shipping fields for easier access
+    shippingPartner: { type: String },
+    trackingId: { type: String },
     // Legacy fields for backward compatibility
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'user' },
     amount: { type: Number },

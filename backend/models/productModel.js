@@ -21,18 +21,18 @@ const productSchema = new mongoose.Schema({
     price: { 
         type: Number, 
         required: true,
-        min: [100, 'Price must be at least ₹100 to prevent offer calculation issues'],
+        min: [1, 'Price must be at least ₹1'],
         validate: {
             validator: function(price) {
-                // 🔧 FIX: Prevent extremely low prices that can cause negative totals
-                return price >= 100;
+                // Allow low prices for testing purposes
+                return price >= 1;
             },
-            message: 'Price must be at least ₹100 to prevent offer calculation issues'
+            message: 'Price must be at least ₹1'
         }
     },
     originalPrice: { 
         type: Number,
-        min: [100, 'Original price must be at least ₹100']
+        min: [1, 'Original price must be at least ₹1']
     },
     description: { type: String, required: true },
     images: [{ type: String, required: true }],

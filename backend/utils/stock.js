@@ -147,9 +147,14 @@ export async function reserveStock(productId, size, quantity, options = {}) {
                 }
             },
             {
-                $inc: { 'sizes.$.reserved': quantity }
+                $inc: { 'sizes.$[elem].reserved': quantity }
             },
-            { session }
+            { 
+                session,
+                arrayFilters: [
+                    { 'elem.size': size }
+                ]
+            }
         );
         
         if (result.modifiedCount === 0) {
@@ -226,6 +231,7 @@ export async function confirmStockReservation(productId, size, quantity, options
         });
         
         // 🔑 CRITICAL: Use atomic update with both stock and reserved validation
+        // Fix: Use arrayFilters to ensure we're updating the correct size element
         const result = await productModel.updateOne(
             {
                 _id: productId,
@@ -235,11 +241,16 @@ export async function confirmStockReservation(productId, size, quantity, options
             },
             {
                 $inc: { 
-                    'sizes.$.stock': -quantity,
-                    'sizes.$.reserved': -quantity
+                    'sizes.$[elem].stock': -quantity,
+                    'sizes.$[elem].reserved': -quantity
                 }
             },
-            { session }
+            { 
+                session,
+                arrayFilters: [
+                    { 'elem.size': size, 'elem.stock': { $gte: quantity }, 'elem.reserved': { $gte: quantity } }
+                ]
+            }
         );
         
         // 🔑 CRITICAL: Return boolean success indicator for idempotency
@@ -283,9 +294,14 @@ export async function releaseStockReservation(productId, size, quantity, options
                 'sizes.reserved': { $gte: quantity }
             },
             {
-                $inc: { 'sizes.$.reserved': -quantity }
+                $inc: { 'sizes.$[elem].reserved': -quantity }
             },
-            { session }
+            { 
+                session,
+                arrayFilters: [
+                    { 'elem.size': size, 'elem.reserved': { $gte: quantity } }
+                ]
+            }
         );
         
         // 🔑 CRITICAL: Return boolean success indicator for idempotency
