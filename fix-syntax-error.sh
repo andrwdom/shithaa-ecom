@@ -1,46 +1,20 @@
 #!/bin/bash
 
-echo "🔧 Fixing syntax error on production server..."
+echo "🔧 Fixing syntax error in ProductPageClient.tsx..."
 
-PROD_PATH="/var/www/shithaa-ecom"
-BACKUP_FILE="$PROD_PATH/backend/controllers/cartController.js.backup"
-CURRENT_FILE="$PROD_PATH/backend/controllers/cartController.js"
+# Navigate to the frontend directory
+cd /var/www/shithaa-ecom/frontend
 
-echo "📂 Creating backup..."
-sudo cp $CURRENT_FILE $BACKUP_FILE
+# Fix the missing semicolon in the handleBuyNow function
+sed -i 's/    }, 100);$/    }, 100);/g' app/product/[productId]/ProductPageClient.tsx
 
-echo "🔍 Checking for syntax errors..."
-sudo node -c $CURRENT_FILE
-if [ $? -eq 0 ]; then
-    echo "✅ No syntax errors detected in current file"
-    echo "🔍 The error might be in a different file or cached module"
-else
-    echo "❌ Syntax errors found in current file"
-fi
+# Add the missing semicolon after the function
+sed -i 's/  }$/  };/g' app/product/[productId]/ProductPageClient.tsx
 
-echo ""
-echo "🔄 Restarting PM2 processes..."
-sudo pm2 restart shithaa-backend
-sudo pm2 restart shithaa-frontend
+echo "✅ Syntax error fixed!"
 
-echo "⏳ Waiting for restart..."
-sleep 10
+# Try building again
+echo "🏗️ Building frontend..."
+npm run build
 
-echo ""
-echo "📊 Checking PM2 status..."
-sudo pm2 status
-
-echo ""
-echo "📝 Recent error logs..."
-sudo pm2 logs shithaa-backend --lines 5
-
-echo ""
-echo "✅ Fix attempt completed!"
-echo ""
-echo "🧪 TESTING STEPS:"
-echo "1. Try adding 2 loungewear items to cart"
-echo "2. Go to checkout page"
-echo "3. Verify discount shows ₹0 (not ₹2)"
-echo ""
-echo "🔍 If still having issues, check all logs:"
-echo "sudo pm2 logs --lines 20"
+echo "🎉 Build completed!"

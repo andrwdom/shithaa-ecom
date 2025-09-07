@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Footer from "@/components/footer"
 import CartSidebar from "@/components/cart-sidebar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"

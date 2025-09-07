@@ -12,6 +12,8 @@ import { useCart } from "@/components/cart-context";
 import { useBuyNow } from "@/components/buy-now-context";
 import { useCheckoutFlow } from "@/components/checkout-flow-manager";
 import WishlistButton from "@/components/WishlistButton"
+import Navbar from "@/components/navbar"
+import Footer from "@/components/footer"
 import { toast } from "sonner"
 
 interface Product {
@@ -72,7 +74,7 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
     };
 
     fetchProduct();
-  }, [productId]);
+  }, [productId])
 
   // Per-size stock logic
   const sizeOptions = Array.isArray(product?.availableSizes) && product.availableSizes.length > 0
@@ -88,7 +90,7 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
     if (selectedSize && selectedSizeStock > 0 && quantity > selectedSizeStock) {
       setQuantity(selectedSizeStock)
     }
-  }, [selectedSize, selectedSizeStock, quantity]);
+  }, [selectedSize, selectedSizeStock, quantity])
 
   const handleBuyNow = async () => {
     if (!selectedSize) {
@@ -144,7 +146,7 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
       console.log('🚀 Navigating to buy-now checkout');
       window.location.href = '/checkout?mode=buynow';
     }, 100);
-  };
+  }
 
   // Safety check - ensure product exists before rendering
   if (loading) {
@@ -195,9 +197,11 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
   else stockStatus = 'Out of Stock';
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <>
+      <Navbar />
+      <div className="min-h-screen bg-gray-50">
         {/* Header */}
-        <div className="sticky top-16 lg:top-18 z-40 bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-sm">
+        <div className="sticky top-20 z-40 bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-sm">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col h-auto py-3">
               {/* Breadcrumb */}
@@ -607,6 +611,7 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
           </div>
         </div>
       </div>
-    </div>
+      <Footer />
+    </>
   )
 }

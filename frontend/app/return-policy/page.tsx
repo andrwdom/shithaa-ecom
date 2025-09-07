@@ -1,3 +1,5 @@
+import Navbar from '@/components/navbar'
+import Footer from '@/components/footer'
 import { Metadata } from 'next'
 import styles from '../styles/informational-pages.module.css'
 

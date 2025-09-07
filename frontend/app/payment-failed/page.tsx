@@ -240,12 +240,8 @@ function PaymentFailedContent() {
         <div className="mt-8 text-center">
           <p className="text-sm text-gray-500 mb-2">Need help? Contact our support team</p>
           <div className="flex justify-center gap-4 text-sm">
-            <a href="mailto:support@shithaa.in" className="text-[#473C66] hover:underline">
-              support@shithaa.in
-            </a>
-            <span className="text-gray-300">|</span>
-            <a href="tel:+919876543210" className="text-[#473C66] hover:underline">
-              +91 98765 43210
+            <a href="mailto:info.shithaa@gmail.com" className="text-[#473C66] hover:underline">
+              info.shithaa@gmail.com
             </a>
           </div>
         </div>
