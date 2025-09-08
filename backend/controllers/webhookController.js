@@ -91,8 +91,8 @@ export async function phonePeWebhookHandler(req, res) {
             }
             
             orderPayload.paymentStatus = 'paid';
-            orderPayload.orderStatus = 'Confirmed';
-            orderPayload.status = 'Order Placed';
+            orderPayload.orderStatus = 'Pending';
+            orderPayload.status = 'Pending';
             orderPayload.paidAt = new Date();
             orderPayload.phonepeResponse = req.body;
 
@@ -150,8 +150,8 @@ export async function phonePeWebhookHandler(req, res) {
         const updateData = {
           payment: true,
           paymentStatus: 'paid',
-          orderStatus: 'Confirmed',
-          status: 'Order Placed',
+          orderStatus: 'Pending',
+          status: 'Pending',
           paidAt: new Date(),
           phonepeResponse: req.body,
           updatedAt: new Date()

@@ -32,7 +32,7 @@ async function reconcilePendingOrders() {
       }
       if (response && response.state) {
         order.paymentStatus = response.state === 'COMPLETED' ? 'paid' : response.state.toLowerCase();
-        order.orderStatus = response.state === 'COMPLETED' ? 'Confirmed' : response.state.toLowerCase();
+        order.orderStatus = response.state === 'COMPLETED' ? 'Pending' : response.state.toLowerCase();
         order.status = response.state;
         await order.save();
         console.log(`Order ${order._id} updated to state: ${response.state}`);

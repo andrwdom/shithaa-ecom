@@ -761,22 +761,10 @@ const getAllOrders = async (req, res) => {
     }
 };
 
-// Update order status (Admin)
+// Update order status (Admin) - Use the comprehensive updateStatus function
 const updateOrderStatus = async (req, res) => {
-  try {
-    const { orderId, status } = req.body;
-    if (!orderId || !status) {
-      return res.status(400).json({ message: 'Missing orderId or status' });
-    }
-    const order = await orderModel.findByIdAndUpdate(orderId, { status }, { new: true });
-    if (!order) {
-      return res.status(404).json({ message: 'Order not found' });
-    }
-    res.status(200).json({ success: true, order });
-  } catch (err) {
-    console.error('Update Order Status Error:', err);
-    res.status(500).json({ message: 'Server error while updating order status' });
-  }
+  // Delegate to the comprehensive updateStatus function
+  return await updateStatus(req, res);
 };
 
 export const generateInvoice = async (req, res) => {

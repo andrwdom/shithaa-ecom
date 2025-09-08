@@ -529,8 +529,8 @@ export const phonePeCallback = async (req, res) => {
         }
         
         orderPayload.paymentStatus = 'paid';
-        orderPayload.orderStatus = 'Confirmed';
-        orderPayload.status = 'Order Placed';
+        orderPayload.orderStatus = 'Pending';
+        orderPayload.status = 'Pending';
         orderPayload.paidAt = new Date();
         orderPayload.phonepeResponse = req.body;
 
@@ -762,8 +762,8 @@ export const verifyPhonePePayment = async (req, res) => {
           }
           
           orderPayload.paymentStatus = 'paid';
-          orderPayload.orderStatus = 'Confirmed';
-          orderPayload.status = 'Order Placed';
+          orderPayload.orderStatus = 'Pending';
+          orderPayload.status = 'Pending';
           orderPayload.paidAt = new Date();
           orderPayload.phonepeResponse = paymentStatus;
 
@@ -839,7 +839,7 @@ export const verifyPhonePePayment = async (req, res) => {
       success: true,
       data: {
         orderId: order?._id || null,
-        orderStatus: order?.orderStatus || (isSuccess ? 'Confirmed' : 'Failed'),
+        orderStatus: order?.orderStatus || (isSuccess ? 'Pending' : 'Failed'),
         paymentStatus: order?.paymentStatus || (isSuccess ? 'paid' : 'failed'),
         // Return PhonePe data in the format frontend expects
         state: paymentStatus?.state || paymentStatus?.status,
@@ -879,8 +879,8 @@ export const dummyPaymentSuccess = async (req, res) => {
     // Mark as paid
     order.payment = true;
     order.paymentStatus = 'paid';
-    order.orderStatus = 'Confirmed';
-    order.status = 'Order Placed';
+    order.orderStatus = 'Pending';
+    order.status = 'Pending';
     await order.save();
     // Generate and send invoice
     try {
