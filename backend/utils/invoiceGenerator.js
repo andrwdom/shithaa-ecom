@@ -69,8 +69,8 @@ export async function generateInvoiceBuffer(order) {
       doc.font('Helvetica-Bold').fontSize(13).fillColor('#473C66').text('Product Summary');
       doc.moveDown(0.3);
       const tableTop = doc.y;
-      // 🔧 FIX: Increased product name column width to prevent text truncation
-      const colX = [40, 300, 350, 420, 490];
+      // 🔧 FIX: Significantly increased product name column width to prevent text truncation
+      const colX = [40, 380, 430, 500, 570];
       doc.font('Helvetica-Bold').fontSize(11).fillColor('#333');
       doc.text('Product', colX[0], tableTop, { width: colX[1] - colX[0] - 5 });
       doc.text('Qty', colX[1], tableTop, { width: colX[2] - colX[1] - 5, align: 'center' });
@@ -84,12 +84,37 @@ export async function generateInvoiceBuffer(order) {
       const items = order.cartItems?.length ? order.cartItems : order.items;
       items.forEach(item => {
         const y = doc.y;
-        doc.text(item.name, colX[0], y, { width: colX[1] - colX[0] - 5 });
-        doc.text(String(item.quantity), colX[1], y, { width: colX[2] - colX[1] - 5, align: 'center' });
-        doc.text(item.size || '-', colX[2], y, { width: colX[3] - colX[2] - 5, align: 'center' });
-        doc.text(`INR ${item.price}`, colX[3], y, { width: colX[4] - colX[3] - 5, align: 'right' });
-        doc.text(`INR ${item.price * item.quantity}`, colX[4], y, { align: 'right' });
-        doc.moveDown(0.2);
+        // 🔧 FIX: Add text wrapping for very long product names
+        const productNameWidth = colX[1] - colX[0] - 10; // Extra padding
+        const productNameHeight = doc.heightOfString(item.name, { width: productNameWidth });
+        
+        doc.text(item.name, colX[0], y, { 
+          width: productNameWidth,
+          align: 'left',
+          lineGap: 2
+        });
+        
+        // Position other columns based on the product name height
+        const centerY = y + (productNameHeight / 2);
+        
+        doc.text(String(item.quantity), colX[1], centerY, { 
+          width: colX[2] - colX[1] - 5, 
+          align: 'center' 
+        });
+        doc.text(item.size || '-', colX[2], centerY, { 
+          width: colX[3] - colX[2] - 5, 
+          align: 'center' 
+        });
+        doc.text(`INR ${item.price}`, colX[3], centerY, { 
+          width: colX[4] - colX[3] - 5, 
+          align: 'right' 
+        });
+        doc.text(`INR ${item.price * item.quantity}`, colX[4], centerY, { 
+          align: 'right' 
+        });
+        
+        // Move down based on the actual height of the product name
+        doc.moveDown(Math.max(0.2, productNameHeight / 20));
       });
       doc.moveDown(1);
       doc.moveTo(40, doc.y).lineTo(555, doc.y).strokeColor('#E1D5F6').lineWidth(1.2).stroke();
