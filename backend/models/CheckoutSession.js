@@ -53,6 +53,20 @@ const checkoutSessionSchema = new mongoose.Schema({
     value: { type: Number },
     appliedCouponCode: { type: String }
   },
+  // Offer information for invoice generation
+  offerDetails: {
+    offerApplied: { type: Boolean, default: false },
+    offerType: { type: String }, // e.g., 'loungewear_buy3_1299'
+    offerDiscount: { type: Number, default: 0 },
+    offerDescription: { type: String }, // e.g., "Buy 3 @ ₹1299"
+    offerCalculation: {
+      completeSets: { type: Number, default: 0 },
+      remainingItems: { type: Number, default: 0 },
+      originalPrice: { type: Number, default: 0 },
+      offerPrice: { type: Number, default: 0 },
+      savings: { type: Number, default: 0 }
+    }
+  },
   shippingCost: { type: Number, default: 0 },
   total: { type: Number, required: true },
   currency: { type: String, default: 'INR' },

@@ -328,6 +328,20 @@ export const createPhonePeSession = async (req, res) => {
       amount: checkoutSession.total, // Legacy compatibility
       subtotal: checkoutSession.subtotal,
       shippingCost: checkoutSession.shippingCost || 0,
+      // 🔧 FIX: Pass offer details from checkout session to order
+      offerDetails: checkoutSession.offerDetails || {
+        offerApplied: false,
+        offerType: null,
+        offerDiscount: 0,
+        offerDescription: null,
+        offerCalculation: {
+          completeSets: 0,
+          remainingItems: 0,
+          originalPrice: 0,
+          offerPrice: 0,
+          savings: 0
+        }
+      },
       status: 'Pending',
       orderStatus: 'Pending',
       paymentStatus: 'Pending',

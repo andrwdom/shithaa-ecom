@@ -251,6 +251,20 @@ export const createCheckoutSession = async (req, res) => {
         value: offerDiscount,
         appliedCouponCode: null
       },
+      // 🔧 FIX: Store offer details for invoice generation
+      offerDetails: {
+        offerApplied: loungewearCategoryOffer.offerApplied,
+        offerType: loungewearCategoryOffer.offerApplied ? 'loungewear_buy3_1299' : null,
+        offerDiscount: loungewearCategoryOffer.discount,
+        offerDescription: loungewearCategoryOffer.offerApplied ? 'Buy 3 @ ₹1299' : null,
+        offerCalculation: loungewearCategoryOffer.offerDetails || {
+          completeSets: 0,
+          remainingItems: 0,
+          originalPrice: 0,
+          offerPrice: 0,
+          savings: 0
+        }
+      },
       total,
       currency: 'INR',
       status: 'pending',

@@ -69,7 +69,8 @@ export async function generateInvoiceBuffer(order) {
       doc.font('Helvetica-Bold').fontSize(13).fillColor('#473C66').text('Product Summary');
       doc.moveDown(0.3);
       const tableTop = doc.y;
-      const colX = [40, 220, 270, 340, 410];
+      // 🔧 FIX: Increased product name column width to prevent text truncation
+      const colX = [40, 300, 350, 420, 490];
       doc.font('Helvetica-Bold').fontSize(11).fillColor('#333');
       doc.text('Product', colX[0], tableTop, { width: colX[1] - colX[0] - 5 });
       doc.text('Qty', colX[1], tableTop, { width: colX[2] - colX[1] - 5, align: 'center' });
@@ -108,6 +109,13 @@ export async function generateInvoiceBuffer(order) {
       doc.moveDown(0.3);
       doc.font('Helvetica').fontSize(11).fillColor('#333');
       doc.text(`Subtotal: `, { continued: true }).font('Helvetica-Bold').text(`INR ${safeSubtotal}`)
+      
+      // 🔧 FIX: Display loungewear offer discount if applied
+      if (order.offerDetails?.offerApplied && order.offerDetails?.offerDiscount > 0) {
+        doc.moveDown(0.2)
+        doc.font('Helvetica').text(`Loungewear Offer (${order.offerDetails.offerDescription}): `, { continued: true }).font('Helvetica-Bold').text(`-INR ${order.offerDetails.offerDiscount}`)
+      }
+      
       if (discountAmt > 0) {
         doc.moveDown(0.2)
         doc.font('Helvetica').text(`Discount: `, { continued: true }).font('Helvetica-Bold').text(`-INR ${discountAmt}${coupon ? ` (Coupon: ${coupon})` : ''}`)

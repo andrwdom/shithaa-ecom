@@ -124,6 +124,20 @@ const orderSchema = new mongoose.Schema({
     // Direct shipping fields for easier access
     shippingPartner: { type: String },
     trackingId: { type: String },
+    // Offer information for invoice generation
+    offerDetails: {
+      offerApplied: { type: Boolean, default: false },
+      offerType: { type: String }, // e.g., 'loungewear_buy3_1299'
+      offerDiscount: { type: Number, default: 0 },
+      offerDescription: { type: String }, // e.g., "Buy 3 @ ₹1299"
+      offerCalculation: {
+        completeSets: { type: Number, default: 0 },
+        remainingItems: { type: Number, default: 0 },
+        originalPrice: { type: Number, default: 0 },
+        offerPrice: { type: Number, default: 0 },
+        savings: { type: Number, default: 0 }
+      }
+    },
     // Legacy fields for backward compatibility
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'user' },
     amount: { type: Number },

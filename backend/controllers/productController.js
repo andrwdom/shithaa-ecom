@@ -652,12 +652,8 @@ export const updateProduct = async (req, res) => {
                     message: "Price must be a positive number"
                 });
             }
-            if (numericPrice < 100) {
-                return res.status(400).json({
-                    success: false,
-                    message: "Price must be at least ₹100 to prevent offer calculation issues"
-                });
-            }
+            // 🔧 REMOVED: Minimum price restriction for testing purposes
+            // Users can now set any price >= 1 for testing
         }
 
         // Handle image uploads if provided
