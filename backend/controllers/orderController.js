@@ -920,6 +920,13 @@ export const generateInvoice = async (req, res) => {
     doc.moveDown(0.3);
     doc.font('Helvetica').fontSize(11).fillColor('#333');
     doc.text(`Subtotal: `, { continued: true }).font('Helvetica-Bold').text(`INR ${safeSubtotal}`);
+    
+    // 🔧 FIX: Display loungewear offer discount if applied
+    if (order.offerDetails?.offerApplied && order.offerDetails?.offerDiscount > 0) {
+      doc.moveDown(0.2);
+      doc.font('Helvetica').text(`Loungewear Offer (${order.offerDetails.offerDescription}): `, { continued: true }).font('Helvetica-Bold').text(`-INR ${order.offerDetails.offerDiscount}`);
+    }
+    
     if (discountAmt > 0) {
       doc.moveDown(0.2);
       doc.font('Helvetica').text(`Discount: `, { continued: true }).font('Helvetica-Bold').text(`-INR ${discountAmt}${coupon ? ` (Coupon: ${coupon})` : ''}`);
