@@ -56,8 +56,11 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
     const fetchProduct = async () => {
       try {
         // 🔧 FIX: Add aggressive cache busting and debugging
-        const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + `/api/products/${productId}?_t=${Date.now()}&_r=${Math.random()}&_fresh=true`;
+        const timestamp = Date.now();
+        const random = Math.random();
+        const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + `/api/products/${productId}?_t=${timestamp}&_r=${random}&_fresh=true&_cache_bust=${refreshKey}`;
         console.log('🔄 Fetching product from:', apiUrl);
+        console.log('🔄 Refresh key:', refreshKey);
         
         const res = await fetch(apiUrl, {
           method: 'GET',
@@ -80,6 +83,8 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
         if (data.product) {
           console.log('📏 Product sizes from API:', data.product.sizes);
           console.log('📏 AvailableSizes from API:', data.product.availableSizes);
+          console.log('📏 Product name:', data.product.name);
+          console.log('📏 Product customId:', data.product.customId);
           
           // 🔧 FIX: Ensure sizes array is properly formatted
           if (data.product.sizes && Array.isArray(data.product.sizes)) {
@@ -87,6 +92,13 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
             data.product.sizes.forEach((size, index) => {
               console.log(`  - Size ${index + 1}:`, size);
             });
+            
+            // 🔧 FIX: Validate each size object
+            const validSizes = data.product.sizes.filter(size => size && size.size);
+            console.log('✅ Valid sizes after filtering:', validSizes.length);
+            if (validSizes.length !== data.product.sizes.length) {
+              console.log('⚠️ Some sizes were invalid and filtered out');
+            }
           } else {
             console.log('❌ Sizes array is invalid:', data.product.sizes);
           }
@@ -109,18 +121,17 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
     fetchProduct();
   }, [productId, refreshKey])
 
-  // Per-size stock logic
-  const sizeOptions = Array.isArray(product?.availableSizes) && product.availableSizes.length > 0
-    ? product.availableSizes
-    : Array.isArray(product?.sizes) && product.sizes.length > 0
-      ? product.sizes.map(s => s.size)
-      : [];
+  // Per-size stock logic - FIXED: Use same logic as SizeSelectionSidebar
+  const sizeOptions = Array.isArray(product?.sizes) && product.sizes.length > 0
+    ? product.sizes.map(s => s.size)
+    : [];
   
   // 🔧 DEBUG: Log size processing
+  console.log('🔍 PRODUCT PAGE DEBUG:');
   console.log('Product data:', product);
-  console.log('AvailableSizes:', product?.availableSizes);
   console.log('Sizes array:', product?.sizes);
   console.log('Size options calculated:', sizeOptions);
+  console.log('Size options length:', sizeOptions.length);
   
   const selectedSizeObj = product?.sizes?.find(s => s.size === selectedSize);
   const selectedSizeStock = selectedSizeObj ? Math.max(0, (selectedSizeObj.stock || 0) - (selectedSizeObj.reserved || 0)) : 0;
