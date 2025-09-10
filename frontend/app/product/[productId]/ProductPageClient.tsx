@@ -54,14 +54,27 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        // 🔧 FIX: Add cache busting parameter to force fresh data
-        const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + `/api/products/${productId}?_t=${Date.now()}`;
-        const res = await fetch(apiUrl);
+        // 🔧 FIX: Add aggressive cache busting and debugging
+        const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + `/api/products/${productId}?_t=${Date.now()}&_r=${Math.random()}`;
+        console.log('Fetching product from:', apiUrl);
+        
+        const res = await fetch(apiUrl, {
+          method: 'GET',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          }
+        });
         const data = await res.json();
         
+        console.log('Product API response:', data);
+        
         if (data.product) {
+          console.log('Product sizes from API:', data.product.sizes);
           setProduct(data.product);
         } else if (data.success && data.data) {
+          console.log('Product sizes from API (data):', data.data.sizes);
           setProduct(data.data);
         } else {
           setError(data.message || data.error || 'Failed to fetch product');
@@ -83,6 +96,13 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
     : Array.isArray(product?.sizes) && product.sizes.length > 0
       ? product.sizes.map(s => s.size)
       : [];
+  
+  // 🔧 DEBUG: Log size processing
+  console.log('Product data:', product);
+  console.log('AvailableSizes:', product?.availableSizes);
+  console.log('Sizes array:', product?.sizes);
+  console.log('Size options calculated:', sizeOptions);
+  
   const selectedSizeObj = product?.sizes?.find(s => s.size === selectedSize);
   const selectedSizeStock = selectedSizeObj ? Math.max(0, (selectedSizeObj.stock || 0) - (selectedSizeObj.reserved || 0)) : 0;
 

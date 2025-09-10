@@ -8,17 +8,24 @@ import Category from '../models/Category.js';
 // GET /api/products/:id or /api/products/custom/:customId - RESTful single product fetch
 export const getProductById = async (req, res) => {
     try {
+        console.log('🔧 DEBUG: getProductById called with ID:', req.params.id);
+        
         let product;
         if (req.params.id && req.params.id.length === 24) {
             product = await productModel.findById(req.params.id).lean();
+            console.log('🔧 DEBUG: Found by MongoDB ID:', product ? 'Yes' : 'No');
         }
         if (!product && req.params.id) {
             // Try fetching by customId
             product = await productModel.findOne({ customId: req.params.id }).lean();
+            console.log('🔧 DEBUG: Found by customId:', product ? 'Yes' : 'No');
         }
         if (!product) {
+            console.log('🔧 DEBUG: Product not found');
             return res.status(404).json({ error: 'Product not found' });
         }
+        
+        console.log('🔧 DEBUG: Product found - sizes before processing:', JSON.stringify(product.sizes, null, 2));
         
         // 🔑 CRITICAL FIX: Calculate available stock (stock - reserved) for each size
         if (product.sizes && Array.isArray(product.sizes)) {
@@ -30,6 +37,8 @@ export const getProductById = async (req, res) => {
                 reserved: sizeObj.reserved || 0
             }));
         }
+        
+        console.log('🔧 DEBUG: Product sizes after processing:', JSON.stringify(product.sizes, null, 2));
         
         res.status(200).json({ product });
     } catch (error) {
