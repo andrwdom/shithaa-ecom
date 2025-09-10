@@ -875,13 +875,41 @@ export const generateInvoice = async (req, res) => {
     doc.moveDown(0.2);
     doc.font('Helvetica').fontSize(11).fillColor('#333');
     items.forEach(item => {
-      const y = doc.y;
-      doc.text(item.name, colX[0], y, { width: colX[1] - colX[0] - 5 });
-      doc.text(String(item.quantity), colX[1], y, { width: colX[2] - colX[1] - 5, align: 'center' });
-      doc.text(item.size || '-', colX[2], y, { width: colX[3] - colX[2] - 5, align: 'center' });
-      doc.text(`INR ${item.price}`, colX[3], y, { width: colX[4] - colX[3] - 5, align: 'right' });
-      doc.text(`INR ${item.price * item.quantity}`, colX[4], y, { align: 'right' });
-      doc.moveDown(0.2);
+      const startY = doc.y;
+      
+      // 🔧 FIX: Properly handle long product names with better column layout
+      const productNameWidth = colX[1] - colX[0] - 10; // Extra padding for product name
+      const productNameHeight = doc.heightOfString(item.name, { width: productNameWidth });
+      
+      // Draw product name with proper wrapping
+      doc.text(item.name, colX[0], startY, { 
+        width: productNameWidth,
+        align: 'left',
+        lineGap: 1
+      });
+      
+      // Calculate the actual height used by the product name
+      const actualProductHeight = Math.max(15, productNameHeight); // Minimum 15 points height
+      
+      // Position other columns at the top of the row, not centered
+      doc.text(String(item.quantity), colX[1], startY, { 
+        width: colX[2] - colX[1] - 5, 
+        align: 'center' 
+      });
+      doc.text(item.size || '-', colX[2], startY, { 
+        width: colX[3] - colX[2] - 5, 
+        align: 'center' 
+      });
+      doc.text(`INR ${item.price}`, colX[3], startY, { 
+        width: colX[4] - colX[3] - 5, 
+        align: 'right' 
+      });
+      doc.text(`INR ${item.price * item.quantity}`, colX[4], startY, { 
+        align: 'right' 
+      });
+      
+      // Move down based on the actual height of the product name
+      doc.y = startY + actualProductHeight + 5; // Add 5 points spacing
     });
     doc.moveDown(1);
     doc.moveTo(40, doc.y).lineTo(555, doc.y).strokeColor('#E1D5F6').lineWidth(1.2).stroke();

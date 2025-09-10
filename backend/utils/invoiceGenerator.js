@@ -83,38 +83,42 @@ export async function generateInvoiceBuffer(order) {
       doc.font('Helvetica').fontSize(11).fillColor('#333');
       const items = order.cartItems?.length ? order.cartItems : order.items;
       items.forEach(item => {
-        const y = doc.y;
-        // 🔧 FIX: Add text wrapping for very long product names
-        const productNameWidth = colX[1] - colX[0] - 10; // Extra padding
+        const startY = doc.y;
+        
+        // 🔧 FIX: Properly handle long product names with better column layout
+        const productNameWidth = colX[1] - colX[0] - 10; // Extra padding for product name
         const productNameHeight = doc.heightOfString(item.name, { width: productNameWidth });
         
-        doc.text(item.name, colX[0], y, { 
+        // Draw product name with proper wrapping
+        doc.text(item.name, colX[0], startY, { 
           width: productNameWidth,
           align: 'left',
-          lineGap: 2
+          lineGap: 1
         });
         
-        // Position other columns based on the product name height
-        const centerY = y + (productNameHeight / 2);
+        // Calculate the actual height used by the product name
+        const actualProductHeight = Math.max(15, productNameHeight); // Minimum 15 points height
         
-        doc.text(String(item.quantity), colX[1], centerY, { 
+        // Position other columns at the top of the row, not centered
+        doc.text(String(item.quantity), colX[1], startY, { 
           width: colX[2] - colX[1] - 5, 
           align: 'center' 
         });
-        doc.text(item.size || '-', colX[2], centerY, { 
+        doc.text(item.size || '-', colX[2], startY, { 
           width: colX[3] - colX[2] - 5, 
           align: 'center' 
         });
-        doc.text(`INR ${item.price}`, colX[3], centerY, { 
+        doc.text(`INR ${item.price}`, colX[3], startY, { 
           width: colX[4] - colX[3] - 5, 
           align: 'right' 
         });
-        doc.text(`INR ${item.price * item.quantity}`, colX[4], centerY, { 
+        doc.text(`INR ${item.price * item.quantity}`, colX[4], startY, { 
           align: 'right' 
         });
         
         // Move down based on the actual height of the product name
-        doc.moveDown(Math.max(0.2, productNameHeight / 20));
+        const moveDownAmount = Math.max(0.3, actualProductHeight / 15);
+        doc.y = startY + actualProductHeight + 5; // Add 5 points spacing
       });
       doc.moveDown(1);
       doc.moveTo(40, doc.y).lineTo(555, doc.y).strokeColor('#E1D5F6').lineWidth(1.2).stroke();
