@@ -122,16 +122,15 @@ const EditProduct = ({ product, token, onClose, onUpdate }) => {
     try {
       const formData = new FormData()
 
-      // Get sizes with stock > 0
-      const sizesWithStock = sizes.filter(s => s.stock > 0);
-
+      // Send all selected sizes, including those with stock = 0
+      // This allows new sizes to be added even if stock hasn't been set yet
       formData.append("name", name)
       formData.append("description", description)
       formData.append("price", price)
       formData.append("category", category)
       formData.append("categorySlug", getCategorySlug(category))
       formData.append("bestseller", bestseller)
-      formData.append("sizes", JSON.stringify(sizesWithStock))
+      formData.append("sizes", JSON.stringify(sizes))
       formData.append("stock", stock)
       formData.append("customId", customId)
       
@@ -390,7 +389,7 @@ const EditProduct = ({ product, token, onClose, onUpdate }) => {
                   checked={checked}
                   onChange={e => {
                     if (e.target.checked) {
-                      setSizes(prev => [...prev, { size, stock: 0 }]);
+                      setSizes(prev => [...prev, { size, stock: 1 }]);
                     } else {
                       setSizes(prev => prev.filter(s => s.size !== size));
                     }

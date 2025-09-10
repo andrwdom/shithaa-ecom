@@ -367,7 +367,8 @@ const FALLBACK_PRODUCTS = [
 
 // Specialized fetch for products with caching and fallback
 export async function fetchProducts(
-  params: Record<string, string> = {}
+  params: Record<string, string> = {},
+  forceRefresh: boolean = false
 ): Promise<Response> {
   const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
   const url = new URL(`${baseUrl}/api/products`)
@@ -379,8 +380,13 @@ export async function fetchProducts(
     }
   })
   
-  const cacheKey = `products-${JSON.stringify(params)}`
-  const cacheTTL = 2 * 60 * 1000 // 2 minutes for products
+  // 🔧 FIX: Add cache busting parameter when force refresh is requested
+  if (forceRefresh) {
+    url.searchParams.append('_t', Date.now().toString())
+  }
+  
+  const cacheKey = `products-${JSON.stringify(params)}${forceRefresh ? '-fresh' : ''}`
+  const cacheTTL = forceRefresh ? 0 : 2 * 60 * 1000 // No cache when force refresh, 2 minutes otherwise
   
   try {
     const response = await safeFetch(url.toString(), {
@@ -407,6 +413,19 @@ export async function fetchProducts(
       }
     })
   }
+}
+
+// 🔧 FIX: Function to force refresh products (bypass cache)
+export async function fetchProductsFresh(
+  params: Record<string, string> = {}
+): Promise<Response> {
+  return fetchProducts(params, true)
+}
+
+// 🔧 FIX: Function to clear product cache
+export function clearProductCache(): void {
+  apiManager.clearCache()
+  console.log('✅ Product cache cleared')
 }
 
 // Cleanup cache periodically

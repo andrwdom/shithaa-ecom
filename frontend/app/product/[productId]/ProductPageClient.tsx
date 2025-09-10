@@ -54,7 +54,8 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + `/api/products/${productId}`;
+        // 🔧 FIX: Add cache busting parameter to force fresh data
+        const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + `/api/products/${productId}?_t=${Date.now()}`;
         const res = await fetch(apiUrl);
         const data = await res.json();
         
