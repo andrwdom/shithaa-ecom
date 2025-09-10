@@ -9,6 +9,7 @@ import Category from '../models/Category.js';
 export const getProductById = async (req, res) => {
     try {
         console.log('🔧 DEBUG: getProductById called with ID:', req.params.id);
+        console.log('🔧 DEBUG: Query params:', req.query);
         
         let product;
         if (req.params.id && req.params.id.length === 24) {
@@ -26,6 +27,8 @@ export const getProductById = async (req, res) => {
         }
         
         console.log('🔧 DEBUG: Product found - sizes before processing:', JSON.stringify(product.sizes, null, 2));
+        console.log('🔧 DEBUG: Product name:', product.name);
+        console.log('🔧 DEBUG: Product customId:', product.customId);
         
         // 🔑 CRITICAL FIX: Calculate available stock (stock - reserved) for each size
         if (product.sizes && Array.isArray(product.sizes)) {
@@ -39,6 +42,14 @@ export const getProductById = async (req, res) => {
         }
         
         console.log('🔧 DEBUG: Product sizes after processing:', JSON.stringify(product.sizes, null, 2));
+        console.log('🔧 DEBUG: Total sizes count:', product.sizes ? product.sizes.length : 0);
+        
+        // Add cache busting headers
+        res.set({
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+        });
         
         res.status(200).json({ product });
     } catch (error) {

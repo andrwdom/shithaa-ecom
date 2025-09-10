@@ -47,6 +47,7 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
   const [selectedSize, setSelectedSize] = useState("")
   const [quantity, setQuantity] = useState(1)
   const [isWishlisted, setIsWishlisted] = useState(false)
+  const [refreshKey, setRefreshKey] = useState(0)
   const { addToCart, openCartSidebar, clearCart } = useCart()
   const { setBuyNowItem } = useBuyNow()
   const { setCheckoutFlow } = useCheckoutFlow();
@@ -55,32 +56,50 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
     const fetchProduct = async () => {
       try {
         // 🔧 FIX: Add aggressive cache busting and debugging
-        const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + `/api/products/${productId}?_t=${Date.now()}&_r=${Math.random()}`;
-        console.log('Fetching product from:', apiUrl);
+        const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + `/api/products/${productId}?_t=${Date.now()}&_r=${Math.random()}&_fresh=true`;
+        console.log('🔄 Fetching product from:', apiUrl);
         
         const res = await fetch(apiUrl, {
           method: 'GET',
           headers: {
             'Cache-Control': 'no-cache, no-store, must-revalidate',
             'Pragma': 'no-cache',
-            'Expires': '0'
+            'Expires': '0',
+            'If-None-Match': '*'
           }
         });
+        
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        
         const data = await res.json();
         
-        console.log('Product API response:', data);
+        console.log('📦 Product API response:', data);
         
         if (data.product) {
-          console.log('Product sizes from API:', data.product.sizes);
+          console.log('📏 Product sizes from API:', data.product.sizes);
+          console.log('📏 AvailableSizes from API:', data.product.availableSizes);
+          
+          // 🔧 FIX: Ensure sizes array is properly formatted
+          if (data.product.sizes && Array.isArray(data.product.sizes)) {
+            console.log('✅ Sizes array is valid:', data.product.sizes.length, 'items');
+            data.product.sizes.forEach((size, index) => {
+              console.log(`  - Size ${index + 1}:`, size);
+            });
+          } else {
+            console.log('❌ Sizes array is invalid:', data.product.sizes);
+          }
+          
           setProduct(data.product);
         } else if (data.success && data.data) {
-          console.log('Product sizes from API (data):', data.data.sizes);
+          console.log('📏 Product sizes from API (data):', data.data.sizes);
           setProduct(data.data);
         } else {
           setError(data.message || data.error || 'Failed to fetch product');
         }
       } catch (error) {
-        console.error('Error fetching product:', error);
+        console.error('❌ Error fetching product:', error);
         setError('Failed to fetch product');
       } finally {
         setLoading(false);
@@ -88,7 +107,7 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
     };
 
     fetchProduct();
-  }, [productId])
+  }, [productId, refreshKey])
 
   // Per-size stock logic
   const sizeOptions = Array.isArray(product?.availableSizes) && product.availableSizes.length > 0
@@ -499,6 +518,19 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
                   ) : (
                     <div className="text-sm text-red-500 font-medium mb-2">Size not available</div>
                   )}
+                  
+                  {/* Refresh button for debugging */}
+                  <div className="mb-2">
+                    <button
+                      onClick={() => {
+                        console.log('🔄 Manual refresh triggered');
+                        setRefreshKey(prev => prev + 1);
+                      }}
+                      className="text-xs text-gray-500 hover:text-gray-700 underline"
+                    >
+                      🔄 Refresh Product Data
+                    </button>
+                  </div>
                   
                   {/* Size availability indicator */}
                   {sizeOptions.length > 0 && (
