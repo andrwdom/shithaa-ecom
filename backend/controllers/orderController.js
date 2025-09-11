@@ -799,12 +799,19 @@ export const generateInvoice = async (req, res) => {
     const billing = order.billingInfo;
     const items = order.cartItems?.length ? order.cartItems : order.items;
     const safeSubtotal = (items || []).reduce((sum, it) => sum + (Number(it?.price) || 0) * (Number(it?.quantity) || 0), 0);
+    
+    // 🔧 FIX: Calculate loungwear offer discount
+    const loungwearOfferDiscount = order.offerDetails?.offerApplied ? (order.offerDetails?.offerDiscount || 0) : 0;
+    
     const couponPct = (order.couponUsed?.discount || (order.discount?.type === 'percentage' ? (order.discount?.value || 0) : 0));
     const fixedDiscount = order.discount?.type && order.discount?.type !== 'percentage' ? (Number(order.discount?.value) || 0) : 0;
-    const discountAmt = Math.round((safeSubtotal * (couponPct || 0)) / 100) + (fixedDiscount || 0);
+    const couponDiscount = Math.round((safeSubtotal * (couponPct || 0)) / 100) + (fixedDiscount || 0);
     const coupon = order.couponUsed?.code || order.discount?.appliedCouponCode;
     const shippingCost = Number(order.shippingCost) || 0;
-    const total = order.totalAmount || order.total || order.totalPrice || order.amount || (safeSubtotal - discountAmt + shippingCost);
+    
+    // 🔧 FIX: Include loungwear offer discount in total calculation
+    const totalDiscount = loungwearOfferDiscount + couponDiscount;
+    const total = order.totalAmount || order.total || order.totalPrice || order.amount || (safeSubtotal - totalDiscount + shippingCost);
 
     // PDF generation
     const doc = new PDFDocument({ size: "A4", margin: 40 });
@@ -862,36 +869,51 @@ export const generateInvoice = async (req, res) => {
     // --- PRODUCT SUMMARY TABLE ---
     doc.font('Helvetica-Bold').fontSize(13).fillColor('#473C66').text('Product Summary');
     doc.moveDown(0.3);
+    
+    // 🔧 IMPROVED: Better column layout for professional appearance
     const tableTop = doc.y;
-    const colX = [40, 220, 270, 340, 410];
-    doc.font('Helvetica-Bold').fontSize(11).fillColor('#333');
+    const colX = [40, 280, 320, 380, 450, 520];
+    
+    // Table header with better spacing
+    doc.font('Helvetica-Bold').fontSize(10).fillColor('#333');
     doc.text('Product', colX[0], tableTop, { width: colX[1] - colX[0] - 5 });
     doc.text('Qty', colX[1], tableTop, { width: colX[2] - colX[1] - 5, align: 'center' });
     doc.text('Size', colX[2], tableTop, { width: colX[3] - colX[2] - 5, align: 'center' });
-    doc.text('Price (INR)', colX[3], tableTop, { width: colX[4] - colX[3] - 5, align: 'right' });
-    doc.text('Subtotal (INR)', colX[4], tableTop, { align: 'right' });
+    doc.text('Price', colX[3], tableTop, { width: colX[4] - colX[3] - 5, align: 'right' });
+    doc.text('Subtotal', colX[4], tableTop, { width: colX[5] - colX[4] - 5, align: 'right' });
+    
+    // Header underline
     doc.moveDown(0.2);
-    doc.moveTo(colX[0], doc.y).lineTo(555, doc.y).strokeColor('#E1D5F6').lineWidth(1).stroke();
-    doc.moveDown(0.2);
-    doc.font('Helvetica').fontSize(11).fillColor('#333');
-    items.forEach(item => {
+    doc.moveTo(colX[0], doc.y).lineTo(colX[5], doc.y).strokeColor('#E1D5F6').lineWidth(1).stroke();
+    doc.moveDown(0.3);
+    
+    // Product rows
+    doc.font('Helvetica').fontSize(10).fillColor('#333');
+    items.forEach((item, index) => {
       const startY = doc.y;
       
-      // 🔧 FIX: Properly handle long product names with better column layout
-      const productNameWidth = colX[1] - colX[0] - 10; // Extra padding for product name
-      const productNameHeight = doc.heightOfString(item.name, { width: productNameWidth });
+      // 🔧 IMPROVED: Better product name handling with truncation for long names
+      const productNameWidth = colX[1] - colX[0] - 10;
+      let productName = item.name;
+      
+      // Truncate very long product names to fit better
+      if (productName.length > 50) {
+        productName = productName.substring(0, 47) + '...';
+      }
+      
+      const productNameHeight = doc.heightOfString(productName, { width: productNameWidth });
       
       // Draw product name with proper wrapping
-      doc.text(item.name, colX[0], startY, { 
+      doc.text(productName, colX[0], startY, { 
         width: productNameWidth,
         align: 'left',
         lineGap: 1
       });
       
       // Calculate the actual height used by the product name
-      const actualProductHeight = Math.max(15, productNameHeight); // Minimum 15 points height
+      const actualProductHeight = Math.max(12, productNameHeight);
       
-      // Position other columns at the top of the row, not centered
+      // Position other columns at the top of the row
       doc.text(String(item.quantity), colX[1], startY, { 
         width: colX[2] - colX[1] - 5, 
         align: 'center' 
@@ -900,43 +922,76 @@ export const generateInvoice = async (req, res) => {
         width: colX[3] - colX[2] - 5, 
         align: 'center' 
       });
-      doc.text(`INR ${item.price}`, colX[3], startY, { 
+      doc.text(`₹${item.price}`, colX[3], startY, { 
         width: colX[4] - colX[3] - 5, 
         align: 'right' 
       });
-      doc.text(`INR ${item.price * item.quantity}`, colX[4], startY, { 
+      doc.text(`₹${item.price * item.quantity}`, colX[4], startY, { 
+        width: colX[5] - colX[4] - 5,
         align: 'right' 
       });
       
       // Move down based on the actual height of the product name
-      doc.y = startY + actualProductHeight + 5; // Add 5 points spacing
+      doc.y = startY + actualProductHeight + 3; // Reduced spacing for better density
+      
+      // Add subtle row separator for every other row
+      if (index % 2 === 1) {
+        doc.moveTo(colX[0], doc.y - 1).lineTo(colX[5], doc.y - 1).strokeColor('#F5F5F5').lineWidth(0.5).stroke();
+      }
     });
-    doc.moveDown(1);
-    doc.moveTo(40, doc.y).lineTo(555, doc.y).strokeColor('#E1D5F6').lineWidth(1.2).stroke();
+    
+    // Table bottom border
+    doc.moveDown(0.5);
+    doc.moveTo(colX[0], doc.y).lineTo(colX[5], doc.y).strokeColor('#E1D5F6').lineWidth(1.2).stroke();
     doc.moveDown(0.7);
 
     // --- ORDER SUMMARY ---
     doc.font('Helvetica-Bold').fontSize(13).fillColor('#473C66').text('Order Summary');
     doc.moveDown(0.3);
-    doc.font('Helvetica').fontSize(11).fillColor('#333');
-    doc.text(`Subtotal: `, { continued: true }).font('Helvetica-Bold').text(`INR ${safeSubtotal}`);
     
-    // 🔧 FIX: Display loungewear offer discount if applied
-    if (order.offerDetails?.offerApplied && order.offerDetails?.offerDiscount > 0) {
-      doc.moveDown(0.2);
-      doc.font('Helvetica').text(`Loungewear Offer (${order.offerDetails.offerDescription}): `, { continued: true }).font('Helvetica-Bold').text(`-INR ${order.offerDetails.offerDiscount}`);
+    // 🔧 IMPROVED: Better order summary layout with proper alignment
+    const summaryLeft = 350;
+    const summaryRight = 520;
+    
+    doc.font('Helvetica').fontSize(10).fillColor('#333');
+    
+    // Subtotal
+    doc.text('Subtotal:', summaryLeft, doc.y, { width: summaryRight - summaryLeft - 5, align: 'right' });
+    doc.font('Helvetica-Bold').text(`₹${safeSubtotal}`, summaryRight, doc.y, { align: 'right' });
+    doc.moveDown(0.3);
+    
+    // Loungewear offer discount
+    if (loungwearOfferDiscount > 0) {
+      doc.font('Helvetica').text(`Loungewear Offer (${order.offerDetails?.offerDescription || 'Buy 3 @ ₹1299'}):`, summaryLeft, doc.y, { width: summaryRight - summaryLeft - 5, align: 'right' });
+      doc.font('Helvetica-Bold').fillColor('#E53E3E').text(`-₹${loungwearOfferDiscount}`, summaryRight, doc.y, { align: 'right' });
+      doc.fillColor('#333'); // Reset color
+      doc.moveDown(0.3);
     }
     
-    if (discountAmt > 0) {
-      doc.moveDown(0.2);
-      doc.font('Helvetica').text(`Discount: `, { continued: true }).font('Helvetica-Bold').text(`-INR ${discountAmt}${coupon ? ` (Coupon: ${coupon})` : ''}`);
+    // Coupon discount
+    if (couponDiscount > 0) {
+      doc.font('Helvetica').text(`Coupon Discount${coupon ? ` (${coupon})` : ''}:`, summaryLeft, doc.y, { width: summaryRight - summaryLeft - 5, align: 'right' });
+      doc.font('Helvetica-Bold').fillColor('#E53E3E').text(`-₹${couponDiscount}`, summaryRight, doc.y, { align: 'right' });
+      doc.fillColor('#333'); // Reset color
+      doc.moveDown(0.3);
     }
+    
+    // Shipping
+    doc.font('Helvetica').text('Shipping:', summaryLeft, doc.y, { width: summaryRight - summaryLeft - 5, align: 'right' });
+    doc.font('Helvetica-Bold').text(`₹${shippingCost}`, summaryRight, doc.y, { align: 'right' });
+    doc.moveDown(0.3);
+    
+    // Total with emphasis
     doc.moveDown(0.2);
-    doc.font('Helvetica').text(`Shipping: `, { continued: true }).font('Helvetica-Bold').text(`INR ${shippingCost}`);
-    doc.moveDown(0.2);
-    doc.font('Helvetica').text(`Total: `, { continued: true }).font('Helvetica-Bold').text(`INR ${total}`);
-    doc.moveDown(0.2);
-    doc.font('Helvetica').text(`Payment Method: `, { continued: true }).font('Helvetica-Bold').text(order.paymentMethod || '-');
+    doc.moveTo(summaryLeft - 10, doc.y).lineTo(summaryRight + 10, doc.y).strokeColor('#E1D5F6').lineWidth(1).stroke();
+    doc.moveDown(0.3);
+    doc.font('Helvetica-Bold').fontSize(12).text('Total:', summaryLeft, doc.y, { width: summaryRight - summaryLeft - 5, align: 'right' });
+    doc.font('Helvetica-Bold').fontSize(12).fillColor('#473C66').text(`₹${total}`, summaryRight, doc.y, { align: 'right' });
+    doc.fillColor('#333'); // Reset color
+    doc.moveDown(0.5);
+    
+    // Order details
+    doc.font('Helvetica').fontSize(10).text(`Payment Method: `, { continued: true }).font('Helvetica-Bold').text(order.paymentMethod || '-');
     doc.moveDown(0.2);
     doc.font('Helvetica').text(`Order Status: `, { continued: true }).font('Helvetica-Bold').text(order.status || order.orderStatus || '-');
     doc.moveDown(1);
