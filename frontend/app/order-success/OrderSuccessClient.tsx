@@ -170,7 +170,7 @@ function OrderSuccessContent() {
   const isFailed = displayOrder.paymentStatus === 'failed' || displayOrder.status === 'Payment Failed';
 
   return (
-    <div className="max-w-2xl mx-auto p-6 sm:p-10 text-center flex flex-col items-center justify-center min-h-[70vh]">
+    <div className="max-w-2xl mx-auto p-6 sm:p-10 text-center flex flex-col items-center justify-center min-h-[70vh] order-container container-responsive">
       {/* Success/Failure Animation */}
       <div className="mb-6 animate-bounce-in">
         {isPaid ? (
