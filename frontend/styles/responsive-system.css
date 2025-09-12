@@ -544,20 +544,25 @@
 @media (min-width: 360px) and (max-width: 400px) {
   /* Prevent text from appearing too large */
   html {
-    font-size: 14px; /* Slightly smaller base font size */
+    font-size: 12px; /* More aggressive scaling for small devices */
   }
   
   /* Scale down large text elements */
   .text-2xl {
-    font-size: 1.25rem !important; /* 20px instead of 24px */
+    font-size: 1rem !important; /* 16px instead of 24px */
   }
   
   .text-3xl {
-    font-size: 1.5rem !important; /* 24px instead of 30px */
+    font-size: 1.25rem !important; /* 20px instead of 30px */
   }
   
   .text-4xl {
-    font-size: 1.75rem !important; /* 28px instead of 36px */
+    font-size: 1.5rem !important; /* 24px instead of 36px */
+  }
+  
+  /* Fix modal title specifically */
+  .text-2xl.font-bold {
+    font-size: 0.875rem !important; /* 14px */
   }
   
   /* Scale down large buttons */
@@ -574,7 +579,24 @@
   
   /* Fix modal sizing for order details */
   .max-w-2xl {
-    max-width: 20rem !important; /* 320px instead of 512px */
+    max-width: 18rem !important; /* 288px instead of 512px */
+  }
+  
+  /* More aggressive modal scaling */
+  .modal-responsive {
+    width: 95vw !important;
+    max-width: 18rem !important; /* 288px */
+    margin: 0.5rem !important;
+    transform: scale(0.8) !important;
+    transform-origin: center !important;
+  }
+  
+  /* Even more aggressive scaling for very small devices */
+  @media (max-width: 375px) {
+    .modal-responsive {
+      transform: scale(0.75) !important;
+      max-width: 16rem !important; /* 256px */
+    }
   }
   
   /* Fix checkout page layout */
@@ -615,17 +637,83 @@
   
   /* Fix large padding */
   .p-6 {
-    padding: 1rem !important; /* 16px instead of 24px */
+    padding: 0.75rem !important; /* 12px instead of 24px */
   }
   
   .px-6 {
-    padding-left: 1rem !important;
-    padding-right: 1rem !important;
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
   }
   
   .py-6 {
-    padding-top: 1rem !important;
-    padding-bottom: 1rem !important;
+    padding-top: 0.75rem !important;
+    padding-bottom: 0.75rem !important;
+  }
+  
+  /* Fix modal padding specifically */
+  .modal-responsive .p-6 {
+    padding: 0.5rem !important; /* 8px */
+  }
+  
+  /* Fix modal spacing */
+  .modal-responsive .mb-6 {
+    margin-bottom: 0.75rem !important; /* 12px */
+  }
+  
+  .modal-responsive .space-y-4 > * + * {
+    margin-top: 0.5rem !important; /* 8px */
+  }
+  
+  /* Fix order progress tracker */
+  .modal-responsive .w-10 {
+    width: 1.5rem !important; /* 24px instead of 40px */
+  }
+  
+  .modal-responsive .h-10 {
+    height: 1.5rem !important; /* 24px instead of 40px */
+  }
+  
+  .modal-responsive .w-5 {
+    width: 0.75rem !important; /* 12px instead of 20px */
+  }
+  
+  .modal-responsive .h-5 {
+    height: 0.75rem !important; /* 12px instead of 20px */
+  }
+  
+  /* Fix order items section */
+  .modal-responsive .w-16 {
+    width: 2rem !important; /* 32px instead of 64px */
+  }
+  
+  .modal-responsive .h-16 {
+    height: 2rem !important; /* 32px instead of 64px */
+  }
+  
+  /* Fix text sizes in modal */
+  .modal-responsive .text-lg {
+    font-size: 0.75rem !important; /* 12px */
+  }
+  
+  .modal-responsive .text-sm {
+    font-size: 0.625rem !important; /* 10px */
+  }
+  
+  .modal-responsive .text-xs {
+    font-size: 0.5rem !important; /* 8px */
+  }
+  
+  /* Fix rounded corners in modal */
+  .modal-responsive .rounded-3xl {
+    border-radius: 0.5rem !important; /* 8px instead of 24px */
+  }
+  
+  .modal-responsive .rounded-2xl {
+    border-radius: 0.375rem !important; /* 6px instead of 16px */
+  }
+  
+  .modal-responsive .rounded-xl {
+    border-radius: 0.25rem !important; /* 4px instead of 12px */
   }
 }
 

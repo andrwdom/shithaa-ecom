@@ -360,7 +360,7 @@ export default function OrderHistory({ orders }: { orders: Order[] }): JSX.Eleme
           aria-modal="true"
           aria-labelledby="order-modal-title"
         >
-          <div className="bg-white rounded-3xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto modal-responsive" onClick={(e: MouseEvent) => e.stopPropagation()}>
+          <div className="bg-white rounded-3xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto modal-responsive" onClick={(e: MouseEvent) => e.stopPropagation()} style={{maxWidth: 'min(18rem, 95vw)'}}>
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
                 <h2 id="order-modal-title" className="text-2xl font-bold text-gray-900">Order Details</h2>
