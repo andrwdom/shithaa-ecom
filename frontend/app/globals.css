@@ -77,7 +77,18 @@
     -webkit-text-size-adjust: 100%; /* Fixes Android font scaling */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    text-rendering: optimizeLegibility;
+  }
+  
+  /* Prevent zooming issues on small devices */
+  @media (max-width: 400px) {
+    html {
+      font-size: 14px;
+    }
+    
+    body {
+      font-size: 14px;
+      line-height: 1.4;
+    }
   }
 
   img, video {
@@ -603,42 +614,6 @@ html, body {
     transition-duration: inherit !important;
   }
   
-  /* Fix for high-density displays and different device sizes */
-  body {
-    font-size: 16px; /* Prevent text from being too small on high-density displays */
-    line-height: 1.5;
-  }
-  
-  /* Ensure proper scaling on different device densities */
-  .container-responsive,
-  .max-w-5xl,
-  .max-w-4xl,
-  .max-w-3xl,
-  .max-w-2xl,
-  .max-w-xl {
-    width: 100%;
-    max-width: 100vw;
-    padding-left: 1rem;
-    padding-right: 1rem;
-  }
-  
-  /* Fix for checkout and order pages specifically */
-  .checkout-container,
-  .order-container {
-    width: 100%;
-    max-width: 100vw;
-    margin: 0;
-    padding: 0.5rem;
-  }
-  
-  /* Ensure modals and overlays scale properly */
-  .modal-responsive,
-  .fixed,
-  .absolute {
-    transform: translateZ(0);
-    -webkit-transform: translateZ(0);
-  }
-  
   /* Optimize cart sidebar for mobile */
   .cart-sidebar-mobile {
     -webkit-transform: translateZ(0);
@@ -723,140 +698,5 @@ html, body {
     transform: translateZ(0);
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
-  }
-}
-
-/* ========================================
-   DEVICE-SPECIFIC RESPONSIVE FIXES
-   ======================================== */
-
-/* Fix for high-density displays (like Google S8+) */
-@media screen and (-webkit-min-device-pixel-ratio: 2), 
-       screen and (min-resolution: 192dpi) {
-  body {
-    font-size: 16px;
-    -webkit-text-size-adjust: 100%;
-    text-size-adjust: 100%;
-  }
-  
-  /* Ensure proper scaling for high-density displays */
-  .container-responsive,
-  .max-w-5xl,
-  .max-w-4xl,
-  .max-w-3xl,
-  .max-w-2xl {
-    width: 100%;
-    max-width: 100vw;
-  }
-  
-  /* Fix for checkout and order pages on high-density displays */
-  .checkout-container,
-  .order-container {
-    width: 100%;
-    max-width: 100vw;
-    margin: 0 auto;
-    padding: 0.75rem;
-  }
-}
-
-/* Specific fixes for different screen sizes */
-@media (max-width: 480px) {
-  /* Very small screens */
-  body {
-    font-size: 14px;
-  }
-  
-  .container-responsive,
-  .max-w-5xl,
-  .max-w-4xl,
-  .max-w-3xl,
-  .max-w-2xl {
-    padding-left: 0.5rem;
-    padding-right: 0.5rem;
-  }
-  
-  /* Ensure checkout pages work on very small screens */
-  .checkout-container,
-  .order-container {
-    padding: 0.25rem;
-  }
-}
-
-@media (min-width: 481px) and (max-width: 768px) {
-  /* Small tablets and large phones */
-  body {
-    font-size: 15px;
-  }
-  
-  .container-responsive,
-  .max-w-5xl,
-  .max-w-4xl,
-  .max-w-3xl,
-  .max-w-2xl {
-    padding-left: 1rem;
-    padding-right: 1rem;
-  }
-}
-
-@media (min-width: 769px) and (max-width: 1024px) {
-  /* Tablets */
-  body {
-    font-size: 16px;
-  }
-  
-  .container-responsive,
-  .max-w-5xl,
-  .max-w-4xl,
-  .max-w-3xl,
-  .max-w-2xl {
-    padding-left: 1.5rem;
-    padding-right: 1.5rem;
-  }
-}
-
-/* Fix for specific device orientations */
-@media (orientation: landscape) and (max-height: 500px) {
-  /* Landscape mode on small screens */
-  .checkout-container,
-  .order-container {
-    padding: 0.25rem;
-  }
-  
-  .container-responsive,
-  .max-w-5xl,
-  .max-w-4xl,
-  .max-w-3xl,
-  .max-w-2xl {
-    padding-left: 0.5rem;
-    padding-right: 0.5rem;
-  }
-}
-
-/* Ensure proper scaling for all viewport sizes */
-@media (max-width: 100vw) {
-  html {
-    font-size: 16px;
-  }
-  
-  body {
-    font-size: 1rem;
-    line-height: 1.5;
-  }
-  
-  /* Prevent horizontal scrolling */
-  * {
-    max-width: 100%;
-  }
-  
-  /* Ensure containers don't exceed viewport */
-  .container-responsive,
-  .max-w-5xl,
-  .max-w-4xl,
-  .max-w-3xl,
-  .max-w-2xl,
-  .max-w-xl {
-    width: 100%;
-    max-width: 100vw;
-    box-sizing: border-box;
   }
 }

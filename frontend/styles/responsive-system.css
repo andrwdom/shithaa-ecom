@@ -4,7 +4,8 @@
 
 /* Breakpoint System - Consistent across all components */
 :root {
-  /* Mobile First Breakpoints */
+  /* Mobile First Breakpoints - Enhanced for better device coverage */
+  --breakpoint-xs: 360px;   /* Extra small devices (Google S8+, iPhone SE) */
   --breakpoint-sm: 640px;   /* Small devices (landscape phones) */
   --breakpoint-md: 768px;   /* Medium devices (tablets) */
   --breakpoint-lg: 1024px;  /* Large devices (desktops) */
@@ -12,6 +13,7 @@
   --breakpoint-2xl: 1536px; /* 2X large devices */
   
   /* Container Max Widths */
+  --container-xs: 360px;    /* Extra small devices */
   --container-sm: 640px;
   --container-md: 768px;
   --container-lg: 1024px;
@@ -28,7 +30,7 @@
   --space-3xl: 4rem;     /* 64px */
   --space-4xl: 6rem;     /* 96px */
   
-  /* Typography Scale */
+  /* Typography Scale - Enhanced for better mobile scaling */
   --text-xs: 0.75rem;    /* 12px */
   --text-sm: 0.875rem;   /* 14px */
   --text-base: 1rem;     /* 16px */
@@ -39,6 +41,11 @@
   --text-4xl: 2.25rem;   /* 36px */
   --text-5xl: 3rem;      /* 48px */
   --text-6xl: 3.75rem;   /* 60px */
+  
+  /* Device-specific scaling factors */
+  --scale-xs: 0.9;       /* Scale down for extra small devices */
+  --scale-sm: 1.0;       /* Normal scale for small devices */
+  --scale-md: 1.0;       /* Normal scale for medium devices */
 }
 
 /* ========================================
@@ -51,9 +58,15 @@
   margin-right: auto;
   padding-left: var(--space-md);
   padding-right: var(--space-md);
-  box-sizing: border-box;
-  max-width: 100vw;
-  overflow-x: hidden;
+}
+
+/* Extra small devices (Google S8+, iPhone SE) - 360px and up */
+@media (min-width: 360px) {
+  .container-responsive {
+    max-width: var(--container-xs);
+    padding-left: var(--space-sm);
+    padding-right: var(--space-sm);
+  }
 }
 
 @media (min-width: 640px) {
@@ -89,78 +102,6 @@
 @media (min-width: 1536px) {
   .container-responsive {
     max-width: var(--container-2xl);
-  }
-}
-
-/* ========================================
-   HIGH-DENSITY DISPLAY FIXES
-   ======================================== */
-
-/* Fix for high-density displays (like Google S8+) */
-@media screen and (-webkit-min-device-pixel-ratio: 2), 
-       screen and (min-resolution: 192dpi) {
-  .container-responsive {
-    font-size: 16px;
-    -webkit-text-size-adjust: 100%;
-    text-size-adjust: 100%;
-  }
-  
-  /* Ensure proper scaling for high-density displays */
-  .container-responsive,
-  .max-w-5xl,
-  .max-w-4xl,
-  .max-w-3xl,
-  .max-w-2xl {
-    width: 100%;
-    max-width: 100vw;
-    box-sizing: border-box;
-  }
-}
-
-/* Specific fixes for different screen sizes */
-@media (max-width: 480px) {
-  /* Very small screens */
-  .container-responsive {
-    padding-left: 0.5rem;
-    padding-right: 0.5rem;
-    font-size: 14px;
-  }
-}
-
-@media (min-width: 481px) and (max-width: 768px) {
-  /* Small tablets and large phones */
-  .container-responsive {
-    padding-left: 1rem;
-    padding-right: 1rem;
-    font-size: 15px;
-  }
-}
-
-@media (min-width: 769px) and (max-width: 1024px) {
-  /* Tablets */
-  .container-responsive {
-    padding-left: 1.5rem;
-    padding-right: 1.5rem;
-    font-size: 16px;
-  }
-}
-
-/* Fix for specific device orientations */
-@media (orientation: landscape) and (max-height: 500px) {
-  /* Landscape mode on small screens */
-  .container-responsive {
-    padding-left: 0.5rem;
-    padding-right: 0.5rem;
-  }
-}
-
-/* Ensure proper scaling for all viewport sizes */
-@media (max-width: 100vw) {
-  .container-responsive {
-    width: 100%;
-    max-width: 100vw;
-    box-sizing: border-box;
-    overflow-x: hidden;
   }
 }
 
@@ -568,10 +509,22 @@
   margin: var(--space-md);
 }
 
+/* Extra small devices - Better scaling for Google S8+ */
+@media (min-width: 360px) and (max-width: 639px) {
+  .modal-responsive {
+    width: 98vw;
+    max-width: 22rem; /* 352px - slightly smaller for better fit */
+    margin: var(--space-sm);
+    transform: scale(var(--scale-xs));
+    transform-origin: center;
+  }
+}
+
 @media (min-width: 640px) {
   .modal-responsive {
     max-width: 32rem; /* 512px */
     margin: var(--space-xl);
+    transform: scale(var(--scale-sm));
   }
 }
 
@@ -579,6 +532,203 @@
   .modal-responsive {
     max-width: 40rem; /* 640px */
     margin: var(--space-2xl);
+    transform: scale(var(--scale-md));
+  }
+}
+
+/* ========================================
+   DEVICE-SPECIFIC FIXES FOR ZOOMY ISSUES
+   ======================================== */
+
+/* Fix for Google S8+ and similar devices (360px-400px) */
+@media (min-width: 360px) and (max-width: 400px) {
+  /* Prevent text from appearing too large */
+  html {
+    font-size: 14px; /* Slightly smaller base font size */
+  }
+  
+  /* Scale down large text elements */
+  .text-2xl {
+    font-size: 1.25rem !important; /* 20px instead of 24px */
+  }
+  
+  .text-3xl {
+    font-size: 1.5rem !important; /* 24px instead of 30px */
+  }
+  
+  .text-4xl {
+    font-size: 1.75rem !important; /* 28px instead of 36px */
+  }
+  
+  /* Scale down large buttons */
+  .btn-lg {
+    padding: 0.75rem 1.5rem !important;
+    font-size: 0.875rem !important;
+  }
+  
+  /* Scale down large cards and modals */
+  .card-responsive {
+    padding: var(--space-sm) !important;
+    border-radius: 0.5rem !important;
+  }
+  
+  /* Fix modal sizing for order details */
+  .max-w-2xl {
+    max-width: 20rem !important; /* 320px instead of 512px */
+  }
+  
+  /* Fix checkout page layout */
+  .max-w-5xl {
+    max-width: 100% !important;
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+  
+  /* Fix large text in checkout */
+  .text-lg {
+    font-size: 0.875rem !important; /* 14px instead of 18px */
+  }
+  
+  /* Fix large buttons in checkout */
+  .py-3 {
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+  }
+  
+  /* Fix large spacing in checkout */
+  .mb-8 {
+    margin-bottom: 1.5rem !important; /* 24px instead of 32px */
+  }
+  
+  .mb-6 {
+    margin-bottom: 1rem !important; /* 16px instead of 24px */
+  }
+  
+  /* Scale down large spacing */
+  .space-y-6 > * + * {
+    margin-top: 1rem !important; /* 16px instead of 24px */
+  }
+  
+  .space-y-4 > * + * {
+    margin-top: 0.75rem !important; /* 12px instead of 16px */
+  }
+  
+  /* Fix large padding */
+  .p-6 {
+    padding: 1rem !important; /* 16px instead of 24px */
+  }
+  
+  .px-6 {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+  
+  .py-6 {
+    padding-top: 1rem !important;
+    padding-bottom: 1rem !important;
+  }
+}
+
+/* Fix for devices between 400px-640px */
+@media (min-width: 401px) and (max-width: 639px) {
+  /* Slightly less aggressive scaling */
+  html {
+    font-size: 15px;
+  }
+  
+  .text-2xl {
+    font-size: 1.375rem !important; /* 22px */
+  }
+  
+  .text-3xl {
+    font-size: 1.625rem !important; /* 26px */
+  }
+  
+  .max-w-2xl {
+    max-width: 24rem !important; /* 384px */
+  }
+  
+  /* Fix order success page */
+  .max-w-4xl {
+    max-width: 100% !important;
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+  
+  .max-w-xl {
+    max-width: 100% !important;
+  }
+  
+  /* Fix large text in order success */
+  .text-3xl {
+    font-size: 1.5rem !important; /* 24px instead of 30px */
+  }
+  
+  .text-2xl {
+    font-size: 1.25rem !important; /* 20px instead of 24px */
+  }
+  
+  /* Fix specific components that appear zoomy */
+  .w-20 {
+    width: 4rem !important; /* 64px instead of 80px */
+  }
+  
+  .h-20 {
+    height: 4rem !important; /* 64px instead of 80px */
+  }
+  
+  .w-16 {
+    width: 3rem !important; /* 48px instead of 64px */
+  }
+  
+  .h-16 {
+    height: 3rem !important; /* 48px instead of 64px */
+  }
+  
+  .w-12 {
+    width: 2.5rem !important; /* 40px instead of 48px */
+  }
+  
+  .h-12 {
+    height: 2.5rem !important; /* 40px instead of 48px */
+  }
+  
+  .w-10 {
+    width: 2rem !important; /* 32px instead of 40px */
+  }
+  
+  .h-10 {
+    height: 2rem !important; /* 32px instead of 40px */
+  }
+  
+  /* Fix large icons */
+  .w-6 {
+    width: 1.25rem !important; /* 20px instead of 24px */
+  }
+  
+  .h-6 {
+    height: 1.25rem !important; /* 20px instead of 24px */
+  }
+  
+  .w-5 {
+    width: 1rem !important; /* 16px instead of 20px */
+  }
+  
+  .h-5 {
+    height: 1rem !important; /* 16px instead of 20px */
+  }
+  
+  /* Fix large rounded corners */
+  .rounded-3xl {
+    border-radius: 1rem !important; /* 16px instead of 24px */
+  }
+  
+  .rounded-2xl {
+    border-radius: 0.75rem !important; /* 12px instead of 16px */
+  }
+  
+  .rounded-xl {
+    border-radius: 0.5rem !important; /* 8px instead of 12px */
   }
 }
 

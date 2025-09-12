@@ -666,7 +666,7 @@ export default function CheckoutPage() {
   }, [processing, orderSummary, displayItems, displayMode, shipping, coupon, user?.mongoId, user?.email]);
   return (
     <PageLoading loadingMessage="Loading Checkout..." minLoadingTime={1500}>
-      <div className="min-h-screen bg-gray-50 py-6 px-2 sm:px-4 checkout-container">
+        <div className="min-h-screen bg-gray-50 py-6 px-2 sm:px-4 container-responsive">
         {/* Stepper/Progress Indicator */}
         <div className="max-w-5xl mx-auto mb-8 px-4 container-responsive">
           <div className="flex items-center justify-center">
@@ -743,7 +743,7 @@ export default function CheckoutPage() {
 
         {/* Show loading state while checkout flow is being restored */}
         {checkoutFlowLoading && (
-          <div className="max-w-5xl mx-auto px-4 container-responsive">
+          <div className="max-w-5xl mx-auto px-4">
             <div className="bg-white rounded-xl shadow p-8 text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[rgb(71,60,102)] mx-auto mb-4"></div>
               <p className="text-gray-600">Restoring your checkout items...</p>
@@ -753,7 +753,7 @@ export default function CheckoutPage() {
 
         {/* Show error state if no items found after loading */}
         {!checkoutFlowLoading && !hasItems && (
-          <div className="max-w-5xl mx-auto px-4 container-responsive">
+          <div className="max-w-5xl mx-auto px-4">
             <div className="bg-white rounded-xl shadow p-8 text-center">
               <div className="text-red-500 mb-4">
                 <svg className="h-16 w-16 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -799,7 +799,7 @@ export default function CheckoutPage() {
 
         {/* Show checkout form only when we have items */}
         {!checkoutFlowLoading && hasItems && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto mt-10 px-4 container-responsive">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto mt-10 px-4">
             {/* Left Section: Product Preview + Shipping Form Only */}
             <div className="space-y-6">
               {/* 🔑 DEBUG: Log data being passed to ProductPreviewSection to ensure consistency */}
