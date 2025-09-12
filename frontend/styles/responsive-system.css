@@ -577,65 +577,78 @@
     border-radius: 0.5rem !important;
   }
   
-  /* Fix modal sizing for order details */
+  /* Fix modal sizing for order details - use more space */
   .max-w-2xl {
-    max-width: 18rem !important; /* 288px instead of 512px */
+    max-width: 22rem !important; /* 352px instead of 512px */
   }
   
-  /* Better modal sizing without aggressive scaling */
+  /* Better modal sizing - use more available space */
   .modal-responsive {
-    width: 90vw !important;
-    max-width: 20rem !important; /* 320px */
-    margin: 1rem !important;
+    width: 95vw !important;
+    max-width: 22rem !important; /* 352px */
+    margin: 0.5rem !important;
     transform: none !important;
   }
   
-  /* Galaxy S8 specific fixes */
+  /* Galaxy S8 specific fixes - use more space */
   @media (min-width: 360px) and (max-width: 375px) {
     .modal-responsive {
-      width: 88vw !important;
-      max-width: 18rem !important; /* 288px */
-      margin: 0.75rem !important;
+      width: 96vw !important;
+      max-width: 20rem !important; /* 320px */
+      margin: 0.5rem !important;
+    }
+  }
+  
+  /* Devices between 375px-400px - use even more space */
+  @media (min-width: 376px) and (max-width: 400px) {
+    .modal-responsive {
+      width: 97vw !important;
+      max-width: 24rem !important; /* 384px */
+      margin: 0.5rem !important;
     }
     
-    /* Galaxy S8 text adjustments */
-    .modal-responsive .text-2xl {
-      font-size: 0.875rem !important; /* 14px */
+    .max-w-2xl {
+      max-width: 24rem !important; /* 384px */
     }
-    
-    .modal-responsive .text-lg {
-      font-size: 0.75rem !important; /* 12px */
-    }
-    
-    .modal-responsive .text-sm {
-      font-size: 0.625rem !important; /* 10px */
-    }
-    
-    /* Galaxy S8 spacing adjustments */
-    .modal-responsive .p-6 {
-      padding: 0.5rem !important; /* 8px */
-    }
-    
-    .modal-responsive .mb-6 {
-      margin-bottom: 0.75rem !important; /* 12px */
-    }
-    
-    /* Galaxy S8 element sizing */
-    .modal-responsive .w-10 {
-      width: 1.75rem !important; /* 28px */
-    }
-    
-    .modal-responsive .h-10 {
-      height: 1.75rem !important; /* 28px */
-    }
-    
-    .modal-responsive .w-16 {
-      width: 2.5rem !important; /* 40px */
-    }
-    
-    .modal-responsive .h-16 {
-      height: 2.5rem !important; /* 40px */
-    }
+  }
+  
+  /* Galaxy S8 text adjustments */
+  .modal-responsive .text-2xl {
+    font-size: 0.875rem !important; /* 14px */
+  }
+  
+  .modal-responsive .text-lg {
+    font-size: 0.75rem !important; /* 12px */
+  }
+  
+  .modal-responsive .text-sm {
+    font-size: 0.625rem !important; /* 10px */
+  }
+  
+  /* Galaxy S8 spacing adjustments */
+  .modal-responsive .p-6 {
+    padding: 0.5rem !important; /* 8px */
+  }
+  
+  .modal-responsive .mb-6 {
+    margin-bottom: 0.75rem !important; /* 12px */
+  }
+  
+  /* Galaxy S8 element sizing */
+  .modal-responsive .w-10 {
+    width: 1.75rem !important; /* 28px */
+  }
+  
+  .modal-responsive .h-10 {
+    height: 1.75rem !important; /* 28px */
+  }
+  
+  .modal-responsive .w-16 {
+    width: 2.5rem !important; /* 40px */
+  }
+  
+  .modal-responsive .h-16 {
+    height: 2.5rem !important; /* 40px */
   }
   
   /* Fix checkout page layout */
