@@ -57,8 +57,8 @@ module.exports = {
     },
     {
       name: 'shithaa-reservation-worker',
-      script: 'backend/workers/reservationExpiryWorker.js',
-      cwd: '/var/www/shithaa-ecom',
+      script: 'workers/reservationExpiryWorker.js',
+      cwd: '/var/www/shithaa-ecom/backend',
       instances: 1,
       exec_mode: 'fork',
       autorestart: true,
@@ -67,9 +67,9 @@ module.exports = {
       env: {
         NODE_ENV: 'production'
       },
-      error_file: './backend/logs/reservation-worker-err.log',
-      out_file: './backend/logs/reservation-worker-out.log',
-      log_file: './backend/logs/reservation-worker-combined.log',
+      error_file: './logs/reservation-worker-err.log',
+      out_file: './logs/reservation-worker-out.log',
+      log_file: './logs/reservation-worker-combined.log',
       time: true,
       cron_restart: '*/5 * * * *',
       restart_delay: 10000
