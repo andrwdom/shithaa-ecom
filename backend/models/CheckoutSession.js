@@ -136,7 +136,7 @@ checkoutSessionSchema.methods.isExpired = function() {
 };
 
 // Method to extend session
-checkoutSessionSchema.methods.extend = function(minutes = 15) {
+checkoutSessionSchema.methods.extend = function(minutes = 5) {
   this.expiresAt = new Date(Date.now() + minutes * 60 * 1000);
   return this.save();
 };

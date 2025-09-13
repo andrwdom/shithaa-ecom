@@ -71,7 +71,7 @@ module.exports = {
       out_file: './logs/reservation-worker-out.log',
       log_file: './logs/reservation-worker-combined.log',
       time: true,
-      cron_restart: '*/5 * * * *',
+      cron_restart: '*/2 * * * *',
       restart_delay: 10000
     }
   ]

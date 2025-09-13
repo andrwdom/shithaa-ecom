@@ -268,7 +268,7 @@ export const createCheckoutSession = async (req, res) => {
       total,
       currency: 'INR',
       status: 'pending',
-      expiresAt: new Date(Date.now() + 30 * 60 * 1000), // 30 minutes
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes - optimal for e-commerce
       metadata: {
         userAgent: req.headers['user-agent'],
         ipAddress: req.ip || req.connection.remoteAddress,

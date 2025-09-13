@@ -64,6 +64,40 @@ export const expireOldReservations = async () => {
     console.log(`[${correlationId}] Cleaning up expired checkout sessions...`);
     const checkoutCleanupResult = await CheckoutSession.cleanExpired();
     
+    // Additional cleanup: Force release stock for sessions older than 15 minutes
+    console.log(`[${correlationId}] Cleaning up very old sessions (>15min)...`);
+    const veryOldSessions = await CheckoutSession.find({
+      createdAt: { $lt: new Date(Date.now() - 15 * 60 * 1000) },
+      stockReserved: true,
+      status: { $in: ['pending', 'awaiting_payment'] }
+    });
+    
+    if (veryOldSessions.length > 0) {
+      console.log(`[${correlationId}] Found ${veryOldSessions.length} very old sessions, forcing stock release...`);
+      
+      for (const session of veryOldSessions) {
+        try {
+          // Force release stock
+          const releasePromises = session.items.map(item =>
+            releaseStockReservation(item.productId, item.size, item.quantity).catch(error => {
+              console.error(`Failed to force release stock for product ${item.productId} size ${item.size}:`, error);
+            })
+          );
+          
+          await Promise.all(releasePromises);
+          
+          // Mark session as expired
+          session.status = 'expired';
+          session.stockReserved = false;
+          await session.save();
+          
+          console.log(`[${correlationId}] Force released stock for very old session: ${session.sessionId}`);
+        } catch (error) {
+          console.error(`[${correlationId}] Error force processing very old session ${session.sessionId}:`, error);
+        }
+      }
+    }
+    
     console.log(`[${correlationId}] Reservation expiry worker completed. Processed: ${processedCount}, Errors: ${errorCount}, Checkout sessions cleaned: ${checkoutCleanupResult.deletedCount}`);
     
     return {
