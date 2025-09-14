@@ -55,6 +55,17 @@ export default function OrderSummary({
                 <span className="text-green-800 font-semibold text-sm">Loungewear Offer Applied!</span>
                 <div className="text-xs text-green-600">
                   {(() => {
+                    // Use offer details from props if available, otherwise calculate from items
+                    if (offerDetails?.offerDetails) {
+                      const { completeSets, remainingItems } = offerDetails.offerDetails;
+                      if (completeSets > 0 && remainingItems === 0) {
+                        return `${completeSets} set(s) of 3 for ₹1299 each`;
+                      } else if (completeSets > 0 && remainingItems > 0) {
+                        return `${completeSets} set(s) of 3 + ${remainingItems} item(s) at ₹450 each`;
+                      }
+                    }
+                    
+                    // Fallback calculation
                     const loungewearItems = displayItems.filter((item: any) => 
                       item.categorySlug === 'zipless-feeding-lounge-wear' || 
                       item.categorySlug === 'non-feeding-lounge-wear' ||

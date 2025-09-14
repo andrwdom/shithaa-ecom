@@ -284,6 +284,27 @@ function calculateLoungewearCategoryOffer(loungewearCategoryItems) {
         return result;
     }
 
+    // 🔧 NEW FIX: Check if items are priced appropriately for the offer
+    // The offer is designed for items priced at ₹450+ each, not ₹1 test items
+    const minPriceForOffer = 400; // Minimum price per item to qualify for offer
+    const itemsBelowMinPrice = loungewearCategoryItems.filter(item => item.originalPrice < minPriceForOffer);
+    
+    if (itemsBelowMinPrice.length > 0) {
+        console.log(`🔧 CRITICAL: No loungewear offer applied: Items below minimum price (₹${minPriceForOffer}):`, 
+                   itemsBelowMinPrice.map(item => `${item.name} - ₹${item.originalPrice}`));
+        const originalTotal = loungewearCategoryItems.reduce((sum, item) => sum + item.originalPrice, 0);
+        
+        const result = {
+            originalTotal,
+            discount: 0,
+            offerApplied: false,
+            offerDetails: null
+        };
+        
+        console.log(`🔧 FINAL RESULT FOR LOW-PRICED ITEMS:`, result);
+        return result;
+    }
+
     // Calculate how many complete sets of 3
     const completeSets = Math.floor(loungewearCategoryItems.length / 3);
     const remainingItems = loungewearCategoryItems.length % 3;
