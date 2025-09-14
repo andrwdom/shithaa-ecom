@@ -92,7 +92,8 @@ function PhonePeCallbackInner() {
               // Payment failed - redirect to PaymentFailed page
               console.log('Payment failed, redirecting to PaymentFailed page')
               const failureReason = paymentData.message || 'Payment was not completed'
-              const failureAmount = paymentData.amount || null // Amount is already in rupees from PhonePe
+              // 🔧 FIX: Convert amount from paise to rupees (PhonePe returns amount in paise)
+              const failureAmount = paymentData.amount ? paymentData.amount / 100 : null
               
               redirectToPaymentFailed(transactionId, failureReason, failureAmount, storedOrderData)
               return
