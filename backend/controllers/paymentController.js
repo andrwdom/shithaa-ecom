@@ -83,6 +83,108 @@ const releaseStockOnPaymentFailure = async (paymentSession, correlationId) => {
   }
 };
 
+// Fallback function for non-transactional payment processing
+const processPaymentWithoutTransaction = async (paymentSession, merchantTransactionId, correlationId, phonepeResponse) => {
+  console.log(`[${correlationId}] Processing payment without transaction (fallback mode)`);
+  
+  try {
+    // 1. Check if order already exists (idempotency check)
+    const existingOrder = await orderModel.findOne({
+      phonepeTransactionId: merchantTransactionId
+    });
+    
+    if (existingOrder) {
+      console.log(`[${correlationId}] Order already exists for transaction ${merchantTransactionId}, skipping creation`);
+      return existingOrder;
+    }
+
+    // 2. Validate payment session data
+    const orderPayload = paymentSession.orderPayload;
+    if (!orderPayload) {
+      throw new Error('Order payload is missing from payment session');
+    }
+
+    // 3. Prepare order data
+    orderPayload.paymentStatus = 'paid';
+    orderPayload.orderStatus = 'Pending';
+    orderPayload.status = 'Pending';
+    orderPayload.paidAt = new Date();
+    orderPayload.phonepeResponse = phonepeResponse;
+    orderPayload.stockConfirmed = false;
+
+    // 4. Create order
+    const order = await orderModel.create(orderPayload);
+    const createdOrder = order;
+    console.log(`[${correlationId}] Order created (non-transactional):`, createdOrder.orderId);
+
+    // 5. Confirm stock reservation (deduct stock)
+    const { confirmStockReservation } = await import('../utils/stock.js');
+    const itemsToProcess = createdOrder.cartItems && createdOrder.cartItems.length > 0 
+      ? createdOrder.cartItems 
+      : createdOrder.items;
+
+    if (!itemsToProcess || itemsToProcess.length === 0) {
+      throw new Error('Order has no items to process');
+    }
+
+    // Process each item
+    for (const item of itemsToProcess) {
+      const productId = item.productId || item._id || item.id || item.product;
+      
+      if (!productId || !item.size || !item.quantity) {
+        throw new Error(`Invalid item data: ${JSON.stringify(item)}`);
+      }
+
+      console.log(`[${correlationId}] Confirming stock for:`, item.name, 'Product:', productId, 'Size:', item.size, 'Qty:', item.quantity);
+      
+      const stockConfirmed = await confirmStockReservation(
+        productId, 
+        item.size, 
+        item.quantity
+      );
+      
+      if (!stockConfirmed) {
+        throw new Error(`Stock confirmation failed for ${item.name} (${item.size}) - insufficient stock or reservation`);
+      }
+    }
+
+    // 6. Mark order as stock confirmed
+    await orderModel.findByIdAndUpdate(
+      createdOrder._id, 
+      { 
+        stockConfirmed: true,
+        stockConfirmedAt: new Date(),
+        updatedAt: new Date()
+      }
+    );
+
+    // 7. Update payment session status
+    await PaymentSession.findByIdAndUpdate(
+      paymentSession._id,
+      {
+        status: 'success',
+        orderId: createdOrder._id,
+        phonepeResponse: phonepeResponse
+      }
+    );
+
+    console.log(`[${correlationId}] Non-transactional payment processing completed successfully for order:`, createdOrder.orderId);
+    return createdOrder;
+
+  } catch (error) {
+    console.error(`[${correlationId}] Non-transactional payment processing failed:`, error);
+    
+    // Try to rollback by releasing stock
+    try {
+      await releaseStockOnPaymentFailure(paymentSession, correlationId);
+    } catch (rollbackError) {
+      console.error(`[${correlationId}] Rollback failed:`, rollbackError);
+    }
+    
+    throw error;
+  }
+};
+
 // Helper function to initialize PhonePe client
 const initializePhonePeClient = () => {
     const { phonepe } = config;
@@ -660,18 +762,76 @@ export const phonePeCallback = async (req, res) => {
       } catch (transactionError) {
         console.error(`[${correlationId}] Atomic transaction failed:`, transactionError);
         
-        // Update payment session to failed
-        await PaymentSession.findByIdAndUpdate(paymentSession._id, {
-          status: 'failed',
-          error: transactionError.message,
-          phonepeResponse: req.body
-        });
-        
-        return res.status(500).json({
-          success: false,
-          message: 'Payment processing failed. Please contact support.',
-          error: transactionError.message
-        });
+        // Check if it's a replica set error
+        if (transactionError.message && transactionError.message.includes('Transaction numbers are only allowed on a replica set')) {
+          console.log(`[${correlationId}] MongoDB not configured as replica set, falling back to non-transactional approach`);
+          await session.endSession();
+          
+          try {
+            // Fallback: Non-transactional approach
+            const order = await processPaymentWithoutTransaction(paymentSession, merchantTransactionId, correlationId, req.body);
+            
+            // Clear user's cart (non-blocking)
+            if (order.userId) {
+              try {
+                const { userModel } = await import('../models/userModel.js');
+                await userModel.findByIdAndUpdate(order.userId, { cartData: {} });
+                console.log('User cart cleared successfully');
+              } catch (cartError) {
+                console.error('Failed to clear user cart:', cartError);
+              }
+            }
+            
+            // Generate and send invoice PDF via email (non-blocking)
+            try {
+              const { generateInvoiceBuffer, sendInvoiceEmail } = await import('../utils/invoiceGenerator.js');
+              const pdfBuffer = await generateInvoiceBuffer(order);
+              await sendInvoiceEmail(order, pdfBuffer);
+              console.log('Invoice email sent successfully');
+            } catch (err) {
+              console.error('Invoice email error:', err);
+            }
+
+            // Determine redirect URL for successful payment
+            const redirectUrl = `${process.env.FRONTEND_URL || 'https://shithaa.in'}/order-success?orderId=${order.orderId}`;
+
+            return res.json({
+              success: true,
+              message: 'Payment successful',
+              orderId: order._id,
+              redirectUrl
+            });
+            
+          } catch (fallbackError) {
+            console.error(`[${correlationId}] Fallback processing also failed:`, fallbackError);
+            
+            // Update payment session to failed
+            await PaymentSession.findByIdAndUpdate(paymentSession._id, {
+              status: 'failed',
+              error: fallbackError.message,
+              phonepeResponse: req.body
+            });
+            
+            return res.status(500).json({
+              success: false,
+              message: 'Payment processing failed. Please contact support.',
+              error: fallbackError.message
+            });
+          }
+        } else {
+          // Other transaction errors - update payment session to failed
+          await PaymentSession.findByIdAndUpdate(paymentSession._id, {
+            status: 'failed',
+            error: transactionError.message,
+            phonepeResponse: req.body
+          });
+          
+          return res.status(500).json({
+            success: false,
+            message: 'Payment processing failed. Please contact support.',
+            error: transactionError.message
+          });
+        }
       } finally {
         await session.endSession();
       }
@@ -919,19 +1079,68 @@ export const verifyPhonePePayment = async (req, res) => {
         } catch (transactionError) {
           console.error(`[${correlationId}] Atomic transaction failed in verify:`, transactionError);
           
-          // Update payment session to failed
-          await PaymentSession.findByIdAndUpdate(paymentSession._id, {
-            status: 'failed',
-            error: transactionError.message,
-            phonepeResponse: paymentStatus
-          });
-          
-          return res.status(500).json({
-            success: false,
-            message: 'Order creation failed during verification',
-            error: transactionError.message,
-            data: null
-          });
+          // Check if it's a replica set error
+          if (transactionError.message && transactionError.message.includes('Transaction numbers are only allowed on a replica set')) {
+            console.log(`[${correlationId}] MongoDB not configured as replica set, falling back to non-transactional approach in verify`);
+            await session.endSession();
+            
+            try {
+              // Fallback: Non-transactional approach
+              order = await processPaymentWithoutTransaction(paymentSession, merchantTransactionId, correlationId, paymentStatus);
+              
+              // Clear user's cart (non-blocking)
+              if (order.userId) {
+                try {
+                  const { userModel } = await import('../models/userModel.js');
+                  await userModel.findByIdAndUpdate(order.userId, { cartData: {} });
+                  console.log('User cart cleared successfully');
+                } catch (cartError) {
+                  console.error('Failed to clear user cart:', cartError);
+                }
+              }
+
+              // Send invoice email (non-blocking)
+              try {
+                const { generateInvoiceBuffer, sendInvoiceEmail } = await import('../utils/invoiceGenerator.js');
+                generateInvoiceBuffer(order)
+                  .then(pdfBuffer => sendInvoiceEmail(order, pdfBuffer))
+                  .catch(err => console.error('Error sending invoice from verify endpoint:', err));
+              } catch (err) {
+                console.error('Error preparing invoice from verify endpoint:', err);
+              }
+              
+            } catch (fallbackError) {
+              console.error(`[${correlationId}] Fallback processing also failed in verify:`, fallbackError);
+              
+              // Update payment session to failed
+              await PaymentSession.findByIdAndUpdate(paymentSession._id, {
+                status: 'failed',
+                error: fallbackError.message,
+                phonepeResponse: paymentStatus
+              });
+              
+              return res.status(500).json({
+                success: false,
+                message: 'Order creation failed during verification',
+                error: fallbackError.message,
+                data: null
+              });
+            }
+          } else {
+            // Other transaction errors - update payment session to failed
+            await PaymentSession.findByIdAndUpdate(paymentSession._id, {
+              status: 'failed',
+              error: transactionError.message,
+              phonepeResponse: paymentStatus
+            });
+            
+            return res.status(500).json({
+              success: false,
+              message: 'Order creation failed during verification',
+              error: transactionError.message,
+              data: null
+            });
+          }
         } finally {
           await session.endSession();
         }
