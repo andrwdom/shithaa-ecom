@@ -180,7 +180,7 @@ export async function generateInvoiceBuffer(order) {
       doc.font('Helvetica-Bold').fontSize(12).fillColor(BRAND_COLOR).text(`Total: `, { continued: true }).text(`₹${total}`)
       doc.moveDown(0.5);
       
-      // Payment and status info
+      // Payment and status info - PROPERLY ALIGNED
       doc.font('Helvetica').fontSize(10).fillColor('#666');
       doc.text(`Payment Method: `, { continued: true }).font('Helvetica-Bold').text(order.paymentMethod || '-')
       doc.moveDown(0.2);
@@ -191,24 +191,24 @@ export async function generateInvoiceBuffer(order) {
       doc.moveTo(40, doc.y).lineTo(555, doc.y).strokeColor('#E1D5F6').lineWidth(1.2).stroke();
       doc.moveDown(0.8);
 
-      // --- FOOTER ---
-      // Add proper spacing before footer
-      doc.moveDown(1.5);
-      
-      // Add a subtle line above footer
-      doc.moveTo(40, doc.y).lineTo(555, doc.y).strokeColor('#E1D5F6').lineWidth(0.5).stroke();
-      doc.moveDown(0.5);
-      
-      // Thank you message with proper spacing
-      doc.font('Helvetica-Bold').fontSize(12).fillColor(BRAND_COLOR).text('Thank you for shopping with SHITHAA!', { align: 'center' });
-      doc.moveDown(0.3);
-      
-      // Contact info with proper spacing
-      doc.font('Helvetica').fontSize(10).fillColor('#888').text(`${process.env.BASE_URL?.replace('https://', 'www.').replace('http://', 'www.') || 'www.shithaa.in'} | info.shithaa@gmail.com`, { align: 'center' });
-      doc.moveDown(0.5);
-      
-      // Add final spacing to ensure proper bottom margin
-      doc.moveDown(1);
+    // --- FOOTER ---
+    // Add proper spacing before footer
+    doc.moveDown(1.5);
+
+    // Add a subtle line above footer
+    doc.moveTo(40, doc.y).lineTo(555, doc.y).strokeColor('#E1D5F6').lineWidth(0.5).stroke();
+    doc.moveDown(0.5);
+
+    // Thank you message with proper spacing - CENTERED
+    doc.font('Helvetica-Bold').fontSize(12).fillColor(BRAND_COLOR).text('Thank you for shopping with SHITHAA!', { align: 'center' });
+    doc.moveDown(0.3);
+
+    // Contact info with proper spacing - CENTERED
+    doc.font('Helvetica').fontSize(10).fillColor('#888').text(`${process.env.BASE_URL?.replace('https://', 'www.').replace('http://', 'www.') || 'www.shithaa.in'} | info.shithaa@gmail.com`, { align: 'center' });
+    doc.moveDown(0.5);
+
+    // Add final spacing to ensure proper bottom margin
+    doc.moveDown(1);
       
       doc.end();
     } catch (err) {
