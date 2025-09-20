@@ -952,9 +952,9 @@ export const generateInvoice = async (req, res) => {
     doc.font('Helvetica-Bold').fontSize(13).fillColor('#473C66').text('Order Summary');
     doc.moveDown(0.5);
     
-    // 🔧 IMPROVED: Better order summary layout with proper alignment
-    const summaryLeft = 350;
-    const summaryRight = 520;
+    // 🔧 FIXED: Use full width with proper spacing
+    const summaryLeft = 200;  // Start much earlier
+    const summaryRight = 520; // Keep same end point
     
     doc.font('Helvetica').fontSize(11).fillColor('#333');
     
@@ -1014,12 +1014,12 @@ export const generateInvoice = async (req, res) => {
     doc.moveTo(40, doc.y).lineTo(555, doc.y).strokeColor('#E1D5F6').lineWidth(0.5).stroke();
     doc.moveDown(0.5);
     
-    // Thank you message with proper spacing - CENTERED
-    doc.font('Helvetica-Bold').fontSize(12).fillColor('#473C66').text('Thank you for shopping with SHITHAA!', { align: 'center' });
+    // Thank you message with proper spacing - CENTERED with width constraint
+    doc.font('Helvetica-Bold').fontSize(12).fillColor('#473C66').text('Thank you for shopping with SHITHAA!', 40, doc.y, { width: 515, align: 'center' });
     doc.moveDown(0.3);
     
-    // Contact info with proper spacing - CENTERED
-    doc.font('Helvetica').fontSize(10).fillColor('#888').text(`${process.env.BASE_URL?.replace('https://', 'www.').replace('http://', 'www.') || 'www.shithaa.in'} | info.shithaa@gmail.com`, { align: 'center' });
+    // Contact info with proper spacing - CENTERED with width constraint
+    doc.font('Helvetica').fontSize(10).fillColor('#888').text(`${process.env.BASE_URL?.replace('https://', 'www.').replace('http://', 'www.') || 'www.shithaa.in'} | info.shithaa@gmail.com`, 40, doc.y, { width: 515, align: 'center' });
     doc.moveDown(0.5);
     
     // Add final spacing to ensure proper bottom margin

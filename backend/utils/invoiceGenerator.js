@@ -199,13 +199,13 @@ export async function generateInvoiceBuffer(order) {
     doc.moveTo(40, doc.y).lineTo(555, doc.y).strokeColor('#E1D5F6').lineWidth(0.5).stroke();
     doc.moveDown(0.5);
 
-    // Thank you message with proper spacing - CENTERED
-    doc.font('Helvetica-Bold').fontSize(12).fillColor(BRAND_COLOR).text('Thank you for shopping with SHITHAA!', { align: 'center' });
-    doc.moveDown(0.3);
+      // Thank you message with proper spacing - CENTERED with width constraint
+      doc.font('Helvetica-Bold').fontSize(12).fillColor(BRAND_COLOR).text('Thank you for shopping with SHITHAA!', 40, doc.y, { width: 515, align: 'center' });
+      doc.moveDown(0.3);
 
-    // Contact info with proper spacing - CENTERED
-    doc.font('Helvetica').fontSize(10).fillColor('#888').text(`${process.env.BASE_URL?.replace('https://', 'www.').replace('http://', 'www.') || 'www.shithaa.in'} | info.shithaa@gmail.com`, { align: 'center' });
-    doc.moveDown(0.5);
+      // Contact info with proper spacing - CENTERED with width constraint
+      doc.font('Helvetica').fontSize(10).fillColor('#888').text(`${process.env.BASE_URL?.replace('https://', 'www.').replace('http://', 'www.') || 'www.shithaa.in'} | info.shithaa@gmail.com`, 40, doc.y, { width: 515, align: 'center' });
+      doc.moveDown(0.5);
 
     // Add final spacing to ensure proper bottom margin
     doc.moveDown(1);
