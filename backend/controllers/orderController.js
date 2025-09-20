@@ -952,9 +952,9 @@ export const generateInvoice = async (req, res) => {
     doc.font('Helvetica-Bold').fontSize(13).fillColor('#473C66').text('Order Summary');
     doc.moveDown(0.5);
     
-    // 🔧 FIXED: Use full width with proper spacing
-    const summaryLeft = 200;  // Start much earlier
-    const summaryRight = 520; // Keep same end point
+    // 🔧 FIXED: Use much more of the available width
+    const summaryLeft = 100;  // Start much earlier to use more space
+    const summaryRight = 480; // End earlier to balance the layout
     
     doc.font('Helvetica').fontSize(11).fillColor('#333');
     

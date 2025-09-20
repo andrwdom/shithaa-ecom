@@ -147,44 +147,56 @@ export async function generateInvoiceBuffer(order) {
       const total = order.totalAmount || order.total || order.totalPrice || order.amount || (safeSubtotal - discountAmt + shippingCost)
       
       doc.font('Helvetica-Bold').fontSize(13).fillColor(BRAND_COLOR).text('Order Summary');
-      doc.moveDown(0.4);
+      doc.moveDown(0.5);
       
-      // Create a nice summary box
-      const summaryStartY = doc.y;
+      // 🔧 FIXED: Use much more of the available width with proper alignment
+      const summaryLeft = 100;  // Start much earlier to use more space
+      const summaryRight = 480; // End earlier to balance the layout
+      
       doc.font('Helvetica').fontSize(11).fillColor('#333');
       
       // Subtotal
-      doc.text(`Subtotal: `, { continued: true }).font('Helvetica-Bold').text(`₹${safeSubtotal}`)
+      doc.text('Subtotal:', summaryLeft, doc.y, { width: summaryRight - summaryLeft - 5, align: 'right' });
+      doc.font('Helvetica-Bold').text(`₹${safeSubtotal}`, summaryRight, doc.y, { align: 'right' });
       doc.moveDown(0.3);
       
       // 🔧 FIX: Display loungewear offer discount if applied
       if (order.offerDetails?.offerApplied && order.offerDetails?.offerDiscount > 0) {
-        doc.font('Helvetica').text(`${order.offerDetails.offerDescription}: `, { continued: true }).font('Helvetica-Bold').text(`-₹${order.offerDetails.offerDiscount}`)
+        doc.font('Helvetica').text(`${order.offerDetails.offerDescription}:`, summaryLeft, doc.y, { width: summaryRight - summaryLeft - 5, align: 'right' });
+        doc.font('Helvetica-Bold').fillColor('#E53E3E').text(`-₹${order.offerDetails.offerDiscount}`, summaryRight, doc.y, { align: 'right' });
+        doc.fillColor('#333'); // Reset color
         doc.moveDown(0.3);
       }
       
       // Discount
       if (discountAmt > 0) {
-        doc.font('Helvetica').text(`Discount: `, { continued: true }).font('Helvetica-Bold').text(`-₹${discountAmt}${coupon ? ` (${coupon})` : ''}`)
+        doc.font('Helvetica').text(`Discount${coupon ? ` (${coupon})` : ''}:`, summaryLeft, doc.y, { width: summaryRight - summaryLeft - 5, align: 'right' });
+        doc.font('Helvetica-Bold').fillColor('#E53E3E').text(`-₹${discountAmt}`, summaryRight, doc.y, { align: 'right' });
+        doc.fillColor('#333'); // Reset color
         doc.moveDown(0.3);
       }
       
       // Shipping
-      doc.font('Helvetica').text(`Shipping: `, { continued: true }).font('Helvetica-Bold').text(`₹${shippingCost}`)
+      doc.font('Helvetica').text('Shipping:', summaryLeft, doc.y, { width: summaryRight - summaryLeft - 5, align: 'right' });
+      doc.font('Helvetica-Bold').text(`₹${shippingCost}`, summaryRight, doc.y, { align: 'right' });
       doc.moveDown(0.3);
       
       // Total with emphasis
       doc.moveDown(0.2);
-      doc.moveTo(40, doc.y).lineTo(555, doc.y).strokeColor('#E1D5F6').lineWidth(1).stroke();
+      doc.moveTo(summaryLeft - 10, doc.y).lineTo(summaryRight + 10, doc.y).strokeColor('#E1D5F6').lineWidth(1).stroke();
       doc.moveDown(0.3);
-      doc.font('Helvetica-Bold').fontSize(12).fillColor(BRAND_COLOR).text(`Total: `, { continued: true }).text(`₹${total}`)
-      doc.moveDown(0.5);
+      doc.font('Helvetica-Bold').fontSize(12).text('Total:', summaryLeft, doc.y, { width: summaryRight - summaryLeft - 5, align: 'right' });
+      doc.font('Helvetica-Bold').fontSize(12).fillColor(BRAND_COLOR).text(`₹${total}`, summaryRight, doc.y, { align: 'right' });
+      doc.fillColor('#333'); // Reset color
+      doc.moveDown(0.8);
       
       // Payment and status info - PROPERLY ALIGNED
       doc.font('Helvetica').fontSize(10).fillColor('#666');
-      doc.text(`Payment Method: `, { continued: true }).font('Helvetica-Bold').text(order.paymentMethod || '-')
+      doc.text(`Payment Method: `, summaryLeft, doc.y, { width: summaryRight - summaryLeft - 5, align: 'right' });
+      doc.font('Helvetica-Bold').text(order.paymentMethod || '-', summaryRight, doc.y, { align: 'right' });
       doc.moveDown(0.2);
-      doc.font('Helvetica').text(`Order Status: `, { continued: true }).font('Helvetica-Bold').text(order.status || order.orderStatus || '-')
+      doc.font('Helvetica').text(`Order Status: `, summaryLeft, doc.y, { width: summaryRight - summaryLeft - 5, align: 'right' });
+      doc.font('Helvetica-Bold').text(order.status || order.orderStatus || '-', summaryRight, doc.y, { align: 'right' });
       doc.moveDown(0.8);
       
       // Final separator
