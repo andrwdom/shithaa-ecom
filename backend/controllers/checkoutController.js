@@ -5,6 +5,113 @@ import Reservation from '../models/Reservation.js';
 import productModel from '../models/productModel.js';
 import { successResponse, errorResponse } from '../utils/response.js';
 import { checkStockAvailability, reserveStock, releaseStockReservation } from '../utils/stock.js';
+import mongoose from 'mongoose';
+
+/**
+ * CRITICAL: Server-side cart validation to prevent price manipulation
+ * This function validates all cart items against current database prices
+ * and ensures stock availability before checkout
+ */
+const validateCartItems = async (cartItems) => {
+    if (!cartItems || !Array.isArray(cartItems) || cartItems.length === 0) {
+        return {
+            isValid: false,
+            error: 'No cart items provided',
+            validatedItems: []
+        };
+    }
+
+    const validatedItems = [];
+    const errors = [];
+    let totalPrice = 0;
+
+    try {
+        for (const item of cartItems) {
+            // Validate required fields
+            if (!item._id || !item.size || !item.quantity || typeof item.price !== 'number') {
+                errors.push(`Invalid item data: ${JSON.stringify(item)}`);
+                continue;
+            }
+
+            // Validate MongoDB ObjectId format
+            if (!mongoose.Types.ObjectId.isValid(item._id)) {
+                errors.push(`Invalid product ID format: ${item._id}`);
+                continue;
+            }
+
+            // Fetch current product data from database
+            const product = await productModel.findById(item._id);
+            if (!product) {
+                errors.push(`Product not found: ${item._id}`);
+                continue;
+            }
+
+            // Find the specific size
+            const sizeData = product.sizes.find(s => s.size === item.size);
+            if (!sizeData) {
+                errors.push(`Size ${item.size} not available for product ${product.name}`);
+                continue;
+            }
+
+            // CRITICAL: Validate price against database
+            const currentPrice = product.price;
+            if (Math.abs(item.price - currentPrice) > 0.01) { // Allow small floating point differences
+                console.warn(`🚨 PRICE MANIPULATION DETECTED: Product ${product.name} - Client price: ${item.price}, Server price: ${currentPrice}`);
+                errors.push(`Price mismatch for ${product.name}: Expected ${currentPrice}, got ${item.price}`);
+                continue;
+            }
+
+            // Validate stock availability
+            const availableStock = Math.max(0, sizeData.stock - (sizeData.reserved || 0));
+            if (item.quantity > availableStock) {
+                errors.push(`Insufficient stock for ${product.name} (${item.size}): Available ${availableStock}, Requested ${item.quantity}`);
+                continue;
+            }
+
+            // Validate quantity
+            if (item.quantity <= 0 || item.quantity > 10) { // Reasonable quantity limit
+                errors.push(`Invalid quantity for ${product.name}: ${item.quantity}`);
+                continue;
+            }
+
+            // Create validated item with server-verified data
+            const validatedItem = {
+                _id: item._id,
+                productId: item._id, // For compatibility
+                name: product.name,
+                price: currentPrice, // Use server price
+                size: item.size,
+                quantity: item.quantity,
+                image: product.images?.[0] || '',
+                category: product.category,
+                // Add server-side metadata
+                validatedAt: new Date(),
+                serverPrice: currentPrice,
+                clientPrice: item.price
+            };
+
+            validatedItems.push(validatedItem);
+            totalPrice += currentPrice * item.quantity;
+        }
+
+        return {
+            isValid: errors.length === 0,
+            validatedItems,
+            totalPrice,
+            errors,
+            itemCount: validatedItems.length,
+            originalItemCount: cartItems.length
+        };
+
+    } catch (error) {
+        console.error('❌ Cart validation error:', error);
+        return {
+            isValid: false,
+            error: `Validation failed: ${error.message}`,
+            validatedItems: []
+        };
+    }
+};
 
 // Helper function to calculate loungewear category offer
 function calculateLoungewearCategoryOffer(loungewearCategoryItems) {
@@ -153,12 +260,44 @@ export const createCheckoutSession = async (req, res) => {
       data: { source, itemCount: items.length }
     });
     
-    // Fetch authoritative product data and validate stock availability
-    const validatedItems = [];
-    let subtotal = 0;
+    // 🔑 CRITICAL: Server-side cart validation to prevent price manipulation
+    console.log(`[${correlationId}] Performing server-side cart validation for ${items.length} items`);
     
-    for (const item of items) {
-      const productId = item.productId || item._id;
+    // Perform server-side cart validation
+    const validationResult = await validateCartItems(items);
+    
+    if (!validationResult.isValid) {
+      console.warn(`[${correlationId}] 🚨 Cart validation failed:`, validationResult.errors);
+      
+      await PaymentEvent.createEvent({
+        correlationId,
+        eventType: 'cart_validation_failed',
+        source: 'backend',
+        userId,
+        userEmail,
+        status: 'failed',
+        error: {
+          message: 'Cart validation failed',
+          errors: validationResult.errors
+        }
+      });
+      
+      return errorResponse(res, 400, 'Cart validation failed', {
+        errors: validationResult.errors,
+        validatedItems: validationResult.validatedItems,
+        totalPrice: validationResult.totalPrice
+      });
+    }
+    
+    console.log(`[${correlationId}] ✅ Cart validation successful: ${validationResult.itemCount} items validated`);
+    
+    // Use validated items from server-side validation
+    const validatedItems = validationResult.validatedItems;
+    let subtotal = validationResult.totalPrice;
+    
+    // Additional stock validation for checkout session
+    for (const item of validatedItems) {
+      const productId = item._id;
       if (!productId) {
         return errorResponse(res, 400, `Missing product ID for item: ${item.name}`);
       }

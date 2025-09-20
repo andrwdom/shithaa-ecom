@@ -13,6 +13,7 @@ import { randomUUID } from 'crypto';
 import { generateInvoiceBuffer, sendInvoiceEmail } from '../utils/invoiceGenerator.js';
 import { releaseStockReservation } from '../utils/stock.js';
 import { config } from '../config.js';
+import mongoose from 'mongoose';
 
 // Helper function to get user email for orders
 const getOrderUserEmail = (req, email) => {
@@ -487,7 +488,7 @@ export const createPhonePeSession = async (req, res) => {
   }
 };
 
-// PhonePe payment callback using SDK
+// PhonePe payment callback using SDK - ATOMIC VERSION
 export const phonePeCallback = async (req, res) => {
   const correlationId = req.headers['x-request-id'] || `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   
@@ -525,68 +526,107 @@ export const phonePeCallback = async (req, res) => {
     );
 
     if (isSuccess) {
-      console.log('Payment successful, creating order and reducing stock');
+      console.log('Payment successful, processing atomic transaction');
       
       // Track successful payment
       trackPayment(true);
 
-      // 🔑 CRITICAL FIX: Create order ONLY on successful payment
-      let order;
+      // 🔑 CRITICAL FIX: ATOMIC TRANSACTION - All operations in one transaction
+      const session = await mongoose.startSession();
+      
       try {
-        // Create order from payment session data
-        const orderPayload = paymentSession.orderPayload;
-        
-        // 🔑 CRITICAL FIX: Check if orderPayload exists
-        if (!orderPayload) {
-          console.error(`[callback] Order payload is missing for payment session ${paymentSession._id}`);
-          throw new Error('Order payload is missing from payment session');
-        }
-        
-        orderPayload.paymentStatus = 'paid';
-        orderPayload.orderStatus = 'Pending';
-        orderPayload.status = 'Pending';
-        orderPayload.paidAt = new Date();
-        orderPayload.phonepeResponse = req.body;
-
-        order = await orderModel.create(orderPayload);
-        console.log('Order created successfully:', order.orderId);
-
-        // Update payment session status
-        paymentSession.status = 'success';
-        paymentSession.orderId = order._id;
-        await paymentSession.save();
-
-        // -----------------------------------------------------------------
-        // 🔑 CRITICAL FIX: Deduct stock ONLY on successful payment
-        // -----------------------------------------------------------------
-        try {
-          // Import and call confirmOrderStock to handle stock reduction
-          const { confirmOrderStock } = await import('../controllers/orderController.js');
-          console.log('Reducing stock for order:', order._id);
-          await confirmOrderStock(order._id);
-          console.log('Stock reduction completed successfully');
+        await session.withTransaction(async () => {
+          // 1. Check if order already exists (idempotency check)
+          const existingOrder = await orderModel.findOne({ 
+            phonepeTransactionId: merchantTransactionId 
+          }).session(session);
           
-          // Mark stock as confirmed (i.e., deducted)
-          order.stockConfirmed = true;
-          order.stockConfirmedAt = new Date();
-          await order.save();
-        } catch (stockError) {
-          console.error(`[CRITICAL] Stock deduction failed for order ${order.orderId} after successful payment!`, stockError);
-          // If stock deduction fails, mark the order for manual intervention
-          order.paymentStatus = 'paid_stock_failed';
-          order.orderStatus = 'On Hold';
-          order.status = 'Payment Received, Stock Issue';
-          await order.save();
-          
-          return res.status(500).json({
-            success: false,
-            message: 'Payment successful, but stock update failed. Please contact support.',
-            orderId: order.orderId,
-          });
-        }
-        // -----------------------------------------------------------------
+          if (existingOrder) {
+            console.log(`[${correlationId}] Order already exists for transaction ${merchantTransactionId}, skipping creation`);
+            return existingOrder;
+          }
+
+          // 2. Validate payment session data
+          const orderPayload = paymentSession.orderPayload;
+          if (!orderPayload) {
+            throw new Error('Order payload is missing from payment session');
+          }
+
+          // 3. Prepare order data
+          orderPayload.paymentStatus = 'paid';
+          orderPayload.orderStatus = 'Pending';
+          orderPayload.status = 'Pending';
+          orderPayload.paidAt = new Date();
+          orderPayload.phonepeResponse = req.body;
+          orderPayload.stockConfirmed = false; // Will be set to true after stock confirmation
+
+          // 4. Create order atomically
+          const order = await orderModel.create([orderPayload], { session });
+          const createdOrder = order[0];
+          console.log(`[${correlationId}] Order created atomically:`, createdOrder.orderId);
+
+          // 5. Confirm stock reservation atomically (deduct stock)
+          const { confirmStockReservation } = await import('../utils/stock.js');
+          const itemsToProcess = createdOrder.cartItems && createdOrder.cartItems.length > 0 
+            ? createdOrder.cartItems 
+            : createdOrder.items;
+
+          if (!itemsToProcess || itemsToProcess.length === 0) {
+            throw new Error('Order has no items to process');
+          }
+
+          // Process each item atomically
+          for (const item of itemsToProcess) {
+            const productId = item.productId || item._id || item.id || item.product;
+            
+            if (!productId || !item.size || !item.quantity) {
+              throw new Error(`Invalid item data: ${JSON.stringify(item)}`);
+            }
+
+            console.log(`[${correlationId}] Confirming stock for:`, item.name, 'Product:', productId, 'Size:', item.size, 'Qty:', item.quantity);
+            
+            const stockConfirmed = await confirmStockReservation(
+              productId, 
+              item.size, 
+              item.quantity, 
+              { session }
+            );
+            
+            if (!stockConfirmed) {
+              throw new Error(`Stock confirmation failed for ${item.name} (${item.size}) - insufficient stock or reservation`);
+            }
+          }
+
+          // 6. Mark order as stock confirmed
+          await orderModel.findByIdAndUpdate(
+            createdOrder._id, 
+            { 
+              stockConfirmed: true,
+              stockConfirmedAt: new Date(),
+              updatedAt: new Date()
+            },
+            { session }
+          );
+
+          // 7. Update payment session status
+          await PaymentSession.findByIdAndUpdate(
+            paymentSession._id,
+            {
+              status: 'success',
+              orderId: createdOrder._id,
+              phonepeResponse: req.body
+            },
+            { session }
+          );
+
+          console.log(`[${correlationId}] Atomic transaction completed successfully for order:`, createdOrder.orderId);
+          return createdOrder;
+        });
+
+        // Get the created order for response
+        const order = await orderModel.findOne({ phonepeTransactionId: merchantTransactionId });
         
-        // Clear user's cart (non-blocking)
+        // Clear user's cart (non-blocking - outside transaction)
         if (order.userId) {
           try {
             const { userModel } = await import('../models/userModel.js');
@@ -597,7 +637,7 @@ export const phonePeCallback = async (req, res) => {
           }
         }
         
-        // Generate and send invoice PDF via email (non-blocking)
+        // Generate and send invoice PDF via email (non-blocking - outside transaction)
         try {
           const { generateInvoiceBuffer, sendInvoiceEmail } = await import('../utils/invoiceGenerator.js');
           const pdfBuffer = await generateInvoiceBuffer(order);
@@ -617,20 +657,25 @@ export const phonePeCallback = async (req, res) => {
           redirectUrl
         });
 
-      } catch (orderCreationError) {
-        console.error('Failed to create order after successful payment:', orderCreationError);
+      } catch (transactionError) {
+        console.error(`[${correlationId}] Atomic transaction failed:`, transactionError);
         
-        // Update payment session to failed since order creation failed
-        paymentSession.status = 'failed';
-        paymentSession.error = orderCreationError.message;
-        await paymentSession.save();
+        // Update payment session to failed
+        await PaymentSession.findByIdAndUpdate(paymentSession._id, {
+          status: 'failed',
+          error: transactionError.message,
+          phonepeResponse: req.body
+        });
         
         return res.status(500).json({
           success: false,
-          message: 'Payment successful but order creation failed. Please contact support.',
-          error: orderCreationError.message
+          message: 'Payment processing failed. Please contact support.',
+          error: transactionError.message
         });
+      } finally {
+        await session.endSession();
       }
+
     } else {
       console.log('Payment failed, updating payment session status');
       
@@ -665,7 +710,7 @@ export const phonePeCallback = async (req, res) => {
   }
 };
 
-// Verify PhonePe payment status using SDK
+// Verify PhonePe payment status using SDK - ATOMIC VERSION
 export const verifyPhonePePayment = async (req, res) => {
   const correlationId = req.headers['x-request-id'] || `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   
@@ -693,16 +738,12 @@ export const verifyPhonePePayment = async (req, res) => {
       });
     }
 
-    // Check if order already exists (created on successful payment)
-    let order = null;
-    if (paymentSession.orderId) {
-      order = await orderModel.findById(paymentSession.orderId);
-    }
+    // Check if order already exists (idempotency check)
+    let order = await orderModel.findOne({ phonepeTransactionId: merchantTransactionId });
 
     // Initialize PhonePe client
     const phonePeClient = await initializePhonePeClient();
     
-    // 🔧 CRITICAL FIX: Check if PhonePe client was initialized successfully
     if (!phonePeClient) {
       console.error('PhonePe client initialization failed - cannot verify payment');
       return res.status(500).json({
@@ -716,40 +757,39 @@ export const verifyPhonePePayment = async (req, res) => {
     // Check payment status
     let paymentStatus;
     try {
-        // 🔧 CRITICAL FIX: Try both method names for PhonePe SDK compatibility
-        if (typeof phonePeClient.getOrderStatus === 'function') {
-            paymentStatus = await phonePeClient.getOrderStatus(merchantTransactionId);
-        } else if (typeof phonePeClient.getStatus === 'function') {
-            paymentStatus = await phonePeClient.getStatus(merchantTransactionId);
-        } else {
-            console.error('PhonePe client missing both getOrderStatus and getStatus methods');
-            return res.status(500).json({
-                success: false,
-                message: 'Payment verification failed - PhonePe client method not found',
-                error: 'Missing getOrderStatus/getStatus method',
-                data: null
-            });
-        }
-        
-        console.log('PhonePe payment status:', paymentStatus);
-        
-        if (!paymentStatus) {
-            console.error('PhonePe returned null/undefined payment status');
-            return res.status(500).json({
-                success: false,
-                message: 'Payment verification failed - no status received from PhonePe',
-                error: 'Null payment status',
-                data: null
-            });
-        }
-    } catch (statusError) {
-        console.error('PhonePe getOrderStatus/getStatus failed:', statusError);
+      if (typeof phonePeClient.getOrderStatus === 'function') {
+        paymentStatus = await phonePeClient.getOrderStatus(merchantTransactionId);
+      } else if (typeof phonePeClient.getStatus === 'function') {
+        paymentStatus = await phonePeClient.getStatus(merchantTransactionId);
+      } else {
+        console.error('PhonePe client missing both getOrderStatus and getStatus methods');
         return res.status(500).json({
-            success: false,
-            message: 'Payment verification failed - PhonePe API error',
-            error: statusError.message,
-            data: null
+          success: false,
+          message: 'Payment verification failed - PhonePe client method not found',
+          error: 'Missing getOrderStatus/getStatus method',
+          data: null
         });
+      }
+      
+      console.log('PhonePe payment status:', paymentStatus);
+      
+      if (!paymentStatus) {
+        console.error('PhonePe returned null/undefined payment status');
+        return res.status(500).json({
+          success: false,
+          message: 'Payment verification failed - no status received from PhonePe',
+          error: 'Null payment status',
+          data: null
+        });
+      }
+    } catch (statusError) {
+      console.error('PhonePe getOrderStatus/getStatus failed:', statusError);
+      return res.status(500).json({
+        success: false,
+        message: 'Payment verification failed - PhonePe API error',
+        error: statusError.message,
+        data: null
+      });
     }
 
     const isSuccess = (
@@ -759,51 +799,101 @@ export const verifyPhonePePayment = async (req, res) => {
       paymentStatus.responseCode === '000'
     );
 
-    // 🔑 CRITICAL FIX: If payment is successful, create order if it doesn't exist
-    // This makes the verification endpoint a reliable fallback for the webhook.
+    // 🔑 CRITICAL FIX: If payment is successful, create order atomically if it doesn't exist
     if (isSuccess) {
       if (!order) {
-        console.log(`[verify] Creating order from payment session ${paymentSession._id} (webhook was slow).`);
+        console.log(`[${correlationId}] Creating order atomically from payment session ${paymentSession._id} (webhook was slow).`);
+        
+        const session = await mongoose.startSession();
         
         try {
-          // Create order from payment session data
-          const orderPayload = paymentSession.orderPayload;
-          
-          // 🔑 CRITICAL FIX: Check if orderPayload exists
-          if (!orderPayload) {
-            console.error(`[verify] Order payload is missing for payment session ${paymentSession._id}`);
-            throw new Error('Order payload is missing from payment session');
-          }
-          
-          orderPayload.paymentStatus = 'paid';
-          orderPayload.orderStatus = 'Pending';
-          orderPayload.status = 'Pending';
-          orderPayload.paidAt = new Date();
-          orderPayload.phonepeResponse = paymentStatus;
-
-          order = await orderModel.create(orderPayload);
-          console.log('Order created successfully from verify endpoint:', order.orderId);
-
-          // Update payment session with order ID
-          paymentSession.orderId = order._id;
-          paymentSession.status = 'success';
-          await paymentSession.save();
-          
-          // Reduce stock
-          const { confirmOrderStock } = await import('../controllers/orderController.js');
-          try {
-            console.log('Reducing stock for order (verify path):', order._id);
-            await confirmOrderStock(order._id);
-            console.log('Stock reduction completed successfully');
+          await session.withTransaction(async () => {
+            // Double-check order doesn't exist (race condition protection)
+            const existingOrder = await orderModel.findOne({ 
+              phonepeTransactionId: merchantTransactionId 
+            }).session(session);
             
-            // Mark stock as confirmed
-            order.stockConfirmed = true;
-            order.stockConfirmedAt = new Date();
-            await order.save();
-          } catch (stockError) {
-            console.error('Failed to reduce stock during verify:', stockError);
-            // Continue with order update even if stock reduction fails
-          }
+            if (existingOrder) {
+              console.log(`[${correlationId}] Order already exists in transaction, skipping creation`);
+              return existingOrder;
+            }
+
+            // Create order from payment session data
+            const orderPayload = paymentSession.orderPayload;
+            
+            if (!orderPayload) {
+              throw new Error('Order payload is missing from payment session');
+            }
+            
+            orderPayload.paymentStatus = 'paid';
+            orderPayload.orderStatus = 'Pending';
+            orderPayload.status = 'Pending';
+            orderPayload.paidAt = new Date();
+            orderPayload.phonepeResponse = paymentStatus;
+            orderPayload.stockConfirmed = false;
+
+            // Create order atomically
+            const orderResult = await orderModel.create([orderPayload], { session });
+            const createdOrder = orderResult[0];
+            console.log(`[${correlationId}] Order created atomically from verify:`, createdOrder.orderId);
+
+            // Confirm stock reservation atomically
+            const { confirmStockReservation } = await import('../utils/stock.js');
+            const itemsToProcess = createdOrder.cartItems && createdOrder.cartItems.length > 0 
+              ? createdOrder.cartItems 
+              : createdOrder.items;
+
+            if (!itemsToProcess || itemsToProcess.length === 0) {
+              throw new Error('Order has no items to process');
+            }
+
+            // Process each item atomically
+            for (const item of itemsToProcess) {
+              const productId = item.productId || item._id || item.id || item.product;
+              
+              if (!productId || !item.size || !item.quantity) {
+                throw new Error(`Invalid item data: ${JSON.stringify(item)}`);
+              }
+
+              const stockConfirmed = await confirmStockReservation(
+                productId, 
+                item.size, 
+                item.quantity, 
+                { session }
+              );
+              
+              if (!stockConfirmed) {
+                throw new Error(`Stock confirmation failed for ${item.name} (${item.size})`);
+              }
+            }
+
+            // Mark order as stock confirmed
+            await orderModel.findByIdAndUpdate(
+              createdOrder._id, 
+              { 
+                stockConfirmed: true,
+                stockConfirmedAt: new Date(),
+                updatedAt: new Date()
+              },
+              { session }
+            );
+
+            // Update payment session
+            await PaymentSession.findByIdAndUpdate(
+              paymentSession._id,
+              {
+                orderId: createdOrder._id,
+                status: 'success',
+                phonepeResponse: paymentStatus
+              },
+              { session }
+            );
+
+            return createdOrder;
+          });
+
+          // Get the created order
+          order = await orderModel.findOne({ phonepeTransactionId: merchantTransactionId });
 
           // Clear user's cart (non-blocking)
           if (order.userId) {
@@ -825,15 +915,28 @@ export const verifyPhonePePayment = async (req, res) => {
           } catch (err) {
             console.error('Error preparing invoice from verify endpoint:', err);
           }
-        } catch (orderCreationError) {
-          console.error('Failed to create order from verify endpoint:', orderCreationError);
-          // Update payment session to failed since order creation failed
-          paymentSession.status = 'failed';
-          paymentSession.error = orderCreationError.message;
-          await paymentSession.save();
+
+        } catch (transactionError) {
+          console.error(`[${correlationId}] Atomic transaction failed in verify:`, transactionError);
+          
+          // Update payment session to failed
+          await PaymentSession.findByIdAndUpdate(paymentSession._id, {
+            status: 'failed',
+            error: transactionError.message,
+            phonepeResponse: paymentStatus
+          });
+          
+          return res.status(500).json({
+            success: false,
+            message: 'Order creation failed during verification',
+            error: transactionError.message,
+            data: null
+          });
+        } finally {
+          await session.endSession();
         }
       } else {
-        console.log(`[verify] Order already exists for payment session ${paymentSession._id}`);
+        console.log(`[${correlationId}] Order already exists for payment session ${paymentSession._id}`);
       }
     } else {
       // Payment failed - update payment session status
@@ -844,7 +947,7 @@ export const verifyPhonePePayment = async (req, res) => {
         await paymentSession.save();
         console.log('Payment session marked as failed');
         
-        // 🔑 CRITICAL: Release reserved stock on payment failure
+        // Release reserved stock on payment failure
         await releaseStockOnPaymentFailure(paymentSession, correlationId);
       }
     }
@@ -855,15 +958,13 @@ export const verifyPhonePePayment = async (req, res) => {
         orderId: order?._id || null,
         orderStatus: order?.orderStatus || (isSuccess ? 'Pending' : 'Failed'),
         paymentStatus: order?.paymentStatus || (isSuccess ? 'paid' : 'failed'),
-        // Return PhonePe data in the format frontend expects
         state: paymentStatus?.state || paymentStatus?.status,
         code: paymentStatus?.responseCode || paymentStatus?.code,
         status: paymentStatus?.state || paymentStatus?.status,
         paymentState: paymentStatus?.state || paymentStatus?.status,
         message: paymentStatus?.responseMessage || paymentStatus?.message,
-        amount: paymentStatus?.amount ? paymentStatus.amount / 100 : null, // Convert amount from paise to rupees
+        amount: paymentStatus?.amount ? paymentStatus.amount / 100 : null,
         transactionId: paymentStatus?.transactionId || paymentStatus?.orderId,
-        // Include the full PhonePe response for debugging
         phonepeResponse: paymentStatus
       },
       isSuccess

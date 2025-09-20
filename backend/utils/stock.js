@@ -194,12 +194,12 @@ export async function reserveStock(productId, size, quantity, options = {}) {
 }
 
 /**
- * Confirm stock reservation (decrement stock and reserved fields)
+ * Confirm stock reservation with transaction support (ATOMIC VERSION)
  * @param {string} productId - Product ID
  * @param {string} size - Size to confirm
  * @param {number} quantity - Quantity to confirm
- * @param {Object} options - Additional options
- * @returns {Promise<Object>} - Result of the confirmation
+ * @param {Object} options - Additional options including session
+ * @returns {Promise<boolean>} - Result of the confirmation
  */
 export async function confirmStockReservation(productId, size, quantity, options = {}) {
     if (quantity <= 0) {
@@ -210,7 +210,7 @@ export async function confirmStockReservation(productId, size, quantity, options
     
     try {
         // 🔍 DEBUG: First check if product and size exist
-        const product = await productModel.findById(productId);
+        const product = await productModel.findById(productId).session(session);
         if (!product) {
             console.error(`Stock confirmation failed - Product not found: ${productId}`);
             return false;
@@ -231,7 +231,6 @@ export async function confirmStockReservation(productId, size, quantity, options
         });
         
         // 🔑 CRITICAL: Use atomic update with both stock and reserved validation
-        // Fix: Use arrayFilters to ensure we're updating the correct size element
         const result = await productModel.updateOne(
             {
                 _id: productId,
@@ -257,7 +256,7 @@ export async function confirmStockReservation(productId, size, quantity, options
         const success = !!(result && (result.modifiedCount > 0 || result.nModified > 0));
         
         if (success) {
-            console.log(`✅ Stock reservation confirmed: ${quantity} units for product ${productId} size ${size}`);
+            console.log(`✅ Stock reservation confirmed atomically: ${quantity} units for product ${productId} size ${size}`);
         } else {
             console.warn(`❌ Stock confirmation failed - no matching document: product ${productId} size ${size}`);
             console.warn(`   This usually means stock (${sizeData.stock}) or reserved (${sizeData.reserved}) is insufficient for quantity ${quantity}`);
@@ -557,4 +556,286 @@ export async function cleanupStockReservations() {
             error: error.message
         };
     }
+}
+
+/**
+ * CRITICAL: Clean up expired stock reservations
+ * This prevents stock from being stuck in "reserved" state indefinitely
+ * Should be run as a cron job every 15-30 minutes
+ * @returns {Promise<Object>} - Cleanup results
+ */
+export async function cleanupExpiredReservations() {
+    try {
+        console.log('🧹 Starting expired reservation cleanup...');
+        
+        const now = new Date();
+        const timeoutMinutes = 30; // Reservations older than 30 minutes are considered expired
+        const timeoutDate = new Date(now.getTime() - (timeoutMinutes * 60 * 1000));
+        
+        // Find expired reservations
+        const expiredReservations = await Reservation.find({
+            status: 'active',
+            createdAt: { $lt: timeoutDate }
+        });
+        
+        if (expiredReservations.length === 0) {
+            console.log('✅ No expired reservations found');
+            return {
+                success: true,
+                expiredCount: 0,
+                releasedItems: 0,
+                message: 'No expired reservations to clean up'
+            };
+        }
+        
+        console.log(`🔍 Found ${expiredReservations.length} expired reservations`);
+        
+        let totalReleasedItems = 0;
+        const session = await mongoose.startSession();
+        
+        try {
+            await session.withTransaction(async () => {
+                for (const reservation of expiredReservations) {
+                    console.log(`🔄 Releasing expired reservation: ${reservation._id}`);
+                    
+                    // Release stock for each item in the reservation
+                    for (const item of reservation.items) {
+                        try {
+                            const released = await releaseStockReservation(
+                                item.productId,
+                                item.size,
+                                item.quantity,
+                                { session }
+                            );
+                            
+                            if (released) {
+                                totalReleasedItems++;
+                                console.log(`✅ Released ${item.quantity} units of ${item.productId} size ${item.size}`);
+                            }
+                        } catch (error) {
+                            console.error(`❌ Failed to release stock for item:`, error);
+                        }
+                    }
+                    
+                    // Mark reservation as expired
+                    await Reservation.findByIdAndUpdate(
+                        reservation._id,
+                        { 
+                            status: 'expired',
+                            expiredAt: now,
+                            reason: 'Timeout cleanup'
+                        },
+                        { session }
+                    );
+                }
+            });
+            
+            console.log(`✅ Expired reservation cleanup completed: ${totalReleasedItems} items released from ${expiredReservations.length} reservations`);
+            
+            return {
+                success: true,
+                expiredCount: expiredReservations.length,
+                releasedItems: totalReleasedItems,
+                message: `Released ${totalReleasedItems} items from ${expiredReservations.length} expired reservations`
+            };
+            
+        } finally {
+            await session.endSession();
+        }
+        
+    } catch (error) {
+        console.error('❌ Expired reservation cleanup failed:', error);
+        return {
+            success: false,
+            error: error.message
+        };
+    }
+}
+
+/**
+ * CRITICAL: Get stock health report
+ * Shows current stock status and identifies potential issues
+ * @returns {Promise<Object>} - Stock health report
+ */
+export async function getStockHealthReport() {
+    try {
+        console.log('📊 Generating stock health report...');
+        
+        // Get all products with stock data
+        const products = await productModel.find({}, 'name sizes.stock sizes.reserved sizes.size');
+        
+        let totalProducts = 0;
+        let productsWithStock = 0;
+        let productsWithReservations = 0;
+        let totalStock = 0;
+        let totalReserved = 0;
+        let lowStockProducts = [];
+        let stuckReservations = [];
+        
+        for (const product of products) {
+            totalProducts++;
+            
+            for (const size of product.sizes) {
+                const stock = size.stock || 0;
+                const reserved = size.reserved || 0;
+                const available = Math.max(0, stock - reserved);
+                
+                totalStock += stock;
+                totalReserved += reserved;
+                
+                if (stock > 0) {
+                    productsWithStock++;
+                }
+                
+                if (reserved > 0) {
+                    productsWithReservations++;
+                }
+                
+                // Flag low stock (less than 5 available)
+                if (available < 5 && stock > 0) {
+                    lowStockProducts.push({
+                        productId: product._id,
+                        productName: product.name,
+                        size: size.size,
+                        stock: stock,
+                        reserved: reserved,
+                        available: available
+                    });
+                }
+                
+                // Flag potentially stuck reservations (more than 50% of stock reserved)
+                if (reserved > 0 && reserved > (stock * 0.5)) {
+                    stuckReservations.push({
+                        productId: product._id,
+                        productName: product.name,
+                        size: size.size,
+                        stock: stock,
+                        reserved: reserved,
+                        reservedPercentage: Math.round((reserved / stock) * 100)
+                    });
+                }
+            }
+        }
+        
+        // Check for expired reservations
+        const now = new Date();
+        const timeoutDate = new Date(now.getTime() - (30 * 60 * 1000)); // 30 minutes ago
+        const expiredReservations = await Reservation.countDocuments({
+            status: 'active',
+            createdAt: { $lt: timeoutDate }
+        });
+        
+        const healthScore = calculateHealthScore({
+            totalProducts,
+            productsWithStock,
+            productsWithReservations,
+            totalStock,
+            totalReserved,
+            lowStockProducts: lowStockProducts.length,
+            stuckReservations: stuckReservations.length,
+            expiredReservations
+        });
+        
+        return {
+            success: true,
+            healthScore,
+            summary: {
+                totalProducts,
+                productsWithStock,
+                productsWithReservations,
+                totalStock,
+                totalReserved,
+                availableStock: Math.max(0, totalStock - totalReserved),
+                lowStockCount: lowStockProducts.length,
+                stuckReservationCount: stuckReservations.length,
+                expiredReservationCount: expiredReservations
+            },
+            issues: {
+                lowStockProducts: lowStockProducts.slice(0, 10), // Top 10
+                stuckReservations: stuckReservations.slice(0, 10), // Top 10
+                expiredReservations
+            },
+            recommendations: generateStockRecommendations({
+                lowStockProducts: lowStockProducts.length,
+                stuckReservations: stuckReservations.length,
+                expiredReservations
+            })
+        };
+        
+    } catch (error) {
+        console.error('❌ Stock health report failed:', error);
+        return {
+            success: false,
+            error: error.message
+        };
+    }
+}
+
+/**
+ * Calculate stock health score (0-100)
+ */
+function calculateHealthScore(metrics) {
+    let score = 100;
+    
+    // Deduct points for issues
+    if (metrics.lowStockProducts > 0) {
+        score -= Math.min(20, metrics.lowStockProducts * 2);
+    }
+    
+    if (metrics.stuckReservations > 0) {
+        score -= Math.min(30, metrics.stuckReservations * 3);
+    }
+    
+    if (metrics.expiredReservations > 0) {
+        score -= Math.min(40, metrics.expiredReservations * 4);
+    }
+    
+    // Deduct points for high reservation ratio
+    const reservationRatio = metrics.totalReserved / Math.max(1, metrics.totalStock);
+    if (reservationRatio > 0.3) {
+        score -= Math.min(20, (reservationRatio - 0.3) * 100);
+    }
+    
+    return Math.max(0, Math.round(score));
+}
+
+/**
+ * Generate stock management recommendations
+ */
+function generateStockRecommendations(metrics) {
+    const recommendations = [];
+    
+    if (metrics.lowStockProducts > 0) {
+        recommendations.push({
+            priority: 'HIGH',
+            action: 'Restock low inventory items',
+            description: `${metrics.lowStockProducts} products have low stock levels`
+        });
+    }
+    
+    if (metrics.stuckReservations > 0) {
+        recommendations.push({
+            priority: 'HIGH',
+            action: 'Investigate stuck reservations',
+            description: `${metrics.stuckReservations} products have high reservation ratios`
+        });
+    }
+    
+    if (metrics.expiredReservations > 0) {
+        recommendations.push({
+            priority: 'CRITICAL',
+            action: 'Run expired reservation cleanup',
+            description: `${metrics.expiredReservations} reservations have expired and need cleanup`
+        });
+    }
+    
+    if (recommendations.length === 0) {
+        recommendations.push({
+            priority: 'INFO',
+            action: 'Stock system is healthy',
+            description: 'No immediate issues detected'
+        });
+    }
+    
+    return recommendations;
 } 

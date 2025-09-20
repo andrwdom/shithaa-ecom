@@ -947,13 +947,13 @@ export const generateInvoice = async (req, res) => {
 
     // --- ORDER SUMMARY ---
     doc.font('Helvetica-Bold').fontSize(13).fillColor('#473C66').text('Order Summary');
-    doc.moveDown(0.3);
+    doc.moveDown(0.4);
     
     // 🔧 IMPROVED: Better order summary layout with proper alignment
     const summaryLeft = 350;
     const summaryRight = 520;
     
-    doc.font('Helvetica').fontSize(10).fillColor('#333');
+    doc.font('Helvetica').fontSize(11).fillColor('#333');
     
     // Subtotal
     doc.text('Subtotal:', summaryLeft, doc.y, { width: summaryRight - summaryLeft - 5, align: 'right' });
@@ -962,7 +962,7 @@ export const generateInvoice = async (req, res) => {
     
     // Loungewear offer discount
     if (loungwearOfferDiscount > 0) {
-      doc.font('Helvetica').text(`Loungewear Offer (${order.offerDetails?.offerDescription || 'Buy 3 @ ₹1299'}):`, summaryLeft, doc.y, { width: summaryRight - summaryLeft - 5, align: 'right' });
+      doc.font('Helvetica').text(`${order.offerDetails?.offerDescription || 'Loungewear Offer (Buy 3 @ ₹1299)'}:`, summaryLeft, doc.y, { width: summaryRight - summaryLeft - 5, align: 'right' });
       doc.font('Helvetica-Bold').fillColor('#E53E3E').text(`-₹${loungwearOfferDiscount}`, summaryRight, doc.y, { align: 'right' });
       doc.fillColor('#333'); // Reset color
       doc.moveDown(0.3);
@@ -970,7 +970,7 @@ export const generateInvoice = async (req, res) => {
     
     // Coupon discount
     if (couponDiscount > 0) {
-      doc.font('Helvetica').text(`Coupon Discount${coupon ? ` (${coupon})` : ''}:`, summaryLeft, doc.y, { width: summaryRight - summaryLeft - 5, align: 'right' });
+      doc.font('Helvetica').text(`Discount${coupon ? ` (${coupon})` : ''}:`, summaryLeft, doc.y, { width: summaryRight - summaryLeft - 5, align: 'right' });
       doc.font('Helvetica-Bold').fillColor('#E53E3E').text(`-₹${couponDiscount}`, summaryRight, doc.y, { align: 'right' });
       doc.fillColor('#333'); // Reset color
       doc.moveDown(0.3);
@@ -988,19 +988,38 @@ export const generateInvoice = async (req, res) => {
     doc.font('Helvetica-Bold').fontSize(12).text('Total:', summaryLeft, doc.y, { width: summaryRight - summaryLeft - 5, align: 'right' });
     doc.font('Helvetica-Bold').fontSize(12).fillColor('#473C66').text(`₹${total}`, summaryRight, doc.y, { align: 'right' });
     doc.fillColor('#333'); // Reset color
-    doc.moveDown(0.5);
+    doc.moveDown(0.8);
     
     // Order details
-    doc.font('Helvetica').fontSize(10).text(`Payment Method: `, { continued: true }).font('Helvetica-Bold').text(order.paymentMethod || '-');
+    doc.font('Helvetica').fontSize(10).fillColor('#666');
+    doc.text(`Payment Method: `, { continued: true }).font('Helvetica-Bold').text(order.paymentMethod || '-');
     doc.moveDown(0.2);
     doc.font('Helvetica').text(`Order Status: `, { continued: true }).font('Helvetica-Bold').text(order.status || order.orderStatus || '-');
-    doc.moveDown(1);
+    doc.moveDown(0.8);
+    
+    // Final separator
     doc.moveTo(40, doc.y).lineTo(555, doc.y).strokeColor('#E1D5F6').lineWidth(1.2).stroke();
-    doc.moveDown(1);
+    doc.moveDown(0.8);
 
     // --- FOOTER ---
-    doc.font('Helvetica-Bold').fontSize(11).fillColor('#473C66').text('Thank you for shopping with SHITHAA!', { align: 'center' });
+    // Add proper spacing before footer
+    doc.moveDown(1.5);
+    
+    // Add a subtle line above footer
+    doc.moveTo(40, doc.y).lineTo(555, doc.y).strokeColor('#E1D5F6').lineWidth(0.5).stroke();
+    doc.moveDown(0.5);
+    
+    // Thank you message with proper spacing
+    doc.font('Helvetica-Bold').fontSize(12).fillColor('#473C66').text('Thank you for shopping with SHITHAA!', { align: 'center' });
+    doc.moveDown(0.3);
+    
+    // Contact info with proper spacing
     doc.font('Helvetica').fontSize(10).fillColor('#888').text(`${process.env.BASE_URL?.replace('https://', 'www.').replace('http://', 'www.') || 'www.shithaa.in'} | info.shithaa@gmail.com`, { align: 'center' });
+    doc.moveDown(0.5);
+    
+    // Add final spacing to ensure proper bottom margin
+    doc.moveDown(1);
+    
     doc.end();
 
   } catch (error) {

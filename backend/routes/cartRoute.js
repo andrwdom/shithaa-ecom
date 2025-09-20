@@ -1,5 +1,5 @@
 import express from 'express'
-import { addToCart, getUserCart, updateCart, removeFromCart, calculateCartTotal, getBulkStock, getCartItemsByUserId } from '../controllers/cartController.js'
+import { addToCart, getUserCart, updateCart, removeFromCart, calculateCartTotal, getBulkStock, getCartItemsByUserId, validateCart } from '../controllers/cartController.js'
 import { verifyToken } from '../middleware/auth.js'
 import productModel from '../models/productModel.js'
 
@@ -12,6 +12,7 @@ cartRouter.post('/remove', verifyToken, removeFromCart)
 cartRouter.post('/calculate-total', calculateCartTotal) // No auth required - frontend needs this
 cartRouter.post('/get-stock', verifyToken, getBulkStock)
 cartRouter.post('/get-items', getCartItemsByUserId) // No auth required - for frontend restoration
+cartRouter.post('/validate', validateCart) // CRITICAL: Server-side cart validation - no auth required for checkout flow
 
 // Stock validation endpoint - check for out-of-stock items
 cartRouter.post('/validate-stock', async (req, res) => {

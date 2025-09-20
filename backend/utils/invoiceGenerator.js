@@ -67,39 +67,43 @@ export async function generateInvoiceBuffer(order) {
 
       // --- PRODUCT SUMMARY TABLE ---
       doc.font('Helvetica-Bold').fontSize(13).fillColor('#473C66').text('Product Summary');
-      doc.moveDown(0.3);
+      doc.moveDown(0.4);
       const tableTop = doc.y;
-      // 🔧 FIX: Significantly increased product name column width to prevent text truncation
-      const colX = [40, 380, 430, 500, 570];
+      
+      // 🔧 FIX: Better column layout with proper spacing
+      const colX = [40, 350, 400, 470, 540];
       doc.font('Helvetica-Bold').fontSize(11).fillColor('#333');
       doc.text('Product', colX[0], tableTop, { width: colX[1] - colX[0] - 5 });
       doc.text('Qty', colX[1], tableTop, { width: colX[2] - colX[1] - 5, align: 'center' });
       doc.text('Size', colX[2], tableTop, { width: colX[3] - colX[2] - 5, align: 'center' });
-      doc.text('Price (INR)', colX[3], tableTop, { width: colX[4] - colX[3] - 5, align: 'right' });
-      doc.text('Subtotal (INR)', colX[4], tableTop, { align: 'right' });
-      doc.moveDown(0.2);
+      doc.text('Price', colX[3], tableTop, { width: colX[4] - colX[3] - 5, align: 'right' });
+      doc.text('Subtotal', colX[4], tableTop, { align: 'right' });
+      
+      doc.moveDown(0.3);
       doc.moveTo(colX[0], doc.y).lineTo(555, doc.y).strokeColor('#E1D5F6').lineWidth(1).stroke();
-      doc.moveDown(0.2);
+      doc.moveDown(0.3);
+      
       doc.font('Helvetica').fontSize(11).fillColor('#333');
       const items = order.cartItems?.length ? order.cartItems : order.items;
-      items.forEach(item => {
+      
+      items.forEach((item, index) => {
         const startY = doc.y;
         
-        // 🔧 FIX: Properly handle long product names with better column layout
-        const productNameWidth = colX[1] - colX[0] - 10; // Extra padding for product name
+        // 🔧 FIX: Better product name handling with proper spacing
+        const productNameWidth = colX[1] - colX[0] - 10;
         const productNameHeight = doc.heightOfString(item.name, { width: productNameWidth });
         
         // Draw product name with proper wrapping
         doc.text(item.name, colX[0], startY, { 
           width: productNameWidth,
           align: 'left',
-          lineGap: 1
+          lineGap: 2
         });
         
         // Calculate the actual height used by the product name
-        const actualProductHeight = Math.max(15, productNameHeight); // Minimum 15 points height
+        const actualProductHeight = Math.max(18, productNameHeight + 2);
         
-        // Position other columns at the top of the row, not centered
+        // Position other columns at the top of the row
         doc.text(String(item.quantity), colX[1], startY, { 
           width: colX[2] - colX[1] - 5, 
           align: 'center' 
@@ -108,21 +112,28 @@ export async function generateInvoiceBuffer(order) {
           width: colX[3] - colX[2] - 5, 
           align: 'center' 
         });
-        doc.text(`INR ${item.price}`, colX[3], startY, { 
+        doc.text(`₹${item.price}`, colX[3], startY, { 
           width: colX[4] - colX[3] - 5, 
           align: 'right' 
         });
-        doc.text(`INR ${item.price * item.quantity}`, colX[4], startY, { 
+        doc.text(`₹${item.price * item.quantity}`, colX[4], startY, { 
           align: 'right' 
         });
         
         // Move down based on the actual height of the product name
-        const moveDownAmount = Math.max(0.3, actualProductHeight / 15);
-        doc.y = startY + actualProductHeight + 5; // Add 5 points spacing
+        doc.y = startY + actualProductHeight + 8; // Add 8 points spacing between rows
+        
+        // Add separator line between items (except for last item)
+        if (index < items.length - 1) {
+          doc.moveDown(0.2);
+          doc.moveTo(colX[0], doc.y).lineTo(555, doc.y).strokeColor('#F5F5F5').lineWidth(0.5).stroke();
+          doc.moveDown(0.3);
+        }
       });
-      doc.moveDown(1);
+      
+      doc.moveDown(0.8);
       doc.moveTo(40, doc.y).lineTo(555, doc.y).strokeColor('#E1D5F6').lineWidth(1.2).stroke();
-      doc.moveDown(0.7);
+      doc.moveDown(0.8);
 
       // --- ORDER SUMMARY ---
       // Robust totals calculation
@@ -134,36 +145,71 @@ export async function generateInvoiceBuffer(order) {
       const coupon = order.couponUsed?.code || order.discount?.appliedCouponCode
       const shippingCost = Number(order.shippingCost) || 0
       const total = order.totalAmount || order.total || order.totalPrice || order.amount || (safeSubtotal - discountAmt + shippingCost)
+      
       doc.font('Helvetica-Bold').fontSize(13).fillColor(BRAND_COLOR).text('Order Summary');
-      doc.moveDown(0.3);
+      doc.moveDown(0.4);
+      
+      // Create a nice summary box
+      const summaryStartY = doc.y;
       doc.font('Helvetica').fontSize(11).fillColor('#333');
-      doc.text(`Subtotal: `, { continued: true }).font('Helvetica-Bold').text(`INR ${safeSubtotal}`)
+      
+      // Subtotal
+      doc.text(`Subtotal: `, { continued: true }).font('Helvetica-Bold').text(`₹${safeSubtotal}`)
+      doc.moveDown(0.3);
       
       // 🔧 FIX: Display loungewear offer discount if applied
       if (order.offerDetails?.offerApplied && order.offerDetails?.offerDiscount > 0) {
-        doc.moveDown(0.2)
-        doc.font('Helvetica').text(`Loungewear Offer (${order.offerDetails.offerDescription}): `, { continued: true }).font('Helvetica-Bold').text(`-INR ${order.offerDetails.offerDiscount}`)
+        doc.font('Helvetica').text(`${order.offerDetails.offerDescription}: `, { continued: true }).font('Helvetica-Bold').text(`-₹${order.offerDetails.offerDiscount}`)
+        doc.moveDown(0.3);
       }
       
+      // Discount
       if (discountAmt > 0) {
-        doc.moveDown(0.2)
-        doc.font('Helvetica').text(`Discount: `, { continued: true }).font('Helvetica-Bold').text(`-INR ${discountAmt}${coupon ? ` (Coupon: ${coupon})` : ''}`)
+        doc.font('Helvetica').text(`Discount: `, { continued: true }).font('Helvetica-Bold').text(`-₹${discountAmt}${coupon ? ` (${coupon})` : ''}`)
+        doc.moveDown(0.3);
       }
-      doc.moveDown(0.2)
-      doc.font('Helvetica').text(`Shipping: `, { continued: true }).font('Helvetica-Bold').text(`INR ${shippingCost}`)
-      doc.moveDown(0.2)
-      doc.font('Helvetica').text(`Total: `, { continued: true }).font('Helvetica-Bold').text(`INR ${total}`)
-      doc.moveDown(0.2)
-      doc.font('Helvetica').text(`Payment Method: `, { continued: true }).font('Helvetica-Bold').text(order.paymentMethod || '-')
-      doc.moveDown(0.2)
+      
+      // Shipping
+      doc.font('Helvetica').text(`Shipping: `, { continued: true }).font('Helvetica-Bold').text(`₹${shippingCost}`)
+      doc.moveDown(0.3);
+      
+      // Total with emphasis
+      doc.moveDown(0.2);
+      doc.moveTo(40, doc.y).lineTo(555, doc.y).strokeColor('#E1D5F6').lineWidth(1).stroke();
+      doc.moveDown(0.3);
+      doc.font('Helvetica-Bold').fontSize(12).fillColor(BRAND_COLOR).text(`Total: `, { continued: true }).text(`₹${total}`)
+      doc.moveDown(0.5);
+      
+      // Payment and status info
+      doc.font('Helvetica').fontSize(10).fillColor('#666');
+      doc.text(`Payment Method: `, { continued: true }).font('Helvetica-Bold').text(order.paymentMethod || '-')
+      doc.moveDown(0.2);
       doc.font('Helvetica').text(`Order Status: `, { continued: true }).font('Helvetica-Bold').text(order.status || order.orderStatus || '-')
-      doc.moveDown(1);
+      doc.moveDown(0.8);
+      
+      // Final separator
       doc.moveTo(40, doc.y).lineTo(555, doc.y).strokeColor('#E1D5F6').lineWidth(1.2).stroke();
-      doc.moveDown(1);
+      doc.moveDown(0.8);
 
       // --- FOOTER ---
-      doc.font('Helvetica-Bold').fontSize(11).fillColor(BRAND_COLOR).text('Thank you for shopping with SHITHAA!', { align: 'center' });
+      // Add proper spacing before footer
+      doc.moveDown(1.5);
+      
+      // Add a subtle line above footer
+      doc.moveTo(40, doc.y).lineTo(555, doc.y).strokeColor('#E1D5F6').lineWidth(0.5).stroke();
+      doc.moveDown(0.5);
+      
+      // Thank you message with proper spacing
+      doc.font('Helvetica-Bold').fontSize(12).fillColor(BRAND_COLOR).text('Thank you for shopping with SHITHAA!', { align: 'center' });
+      doc.moveDown(0.3);
+      
+      // Contact info with proper spacing
       doc.font('Helvetica').fontSize(10).fillColor('#888').text(`${process.env.BASE_URL?.replace('https://', 'www.').replace('http://', 'www.') || 'www.shithaa.in'} | info.shithaa@gmail.com`, { align: 'center' });
+      doc.moveDown(0.5);
+      
+      // Add final spacing to ensure proper bottom margin
+      doc.moveDown(1);
+      
       doc.end();
     } catch (err) {
       reject(err);

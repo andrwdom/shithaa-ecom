@@ -1,5 +1,111 @@
 import userModel from "../models/userModel.js"
 import productModel from "../models/productModel.js"
+import mongoose from 'mongoose'
+
+/**
+ * CRITICAL: Server-side cart validation to prevent price manipulation
+ * This function validates all cart items against current database prices
+ * and ensures stock availability before checkout
+ */
+const validateCartItems = async (cartItems) => {
+    if (!cartItems || !Array.isArray(cartItems) || cartItems.length === 0) {
+        return {
+            isValid: false,
+            error: 'No cart items provided',
+            validatedItems: []
+        };
+    }
+
+    const validatedItems = [];
+    const errors = [];
+    let totalPrice = 0;
+
+    try {
+        for (const item of cartItems) {
+            // Validate required fields
+            if (!item._id || !item.size || !item.quantity || typeof item.price !== 'number') {
+                errors.push(`Invalid item data: ${JSON.stringify(item)}`);
+                continue;
+            }
+
+            // Validate MongoDB ObjectId format
+            if (!mongoose.Types.ObjectId.isValid(item._id)) {
+                errors.push(`Invalid product ID format: ${item._id}`);
+                continue;
+            }
+
+            // Fetch current product data from database
+            const product = await productModel.findById(item._id);
+            if (!product) {
+                errors.push(`Product not found: ${item._id}`);
+                continue;
+            }
+
+            // Find the specific size
+            const sizeData = product.sizes.find(s => s.size === item.size);
+            if (!sizeData) {
+                errors.push(`Size ${item.size} not available for product ${product.name}`);
+                continue;
+            }
+
+            // CRITICAL: Validate price against database
+            const currentPrice = product.price;
+            if (Math.abs(item.price - currentPrice) > 0.01) { // Allow small floating point differences
+                console.warn(`🚨 PRICE MANIPULATION DETECTED: Product ${product.name} - Client price: ${item.price}, Server price: ${currentPrice}`);
+                errors.push(`Price mismatch for ${product.name}: Expected ${currentPrice}, got ${item.price}`);
+                continue;
+            }
+
+            // Validate stock availability
+            const availableStock = Math.max(0, sizeData.stock - (sizeData.reserved || 0));
+            if (item.quantity > availableStock) {
+                errors.push(`Insufficient stock for ${product.name} (${item.size}): Available ${availableStock}, Requested ${item.quantity}`);
+                continue;
+            }
+
+            // Validate quantity
+            if (item.quantity <= 0 || item.quantity > 10) { // Reasonable quantity limit
+                errors.push(`Invalid quantity for ${product.name}: ${item.quantity}`);
+                continue;
+            }
+
+            // Create validated item with server-verified data
+            const validatedItem = {
+                _id: item._id,
+                name: product.name,
+                price: currentPrice, // Use server price
+                size: item.size,
+                quantity: item.quantity,
+                image: product.images?.[0] || '',
+                category: product.category,
+                // Add server-side metadata
+                validatedAt: new Date(),
+                serverPrice: currentPrice,
+                clientPrice: item.price
+            };
+
+            validatedItems.push(validatedItem);
+            totalPrice += currentPrice * item.quantity;
+        }
+
+        return {
+            isValid: errors.length === 0,
+            validatedItems,
+            totalPrice,
+            errors,
+            itemCount: validatedItems.length,
+            originalItemCount: cartItems.length
+        };
+
+    } catch (error) {
+        console.error('❌ Cart validation error:', error);
+        return {
+            isValid: false,
+            error: `Validation failed: ${error.message}`,
+            validatedItems: []
+        };
+    }
+};
 
 // Add products to user cart
 const addToCart = async (req, res) => {
@@ -505,6 +611,65 @@ const getCartItemsByUserId = async (req, res) => {
     }
 };
 
+/**
+ * CRITICAL: Server-side cart validation endpoint
+ * This endpoint validates cart items and prevents price manipulation
+ * Must be called before checkout to ensure data integrity
+ */
+const validateCart = async (req, res) => {
+    try {
+        console.log('🔍 validateCart called with:', req.body);
+        
+        const { cartItems } = req.body;
+        
+        if (!cartItems || !Array.isArray(cartItems)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Cart items array is required'
+            });
+        }
+
+        // Perform server-side validation
+        const validationResult = await validateCartItems(cartItems);
+        
+        if (!validationResult.isValid) {
+            console.warn('🚨 Cart validation failed:', validationResult.errors);
+            
+            return res.status(400).json({
+                success: false,
+                message: 'Cart validation failed',
+                errors: validationResult.errors,
+                validatedItems: validationResult.validatedItems,
+                totalPrice: validationResult.totalPrice,
+                itemCount: validationResult.itemCount,
+                originalItemCount: validationResult.originalItemCount
+            });
+        }
+
+        console.log('✅ Cart validation successful:', {
+            itemCount: validationResult.itemCount,
+            totalPrice: validationResult.totalPrice
+        });
+
+        res.json({
+            success: true,
+            message: 'Cart validation successful',
+            validatedItems: validationResult.validatedItems,
+            totalPrice: validationResult.totalPrice,
+            itemCount: validationResult.itemCount,
+            originalItemCount: validationResult.originalItemCount
+        });
+
+    } catch (error) {
+        console.error('❌ Cart validation error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Cart validation failed',
+            error: error.message
+        });
+    }
+};
+
 export {
     addToCart,
     getUserCart,
@@ -512,5 +677,6 @@ export {
     removeFromCart,
     calculateCartTotal,
     getBulkStock,
-    getCartItemsByUserId
+    getCartItemsByUserId,
+    validateCart
 } 
