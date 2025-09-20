@@ -220,8 +220,8 @@ export async function generateInvoiceBuffer(order) {
       doc.moveDown(0.5);
 
     // Add final spacing to ensure proper bottom margin
-    doc.moveDown(1);
-      
+      doc.moveDown(1);
+
       doc.end();
     } catch (err) {
       reject(err);

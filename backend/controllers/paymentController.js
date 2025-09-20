@@ -650,16 +650,16 @@ export const phonePeCallback = async (req, res) => {
 
           // 2. Validate payment session data
           const orderPayload = paymentSession.orderPayload;
-          if (!orderPayload) {
-            throw new Error('Order payload is missing from payment session');
-          }
-
+        if (!orderPayload) {
+          throw new Error('Order payload is missing from payment session');
+        }
+        
           // 3. Prepare order data
-          orderPayload.paymentStatus = 'paid';
-          orderPayload.orderStatus = 'Pending';
-          orderPayload.status = 'Pending';
-          orderPayload.paidAt = new Date();
-          orderPayload.phonepeResponse = req.body;
+        orderPayload.paymentStatus = 'paid';
+        orderPayload.orderStatus = 'Pending';
+        orderPayload.status = 'Pending';
+        orderPayload.paidAt = new Date();
+        orderPayload.phonepeResponse = req.body;
           orderPayload.stockConfirmed = false; // Will be set to true after stock confirmation
 
           // 4. Create order atomically
@@ -770,38 +770,38 @@ export const phonePeCallback = async (req, res) => {
           try {
             // Fallback: Non-transactional approach
             const order = await processPaymentWithoutTransaction(paymentSession, merchantTransactionId, correlationId, req.body);
-            
-            // Clear user's cart (non-blocking)
-            if (order.userId) {
-              try {
-                const { userModel } = await import('../models/userModel.js');
-                await userModel.findByIdAndUpdate(order.userId, { cartData: {} });
-                console.log('User cart cleared successfully');
-              } catch (cartError) {
-                console.error('Failed to clear user cart:', cartError);
-              }
-            }
-            
-            // Generate and send invoice PDF via email (non-blocking)
-            try {
-              const { generateInvoiceBuffer, sendInvoiceEmail } = await import('../utils/invoiceGenerator.js');
-              const pdfBuffer = await generateInvoiceBuffer(order);
-              await sendInvoiceEmail(order, pdfBuffer);
-              console.log('Invoice email sent successfully');
-            } catch (err) {
-              console.error('Invoice email error:', err);
-            }
+        
+        // Clear user's cart (non-blocking)
+        if (order.userId) {
+          try {
+            const { userModel } = await import('../models/userModel.js');
+            await userModel.findByIdAndUpdate(order.userId, { cartData: {} });
+            console.log('User cart cleared successfully');
+          } catch (cartError) {
+            console.error('Failed to clear user cart:', cartError);
+          }
+        }
+        
+        // Generate and send invoice PDF via email (non-blocking)
+        try {
+          const { generateInvoiceBuffer, sendInvoiceEmail } = await import('../utils/invoiceGenerator.js');
+          const pdfBuffer = await generateInvoiceBuffer(order);
+          await sendInvoiceEmail(order, pdfBuffer);
+          console.log('Invoice email sent successfully');
+        } catch (err) {
+          console.error('Invoice email error:', err);
+        }
 
-            // Determine redirect URL for successful payment
-            const redirectUrl = `${process.env.FRONTEND_URL || 'https://shithaa.in'}/order-success?orderId=${order.orderId}`;
+        // Determine redirect URL for successful payment
+        const redirectUrl = `${process.env.FRONTEND_URL || 'https://shithaa.in'}/order-success?orderId=${order.orderId}`;
 
             return res.json({
-              success: true,
-              message: 'Payment successful',
-              orderId: order._id,
-              redirectUrl
-            });
-            
+          success: true,
+          message: 'Payment successful',
+          orderId: order._id,
+          redirectUrl
+        });
+
           } catch (fallbackError) {
             console.error(`[${correlationId}] Fallback processing also failed:`, fallbackError);
             
@@ -811,9 +811,9 @@ export const phonePeCallback = async (req, res) => {
               error: fallbackError.message,
               phonepeResponse: req.body
             });
-            
-            return res.status(500).json({
-              success: false,
+        
+        return res.status(500).json({
+          success: false,
               message: 'Payment processing failed. Please contact support.',
               error: fallbackError.message
             });
@@ -917,39 +917,39 @@ export const verifyPhonePePayment = async (req, res) => {
     // Check payment status
     let paymentStatus;
     try {
-      if (typeof phonePeClient.getOrderStatus === 'function') {
-        paymentStatus = await phonePeClient.getOrderStatus(merchantTransactionId);
-      } else if (typeof phonePeClient.getStatus === 'function') {
-        paymentStatus = await phonePeClient.getStatus(merchantTransactionId);
-      } else {
-        console.error('PhonePe client missing both getOrderStatus and getStatus methods');
-        return res.status(500).json({
-          success: false,
-          message: 'Payment verification failed - PhonePe client method not found',
-          error: 'Missing getOrderStatus/getStatus method',
-          data: null
-        });
-      }
-      
-      console.log('PhonePe payment status:', paymentStatus);
-      
-      if (!paymentStatus) {
-        console.error('PhonePe returned null/undefined payment status');
-        return res.status(500).json({
-          success: false,
-          message: 'Payment verification failed - no status received from PhonePe',
-          error: 'Null payment status',
-          data: null
-        });
-      }
+        if (typeof phonePeClient.getOrderStatus === 'function') {
+            paymentStatus = await phonePeClient.getOrderStatus(merchantTransactionId);
+        } else if (typeof phonePeClient.getStatus === 'function') {
+            paymentStatus = await phonePeClient.getStatus(merchantTransactionId);
+        } else {
+            console.error('PhonePe client missing both getOrderStatus and getStatus methods');
+            return res.status(500).json({
+                success: false,
+                message: 'Payment verification failed - PhonePe client method not found',
+                error: 'Missing getOrderStatus/getStatus method',
+                data: null
+            });
+        }
+        
+        console.log('PhonePe payment status:', paymentStatus);
+        
+        if (!paymentStatus) {
+            console.error('PhonePe returned null/undefined payment status');
+            return res.status(500).json({
+                success: false,
+                message: 'Payment verification failed - no status received from PhonePe',
+                error: 'Null payment status',
+                data: null
+            });
+        }
     } catch (statusError) {
-      console.error('PhonePe getOrderStatus/getStatus failed:', statusError);
-      return res.status(500).json({
-        success: false,
-        message: 'Payment verification failed - PhonePe API error',
-        error: statusError.message,
-        data: null
-      });
+        console.error('PhonePe getOrderStatus/getStatus failed:', statusError);
+        return res.status(500).json({
+            success: false,
+            message: 'Payment verification failed - PhonePe API error',
+            error: statusError.message,
+            data: null
+        });
     }
 
     const isSuccess = (
@@ -978,18 +978,18 @@ export const verifyPhonePePayment = async (req, res) => {
               return existingOrder;
             }
 
-            // Create order from payment session data
-            const orderPayload = paymentSession.orderPayload;
-            
-            if (!orderPayload) {
-              throw new Error('Order payload is missing from payment session');
-            }
-            
-            orderPayload.paymentStatus = 'paid';
-            orderPayload.orderStatus = 'Pending';
-            orderPayload.status = 'Pending';
-            orderPayload.paidAt = new Date();
-            orderPayload.phonepeResponse = paymentStatus;
+          // Create order from payment session data
+          const orderPayload = paymentSession.orderPayload;
+          
+          if (!orderPayload) {
+            throw new Error('Order payload is missing from payment session');
+          }
+          
+          orderPayload.paymentStatus = 'paid';
+          orderPayload.orderStatus = 'Pending';
+          orderPayload.status = 'Pending';
+          orderPayload.paidAt = new Date();
+          orderPayload.phonepeResponse = paymentStatus;
             orderPayload.stockConfirmed = false;
 
             // Create order atomically
@@ -1087,27 +1087,27 @@ export const verifyPhonePePayment = async (req, res) => {
             try {
               // Fallback: Non-transactional approach
               order = await processPaymentWithoutTransaction(paymentSession, merchantTransactionId, correlationId, paymentStatus);
-              
-              // Clear user's cart (non-blocking)
-              if (order.userId) {
-                try {
-                  const { userModel } = await import('../models/userModel.js');
-                  await userModel.findByIdAndUpdate(order.userId, { cartData: {} });
-                  console.log('User cart cleared successfully');
-                } catch (cartError) {
-                  console.error('Failed to clear user cart:', cartError);
-                }
-              }
 
-              // Send invoice email (non-blocking)
-              try {
-                const { generateInvoiceBuffer, sendInvoiceEmail } = await import('../utils/invoiceGenerator.js');
-                generateInvoiceBuffer(order)
-                  .then(pdfBuffer => sendInvoiceEmail(order, pdfBuffer))
-                  .catch(err => console.error('Error sending invoice from verify endpoint:', err));
-              } catch (err) {
-                console.error('Error preparing invoice from verify endpoint:', err);
-              }
+          // Clear user's cart (non-blocking)
+          if (order.userId) {
+            try {
+              const { userModel } = await import('../models/userModel.js');
+              await userModel.findByIdAndUpdate(order.userId, { cartData: {} });
+              console.log('User cart cleared successfully');
+            } catch (cartError) {
+              console.error('Failed to clear user cart:', cartError);
+            }
+          }
+
+          // Send invoice email (non-blocking)
+          try {
+            const { generateInvoiceBuffer, sendInvoiceEmail } = await import('../utils/invoiceGenerator.js');
+            generateInvoiceBuffer(order)
+              .then(pdfBuffer => sendInvoiceEmail(order, pdfBuffer))
+              .catch(err => console.error('Error sending invoice from verify endpoint:', err));
+          } catch (err) {
+            console.error('Error preparing invoice from verify endpoint:', err);
+          }
               
             } catch (fallbackError) {
               console.error(`[${correlationId}] Fallback processing also failed in verify:`, fallbackError);
@@ -1125,8 +1125,8 @@ export const verifyPhonePePayment = async (req, res) => {
                 error: fallbackError.message,
                 data: null
               });
-            }
-          } else {
+        }
+      } else {
             // Other transaction errors - update payment session to failed
             await PaymentSession.findByIdAndUpdate(paymentSession._id, {
               status: 'failed',
