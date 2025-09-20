@@ -838,11 +838,14 @@ export const generateInvoice = async (req, res) => {
 
     // --- CUSTOMER INFO ---
     doc.font('Helvetica-Bold').fontSize(13).fillColor('#473C66').text('Customer Information');
-    doc.moveDown(0.2);
+    doc.moveDown(0.4);
     doc.font('Helvetica').fontSize(11).fillColor('#333');
     doc.text(`Name: `, { continued: true }).font('Helvetica-Bold').text(shipping?.fullName || order.customerName);
+    doc.moveDown(0.2);
     doc.font('Helvetica').text(`Email: `, { continued: true }).font('Helvetica-Bold').text(shipping?.email || order.email);
+    doc.moveDown(0.2);
     doc.font('Helvetica').text(`Phone: `, { continued: true }).font('Helvetica-Bold').text(shipping?.phone || order.phone);
+    doc.moveDown(0.2);
     doc.font('Helvetica').text(`Address: `, { continued: true }).font('Helvetica-Bold').text([
       shipping?.addressLine1 || shipping?.line1,
       shipping?.addressLine2 || shipping?.line2,
@@ -852,7 +855,7 @@ export const generateInvoice = async (req, res) => {
       shipping?.country
     ].filter(Boolean).join(', '));
     if (billing) {
-      doc.moveDown(0.2);
+      doc.moveDown(0.3);
       doc.font('Helvetica').text(`Billing Address: `, { continued: true }).font('Helvetica-Bold').text([
         billing.addressLine1,
         billing.addressLine2,
@@ -868,12 +871,12 @@ export const generateInvoice = async (req, res) => {
 
     // --- PRODUCT SUMMARY TABLE ---
     doc.font('Helvetica-Bold').fontSize(13).fillColor('#473C66').text('Product Summary');
-    doc.moveDown(0.3);
-    
-    // 🔧 IMPROVED: Better column layout for professional appearance
+    doc.moveDown(0.4);
+
+    // 🔧 IMPROVED: Better column layout with proper spacing
     const tableTop = doc.y;
-    const colX = [40, 280, 320, 380, 450, 520];
-    
+    const colX = [40, 280, 320, 380, 450, 520]; // Adjusted column X coordinates
+
     // Table header with better spacing
     doc.font('Helvetica-Bold').fontSize(10).fillColor('#333');
     doc.text('Product', colX[0], tableTop, { width: colX[1] - colX[0] - 5 });
@@ -881,7 +884,7 @@ export const generateInvoice = async (req, res) => {
     doc.text('Size', colX[2], tableTop, { width: colX[3] - colX[2] - 5, align: 'center' });
     doc.text('Price', colX[3], tableTop, { width: colX[4] - colX[3] - 5, align: 'right' });
     doc.text('Subtotal', colX[4], tableTop, { width: colX[5] - colX[4] - 5, align: 'right' });
-    
+
     // Header underline
     doc.moveDown(0.2);
     doc.moveTo(colX[0], doc.y).lineTo(colX[5], doc.y).strokeColor('#E1D5F6').lineWidth(1).stroke();
@@ -947,7 +950,7 @@ export const generateInvoice = async (req, res) => {
 
     // --- ORDER SUMMARY ---
     doc.font('Helvetica-Bold').fontSize(13).fillColor('#473C66').text('Order Summary');
-    doc.moveDown(0.4);
+    doc.moveDown(0.5);
     
     // 🔧 IMPROVED: Better order summary layout with proper alignment
     const summaryLeft = 350;
