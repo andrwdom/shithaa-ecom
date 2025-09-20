@@ -11,8 +11,8 @@ import { verifyToken, optionalAuth } from '../middleware/auth.js';
 
 const checkoutRouter = express.Router();
 
-// Create checkout session (requires authentication)
-checkoutRouter.post('/session', verifyToken, createCheckoutSession);
+// Create checkout session (optional auth for guest users)
+checkoutRouter.post('/session', optionalAuth, createCheckoutSession);
 
 // Get checkout session by ID (optional auth for guest users)
 checkoutRouter.get('/session/:sessionId', optionalAuth, getCheckoutSession);

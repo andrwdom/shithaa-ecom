@@ -227,10 +227,13 @@ export const createCheckoutSession = async (req, res) => {
   
   try {
     console.log(`[${correlationId}] Creating checkout session`);
+    console.log(`[${correlationId}] Request body:`, { source: req.body.source, itemsCount: req.body.items?.length, hasEmail: !!req.body.email, hasUserEmail: !!req.body.userEmail, hasUser: !!req.user });
     
     const { source, items, couponCode } = req.body;
     const userId = req.user?.id;
-    const userEmail = req.user?.email || req.body.email;
+    const userEmail = req.user?.email || req.body.email || req.body.userEmail;
+    
+    console.log(`[${correlationId}] Extracted values:`, { userId, userEmail, source, itemsCount: items?.length });
     
     // Validate request
     if (!source || !['cart', 'buynow', 'buy-now'].includes(source)) {

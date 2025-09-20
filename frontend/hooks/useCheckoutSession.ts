@@ -70,12 +70,19 @@ export const useCheckoutSession = () => {
 
   const createCheckoutSession = useCallback(async (
     request: CreateCheckoutSessionRequest,
-    token: string
+    token: string,
+    email?: string
   ): Promise<CreateCheckoutSessionResponse> => {
     setIsLoading(true);
     setError(null);
     
     try {
+      // Add email to request if provided
+      const requestWithEmail = {
+        ...request,
+        ...(email && { email })
+      };
+      
       const response = await fetch('/api/checkout/session', {
         method: 'POST',
         headers: {
@@ -83,7 +90,7 @@ export const useCheckoutSession = () => {
           'Authorization': `Bearer ${token}`,
           'x-request-id': `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
         },
-        body: JSON.stringify(request)
+        body: JSON.stringify(requestWithEmail)
       });
 
       const data = await response.json();

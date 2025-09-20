@@ -104,7 +104,7 @@ export default function CheckoutPageV2Client() {
       const response = await createCheckoutSession({
         source: checkoutMode as 'cart' | 'buynow',
         items
-      }, token);
+      }, token, user.email);
 
       if (response.success && response.data) {
         // Start managing the checkout session for cleanup
