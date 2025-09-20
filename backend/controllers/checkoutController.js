@@ -296,6 +296,7 @@ export const createCheckoutSession = async (req, res) => {
     let subtotal = validationResult.totalPrice;
     
     // Additional stock validation for checkout session
+    // Note: Stock validation is already done in validateCartItems, but we do a final check
     for (const item of validatedItems) {
       const productId = item._id;
       if (!productId) {
@@ -307,25 +308,11 @@ export const createCheckoutSession = async (req, res) => {
         return errorResponse(res, 404, `Product not found: ${item.name}`);
       }
       
-      // Validate stock availability (but don't reserve yet)
+      // Final stock availability check (redundant but safe)
       const stockCheck = await checkStockAvailability(productId, item.size, item.quantity);
       if (!stockCheck.available) {
         return errorResponse(res, 409, `Insufficient stock for ${product.name} (${item.size}): ${stockCheck.error}`);
       }
-      
-      // Use server-verified data
-      validatedItems.push({
-        productId: product._id,
-        name: product.name,
-        price: product.price,
-        quantity: item.quantity,
-        size: item.size,
-        image: product.images?.[0] || '',
-        categorySlug: product.categorySlug,
-        category: product.category
-      });
-      
-      subtotal += product.price * item.quantity;
     }
     
     // Calculate totals with offer discounts
