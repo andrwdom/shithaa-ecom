@@ -17,8 +17,8 @@ checkoutRouter.post('/session', optionalAuth, createCheckoutSession);
 // Get checkout session by ID (optional auth for guest users)
 checkoutRouter.get('/session/:sessionId', optionalAuth, getCheckoutSession);
 
-// Reserve stock for checkout session (requires authentication)
-checkoutRouter.post('/session/:sessionId/reserve-stock', verifyToken, reserveStockForSession);
+// Reserve stock for checkout session (optional auth for guest users)
+checkoutRouter.post('/session/:sessionId/reserve-stock', optionalAuth, reserveStockForSession);
 
 // Release stock for checkout session (requires authentication)
 checkoutRouter.post('/session/:sessionId/release-stock', verifyToken, releaseStockForSession);

@@ -15,7 +15,7 @@ import { phonePeWebhookHandler } from '../controllers/webhookController.js';
 const paymentRouter = express.Router();
 
 // PhonePe payment routes
-paymentRouter.post('/phonepe/create-session', verifyToken, createPhonePeSession);
+paymentRouter.post('/phonepe/create-session', optionalAuth, createPhonePeSession);
 paymentRouter.post('/phonepe/callback', phonePeCallback);
 paymentRouter.post('/phonepe/dummy-success', verifyToken, dummyPaymentSuccess);
 paymentRouter.get('/phonepe/verify/:merchantTransactionId', optionalAuth, verifyPhonePePayment);
