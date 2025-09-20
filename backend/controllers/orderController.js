@@ -925,11 +925,11 @@ export const generateInvoice = async (req, res) => {
         width: colX[3] - colX[2] - 5, 
         align: 'center' 
       });
-      doc.text(`₹${item.price}`, colX[3], startY, { 
+      doc.text(`Rs ${item.price}`, colX[3], startY, { 
         width: colX[4] - colX[3] - 5, 
         align: 'right' 
       });
-      doc.text(`₹${item.price * item.quantity}`, colX[4], startY, { 
+      doc.text(`Rs ${item.price * item.quantity}`, colX[4], startY, { 
         width: colX[5] - colX[4] - 5,
         align: 'right' 
       });
@@ -960,13 +960,13 @@ export const generateInvoice = async (req, res) => {
     
     // Subtotal
     doc.text('Subtotal:', summaryLeft, doc.y, { width: summaryRight - summaryLeft - 5, align: 'right' });
-    doc.font('Helvetica-Bold').text(`₹${safeSubtotal}`, summaryRight, doc.y, { align: 'right' });
+    doc.font('Helvetica-Bold').text(`Rs ${safeSubtotal}`, summaryRight, doc.y, { align: 'right' });
     doc.moveDown(0.3);
     
     // Loungewear offer discount
     if (loungwearOfferDiscount > 0) {
-      doc.font('Helvetica').text(`${order.offerDetails?.offerDescription || 'Loungewear Offer (Buy 3 @ ₹1299)'}:`, summaryLeft, doc.y, { width: summaryRight - summaryLeft - 5, align: 'right' });
-      doc.font('Helvetica-Bold').fillColor('#E53E3E').text(`-₹${loungwearOfferDiscount}`, summaryRight, doc.y, { align: 'right' });
+      doc.font('Helvetica').text(`${order.offerDetails?.offerDescription || 'Loungewear Offer (Buy 3 @ Rs 1299)'}:`, summaryLeft, doc.y, { width: summaryRight - summaryLeft - 5, align: 'right' });
+      doc.font('Helvetica-Bold').fillColor('#E53E3E').text(`-Rs ${loungwearOfferDiscount}`, summaryRight, doc.y, { align: 'right' });
       doc.fillColor('#333'); // Reset color
       doc.moveDown(0.3);
     }
@@ -974,14 +974,14 @@ export const generateInvoice = async (req, res) => {
     // Coupon discount
     if (couponDiscount > 0) {
       doc.font('Helvetica').text(`Discount${coupon ? ` (${coupon})` : ''}:`, summaryLeft, doc.y, { width: summaryRight - summaryLeft - 5, align: 'right' });
-      doc.font('Helvetica-Bold').fillColor('#E53E3E').text(`-₹${couponDiscount}`, summaryRight, doc.y, { align: 'right' });
+      doc.font('Helvetica-Bold').fillColor('#E53E3E').text(`-Rs ${couponDiscount}`, summaryRight, doc.y, { align: 'right' });
       doc.fillColor('#333'); // Reset color
       doc.moveDown(0.3);
     }
     
     // Shipping
     doc.font('Helvetica').text('Shipping:', summaryLeft, doc.y, { width: summaryRight - summaryLeft - 5, align: 'right' });
-    doc.font('Helvetica-Bold').text(`₹${shippingCost}`, summaryRight, doc.y, { align: 'right' });
+    doc.font('Helvetica-Bold').text(`Rs ${shippingCost}`, summaryRight, doc.y, { align: 'right' });
     doc.moveDown(0.3);
     
     // Total with emphasis
@@ -989,7 +989,7 @@ export const generateInvoice = async (req, res) => {
     doc.moveTo(summaryLeft - 10, doc.y).lineTo(summaryRight + 10, doc.y).strokeColor('#E1D5F6').lineWidth(1).stroke();
     doc.moveDown(0.3);
     doc.font('Helvetica-Bold').fontSize(12).text('Total:', summaryLeft, doc.y, { width: summaryRight - summaryLeft - 5, align: 'right' });
-    doc.font('Helvetica-Bold').fontSize(12).fillColor('#473C66').text(`₹${total}`, summaryRight, doc.y, { align: 'right' });
+    doc.font('Helvetica-Bold').fontSize(12).fillColor('#473C66').text(`Rs ${total}`, summaryRight, doc.y, { align: 'right' });
     doc.fillColor('#333'); // Reset color
     doc.moveDown(0.8);
     

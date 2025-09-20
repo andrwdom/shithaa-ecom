@@ -112,11 +112,11 @@ export async function generateInvoiceBuffer(order) {
           width: colX[3] - colX[2] - 5, 
           align: 'center' 
         });
-        doc.text(`₹${item.price}`, colX[3], startY, { 
+        doc.text(`Rs ${item.price}`, colX[3], startY, { 
           width: colX[4] - colX[3] - 5, 
           align: 'right' 
         });
-        doc.text(`₹${item.price * item.quantity}`, colX[4], startY, { 
+        doc.text(`Rs ${item.price * item.quantity}`, colX[4], startY, { 
           align: 'right' 
         });
         
@@ -157,13 +157,13 @@ export async function generateInvoiceBuffer(order) {
       
       // Subtotal
       doc.text('Subtotal:', summaryLeft, doc.y, { width: summaryRight - summaryLeft - 5, align: 'right' });
-      doc.font('Helvetica-Bold').text(`₹${safeSubtotal}`, summaryRight, doc.y, { align: 'right' });
+      doc.font('Helvetica-Bold').text(`Rs ${safeSubtotal}`, summaryRight, doc.y, { align: 'right' });
       doc.moveDown(0.3);
       
       // 🔧 FIX: Display loungewear offer discount if applied
       if (order.offerDetails?.offerApplied && order.offerDetails?.offerDiscount > 0) {
         doc.font('Helvetica').text(`${order.offerDetails.offerDescription}:`, summaryLeft, doc.y, { width: summaryRight - summaryLeft - 5, align: 'right' });
-        doc.font('Helvetica-Bold').fillColor('#E53E3E').text(`-₹${order.offerDetails.offerDiscount}`, summaryRight, doc.y, { align: 'right' });
+        doc.font('Helvetica-Bold').fillColor('#E53E3E').text(`-Rs ${order.offerDetails.offerDiscount}`, summaryRight, doc.y, { align: 'right' });
         doc.fillColor('#333'); // Reset color
         doc.moveDown(0.3);
       }
@@ -171,14 +171,14 @@ export async function generateInvoiceBuffer(order) {
       // Discount
       if (discountAmt > 0) {
         doc.font('Helvetica').text(`Discount${coupon ? ` (${coupon})` : ''}:`, summaryLeft, doc.y, { width: summaryRight - summaryLeft - 5, align: 'right' });
-        doc.font('Helvetica-Bold').fillColor('#E53E3E').text(`-₹${discountAmt}`, summaryRight, doc.y, { align: 'right' });
+        doc.font('Helvetica-Bold').fillColor('#E53E3E').text(`-Rs ${discountAmt}`, summaryRight, doc.y, { align: 'right' });
         doc.fillColor('#333'); // Reset color
         doc.moveDown(0.3);
       }
       
       // Shipping
       doc.font('Helvetica').text('Shipping:', summaryLeft, doc.y, { width: summaryRight - summaryLeft - 5, align: 'right' });
-      doc.font('Helvetica-Bold').text(`₹${shippingCost}`, summaryRight, doc.y, { align: 'right' });
+      doc.font('Helvetica-Bold').text(`Rs ${shippingCost}`, summaryRight, doc.y, { align: 'right' });
       doc.moveDown(0.3);
       
       // Total with emphasis
@@ -186,7 +186,7 @@ export async function generateInvoiceBuffer(order) {
       doc.moveTo(summaryLeft - 10, doc.y).lineTo(summaryRight + 10, doc.y).strokeColor('#E1D5F6').lineWidth(1).stroke();
       doc.moveDown(0.3);
       doc.font('Helvetica-Bold').fontSize(12).text('Total:', summaryLeft, doc.y, { width: summaryRight - summaryLeft - 5, align: 'right' });
-      doc.font('Helvetica-Bold').fontSize(12).fillColor(BRAND_COLOR).text(`₹${total}`, summaryRight, doc.y, { align: 'right' });
+      doc.font('Helvetica-Bold').fontSize(12).fillColor(BRAND_COLOR).text(`Rs ${total}`, summaryRight, doc.y, { align: 'right' });
       doc.fillColor('#333'); // Reset color
       doc.moveDown(0.8);
       
@@ -203,7 +203,7 @@ export async function generateInvoiceBuffer(order) {
       doc.moveTo(40, doc.y).lineTo(555, doc.y).strokeColor('#E1D5F6').lineWidth(1.2).stroke();
       doc.moveDown(0.8);
 
-    // --- FOOTER ---
+      // --- FOOTER ---
     // Add proper spacing before footer
     doc.moveDown(1.5);
 
