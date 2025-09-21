@@ -265,7 +265,7 @@ export const createCheckoutSession = async (req, res) => {
     const shippingCost = req.body.orderSummary?.shipping || req.body.shippingCost || 0;
     
     // 🔧 CRITICAL FIX: Use frontend's calculated total if available to ensure consistency
-    let total, rawSubtotal, offerDiscount, loungewearCategoryOffer;
+    let total, rawSubtotal, offerDiscount, loungewearCategoryOffer, loungewearCategoryItems, otherItems, otherItemsTotal;
     
     if (req.body.orderSummary && req.body.orderSummary.total && req.body.orderSummary.total > 0) {
       // Use frontend's calculated total to ensure consistency with PhonePe payment
@@ -293,13 +293,18 @@ export const createCheckoutSession = async (req, res) => {
           savings: offerDiscount
         }
       };
+      
+      // Initialize empty arrays for logging consistency
+      loungewearCategoryItems = [];
+      otherItems = [];
+      otherItemsTotal = 0;
     } else {
       // Fallback to backend calculation if frontend total not provided
       console.log('📦 [Checkout Session] Frontend total not provided, calculating on backend...');
       
       // 🔧 CRITICAL FIX: Calculate offer discount using the same logic as cart calculation
-      const loungewearCategoryItems = [];
-      const otherItems = [];
+      loungewearCategoryItems = [];
+      otherItems = [];
       
       validatedItems.forEach(item => {
         if (item.categorySlug === 'zipless-feeding-lounge-wear' || 
@@ -321,7 +326,7 @@ export const createCheckoutSession = async (req, res) => {
       loungewearCategoryOffer = calculateLoungewearCategoryOffer(loungewearCategoryItems);
       
       // Calculate other items total
-      const otherItemsTotal = otherItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      otherItemsTotal = otherItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
       
       // Calculate totals with offer discount
       rawSubtotal = loungewearCategoryOffer.originalTotal + otherItemsTotal;
