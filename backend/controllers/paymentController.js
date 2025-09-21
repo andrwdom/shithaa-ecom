@@ -1162,16 +1162,34 @@ export const verifyPhonePePayment = async (req, res) => {
         console.log(`[${correlationId}] Order already exists for payment session ${paymentSession._id}`);
       }
     } else {
-      // Payment failed - update payment session status
+      // Payment failed - update payment session status and release stock
       if (paymentSession.status !== 'failed') {
+        console.log(`[${correlationId}] Payment failed, updating session and releasing stock`);
+        
+        // Find checkout session first
+        const checkoutSession = await CheckoutSession.findOne({ sessionId: paymentSession.sessionId });
+        if (checkoutSession && checkoutSession.stockReserved) {
+          console.log(`[${correlationId}] Found checkout session with reserved stock, releasing...`);
+          
+          // Release stock for each item
+          for (const item of checkoutSession.items) {
+            await releaseStockReservation(item.productId, item.size, item.quantity);
+            console.log(`[${correlationId}] Released stock for ${item.name} (${item.size}) x${item.quantity}`);
+          }
+          
+          // Mark session as failed and stock as released
+          checkoutSession.status = 'failed';
+          checkoutSession.stockReserved = false;
+          await checkoutSession.save();
+          console.log(`[${correlationId}] Checkout session marked as failed and stock released`);
+        }
+        
+        // Update payment session status
         paymentSession.status = 'failed';
         paymentSession.phonepeResponse = paymentStatus;
         paymentSession.failedAt = new Date();
         await paymentSession.save();
-        console.log('Payment session marked as failed');
-        
-        // Release reserved stock on payment failure
-        await releaseStockOnPaymentFailure(paymentSession, correlationId);
+        console.log(`[${correlationId}] Payment session marked as failed`);
       }
     }
 
