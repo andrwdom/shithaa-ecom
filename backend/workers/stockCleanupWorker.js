@@ -55,6 +55,27 @@ const cleanupAbandonedOrders = async () => {
       // - Failed payments (immediately)
       // - Older than 5 minutes and in a terminal state
       const now = new Date();
+      // First find ALL sessions with reserved stock to debug
+      const allReservedSessions = await CheckoutSession.find({
+        stockReserved: true
+      });
+      console.log(`[${correlationId}] DEBUG: Found ${allReservedSessions.length} total sessions with reserved stock`);
+      for (const session of allReservedSessions) {
+        console.log(`[${correlationId}] DEBUG: Session ${session.sessionId}:`, {
+          status: session.status,
+          stockReserved: session.stockReserved,
+          createdAt: session.createdAt,
+          timeoutAt: session.timeoutAt,
+          expiresAt: session.expiresAt,
+          items: session.items.map(item => ({
+            name: item.name,
+            size: item.size,
+            quantity: item.quantity
+          }))
+        });
+      }
+
+      // Now find sessions that need cleanup
       const oldSessions = await CheckoutSession.find({
         stockReserved: true,
         $or: [
@@ -68,9 +89,27 @@ const cleanupAbandonedOrders = async () => {
           {
             status: { $in: ['pending', 'awaiting_payment'] },
             createdAt: { $lt: new Date(now - 5 * 60 * 1000) }
-          }
+          },
+          // CRITICAL: Also clean up sessions with no status (corrupted)
+          { status: { $exists: false } },
+          // CRITICAL: Clean up sessions with no items (corrupted)
+          { items: { $size: 0 } },
+          // CRITICAL: Clean up sessions with no timeoutAt (corrupted)
+          { timeoutAt: { $exists: false } }
         ]
       });
+
+      // Log which conditions matched
+      console.log(`[${correlationId}] DEBUG: Found ${oldSessions.length} sessions to clean. Matching conditions:`);
+      for (const session of oldSessions) {
+        const conditions = [];
+        if (session.timeoutAt < now) conditions.push('TIMEOUT');
+        if (session.expiresAt < now) conditions.push('EXPIRED');
+        if (session.status === 'failed') conditions.push('FAILED');
+        if (['pending', 'awaiting_payment'].includes(session.status) && 
+            session.createdAt < new Date(now - 5 * 60 * 1000)) conditions.push('OLD_PENDING');
+        
+        console.log(`[${correlationId}] DEBUG: Session ${session.sessionId} matched conditions:`, conditions);
     
     console.log(`[${correlationId}] Found ${oldSessions.length} old checkout sessions to clean`);
     

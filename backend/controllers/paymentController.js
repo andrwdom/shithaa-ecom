@@ -352,11 +352,53 @@ export const createPhonePeSession = async (req, res) => {
       });
     }
     
+    // 🔧 CRITICAL FIX: Reserve stock when creating payment session
     if (!checkoutSession.stockReserved) {
-      return res.status(400).json({
-        success: false,
-        message: 'Stock must be reserved before creating payment session'
-      });
+      console.log(`[${correlationId}] Reserving stock for session ${checkoutSessionId}`);
+      
+      try {
+        // Import stock utils
+        const { reserveStock, checkStockAvailability } = await import('../utils/stock.js');
+        
+        // First check if stock is available
+        for (const item of checkoutSession.items) {
+          const availability = await checkStockAvailability(item.productId, item.size, item.quantity);
+          if (!availability.available) {
+            console.error(`[${correlationId}] Stock not available for ${item.name}:`, availability);
+            return res.status(400).json({
+              success: false,
+              message: `Insufficient stock for ${item.name} (${item.size}). Available: ${availability.availableStock}, Requested: ${item.quantity}`
+            });
+          }
+        }
+        
+        // Now reserve stock for each item
+        
+        // Reserve stock for each item
+        for (const item of checkoutSession.items) {
+          console.log(`[${correlationId}] Reserving stock for ${item.name} (${item.size}) x${item.quantity}`);
+          const reserved = await reserveStock(item.productId, item.size, item.quantity);
+          if (!reserved) {
+            console.error(`[${correlationId}] Failed to reserve stock for ${item.name}`);
+            return res.status(400).json({
+              success: false,
+              message: `Insufficient stock for ${item.name} (${item.size})`
+            });
+          }
+        }
+        
+        // Mark session as having reserved stock
+        checkoutSession.stockReserved = true;
+        await checkoutSession.save();
+        console.log(`[${correlationId}] Stock reserved successfully`);
+      } catch (error) {
+        console.error(`[${correlationId}] Error reserving stock:`, error);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to reserve stock',
+          error: error.message
+        });
+      }
     }
     
     const userEmail = email || checkoutSession.userEmail;
@@ -1168,28 +1210,78 @@ export const verifyPhonePePayment = async (req, res) => {
         
         // Find checkout session first
         const checkoutSession = await CheckoutSession.findOne({ sessionId: paymentSession.sessionId });
+        console.log(`[${correlationId}] DEBUG: Found checkout session:`, {
+          exists: !!checkoutSession,
+          sessionId: checkoutSession?.sessionId,
+          status: checkoutSession?.status,
+          stockReserved: checkoutSession?.stockReserved
+        });
+        
         if (checkoutSession && checkoutSession.stockReserved) {
           console.log(`[${correlationId}] Found checkout session with reserved stock, releasing...`);
           
           // Release stock for each item
           for (const item of checkoutSession.items) {
-            await releaseStockReservation(item.productId, item.size, item.quantity);
-            console.log(`[${correlationId}] Released stock for ${item.name} (${item.size}) x${item.quantity}`);
+            try {
+              await releaseStockReservation(item.productId, item.size, item.quantity);
+              console.log(`[${correlationId}] Released stock for ${item.name} (${item.size}) x${item.quantity}`);
+            } catch (error) {
+              console.error(`[${correlationId}] Failed to release stock for item:`, error);
+            }
           }
           
           // Mark session as failed and stock as released
-          checkoutSession.status = 'failed';
-          checkoutSession.stockReserved = false;
-          await checkoutSession.save();
-          console.log(`[${correlationId}] Checkout session marked as failed and stock released`);
+          try {
+            checkoutSession.status = 'failed';
+            checkoutSession.stockReserved = false;
+            await checkoutSession.save();
+            console.log(`[${correlationId}] Checkout session marked as failed and stock released`);
+          } catch (error) {
+            console.error(`[${correlationId}] Failed to update checkout session:`, error);
+          }
+        } else {
+          console.log(`[${correlationId}] No checkout session found or no stock reserved`);
+          
+          // Try to find by other fields
+          const altCheckoutSession = await CheckoutSession.findOne({
+            $or: [
+              { phonepeTransactionId: merchantTransactionId },
+              { 'metadata.phonepeTransactionId': merchantTransactionId }
+            ]
+          });
+          
+          console.log(`[${correlationId}] DEBUG: Alternative checkout session search:`, {
+            found: !!altCheckoutSession,
+            sessionId: altCheckoutSession?.sessionId,
+            status: altCheckoutSession?.status,
+            stockReserved: altCheckoutSession?.stockReserved
+          });
+          
+          if (altCheckoutSession && altCheckoutSession.stockReserved) {
+            console.log(`[${correlationId}] Found checkout session by transaction ID, releasing stock...`);
+            try {
+              for (const item of altCheckoutSession.items) {
+                await releaseStockReservation(item.productId, item.size, item.quantity);
+              }
+              altCheckoutSession.status = 'failed';
+              altCheckoutSession.stockReserved = false;
+              await altCheckoutSession.save();
+            } catch (error) {
+              console.error(`[${correlationId}] Failed to process alternative checkout session:`, error);
+            }
+          }
         }
         
         // Update payment session status
-        paymentSession.status = 'failed';
-        paymentSession.phonepeResponse = paymentStatus;
-        paymentSession.failedAt = new Date();
-        await paymentSession.save();
-        console.log(`[${correlationId}] Payment session marked as failed`);
+        try {
+          paymentSession.status = 'failed';
+          paymentSession.phonepeResponse = paymentStatus;
+          paymentSession.failedAt = new Date();
+          await paymentSession.save();
+          console.log(`[${correlationId}] Payment session marked as failed`);
+        } catch (error) {
+          console.error(`[${correlationId}] Failed to update payment session:`, error);
+        }
       }
     }
 

@@ -1,5 +1,6 @@
 import { successResponse, errorResponse } from '../utils/response.js';
-import { cleanupStockReservations } from '../utils/stock.js';
+import { cleanupStockReservations, checkStockAvailability } from '../utils/stock.js';
+import CheckoutSession from '../models/CheckoutSession.js';
 import { expireOldReservations } from '../workers/reservationExpiryWorker.js';
 import productModel from '../models/productModel.js';
 import Reservation from '../models/Reservation.js';
@@ -12,32 +13,64 @@ import CheckoutSession from '../models/CheckoutSession.js';
 // Emergency stock cleanup - resets all reserved stock to 0
 export const emergencyStockCleanup = async (req, res) => {
   try {
-    console.log('🚨 Admin triggered emergency stock cleanup');
+    console.log('🚨 Starting emergency stock cleanup...');
     
-    // 1. Reset all reserved fields to 0
+    // 1. Find all sessions with reserved stock
+    const sessions = await CheckoutSession.find({ stockReserved: true });
+    console.log(`Found ${sessions.length} sessions with reserved stock`);
+    
+    // 2. For each session, check if stock is actually reserved
+    for (const session of sessions) {
+      console.log(`Checking session ${session.sessionId}:`, {
+        status: session.status,
+        createdAt: session.createdAt,
+        items: session.items.length
+      });
+      
+      // Release stock for each item
+      for (const item of session.items) {
+        try {
+          // Check if stock is actually reserved
+          const availability = await checkStockAvailability(item.productId, item.size, item.quantity);
+          console.log(`Stock check for ${item.name}:`, availability);
+          
+          // Force release stock
+          await productModel.updateOne(
+            { _id: item.productId, 'sizes.size': item.size },
+            { $inc: { 'sizes.$.reserved': -item.quantity } }
+          );
+          
+          console.log(`Released ${item.quantity} units of ${item.name} (${item.size})`);
+        } catch (error) {
+          console.error(`Failed to release stock for item:`, error);
+        }
+      }
+      
+      // Mark session as failed and stock as released
+      session.status = 'failed';
+      session.stockReserved = false;
+      await session.save();
+    }
+    
+    // 3. Reset all reserved fields to 0 (just to be sure)
     const resetResult = await productModel.updateMany(
       {},
       { $set: { 'sizes.$[].reserved': 0 } }
     );
     
-    // 2. Mark all active reservations as expired
+    // 4. Mark all reservations as expired
     const reservationResult = await Reservation.updateMany(
       { status: 'active' },
       { 
-        status: 'expired',
-        updatedAt: new Date()
+        $set: { 
+          status: 'expired',
+          expiredAt: new Date(),
+          reason: 'Emergency cleanup'
+        }
       }
     );
     
-    // 3. Clean up expired checkout sessions
-    const sessionResult = await CheckoutSession.deleteMany({
-      $or: [
-        { status: 'expired' },
-        { expiresAt: { $lt: new Date() } }
-      ]
-    });
-    
-    // 4. Get current stock statistics
+    // 5. Get current stock statistics
     const stockStats = await productModel.aggregate([
       {
         $unwind: '$sizes'
@@ -61,19 +94,21 @@ export const emergencyStockCleanup = async (req, res) => {
     
     const stats = stockStats[0] || { totalStock: 0, totalReserved: 0, totalAvailable: 0 };
     
-    return successResponse(res, {
-      message: 'Emergency stock cleanup completed successfully',
-      results: {
-        productsReset: resetResult.modifiedCount,
-        reservationsExpired: reservationResult.modifiedCount,
-        sessionsDeleted: sessionResult.deletedCount
-      },
+    const result = {
+      success: true,
+      sessionsProcessed: sessions.length,
+      stockResetCount: resetResult.modifiedCount,
+      reservationsExpired: reservationResult.modifiedCount,
       stockStats: {
         totalStock: stats.totalStock,
         totalReserved: stats.totalReserved,
         totalAvailable: stats.totalAvailable
-      }
-    });
+      },
+      message: `Emergency cleanup completed: ${sessions.length} sessions processed, ${resetResult.modifiedCount} products reset, ${reservationResult.modifiedCount} reservations expired`
+    };
+    
+    console.log('✅ Emergency cleanup completed:', result);
+    return successResponse(res, result);
     
   } catch (error) {
     console.error('❌ Emergency stock cleanup failed:', error);
