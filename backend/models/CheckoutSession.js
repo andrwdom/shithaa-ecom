@@ -92,7 +92,17 @@ const checkoutSessionSchema = new mongoose.Schema({
   expiresAt: { 
     type: Date, 
     required: true,
-    index: { expireAfterSeconds: 0 } // TTL index RE-ENABLED
+    // 🔧 CRITICAL FIX: Remove TTL index to prevent automatic deletion
+    // We need to control when sessions are deleted to ensure stock is released first
+    index: true // Simple index for queries, but no TTL
+  },
+  timeoutAt: {
+    type: Date,
+    required: true,
+    // 🔧 CRITICAL FIX: This is when we'll force-release stock if no response
+    default: function() {
+      return new Date(Date.now() + 15 * 60 * 1000); // 15 minutes total timeout
+    }
   },
   createdAt: { 
     type: Date, 

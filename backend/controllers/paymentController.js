@@ -621,12 +621,24 @@ export const phonePeCallback = async (req, res) => {
 
     console.log('Found payment session:', paymentSession._id, 'Status:', paymentSession.status);
 
-    // Determine if payment was successful
+    // 🔧 CRITICAL FIX: Check for both success and explicit failure states
     const isSuccess = (
       state === 'PAID' ||
       state === 'COMPLETED' ||
       responseCode === 'SUCCESS' ||
       responseCode === '000'
+    );
+    
+    // Check for explicit failure or timeout
+    const isFailedOrAbandoned = (
+      state === 'FAILED' ||
+      state === 'CANCELLED' ||
+      state === 'TIMEOUT' ||
+      responseCode === 'PAYMENT_ERROR' ||
+      responseCode === 'PAYMENT_CANCELLED' ||
+      responseCode === 'PAYMENT_TIMEOUT' ||
+      // If we get any response and it's not success, treat it as failure
+      (!isSuccess && (state || responseCode))
     );
 
     if (isSuccess) {
@@ -838,8 +850,8 @@ export const phonePeCallback = async (req, res) => {
         await session.endSession();
       }
 
-    } else {
-      console.log('Payment failed, updating payment session status');
+    } else if (isFailedOrAbandoned) {
+      console.log('Payment failed or abandoned, releasing stock');
       
       // Track failed payment
       trackPayment(false);
@@ -1326,4 +1338,59 @@ export const getOrderByTransactionId = async (req, res) => {
   }
 }; 
 
-// Helper function moved to webhookController.js to avoid duplication 
+/**
+ * Handle payment cancellation from frontend
+ */
+export const cancelPayment = async (req, res) => {
+  const correlationId = req.headers['x-request-id'] || `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  
+  try {
+    const { merchantTransactionId } = req.body;
+    
+    if (!merchantTransactionId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Merchant transaction ID is required'
+      });
+    }
+
+    // Find the payment session
+    const paymentSession = await PaymentSession.findOne({ phonepeTransactionId: merchantTransactionId });
+    if (!paymentSession) {
+      return res.status(404).json({
+        success: false,
+        message: 'Payment session not found'
+      });
+    }
+
+    // Update payment session status
+    paymentSession.status = 'cancelled';
+    paymentSession.phonepeResponse = {
+      ...paymentSession.phonepeResponse,
+      state: 'CANCELLED',
+      responseCode: 'PAYMENT_CANCELLED',
+      responseMessage: 'Payment cancelled by user'
+    };
+    paymentSession.failedAt = new Date();
+    await paymentSession.save();
+
+    // Release reserved stock
+    await releaseStockOnPaymentFailure(paymentSession, correlationId);
+
+    // Track cancelled payment
+    trackPayment(false);
+
+    return res.json({
+      success: true,
+      message: 'Payment cancelled successfully'
+    });
+
+  } catch (error) {
+    console.error('Payment cancellation error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to cancel payment',
+      error: error.message
+    });
+  }
+}; 

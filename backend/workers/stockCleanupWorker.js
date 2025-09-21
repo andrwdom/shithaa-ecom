@@ -49,11 +49,24 @@ const cleanupAbandonedOrders = async () => {
       }
     }
     
-    // 2. Clean up checkout sessions older than 5 minutes
+    // 2. Clean up checkout sessions that are either:
+    // - Past their timeout (15 minutes)
+    // - Past their expiry (10 minutes)
+    // - Older than 5 minutes and in a terminal state
+    const now = new Date();
     const oldSessions = await CheckoutSession.find({
-      status: { $in: ['pending', 'awaiting_payment'] },
       stockReserved: true,
-      createdAt: { $lt: new Date(Date.now() - 5 * 60 * 1000) }
+      $or: [
+        // Sessions that have timed out (no response after 15 minutes)
+        { timeoutAt: { $lt: now } },
+        // Sessions that have expired (payment window closed after 10 minutes)
+        { expiresAt: { $lt: now } },
+        // Sessions that are old and in a terminal state
+        {
+          status: { $in: ['pending', 'awaiting_payment'] },
+          createdAt: { $lt: new Date(now - 5 * 60 * 1000) }
+        }
+      ]
     });
     
     console.log(`[${correlationId}] Found ${oldSessions.length} old checkout sessions to clean`);

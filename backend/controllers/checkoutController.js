@@ -358,7 +358,7 @@ export const createCheckoutSession = async (req, res) => {
     // Generate session ID
     const sessionId = randomUUID();
     
-    // Create checkout session
+    // Create checkout session with auto-expiry
     const checkoutSession = new CheckoutSession({
       sessionId,
       shippingCost,
@@ -373,6 +373,9 @@ export const createCheckoutSession = async (req, res) => {
         value: offerDiscount,
         appliedCouponCode: null
       },
+      // 🔧 CRITICAL FIX: Set expiresAt to 10 minutes from now
+      // This ensures stock is released if payment is abandoned
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000),
       // 🔧 FIX: Store offer details for invoice generation
       offerDetails: {
         offerApplied: loungewearCategoryOffer.offerApplied,

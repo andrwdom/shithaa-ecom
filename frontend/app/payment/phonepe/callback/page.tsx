@@ -404,6 +404,39 @@ function PhonePeCallbackInner() {
 }
 
 export default function PhonePeCallback() {
+  // Add warning when user tries to leave page
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = 'Your payment is in progress. If you leave now, your order will be cancelled. Are you sure?';
+      return e.returnValue;
+    };
+
+    // Add warning when user tries to go back
+    const handlePopState = (e: PopStateEvent) => {
+      const confirmLeave = window.confirm('Your payment is in progress. If you go back, your order will be cancelled. Are you sure?');
+      if (confirmLeave) {
+        // Send cancellation to backend
+        fetch('/api/payment/phonepe/cancel', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ merchantTransactionId })
+        }).catch(console.error);
+      } else {
+        // Stay on page
+        window.history.pushState(null, '', window.location.href);
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('popstate', handlePopState);
+    window.history.pushState(null, '', window.location.href); // Add entry to history
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
   return (
     <Suspense fallback={
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
