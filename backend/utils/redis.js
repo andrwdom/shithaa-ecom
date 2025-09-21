@@ -1,39 +1,73 @@
 import Redis from 'ioredis';
-import { config } from '../config.js';
 
 let redis = null;
 let redisEnabled = false;
 
-try {
-  redis = new Redis({
-    host: process.env.REDIS_HOST || 'localhost',
-    port: parseInt(process.env.REDIS_PORT || '6379'),
-    password: process.env.REDIS_PASSWORD,
-    retryStrategy: (times) => {
-      // Stop retrying after 3 attempts
-      if (times > 3) {
-        console.log('Redis connection failed after 3 attempts, disabling Redis');
+// Only initialize Redis if explicitly configured
+if (process.env.REDIS_HOST && process.env.REDIS_PORT) {
+  try {
+    console.log('Redis configuration found, attempting to connect...');
+    
+    redis = new Redis({
+      host: process.env.REDIS_HOST,
+      port: parseInt(process.env.REDIS_PORT),
+      password: process.env.REDIS_PASSWORD || undefined,
+      retryStrategy: (times) => {
+        // Stop retrying after 1 attempt in development
+        if (process.env.NODE_ENV === 'development' && times > 1) {
+          console.log('Redis connection failed in development, disabling Redis');
+          redisEnabled = false;
+          return null;
+        }
+        // Stop retrying after 3 attempts in production
+        if (process.env.NODE_ENV === 'production' && times > 3) {
+          console.log('Redis connection failed in production after 3 attempts, disabling Redis');
+          redisEnabled = false;
+          return null;
+        }
+        const delay = Math.min(times * 50, 2000);
+        return delay;
+      },
+      maxRetriesPerRequest: 1,
+      enableOfflineQueue: false,
+      connectTimeout: 5000,
+    });
+
+    redis.on('error', (error) => {
+      if (error.code === 'ECONNREFUSED') {
+        console.log('Redis connection refused, disabling Redis');
         redisEnabled = false;
-        return null;
+        // Cleanup the client to prevent memory leaks
+        redis.disconnect();
+        redis = null;
+      } else {
+        console.error('Redis error:', error);
       }
-      const delay = Math.min(times * 50, 2000);
-      return delay;
-    },
-    maxRetriesPerRequest: 3
-  });
+    });
 
-  redis.on('error', (error) => {
-    console.error('Redis connection error:', error);
+    redis.on('connect', () => {
+      console.log('Connected to Redis successfully');
+      redisEnabled = true;
+    });
+
+    // Initial connection test
+    redis.ping().then(() => {
+      console.log('Redis ping successful');
+      redisEnabled = true;
+    }).catch(() => {
+      console.log('Redis ping failed, disabling Redis');
+      redisEnabled = false;
+      redis.disconnect();
+      redis = null;
+    });
+
+  } catch (error) {
+    console.log('Failed to initialize Redis, continuing without caching:', error.message);
     redisEnabled = false;
-  });
-
-  redis.on('connect', () => {
-    console.log('Connected to Redis');
-    redisEnabled = true;
-  });
-} catch (error) {
-  console.error('Failed to initialize Redis:', error);
-  redisEnabled = false;
+    redis = null;
+  }
+} else {
+  console.log('No Redis configuration found, continuing without caching');
 }
 
 export const CACHE_TTL = {
@@ -52,7 +86,10 @@ export async function getCached(key) {
     const data = await redis.get(key);
     return data ? JSON.parse(data) : null;
   } catch (error) {
-    console.error('Redis get error:', error);
+    // Don't log ECONNREFUSED errors as they're already handled
+    if (error.code !== 'ECONNREFUSED') {
+      console.error('Redis get error:', error);
+    }
     return null;
   }
 }
@@ -67,7 +104,10 @@ export async function setCached(key, value, ttl = 300) {
     await redis.set(key, JSON.stringify(value), 'EX', ttl);
     return true;
   } catch (error) {
-    console.error('Redis set error:', error);
+    // Don't log ECONNREFUSED errors as they're already handled
+    if (error.code !== 'ECONNREFUSED') {
+      console.error('Redis set error:', error);
+    }
     return false;
   }
 }
@@ -82,7 +122,10 @@ export async function deleteCached(key) {
     await redis.del(key);
     return true;
   } catch (error) {
-    console.error('Redis delete error:', error);
+    // Don't log ECONNREFUSED errors as they're already handled
+    if (error.code !== 'ECONNREFUSED') {
+      console.error('Redis delete error:', error);
+    }
     return false;
   }
 }
@@ -97,7 +140,10 @@ export async function clearCache() {
     await redis.flushall();
     return true;
   } catch (error) {
-    console.error('Redis flush error:', error);
+    // Don't log ECONNREFUSED errors as they're already handled
+    if (error.code !== 'ECONNREFUSED') {
+      console.error('Redis flush error:', error);
+    }
     return false;
   }
 }
@@ -108,6 +154,14 @@ export async function clearCache() {
 export function isRedisEnabled() {
   return redisEnabled && redis !== null;
 }
+
+// Graceful shutdown handler
+process.on('SIGTERM', () => {
+  if (redis) {
+    console.log('Closing Redis connection...');
+    redis.disconnect();
+  }
+});
 
 export default {
   redis,
