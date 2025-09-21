@@ -413,14 +413,9 @@ export default function CheckoutClient() {
   // 🔧 CRITICAL FIX: ALWAYS calculate offer discount directly to ensure it works
   let offerDiscount = 0;
   
-  // Force offer calculation based on item names if categorySlug is missing
+  // STRICT: Only apply offer to specific categories - no name-based fallback
   const loungewearItems = displayItems.filter((item: any) => {
-    const hasCategorySlug = item.categorySlug === 'zipless-feeding-lounge-wear' || item.categorySlug === 'non-feeding-lounge-wear';
-    const hasLoungewearName = item.name && (
-      item.name.toLowerCase().includes('lounge') || 
-      item.name.toLowerCase().includes('loungewear')
-    );
-    return hasCategorySlug || hasLoungewearName;
+    return item.categorySlug === 'zipless-feeding-lounge-wear' || item.categorySlug === 'non-feeding-lounge-wear';
   });
   
   // 🔧 DEBUG: Log all items and loungewear identification
@@ -429,7 +424,7 @@ export default function CheckoutClient() {
     categorySlug: item.categorySlug,
     price: item.price,
     quantity: item.quantity,
-    isLoungewear: item.categorySlug === 'zipless-feeding-lounge-wear' || item.categorySlug === 'non-feeding-lounge-wear' || (item.name && (item.name.toLowerCase().includes('lounge') || item.name.toLowerCase().includes('loungewear')))
+    isLoungewear: item.categorySlug === 'zipless-feeding-lounge-wear' || item.categorySlug === 'non-feeding-lounge-wear'
   })));
   
   console.log('[Checkout] 🔧 DEBUG: Identified loungewear items:', loungewearItems.map(item => ({

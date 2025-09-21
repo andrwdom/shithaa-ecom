@@ -125,13 +125,9 @@ export default function CheckoutPage() {
         // 🔧 FALLBACK: If cart context offer is not working, calculate directly
         if (!offerDetails.offerApplied || offerDetails.offerDiscount === 0) {
           console.log('[CheckoutPage] 🔧 FALLBACK: Cart context offer not working, calculating directly...');
+          // STRICT: Only apply offer to specific categories - no name-based fallback
           const loungewearItems = displayItems.filter((item: any) => {
-            const hasCategorySlug = item.categorySlug === 'zipless-feeding-lounge-wear' || item.categorySlug === 'non-feeding-lounge-wear';
-            const hasLoungewearName = item.name && (
-              item.name.toLowerCase().includes('lounge') || 
-              item.name.toLowerCase().includes('loungewear')
-            );
-            return hasCategorySlug || hasLoungewearName;
+            return item.categorySlug === 'zipless-feeding-lounge-wear' || item.categorySlug === 'non-feeding-lounge-wear';
           });
           
           const totalLoungewearQuantity = loungewearItems.reduce((sum: number, item: any) => sum + item.quantity, 0);
@@ -143,14 +139,9 @@ export default function CheckoutPage() {
           }
         }
       } else if (isBuyNowMode) {
-        // For buy-now mode, calculate offer directly
+        // For buy-now mode, calculate offer directly - STRICT: Only specific categories
         const loungewearItems = displayItems.filter((item: any) => {
-          const hasCategorySlug = item.categorySlug === 'zipless-feeding-lounge-wear' || item.categorySlug === 'non-feeding-lounge-wear';
-          const hasLoungewearName = item.name && (
-            item.name.toLowerCase().includes('lounge') || 
-            item.name.toLowerCase().includes('loungewear')
-          );
-          return hasCategorySlug || hasLoungewearName;
+          return item.categorySlug === 'zipless-feeding-lounge-wear' || item.categorySlug === 'non-feeding-lounge-wear';
         });
         
         const totalLoungewearQuantity = loungewearItems.reduce((sum: number, item: any) => sum + item.quantity, 0);

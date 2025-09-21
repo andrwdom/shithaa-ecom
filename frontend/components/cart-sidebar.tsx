@@ -329,14 +329,10 @@ export default function CartSidebar() {
                   const stock = productStocks[item._id]?.[item.size];
                   const isMaxQuantity = stock !== undefined && item.quantity >= stock;
                   
-                  // Check if this item is part of an offer
+                  // STRICT: Only apply offer to specific categories - no name-based fallback
                   const isPartOfOffer = offerDetails?.offerApplied && (
                     item.categorySlug === 'zipless-feeding-lounge-wear' || 
-                    item.categorySlug === 'non-feeding-lounge-wear' ||
-                    (item.name && (
-                      item.name.toLowerCase().includes('lounge') || 
-                      item.name.toLowerCase().includes('loungewear')
-                    ))
+                    item.categorySlug === 'non-feeding-lounge-wear'
                   );
                   
                   return (
