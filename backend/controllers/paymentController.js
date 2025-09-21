@@ -491,9 +491,12 @@ export const createPhonePeSession = async (req, res) => {
     }
 
     // Initialize PhonePe client and create payment request in parallel
-    // 🔑 CRITICAL FIX: The redirect URL MUST contain the transaction ID for the frontend to verify the payment.
-    const redirectUrl = `${process.env.FRONTEND_URL || 'https://shithaa.in'}/payment/phonepe/callback?merchantTransactionId=${phonepeTransactionId}`;
+    // 🔑 CRITICAL FIX: First redirect to our page which will handle the PhonePe redirect
     const callbackUrl = `${process.env.VPS_BASE_URL || 'https://shithaa.in'}/api/payment/phonepe/webhook`;
+    const finalCallbackUrl = `${process.env.FRONTEND_URL || 'https://shithaa.in'}/payment/phonepe/callback?merchantTransactionId=${phonepeTransactionId}`;
+    
+    // We'll first redirect to our page which will then redirect to PhonePe
+    const redirectUrl = `${process.env.FRONTEND_URL || 'https://shithaa.in'}/payment/phonepe/redirect?transactionId=${phonepeTransactionId}`;
     
     // Calculate final amount including shipping
     const finalAmount = checkoutSession.total; // total already includes shipping from checkout session
@@ -517,7 +520,7 @@ export const createPhonePeSession = async (req, res) => {
     const request = StandardCheckoutPayRequest.builder()
       .merchantOrderId(phonepeTransactionId)
       .amount(amountInPaise)
-      .redirectUrl(redirectUrl)
+      .redirectUrl(finalCallbackUrl) // Use the final callback URL for PhonePe
       // .callbackUrl(callbackUrl) // 🔑 FIX: This method does not exist in the SDK and was causing the crash. The callback is set in the PhonePe dashboard.
       .build();
 
@@ -547,7 +550,7 @@ export const createPhonePeSession = async (req, res) => {
           success: true,
           sessionId: checkoutSessionId,
           phonepeTransactionId: phonepeTransactionId,
-          redirectUrl: response.redirectUrl
+          redirectUrl: `${redirectUrl}&phonepeUrl=${encodeURIComponent(response.redirectUrl)}`
         });
       } else {
         await PaymentSession.findByIdAndUpdate(paymentSession._id, {
@@ -966,52 +969,12 @@ export const verifyPhonePePayment = async (req, res) => {
         });
     }
 
-    // Check for explicit timeout/failure states from PhonePe
-    const isTimeout = (
-      paymentStatus.state === 'TIMEOUT' ||
-      paymentStatus.responseCode === 'PAYMENT_TIMEOUT' ||
-      paymentStatus.responseCode === 'PAYMENT_EXPIRED' ||
-      // PhonePe's timeout is 10 minutes, so check if it's been that long
-      (new Date().getTime() - new Date(paymentSession.createdAt).getTime() > 10 * 60 * 1000)
-    );
-
     const isSuccess = (
       paymentStatus.state === 'PAID' ||
       paymentStatus.state === 'COMPLETED' ||
       paymentStatus.responseCode === 'SUCCESS' ||
       paymentStatus.responseCode === '000'
     );
-
-    // If payment has timed out, release stock immediately
-    if (isTimeout) {
-      console.log(`[${correlationId}] Payment timed out, releasing stock...`);
-      
-      // Update payment session
-      await PaymentSession.findByIdAndUpdate(paymentSession._id, {
-        status: 'failed',
-        failedAt: new Date(),
-        phonepeResponse: {
-          ...paymentStatus,
-          state: 'TIMEOUT',
-          responseCode: 'PAYMENT_TIMEOUT',
-          responseMessage: 'Payment timed out'
-        }
-      });
-
-      // Release stock
-      await releaseStockOnPaymentFailure(paymentSession, correlationId);
-
-      return res.json({
-        success: false,
-        data: {
-          status: 'TIMEOUT',
-          message: 'Payment timed out',
-          state: 'TIMEOUT',
-          code: 'PAYMENT_TIMEOUT'
-        },
-        isSuccess: false
-      });
-    }
 
     // 🔑 CRITICAL FIX: If payment is successful, create order atomically if it doesn't exist
     if (isSuccess) {
@@ -1378,59 +1341,4 @@ export const getOrderByTransactionId = async (req, res) => {
   }
 }; 
 
-/**
- * Handle payment cancellation from frontend
- */
-export const cancelPayment = async (req, res) => {
-  const correlationId = req.headers['x-request-id'] || `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  
-  try {
-    const { merchantTransactionId } = req.body;
-    
-    if (!merchantTransactionId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Merchant transaction ID is required'
-      });
-    }
-
-    // Find the payment session
-    const paymentSession = await PaymentSession.findOne({ phonepeTransactionId: merchantTransactionId });
-    if (!paymentSession) {
-      return res.status(404).json({
-        success: false,
-        message: 'Payment session not found'
-      });
-    }
-
-    // Update payment session status
-    paymentSession.status = 'cancelled';
-    paymentSession.phonepeResponse = {
-      ...paymentSession.phonepeResponse,
-      state: 'CANCELLED',
-      responseCode: 'PAYMENT_CANCELLED',
-      responseMessage: 'Payment cancelled by user'
-    };
-    paymentSession.failedAt = new Date();
-    await paymentSession.save();
-
-    // Release reserved stock
-    await releaseStockOnPaymentFailure(paymentSession, correlationId);
-
-    // Track cancelled payment
-    trackPayment(false);
-
-    return res.json({
-      success: true,
-      message: 'Payment cancelled successfully'
-    });
-
-  } catch (error) {
-    console.error('Payment cancellation error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to cancel payment',
-      error: error.message
-    });
-  }
-}; 
+// Helper function moved to webhookController.js to avoid duplication 

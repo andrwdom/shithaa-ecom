@@ -404,58 +404,6 @@ function PhonePeCallbackInner() {
 }
 
 export default function PhonePeCallback() {
-  // Add warning when user tries to leave page
-  useEffect(() => {
-    // Check payment status every 30 seconds
-    const checkPaymentStatus = async () => {
-      try {
-        const response = await fetch(`/api/payment/phonepe/verify/${merchantTransactionId}`);
-        const data = await response.json();
-        
-        // If payment has timed out, redirect to failure page
-        if (data.data?.state === 'TIMEOUT' || data.data?.code === 'PAYMENT_TIMEOUT') {
-          window.location.href = '/payment-failed?reason=timeout';
-        }
-      } catch (error) {
-        console.error('Error checking payment status:', error);
-      }
-    };
-
-    // Start checking payment status
-    const statusInterval = setInterval(checkPaymentStatus, 30000);
-
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = 'Your payment is in progress. If you leave now, your order will be cancelled. Are you sure?';
-      return e.returnValue;
-    };
-
-    // Add warning when user tries to go back
-    const handlePopState = (e: PopStateEvent) => {
-      const confirmLeave = window.confirm('Your payment is in progress. If you go back, your order will be cancelled. Are you sure?');
-      if (confirmLeave) {
-        // Send cancellation to backend
-        fetch('/api/payment/phonepe/cancel', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ merchantTransactionId })
-        }).catch(console.error);
-      } else {
-        // Stay on page
-        window.history.pushState(null, '', window.location.href);
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    window.addEventListener('popstate', handlePopState);
-    window.history.pushState(null, '', window.location.href); // Add entry to history
-
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      window.removeEventListener('popstate', handlePopState);
-      clearInterval(statusInterval);
-    };
-  }, []);
   return (
     <Suspense fallback={
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
