@@ -1,6 +1,6 @@
 // check-session-status.js
 import mongoose from 'mongoose';
-import CheckoutSession from './models/CheckoutSession.js';
+import CheckoutSession from '../models/CheckoutSession.js';
 
 // The specific session ID for the abandoned order
 const sessionId = '4b20784e-cc96-4b99-9bf4-61f3ac5c7deb';
