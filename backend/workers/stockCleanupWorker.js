@@ -80,17 +80,7 @@ const cleanupAbandonedOrders = async () => {
       }
     }
     
-    // 3. Delete old, fully processed sessions
-    const deletionResult = await CheckoutSession.deleteMany({
-      status: 'expired',
-      updatedAt: { $lt: new Date(Date.now() - 5 * 60 * 1000) } // Older than 5 mins
-    });
-
-    if (deletionResult.deletedCount > 0) {
-      console.log(`[${correlationId}] Deleted ${deletionResult.deletedCount} old expired sessions.`);
-    }
-
-    // 4. Force cleanup any stuck stock (emergency fallback)
+    // 3. Force cleanup any stuck stock (emergency fallback)
     const productsWithReserved = await productModel.find({
       'sizes.reserved': { $gt: 0 }
     });

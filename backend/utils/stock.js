@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import productModel from '../models/productModel.js';
 import Reservation from '../models/Reservation.js';
+import CheckoutSession from '../models/CheckoutSession.js';
 import { trackStockReservation } from './monitoring.js';
 
 /**
@@ -37,26 +38,34 @@ export async function checkStockAvailability(productId, size, quantity, excludeS
             };
         }
 
-        // Use the reserved field from the product model directly
-        // This is more reliable than querying the Reservation collection
-        let totalReserved = sizeObj.reserved || 0;
-        
-        // If we need to exclude a specific session, we need to subtract its reservations
-        if (excludeSessionId) {
-            const sessionReservations = await Reservation.find({
-                'items.productId': productId,
-                'items.size': size,
-                status: 'active',
-                checkoutSessionId: excludeSessionId
-            });
-            
-            const sessionReserved = sessionReservations.reduce((sum, res) => {
-                const item = res.items.find(i => i.productId.toString() === productId.toString() && i.size === size);
-                return sum + (item ? item.quantity : 0);
-            }, 0);
-            
-            totalReserved = Math.max(0, totalReserved - sessionReserved);
-        }
+        // 🔧 CRITICAL FIX: Don't trust the `reserved` field blindly.
+        // Recalculate the real-time reserved count from active sessions to prevent stuck stock.
+        const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+
+        const activeReservations = await CheckoutSession.aggregate([
+            // Match sessions that are recent and could hold a reservation
+            { $match: { 
+                status: { $in: ['pending', 'awaiting_payment'] },
+                stockReserved: true,
+                createdAt: { $gte: tenMinutesAgo }, // Look at sessions from the last 10 mins
+                'items.productId': new mongoose.Types.ObjectId(productId),
+                'items.size': size
+            }},
+            // Unwind the items array to process each item
+            { $unwind: '$items' },
+            // Match the specific item we're checking
+            { $match: {
+                'items.productId': new mongoose.Types.ObjectId(productId),
+                'items.size': size
+            }},
+            // Group and sum the quantities to get the real reserved count
+            { $group: {
+                _id: null,
+                totalReserved: { $sum: '$items.quantity' }
+            }}
+        ]);
+
+        const totalReserved = activeReservations[0]?.totalReserved || 0;
 
         const availableStock = Math.max(0, sizeObj.stock - totalReserved);
         const isAvailable = availableStock >= quantity;
