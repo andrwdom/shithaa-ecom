@@ -67,6 +67,17 @@ export async function checkStockAvailability(productId, size, quantity, excludeS
 
         const totalReserved = activeReservations[0]?.totalReserved || 0;
 
+        // 🔧 CRITICAL FIX: If the product's reserved count is wrong, fix it immediately
+        if (sizeObj.reserved !== totalReserved) {
+            console.log(`🔧 Fixing incorrect reserved count for ${product.name} size ${size}: ${sizeObj.reserved} → ${totalReserved}`);
+            await productModel.updateOne(
+                { _id: productId, 'sizes.size': size },
+                { $set: { 'sizes.$.reserved': totalReserved } }
+            );
+            // Update the local object too for accurate logging
+            sizeObj.reserved = totalReserved;
+        }
+
         const availableStock = Math.max(0, sizeObj.stock - totalReserved);
         const isAvailable = availableStock >= quantity;
 

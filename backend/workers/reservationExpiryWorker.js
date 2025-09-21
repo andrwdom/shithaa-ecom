@@ -274,5 +274,5 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     console.log('🛑 [Reservation Worker] Shutting down gracefully...');
     mongoose.connection.close();
     process.exit(0);
-  });
+    });
 }
