@@ -491,12 +491,9 @@ export const createPhonePeSession = async (req, res) => {
     }
 
     // Initialize PhonePe client and create payment request in parallel
-    // 🔑 CRITICAL FIX: First redirect to our page which will handle the PhonePe redirect
+    // 🔑 CRITICAL FIX: The redirect URL MUST contain the transaction ID for the frontend to verify the payment.
+    const redirectUrl = `${process.env.FRONTEND_URL || 'https://shithaa.in'}/payment/phonepe/callback?merchantTransactionId=${phonepeTransactionId}`;
     const callbackUrl = `${process.env.VPS_BASE_URL || 'https://shithaa.in'}/api/payment/phonepe/webhook`;
-    const finalCallbackUrl = `${process.env.FRONTEND_URL || 'https://shithaa.in'}/payment/phonepe/callback?merchantTransactionId=${phonepeTransactionId}`;
-    
-    // We'll first redirect to our page which will then redirect to PhonePe
-    const redirectUrl = `${process.env.FRONTEND_URL || 'https://shithaa.in'}/payment/phonepe/redirect?transactionId=${phonepeTransactionId}`;
     
     // Calculate final amount including shipping
     const finalAmount = checkoutSession.total; // total already includes shipping from checkout session
@@ -520,7 +517,7 @@ export const createPhonePeSession = async (req, res) => {
     const request = StandardCheckoutPayRequest.builder()
       .merchantOrderId(phonepeTransactionId)
       .amount(amountInPaise)
-      .redirectUrl(finalCallbackUrl) // Use the final callback URL for PhonePe
+      .redirectUrl(redirectUrl)
       // .callbackUrl(callbackUrl) // 🔑 FIX: This method does not exist in the SDK and was causing the crash. The callback is set in the PhonePe dashboard.
       .build();
 
@@ -550,7 +547,7 @@ export const createPhonePeSession = async (req, res) => {
           success: true,
           sessionId: checkoutSessionId,
           phonepeTransactionId: phonepeTransactionId,
-          redirectUrl: `${redirectUrl}&phonepeUrl=${encodeURIComponent(response.redirectUrl)}`
+          redirectUrl: response.redirectUrl
         });
       } else {
         await PaymentSession.findByIdAndUpdate(paymentSession._id, {

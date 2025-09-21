@@ -1,5 +1,6 @@
 import orderModel from '../models/orderModel.js';
 import PaymentSession from '../models/paymentSessionModel.js';
+import CheckoutSession from '../models/CheckoutSession.js';
 import { successResponse, errorResponse } from '../utils/response.js';
 import crypto from 'crypto';
 import Reservation from '../models/Reservation.js';
@@ -195,7 +196,7 @@ export async function phonePeWebhookHandler(req, res) {
         }
         
       } else {
-        console.log('🔔 WEBHOOK: Payment failed, updating payment session status');
+        console.log('🔔 WEBHOOK: Payment failed or timed out, releasing stock');
         
         // Update payment session status to failed
         paymentSession.status = 'failed';
@@ -203,10 +204,31 @@ export async function phonePeWebhookHandler(req, res) {
         paymentSession.failedAt = new Date();
         await paymentSession.save();
         console.log('🔔 WEBHOOK: Payment session updated to failed status');
-        
-        // 🔑 CRITICAL: No order creation for failed payments
-        // No stock restoration needed since stock is not pre-reserved
-        // Stock is only deducted after successful payment confirmation
+
+        // 🔧 CRITICAL FIX: Release stock for failed/timed out payments
+        try {
+          // Find and release stock from the checkout session
+          const checkoutSession = await CheckoutSession.findOne({ sessionId: paymentSession.sessionId });
+          if (checkoutSession && checkoutSession.stockReserved) {
+            console.log('🔔 WEBHOOK: Found checkout session with reserved stock, releasing...');
+            
+            // Release stock for each item
+            for (const item of checkoutSession.items) {
+              await releaseStockReservation(item.productId, item.size, item.quantity);
+              console.log(`🔔 WEBHOOK: Released stock for ${item.name} (${item.size}) x${item.quantity}`);
+            }
+            
+            // Mark session as failed and stock as released
+            checkoutSession.status = 'failed';
+            checkoutSession.stockReserved = false;
+            await checkoutSession.save();
+            console.log('🔔 WEBHOOK: Checkout session marked as failed and stock released');
+          } else {
+            console.log('🔔 WEBHOOK: No checkout session found or no stock reserved');
+          }
+        } catch (error) {
+          console.error('🔔 WEBHOOK: Error releasing stock:', error);
+        }
       }
     }
     
