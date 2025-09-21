@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import { startCleanupJob } from './jobs/paymentSessionCleanup.js';
 import routes from './routes/index.js';
+import './utils/redis.js'; // Initialize Redis connection
 
 dotenv.config();
 

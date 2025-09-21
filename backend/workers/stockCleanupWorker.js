@@ -110,6 +110,7 @@ const cleanupAbandonedOrders = async () => {
             session.createdAt < new Date(now - 5 * 60 * 1000)) conditions.push('OLD_PENDING');
         
         console.log(`[${correlationId}] DEBUG: Session ${session.sessionId} matched conditions:`, conditions);
+      }
     
     console.log(`[${correlationId}] Found ${oldSessions.length} old checkout sessions to clean`);
     
