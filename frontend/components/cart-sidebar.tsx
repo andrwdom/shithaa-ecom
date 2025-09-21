@@ -189,6 +189,13 @@ export default function CartSidebar() {
             <h2 className="text-xl sm:text-2xl font-bold text-[rgb(71,60,102)] font-serif flex items-center gap-2 sm:gap-3">
               <ShoppingBag className="h-6 w-6 sm:h-7 sm:w-7" />
               Shopping Cart
+              {/* Offer Badge */}
+              {offerDetails?.offerApplied && offerDetails?.offerDiscount > 0 && (
+                <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
+                  <Gift className="h-3 w-3" />
+                  OFFER
+                </span>
+              )}
             </h2>
             <Button 
               variant="ghost" 
@@ -199,9 +206,17 @@ export default function CartSidebar() {
               <X className="h-5 w-5" />
             </Button>
           </div>
-          <p className="text-sm text-gray-600">
-            {cartItemsCount} item{cartItemsCount !== 1 ? "s" : ""} in cart
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-gray-600">
+              {cartItemsCount} item{cartItemsCount !== 1 ? "s" : ""} in cart
+            </p>
+            {/* Offer Savings Indicator */}
+            {offerDetails?.offerApplied && offerDetails?.offerDiscount > 0 && (
+              <p className="text-sm text-green-600 font-semibold">
+                You save ₹{offerDetails.offerDiscount.toLocaleString()}!
+              </p>
+            )}
+          </div>
         </div>
 
         {/* Cart Items */}
@@ -226,6 +241,28 @@ export default function CartSidebar() {
             </div>
           ) : cartItemsCount > 0 ? (
             <div className="p-4 sm:p-6 space-y-5">
+              
+              {/* General Offer Indicator - Show whenever any offer is applied */}
+              {offerDetails?.offerApplied && offerDetails?.offerDiscount > 0 && (
+                <div className="bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-300 rounded-xl p-4 shadow-lg mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-purple-100 p-2 rounded-full">
+                      <Gift className="h-5 w-5 text-purple-600" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg font-bold text-purple-800">🎉 Offer Applied!</span>
+                        <span className="bg-purple-200 text-purple-800 px-2 py-1 rounded-full text-xs font-semibold">
+                          SAVE ₹{offerDetails.offerDiscount}
+                        </span>
+                      </div>
+                      <p className="text-purple-700 text-sm mt-1">
+                        You're getting special pricing on your items
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
               {/* Special Offer Banner - CRITICAL FIX: Only show for 3+ items */}
               {(() => {
                 const loungewearItems = cartItems.filter((item: any) => 
@@ -292,8 +329,22 @@ export default function CartSidebar() {
                   const stock = productStocks[item._id]?.[item.size];
                   const isMaxQuantity = stock !== undefined && item.quantity >= stock;
                   
+                  // Check if this item is part of an offer
+                  const isPartOfOffer = offerDetails?.offerApplied && (
+                    item.categorySlug === 'zipless-feeding-lounge-wear' || 
+                    item.categorySlug === 'non-feeding-lounge-wear' ||
+                    (item.name && (
+                      item.name.toLowerCase().includes('lounge') || 
+                      item.name.toLowerCase().includes('loungewear')
+                    ))
+                  );
+                  
                   return (
-                    <div key={`${item.id}-${item.size}`} className="bg-white border border-gray-200 rounded-xl p-3 sm:p-4 shadow-sm">
+                    <div key={`${item.id}-${item.size}`} className={`bg-white border rounded-xl p-3 sm:p-4 shadow-sm ${
+                      isPartOfOffer 
+                        ? 'border-green-300 bg-gradient-to-r from-green-50 to-white' 
+                        : 'border-gray-200'
+                    }`}>
                       <div className="flex gap-3 sm:gap-4">
                         {/* Product Image */}
                         <div className="w-16 h-20 sm:w-20 sm:h-24 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
@@ -308,9 +359,18 @@ export default function CartSidebar() {
                         
                         {/* Product Details */}
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-gray-900 text-xs sm:text-sm leading-tight mb-2 line-clamp-2">
-                            {item.name}
-                          </h3>
+                          <div className="flex items-start justify-between mb-2">
+                            <h3 className="font-semibold text-gray-900 text-xs sm:text-sm leading-tight line-clamp-2 flex-1">
+                              {item.name}
+                            </h3>
+                            {/* Offer Badge */}
+                            {isPartOfOffer && (
+                              <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-semibold ml-2 flex-shrink-0 flex items-center gap-1">
+                                <Gift className="h-3 w-3" />
+                                OFFER
+                              </span>
+                            )}
+                          </div>
                           
                           <div className="flex items-center justify-between mb-3">
                             <p className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
@@ -415,22 +475,59 @@ export default function CartSidebar() {
         {/* Footer */}
         {cartItemsCount > 0 && (
           <div className="border-t border-gray-100 bg-gradient-to-r from-gray-50 to-white p-4 sm:p-6 space-y-4">
-            {/* Total */}
-            <div className="flex justify-between items-center">
-              <span className="text-base sm:text-lg font-semibold text-gray-900">Total:</span>
-              <div className="text-right">
-                {isLoadingOffer ? (
-                  <div className="text-sm text-gray-500">Calculating...</div>
-                ) : (
-                  <span 
-                    className="text-xl sm:text-2xl font-bold text-[rgb(71,60,102)] transition-all duration-300 ease-in-out"
-                    key={`total-${cartTotal}`} // 🔧 FIX: Key for smooth transitions
-                  >
-                    ₹{cartTotal.toLocaleString()}
+            {/* Subtotal and Discount Breakdown */}
+            {offerDetails?.offerApplied && offerDetails?.offerDiscount > 0 ? (
+              <div className="space-y-2">
+                {/* Subtotal */}
+                <div className="flex justify-between items-center text-sm text-gray-600">
+                  <span>Subtotal:</span>
+                  <span>₹{(cartTotal + offerDetails.offerDiscount).toLocaleString()}</span>
+                </div>
+                
+                {/* Discount */}
+                <div className="flex justify-between items-center text-sm text-green-600 font-semibold">
+                  <span className="flex items-center gap-1">
+                    <Gift className="h-3 w-3" />
+                    Discount Applied:
                   </span>
-                )}
+                  <span>-₹{offerDetails.offerDiscount.toLocaleString()}</span>
+                </div>
+                
+                {/* Total */}
+                <div className="flex justify-between items-center border-t border-gray-200 pt-2">
+                  <span className="text-base sm:text-lg font-semibold text-gray-900">Total:</span>
+                  <div className="text-right">
+                    {isLoadingOffer ? (
+                      <div className="text-sm text-gray-500">Calculating...</div>
+                    ) : (
+                      <span 
+                        className="text-xl sm:text-2xl font-bold text-[rgb(71,60,102)] transition-all duration-300 ease-in-out"
+                        key={`total-${cartTotal}`}
+                      >
+                        ₹{cartTotal.toLocaleString()}
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
+            ) : (
+              /* Regular Total */
+              <div className="flex justify-between items-center">
+                <span className="text-base sm:text-lg font-semibold text-gray-900">Total:</span>
+                <div className="text-right">
+                  {isLoadingOffer ? (
+                    <div className="text-sm text-gray-500">Calculating...</div>
+                  ) : (
+                    <span 
+                      className="text-xl sm:text-2xl font-bold text-[rgb(71,60,102)] transition-all duration-300 ease-in-out"
+                      key={`total-${cartTotal}`}
+                    >
+                      ₹{cartTotal.toLocaleString()}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
             
             {/* Shipping Info */}
             <div className="text-xs text-gray-500 text-center bg-white px-3 py-2 rounded-lg border border-gray-200">
