@@ -92,7 +92,7 @@ const checkoutSessionSchema = new mongoose.Schema({
   expiresAt: { 
     type: Date, 
     required: true,
-    index: { expireAfterSeconds: 0 } // TTL index
+    // index: { expireAfterSeconds: 0 } // TTL index REMOVED
   },
   createdAt: { 
     type: Date, 
