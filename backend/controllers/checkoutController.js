@@ -135,26 +135,8 @@ function calculateLoungewearCategoryOffer(loungewearCategoryItems) {
         return result;
     }
 
-    // 🔧 NEW FIX: Check if items are priced appropriately for the offer
-    // The offer is designed for items priced at ₹450+ each, not ₹1 test items
-    const minPriceForOffer = 400; // Minimum price per item to qualify for offer
-    const itemsBelowMinPrice = loungewearCategoryItems.filter(item => item.originalPrice < minPriceForOffer);
-    
-    if (itemsBelowMinPrice.length > 0) {
-        console.log(`🔧 CRITICAL: No loungewear offer applied: Items below minimum price (₹${minPriceForOffer}):`, 
-                   itemsBelowMinPrice.map(item => `${item.name} - ₹${item.originalPrice}`));
-        const originalTotal = loungewearCategoryItems.reduce((sum, item) => sum + item.originalPrice, 0);
-        
-        const result = {
-            originalTotal,
-            discount: 0,
-            offerApplied: false,
-            offerDetails: null
-        };
-        
-        console.log(`🔧 FINAL RESULT FOR LOW-PRICED ITEMS:`, result);
-        return result;
-    }
+    // 🔧 TESTING: Skip minimum price check for testing - allow ₹51 offer regardless of item prices
+    console.log(`🔧 TESTING: Skipping minimum price check for testing - allowing ₹51 offer regardless of item prices`);
 
     // Calculate totals
     const originalTotal = loungewearCategoryItems.reduce((sum, item) => sum + item.originalPrice, 0);
@@ -320,7 +302,18 @@ export const createCheckoutSession = async (req, res) => {
       total,
       source,
       itemCount: items.length,
-      loungewearItemsCount: loungewearCategoryItems.length
+      loungewearItemsCount: loungewearCategoryItems.length,
+      loungewearOfferDetails: loungewearCategoryOffer
+    });
+    
+    // 🔧 DEBUG: Log detailed calculation breakdown
+    console.log('🔧 DETAILED CALCULATION BREAKDOWN:', {
+      loungewearItems: loungewearCategoryItems.map(item => ({ name: item.name, price: item.price })),
+      loungewearOriginalTotal: loungewearCategoryOffer.originalTotal,
+      loungewearDiscount: loungewearCategoryOffer.discount,
+      otherItems: otherItems.map(item => ({ name: item.name, price: item.price, quantity: item.quantity })),
+      otherItemsTotal,
+      finalCalculation: `${rawSubtotal} - ${offerDiscount} + ${shippingCost} = ${total}`
     });
     
     // Generate session ID

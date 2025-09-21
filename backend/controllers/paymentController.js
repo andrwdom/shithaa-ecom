@@ -501,7 +501,9 @@ export const createPhonePeSession = async (req, res) => {
       subtotal: checkoutSession.subtotal,
       shipping: checkoutSession.shippingCost,
       total: checkoutSession.total,
-      finalAmount: finalAmount
+      finalAmount: finalAmount,
+      offerDetails: checkoutSession.offerDetails,
+      discount: checkoutSession.discount
     });
 
     // Convert amount to paise (1 rupee = 100 paise)
