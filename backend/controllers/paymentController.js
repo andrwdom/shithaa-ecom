@@ -966,12 +966,52 @@ export const verifyPhonePePayment = async (req, res) => {
         });
     }
 
+    // Check for explicit timeout/failure states from PhonePe
+    const isTimeout = (
+      paymentStatus.state === 'TIMEOUT' ||
+      paymentStatus.responseCode === 'PAYMENT_TIMEOUT' ||
+      paymentStatus.responseCode === 'PAYMENT_EXPIRED' ||
+      // PhonePe's timeout is 10 minutes, so check if it's been that long
+      (new Date().getTime() - new Date(paymentSession.createdAt).getTime() > 10 * 60 * 1000)
+    );
+
     const isSuccess = (
       paymentStatus.state === 'PAID' ||
       paymentStatus.state === 'COMPLETED' ||
       paymentStatus.responseCode === 'SUCCESS' ||
       paymentStatus.responseCode === '000'
     );
+
+    // If payment has timed out, release stock immediately
+    if (isTimeout) {
+      console.log(`[${correlationId}] Payment timed out, releasing stock...`);
+      
+      // Update payment session
+      await PaymentSession.findByIdAndUpdate(paymentSession._id, {
+        status: 'failed',
+        failedAt: new Date(),
+        phonepeResponse: {
+          ...paymentStatus,
+          state: 'TIMEOUT',
+          responseCode: 'PAYMENT_TIMEOUT',
+          responseMessage: 'Payment timed out'
+        }
+      });
+
+      // Release stock
+      await releaseStockOnPaymentFailure(paymentSession, correlationId);
+
+      return res.json({
+        success: false,
+        data: {
+          status: 'TIMEOUT',
+          message: 'Payment timed out',
+          state: 'TIMEOUT',
+          code: 'PAYMENT_TIMEOUT'
+        },
+        isSuccess: false
+      });
+    }
 
     // 🔑 CRITICAL FIX: If payment is successful, create order atomically if it doesn't exist
     if (isSuccess) {

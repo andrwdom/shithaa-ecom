@@ -406,6 +406,24 @@ function PhonePeCallbackInner() {
 export default function PhonePeCallback() {
   // Add warning when user tries to leave page
   useEffect(() => {
+    // Check payment status every 30 seconds
+    const checkPaymentStatus = async () => {
+      try {
+        const response = await fetch(`/api/payment/phonepe/verify/${merchantTransactionId}`);
+        const data = await response.json();
+        
+        // If payment has timed out, redirect to failure page
+        if (data.data?.state === 'TIMEOUT' || data.data?.code === 'PAYMENT_TIMEOUT') {
+          window.location.href = '/payment-failed?reason=timeout';
+        }
+      } catch (error) {
+        console.error('Error checking payment status:', error);
+      }
+    };
+
+    // Start checking payment status
+    const statusInterval = setInterval(checkPaymentStatus, 30000);
+
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       e.preventDefault();
       e.returnValue = 'Your payment is in progress. If you leave now, your order will be cancelled. Are you sure?';
@@ -435,6 +453,7 @@ export default function PhonePeCallback() {
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       window.removeEventListener('popstate', handlePopState);
+      clearInterval(statusInterval);
     };
   }, []);
   return (
