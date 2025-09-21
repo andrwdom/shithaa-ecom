@@ -22,7 +22,23 @@ export const expireOldReservations = async () => {
     
     console.log(`[${correlationId}] Found ${expiredReservations.length} expired reservations`);
     
-    if (expiredReservations.length === 0) {
+    // Also find very old reservations (older than 5 minutes) regardless of expiry
+    const veryOldReservations = await Reservation.find({
+      status: 'active',
+      createdAt: { $lt: new Date(Date.now() - 5 * 60 * 1000) }
+    });
+    
+    console.log(`[${correlationId}] Found ${veryOldReservations.length} very old reservations (>5min)`);
+    
+    // Combine both lists, removing duplicates
+    const allExpiredReservations = [...new Map([
+      ...expiredReservations.map(r => [r._id.toString(), r]),
+      ...veryOldReservations.map(r => [r._id.toString(), r])
+    ]).values()];
+    
+    console.log(`[${correlationId}] Total reservations to process: ${allExpiredReservations.length}`);
+    
+    if (allExpiredReservations.length === 0) {
       console.log(`[${correlationId}] No expired reservations to process`);
       return { success: true, processed: 0 };
     }
@@ -30,7 +46,7 @@ export const expireOldReservations = async () => {
     let processedCount = 0;
     let errorCount = 0;
     
-    for (const reservation of expiredReservations) {
+    for (const reservation of allExpiredReservations) {
       try {
         console.log(`[${correlationId}] Processing expired reservation: ${reservation.reservationId}`);
         
@@ -141,7 +157,7 @@ export const expireOldReservations = async () => {
       success: true,
       processed: processedCount,
       errors: errorCount,
-      total: expiredReservations.length,
+      total: allExpiredReservations.length,
       checkoutSessionsCleaned: checkoutCleanupResult.deletedCount,
       stuckSessionsCleaned: stuckSessions.length
     };

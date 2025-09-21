@@ -70,7 +70,9 @@ module.exports = {
       error_file: './logs/reservation-worker-err.log',
       out_file: './logs/reservation-worker-out.log',
       log_file: './logs/reservation-worker-combined.log',
-      time: true
+      time: true,
+      min_uptime: '10s',
+      max_restarts: 5
     }
   ]
 } 
