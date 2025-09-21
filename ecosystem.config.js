@@ -56,8 +56,8 @@ module.exports = {
       time: true
     },
     {
-      name: 'shithaa-reservation-worker',
-      script: 'workers/reservationExpiryWorker.js',
+      name: 'shithaa-stock-cleanup-worker',
+      script: 'workers/stockCleanupWorker.js',
       cwd: '/var/www/shithaa-ecom/backend',
       instances: 1,
       exec_mode: 'fork',
@@ -67,9 +67,9 @@ module.exports = {
       env: {
         NODE_ENV: 'production'
       },
-      error_file: './logs/reservation-worker-err.log',
-      out_file: './logs/reservation-worker-out.log',
-      log_file: './logs/reservation-worker-combined.log',
+      error_file: './logs/stock-cleanup-worker-err.log',
+      out_file: './logs/stock-cleanup-worker-out.log',
+      log_file: './logs/stock-cleanup-worker-combined.log',
       time: true,
       min_uptime: '10s',
       max_restarts: 5
