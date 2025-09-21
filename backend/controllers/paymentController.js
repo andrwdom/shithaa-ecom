@@ -1016,6 +1016,58 @@ export const verifyPhonePePayment = async (req, res) => {
     );
 
     // 🔑 CRITICAL FIX: If payment is successful, create order atomically if it doesn't exist
+    // Handle failed payment first
+    if (!isSuccess && paymentStatus.state === 'FAILED') {
+      console.log(`[${correlationId}] Payment failed, releasing stock`);
+      
+      try {
+        // Find checkout session
+        const checkoutSession = await CheckoutSession.findOne({ sessionId: paymentSession.sessionId });
+        
+        if (checkoutSession && checkoutSession.stockReserved) {
+          console.log(`[${correlationId}] Found checkout session with reserved stock, releasing...`);
+          
+          // Release stock for each item
+          for (const item of checkoutSession.items) {
+            try {
+              await releaseStockReservation(item.productId, item.size, item.quantity);
+              console.log(`[${correlationId}] Released stock for ${item.name} (${item.size}) x${item.quantity}`);
+            } catch (error) {
+              console.error(`[${correlationId}] Failed to release stock for item:`, error);
+            }
+          }
+          
+          // Mark session as failed and stock as released
+          checkoutSession.status = 'failed';
+          checkoutSession.stockReserved = false;
+          await checkoutSession.save();
+          
+          // Update payment session
+          paymentSession.status = 'failed';
+          paymentSession.failedAt = new Date();
+          await paymentSession.save();
+          
+          console.log(`[${correlationId}] Stock released and sessions marked as failed`);
+        }
+        
+        return res.json({
+          success: false,
+          message: 'Payment failed',
+          error: paymentStatus.errorCode,
+          detailedError: paymentStatus.detailedErrorCode,
+          redirectUrl: `${process.env.FRONTEND_URL || 'https://shithaa.in'}/payment-failed`
+        });
+      } catch (error) {
+        console.error(`[${correlationId}] Error handling failed payment:`, error);
+        return res.status(500).json({
+          success: false,
+          message: 'Error handling failed payment',
+          error: error.message
+        });
+      }
+    }
+
+    // Handle successful payment
     if (isSuccess) {
       if (!order) {
         console.log(`[${correlationId}] Creating order atomically from payment session ${paymentSession._id} (webhook was slow).`);
