@@ -36,7 +36,8 @@ const paymentEventSchema = new mongoose.Schema({
       'stock_decremented',
       'session_expired',
       'reconciliation_started',
-      'reconciliation_completed'
+      'reconciliation_completed',
+      'cart_validation_failed'
     ]
   },
   
