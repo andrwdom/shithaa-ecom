@@ -13,6 +13,7 @@ import { useAuth } from "@/components/auth/useAuth";
 import LoginModal from "@/components/auth/LoginModal";
 import { useBuyNow } from "@/components/buy-now-context";
 import { useCheckoutFlow } from "@/components/checkout-flow-manager";
+import { calculateShippingCost } from "@/lib/shipping-calculator";
 import { getCheckoutMode } from "@/components/checkout-flow-manager";
 import { getIdToken } from "firebase/auth";
 import { Gift } from "lucide-react";
@@ -447,7 +448,20 @@ export default function CheckoutClient() {
   
   const subtotalAfterOffer = rawSubtotal - offerDiscount;
   const couponDiscount = appliedCoupon ? Math.round((subtotalAfterOffer * appliedCoupon.discountPercentage) / 100) : 0;
-  const finalTotal = subtotalAfterOffer - couponDiscount;
+  
+  // Calculate shipping cost to include in final total
+  let shippingCost = 0;
+  if (form.state && form.state.trim()) {
+    const shippingInfo = {
+      state: form.state,
+      city: form.city,
+      pincode: form.pincode
+    };
+    const shippingCalculation = calculateShippingCost(displayItems, shippingInfo);
+    shippingCost = shippingCalculation.shippingCost;
+  }
+  
+  const finalTotal = subtotalAfterOffer - couponDiscount + shippingCost;
   
   // Debug logging to track total calculation
   console.log('[Checkout] Total calculation:', {
@@ -459,8 +473,10 @@ export default function CheckoutClient() {
     offerDiscount,
     subtotalAfterOffer,
     couponDiscount,
+    shippingCost,
     finalTotal,
-    offerDetails
+    offerDetails,
+    shippingState: form.state
   });
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
