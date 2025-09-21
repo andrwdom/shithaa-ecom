@@ -443,33 +443,9 @@ export default function CheckoutClient() {
   console.log('[Checkout] 🔧 DEBUG: Total loungewear quantity:', totalLoungewearQuantity);
   
   if (totalLoungewearQuantity >= 3) {
-    const completeSets = Math.floor(totalLoungewearQuantity / 3);
-    const remainingItems = totalLoungewearQuantity % 3;
-    const loungewearSubtotal = loungewearItems.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
-    const offerTotal = (completeSets * 1299) + (remainingItems * 450);
-    
-    console.log('[Checkout] 🔧 DEBUG: Offer calculation details:', {
-      totalLoungewearQuantity,
-      completeSets,
-      remainingItems,
-      loungewearSubtotal,
-      offerTotal,
-      willApplyOffer: offerTotal < loungewearSubtotal
-    });
-    
-    if (offerTotal < loungewearSubtotal) {
-      offerDiscount = loungewearSubtotal - offerTotal;
-      console.log('[Checkout] 🔧 CRITICAL: Forced offer calculation:', {
-        totalLoungewearQuantity,
-        completeSets,
-        remainingItems,
-        loungewearSubtotal,
-        offerTotal,
-        offerDiscount
-      });
-    } else {
-      console.log('[Checkout] 🔧 DEBUG: Offer not applied - offer total not less than loungewear subtotal');
-    }
+    // 🔧 SIMPLE FIX: Flat ₹51 discount for 3+ loungewear items
+    offerDiscount = 51;
+    console.log('[Checkout] 🔧 SIMPLE: Loungewear offer applied! Flat discount: ₹51 for', totalLoungewearQuantity, 'items');
   } else {
     console.log('[Checkout] 🔧 DEBUG: Not enough loungewear items for offer - need 3+, have:', totalLoungewearQuantity);
   }

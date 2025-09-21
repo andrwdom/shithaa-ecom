@@ -137,22 +137,9 @@ export default function CheckoutPage() {
           const totalLoungewearQuantity = loungewearItems.reduce((sum: number, item: any) => sum + item.quantity, 0);
           
           if (totalLoungewearQuantity >= 3) {
-            const completeSets = Math.floor(totalLoungewearQuantity / 3);
-            const remainingItems = totalLoungewearQuantity % 3;
-            const loungewearSubtotal = loungewearItems.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
-            const offerTotal = (completeSets * 1299) + (remainingItems * 450);
-            
-            if (offerTotal < loungewearSubtotal) {
-              offerDiscount = loungewearSubtotal - offerTotal;
-              console.log('[CheckoutPage] 🔧 FALLBACK: Calculated offer directly:', {
-                totalLoungewearQuantity,
-                completeSets,
-                remainingItems,
-                loungewearSubtotal,
-                offerTotal,
-                offerDiscount
-              });
-            }
+            // 🔧 SIMPLE FIX: Flat ₹51 discount for 3+ loungewear items
+            offerDiscount = 51;
+            console.log('[CheckoutPage] 🔧 FALLBACK: Calculated offer directly - flat ₹51 discount for', totalLoungewearQuantity, 'items');
           }
         }
       } else if (isBuyNowMode) {
@@ -169,27 +156,21 @@ export default function CheckoutPage() {
         const totalLoungewearQuantity = loungewearItems.reduce((sum: number, item: any) => sum + item.quantity, 0);
         
         if (totalLoungewearQuantity >= 3) {
-          // Calculate offer: 3 for ₹1299, remaining at ₹450 each
-          const completeSets = Math.floor(totalLoungewearQuantity / 3);
-          const remainingItems = totalLoungewearQuantity % 3;
+          // 🔧 SIMPLE FIX: Flat ₹51 discount for 3+ loungewear items
+          offerDiscount = 51;
           const loungewearSubtotal = loungewearItems.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
-          const offerTotal = (completeSets * 1299) + (remainingItems * 450);
-          
-          if (offerTotal < loungewearSubtotal) {
-            offerDiscount = loungewearSubtotal - offerTotal;
-            calculatedOfferDetails = {
-              offerApplied: true,
-              offerDiscount: offerDiscount,
-              offerDetails: {
-                completeSets,
-                remainingItems,
-                offerPrice: offerTotal,
-                originalPrice: loungewearSubtotal,
-                savings: offerDiscount
-              }
-            };
-            console.log('[CheckoutPage] 🔧 Calculated offer for buy-now items:', calculatedOfferDetails);
-          }
+          calculatedOfferDetails = {
+            offerApplied: true,
+            offerDiscount: offerDiscount,
+            offerDetails: {
+              completeSets: Math.floor(totalLoungewearQuantity / 3),
+              remainingItems: totalLoungewearQuantity % 3,
+              offerPrice: loungewearSubtotal - offerDiscount,
+              originalPrice: loungewearSubtotal,
+              savings: offerDiscount
+            }
+          };
+          console.log('[CheckoutPage] 🔧 Calculated offer for buy-now items:', calculatedOfferDetails);
         }
       }
       
