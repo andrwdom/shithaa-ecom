@@ -264,36 +264,70 @@ export const createCheckoutSession = async (req, res) => {
     // Calculate totals with offer discounts
     const shippingCost = req.body.orderSummary?.shipping || req.body.shippingCost || 0;
     
-    // 🔧 CRITICAL FIX: Calculate offer discount using the same logic as cart calculation
-    const loungewearCategoryItems = [];
-    const otherItems = [];
+    // 🔧 CRITICAL FIX: Use frontend's calculated total if available to ensure consistency
+    let total, rawSubtotal, offerDiscount, loungewearCategoryOffer;
     
-    validatedItems.forEach(item => {
-      if (item.categorySlug === 'zipless-feeding-lounge-wear' || 
-          item.categorySlug === 'non-feeding-lounge-wear') {
-        // Add item multiple times based on quantity for offer calculation
-        for (let i = 0; i < item.quantity; i++) {
-          loungewearCategoryItems.push({
-            ...item,
-            quantity: 1,
-            originalPrice: item.price
-          });
+    if (req.body.orderSummary && req.body.orderSummary.total && req.body.orderSummary.total > 0) {
+      // Use frontend's calculated total to ensure consistency with PhonePe payment
+      console.log('📦 [Checkout Session] Using frontend calculated total:', {
+        frontendTotal: req.body.orderSummary.total,
+        frontendSubtotal: req.body.orderSummary.subtotal,
+        frontendOfferDiscount: req.body.orderSummary.offerDiscount,
+        frontendShipping: req.body.orderSummary.shipping
+      });
+      
+      total = req.body.orderSummary.total;
+      rawSubtotal = req.body.orderSummary.subtotal || 0;
+      offerDiscount = req.body.orderSummary.offerDiscount || 0;
+      
+      // Create mock offer details for consistency
+      loungewearCategoryOffer = {
+        offerApplied: offerDiscount > 0,
+        discount: offerDiscount,
+        originalTotal: rawSubtotal,
+        offerDetails: {
+          completeSets: 0,
+          remainingItems: 0,
+          originalPrice: rawSubtotal,
+          offerPrice: total - shippingCost,
+          savings: offerDiscount
         }
-      } else {
-        otherItems.push(item);
-      }
-    });
-    
-    // Calculate loungewear offer
-    const loungewearCategoryOffer = calculateLoungewearCategoryOffer(loungewearCategoryItems);
-    
-    // Calculate other items total
-    const otherItemsTotal = otherItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    
-    // Calculate totals with offer discount
-    const rawSubtotal = loungewearCategoryOffer.originalTotal + otherItemsTotal;
-    const offerDiscount = Math.min(loungewearCategoryOffer.discount, rawSubtotal);
-    const total = Math.max(0, rawSubtotal - offerDiscount) + shippingCost;
+      };
+    } else {
+      // Fallback to backend calculation if frontend total not provided
+      console.log('📦 [Checkout Session] Frontend total not provided, calculating on backend...');
+      
+      // 🔧 CRITICAL FIX: Calculate offer discount using the same logic as cart calculation
+      const loungewearCategoryItems = [];
+      const otherItems = [];
+      
+      validatedItems.forEach(item => {
+        if (item.categorySlug === 'zipless-feeding-lounge-wear' || 
+            item.categorySlug === 'non-feeding-lounge-wear') {
+          // Add item multiple times based on quantity for offer calculation
+          for (let i = 0; i < item.quantity; i++) {
+            loungewearCategoryItems.push({
+              ...item,
+              quantity: 1,
+              originalPrice: item.price
+            });
+          }
+        } else {
+          otherItems.push(item);
+        }
+      });
+      
+      // Calculate loungewear offer
+      loungewearCategoryOffer = calculateLoungewearCategoryOffer(loungewearCategoryItems);
+      
+      // Calculate other items total
+      const otherItemsTotal = otherItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      
+      // Calculate totals with offer discount
+      rawSubtotal = loungewearCategoryOffer.originalTotal + otherItemsTotal;
+      offerDiscount = Math.min(loungewearCategoryOffer.discount, rawSubtotal);
+      total = Math.max(0, rawSubtotal - offerDiscount) + shippingCost;
+    }
     
     console.log('📦 [Checkout Session] Creating session with offer calculation:', {
       rawSubtotal,
