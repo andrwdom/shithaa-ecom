@@ -112,6 +112,49 @@ export default function CheckoutPage() {
         console.log('[CheckoutPage] 🔧 Using cart context offer details:', offerDetails);
         offerDiscount = offerDetails.offerDiscount || 0;
         calculatedOfferDetails = offerDetails;
+        
+        // 🔧 DEBUG: Log detailed offer information
+        console.log('[CheckoutPage] 🔧 DEBUG: Cart offer details breakdown:', {
+          offerApplied: offerDetails.offerApplied,
+          offerDiscount: offerDetails.offerDiscount,
+          offerDetails: offerDetails.offerDetails,
+          loungewearCategoryCount: offerDetails.loungewearCategoryCount,
+          otherItemsCount: offerDetails.otherItemsCount
+        });
+        
+        // 🔧 FALLBACK: If cart context offer is not working, calculate directly
+        if (!offerDetails.offerApplied || offerDetails.offerDiscount === 0) {
+          console.log('[CheckoutPage] 🔧 FALLBACK: Cart context offer not working, calculating directly...');
+          const loungewearItems = displayItems.filter((item: any) => {
+            const hasCategorySlug = item.categorySlug === 'zipless-feeding-lounge-wear' || item.categorySlug === 'non-feeding-lounge-wear';
+            const hasLoungewearName = item.name && (
+              item.name.toLowerCase().includes('lounge') || 
+              item.name.toLowerCase().includes('loungewear')
+            );
+            return hasCategorySlug || hasLoungewearName;
+          });
+          
+          const totalLoungewearQuantity = loungewearItems.reduce((sum: number, item: any) => sum + item.quantity, 0);
+          
+          if (totalLoungewearQuantity >= 3) {
+            const completeSets = Math.floor(totalLoungewearQuantity / 3);
+            const remainingItems = totalLoungewearQuantity % 3;
+            const loungewearSubtotal = loungewearItems.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
+            const offerTotal = (completeSets * 1299) + (remainingItems * 450);
+            
+            if (offerTotal < loungewearSubtotal) {
+              offerDiscount = loungewearSubtotal - offerTotal;
+              console.log('[CheckoutPage] 🔧 FALLBACK: Calculated offer directly:', {
+                totalLoungewearQuantity,
+                completeSets,
+                remainingItems,
+                loungewearSubtotal,
+                offerTotal,
+                offerDiscount
+              });
+            }
+          }
+        }
       } else if (isBuyNowMode) {
         // For buy-now mode, calculate offer directly
         const loungewearItems = displayItems.filter((item: any) => {

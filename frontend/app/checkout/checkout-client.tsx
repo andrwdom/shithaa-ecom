@@ -423,13 +423,39 @@ export default function CheckoutClient() {
     return hasCategorySlug || hasLoungewearName;
   });
   
+  // 🔧 DEBUG: Log all items and loungewear identification
+  console.log('[Checkout] 🔧 DEBUG: All display items:', displayItems.map(item => ({
+    name: item.name,
+    categorySlug: item.categorySlug,
+    price: item.price,
+    quantity: item.quantity,
+    isLoungewear: item.categorySlug === 'zipless-feeding-lounge-wear' || item.categorySlug === 'non-feeding-lounge-wear' || (item.name && (item.name.toLowerCase().includes('lounge') || item.name.toLowerCase().includes('loungewear')))
+  })));
+  
+  console.log('[Checkout] 🔧 DEBUG: Identified loungewear items:', loungewearItems.map(item => ({
+    name: item.name,
+    price: item.price,
+    quantity: item.quantity
+  })));
+  
   const totalLoungewearQuantity = loungewearItems.reduce((sum: number, item: any) => sum + item.quantity, 0);
+  
+  console.log('[Checkout] 🔧 DEBUG: Total loungewear quantity:', totalLoungewearQuantity);
   
   if (totalLoungewearQuantity >= 3) {
     const completeSets = Math.floor(totalLoungewearQuantity / 3);
     const remainingItems = totalLoungewearQuantity % 3;
     const loungewearSubtotal = loungewearItems.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
     const offerTotal = (completeSets * 1299) + (remainingItems * 450);
+    
+    console.log('[Checkout] 🔧 DEBUG: Offer calculation details:', {
+      totalLoungewearQuantity,
+      completeSets,
+      remainingItems,
+      loungewearSubtotal,
+      offerTotal,
+      willApplyOffer: offerTotal < loungewearSubtotal
+    });
     
     if (offerTotal < loungewearSubtotal) {
       offerDiscount = loungewearSubtotal - offerTotal;
@@ -441,7 +467,11 @@ export default function CheckoutClient() {
         offerTotal,
         offerDiscount
       });
+    } else {
+      console.log('[Checkout] 🔧 DEBUG: Offer not applied - offer total not less than loungewear subtotal');
     }
+  } else {
+    console.log('[Checkout] 🔧 DEBUG: Not enough loungewear items for offer - need 3+, have:', totalLoungewearQuantity);
   }
   
   const subtotalAfterOffer = rawSubtotal - offerDiscount;
