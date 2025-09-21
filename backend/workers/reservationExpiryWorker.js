@@ -64,10 +64,10 @@ export const expireOldReservations = async () => {
     console.log(`[${correlationId}] Cleaning up expired checkout sessions...`);
     const checkoutCleanupResult = await CheckoutSession.cleanExpired();
     
-    // Additional cleanup: Force release stock for sessions older than 15 minutes
-    console.log(`[${correlationId}] Cleaning up very old sessions (>15min)...`);
+    // Additional cleanup: Force release stock for sessions older than 10 minutes
+    console.log(`[${correlationId}] Cleaning up very old sessions (>10min)...`);
     const veryOldSessions = await CheckoutSession.find({
-      createdAt: { $lt: new Date(Date.now() - 15 * 60 * 1000) },
+      createdAt: { $lt: new Date(Date.now() - 10 * 60 * 1000) },
       stockReserved: true,
       status: { $in: ['pending', 'awaiting_payment'] }
     });
@@ -98,14 +98,52 @@ export const expireOldReservations = async () => {
       }
     }
     
-    console.log(`[${correlationId}] Reservation expiry worker completed. Processed: ${processedCount}, Errors: ${errorCount}, Checkout sessions cleaned: ${checkoutCleanupResult.deletedCount}`);
+    // Additional cleanup: Force cleanup of any stuck sessions (regardless of age)
+    console.log(`[${correlationId}] Cleaning up any stuck sessions...`);
+    const stuckSessions = await CheckoutSession.find({
+      stockReserved: true,
+      status: { $in: ['pending', 'awaiting_payment'] },
+      $or: [
+        { expiresAt: { $exists: false } }, // Sessions without expiry
+        { expiresAt: { $lt: new Date() } } // Expired sessions
+      ]
+    });
+    
+    if (stuckSessions.length > 0) {
+      console.log(`[${correlationId}] Found ${stuckSessions.length} stuck sessions, forcing cleanup...`);
+      
+      for (const session of stuckSessions) {
+        try {
+          // Force release stock
+          const releasePromises = session.items.map(item =>
+            releaseStockReservation(item.productId, item.size, item.quantity).catch(error => {
+              console.error(`Failed to force release stuck stock for product ${item.productId} size ${item.size}:`, error);
+            })
+          );
+          
+          await Promise.all(releasePromises);
+          
+          // Mark session as expired
+          session.status = 'expired';
+          session.stockReserved = false;
+          await session.save();
+          
+          console.log(`[${correlationId}] Force cleaned stuck session: ${session.sessionId}`);
+        } catch (error) {
+          console.error(`[${correlationId}] Error force processing stuck session ${session.sessionId}:`, error);
+        }
+      }
+    }
+
+    console.log(`[${correlationId}] Reservation expiry worker completed. Processed: ${processedCount}, Errors: ${errorCount}, Checkout sessions cleaned: ${checkoutCleanupResult.deletedCount}, Stuck sessions cleaned: ${stuckSessions.length}`);
     
     return {
       success: true,
       processed: processedCount,
       errors: errorCount,
       total: expiredReservations.length,
-      checkoutSessionsCleaned: checkoutCleanupResult.deletedCount
+      checkoutSessionsCleaned: checkoutCleanupResult.deletedCount,
+      stuckSessionsCleaned: stuckSessions.length
     };
     
   } catch (error) {
@@ -181,17 +219,44 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   // Connect to MongoDB
   const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/shithaa-ecom';
   
+  const runWorker = async () => {
+    try {
+      console.log('🔄 [Reservation Worker] Starting cleanup cycle...');
+      const result = await expireOldReservations();
+      console.log('✅ [Reservation Worker] Cleanup completed:', result);
+    } catch (error) {
+      console.error('❌ [Reservation Worker] Cleanup failed:', error);
+    }
+  };
+
+  // Connect to MongoDB and start the worker
   mongoose.connect(mongoUri)
     .then(() => {
-      console.log('Connected to MongoDB');
-      return expireOldReservations();
-    })
-    .then((result) => {
-      console.log('Worker completed:', result);
-      process.exit(0);
+      console.log('✅ [Reservation Worker] Connected to MongoDB');
+      
+      // Run immediately on startup
+      runWorker();
+      
+      // Then run every 2 minutes (120000ms)
+      setInterval(runWorker, 2 * 60 * 1000);
+      
+      console.log('🔄 [Reservation Worker] Started - will run every 2 minutes');
     })
     .catch((error) => {
-      console.error('Worker failed:', error);
+      console.error('❌ [Reservation Worker] Failed to connect to MongoDB:', error);
       process.exit(1);
     });
+
+  // Handle graceful shutdown
+  process.on('SIGINT', () => {
+    console.log('🛑 [Reservation Worker] Shutting down gracefully...');
+    mongoose.connection.close();
+    process.exit(0);
+  });
+
+  process.on('SIGTERM', () => {
+    console.log('🛑 [Reservation Worker] Shutting down gracefully...');
+    mongoose.connection.close();
+    process.exit(0);
+  });
 }

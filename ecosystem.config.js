@@ -70,9 +70,7 @@ module.exports = {
       error_file: './logs/reservation-worker-err.log',
       out_file: './logs/reservation-worker-out.log',
       log_file: './logs/reservation-worker-combined.log',
-      time: true,
-      cron_restart: '*/2 * * * *',
-      restart_delay: 10000
+      time: true
     }
   ]
 } 
