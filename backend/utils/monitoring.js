@@ -316,11 +316,37 @@ export async function trackPayment(success, details = {}) {
   }
 }
 
+/**
+ * Dummy function for tracking requests - replace with actual implementation
+ */
+export async function trackRequest(req) {
+  // Replace with actual monitoring logic (e.g., logging request details)
+  console.log(`REQUEST: ${req.method} ${req.url}`);
+}
+
+/**
+ * Dummy function for tracking memory usage - replace with actual implementation
+ */
+export async function trackMemoryUsage() {
+  // Replace with actual memory tracking logic
+  const used = process.memoryUsage().heapUsed / 1024 / 1024;
+  console.log(`MEMORY USAGE: ${Math.round(used * 100) / 100} MB`);
+}
+
+/**
+ * Alias for getStockHealthMetrics to be used as getHealthStatus
+ */
+export const getHealthStatus = getStockHealthMetrics;
+
+
 // Export monitoring functions
 export const monitoring = {
   trackStockEvent,
   trackStockReservation,
   trackPayment,
   getStockHealthMetrics,
-  sendStockAlert
+  sendStockAlert,
+  getHealthStatus,
+  trackRequest,
+  trackMemoryUsage
 };
