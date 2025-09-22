@@ -1,10 +1,31 @@
-module.exports = {
+export default {
   apps: [
+    {
+      name: 'shithaa-backend',
+      script: 'backend/server.js',
+      cwd: '/var/www/shithaa-ecom',
+      instances: 1,
+      exec_mode: 'fork',
+      autorestart: true,
+      watch: false,
+      max_memory_restart: '1G',
+      env_file: '/var/www/shithaa-ecom/backend/.env',
+      env: {
+        NODE_ENV: 'production',
+        PORT: 4000
+      },
+      error_file: './backend/logs/backend-err.log',
+      out_file: './backend/logs/backend-out.log',
+      log_file: './backend/logs/backend-combined.log',
+      time: true,
+      merge_logs: true,
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
+    },
     {
       name: 'shithaa-frontend',
       script: 'npm',
-      args: 'run start',
-      cwd: './frontend',
+      args: 'start',
+      cwd: '/var/www/shithaa-ecom/frontend',
       instances: 1,
       exec_mode: 'fork',
       autorestart: true,
@@ -20,28 +41,10 @@ module.exports = {
       time: true
     },
     {
-      name: 'shithaa-backend',
-      script: 'backend/server.js',
-      cwd: '/var/www/shithaa-ecom',
-      instances: 1,
-      autorestart: true,
-      watch: false,
-      max_memory_restart: '1G',
-      env_file: '/var/www/shithaa-ecom/backend/.env',
-      env: {
-        NODE_ENV: 'production',
-        PORT: 4000
-      },
-      error_file: './backend/logs/backend-err.log',
-      out_file: './backend/logs/backend-out.log',
-      log_file: './backend/logs/backend-combined.log',
-      time: true
-    },
-    {
       name: 'shithaa-admin',
       script: 'npm',
       args: 'run preview',
-      cwd: './admin',
+      cwd: '/var/www/shithaa-ecom/admin',
       instances: 1,
       exec_mode: 'fork',
       autorestart: true,
@@ -57,47 +60,40 @@ module.exports = {
       time: true
     },
     {
-      name: 'shithaa-stock-cleanup-worker',
-      script: 'workers/stockCleanupWorker.js',
-      cwd: '/var/www/shithaa-ecom/backend',
-      instances: 1,
-      exec_mode: 'fork',
-      autorestart: true,
-      watch: false,
-      max_memory_restart: '512M',
-      env: {
-        NODE_ENV: 'production',
-        JWT_SECRET: 'shithaa-ecom-secret-key-for-jwt-2025'
-      },
-      error_file: './logs/stock-cleanup-worker-err.log',
-      out_file: './logs/stock-cleanup-worker-out.log',
-      log_file: './logs/stock-cleanup-worker-combined.log',
-      time: true,
-      min_uptime: '10s',
-      max_restarts: 5
-    }
-    ,
-    {
       name: 'shithaa-stock-monitoring-worker',
-      script: 'workers/monitoringWorker.js',
-      cwd: '/var/www/shithaa-ecom/backend',
+      script: 'backend/workers/stockMonitoringWorker.js',
+      cwd: '/var/www/shithaa-ecom',
       instances: 1,
       exec_mode: 'fork',
       autorestart: true,
       watch: false,
-      max_memory_restart: '512M',
+      max_memory_restart: '500M',
+      env_file: '/var/www/shithaa-ecom/backend/.env',
       env: {
-        NODE_ENV: 'production',
-        JWT_SECRET: 'shithaa-ecom-secret-key-for-jwt-2025',
-        MONITORING_WEBHOOK_URL: process.env.MONITORING_WEBHOOK_URL,
-        NOTIFICATION_WEBHOOK_URL: process.env.NOTIFICATION_WEBHOOK_URL
+        NODE_ENV: 'production'
       },
-      error_file: './logs/stock-monitoring-worker-err.log',
-      out_file: './logs/stock-monitoring-worker-out.log',
-      log_file: './logs/stock-monitoring-worker-combined.log',
-      time: true,
-      min_uptime: '10s',
-      max_restarts: 5
+      error_file: './backend/logs/stock-monitoring-worker-err.log',
+      out_file: './backend/logs/stock-monitoring-worker-out.log',
+      log_file: './backend/logs/stock-monitoring-worker-combined.log',
+      time: true
+    },
+    {
+      name: 'shithaa-stock-cleanup-worker',
+      script: 'backend/workers/stockCleanupWorker.js',
+      cwd: '/var/www/shithaa-ecom',
+      instances: 1,
+      exec_mode: 'fork',
+      autorestart: true,
+      watch: false,
+      max_memory_restart: '500M',
+      env_file: '/var/www/shithaa-ecom/backend/.env',
+      env: {
+        NODE_ENV: 'production'
+      },
+      error_file: './backend/logs/stock-cleanup-worker-err.log',
+      out_file: './backend/logs/stock-cleanup-worker-out.log',
+      log_file: './backend/logs/stock-cleanup-worker-combined.log',
+      time: true
     }
   ]
-} 
+};

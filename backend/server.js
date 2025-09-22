@@ -1,25 +1,28 @@
 import express from 'express'
-import dotenv from 'dotenv'
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { existsSync } from 'fs';
+import dotenv from 'dotenv';
 
-// Load .env file from the correct path
+// Load .env file from the correct path FIRST
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-dotenv.config({ path: join(__dirname, '.env') });
-import { existsSync } from 'fs';
-import cors from 'cors';
-import { trackRequest, trackMemoryUsage, getHealthStatus } from './utils/monitoring.js';
-
-// Verify .env file loading
 const envPath = join(__dirname, '.env');
+
 console.log('🔧 Loading .env from:', envPath);
 console.log('🔧 .env file exists:', existsSync(envPath));
+
+// Load environment variables
+dotenv.config({ path: envPath });
+
+// Now import config (which also loads dotenv but won't conflict)
+import { config } from './config.js'
+import cors from 'cors';
+import { trackRequest, trackMemoryUsage, getHealthStatus } from './utils/monitoring.js';
 import rateLimit from 'express-rate-limit'
 import cookieParser from 'cookie-parser'
 import helmet from 'helmet'
 import connectDB from './config/mongodb.js'
-import { config } from './config.js'
 import mongoose from 'mongoose'
 import userRouter from './routes/userRoute.js'
 import productRouter from './routes/productRoute.js'
@@ -53,13 +56,9 @@ console.log('🔧 Environment Variables Debug:');
 console.log('NODE_ENV:', process.env.NODE_ENV);
 console.log('PORT:', process.env.PORT);
 console.log('MONGODB_URI:', process.env.MONGODB_URI ? 'SET' : 'NOT SET');
-console.log('GOOGLE_APPLICATION_CREDENTIALS:', process.env.GOOGLE_APPLICATION_CREDENTIALS ? 'SET' : 'NOT SET');
-// CRITICAL: Log the loaded JWT_SECRET for verification
-const loadedJwtSecret = config.jwt_secret;
-console.log('JWT_SECRET loaded:', loadedJwtSecret ? 'SET' : 'NOT SET');
-if (loadedJwtSecret) {
-    console.log('JWT_SECRET preview:', loadedJwtSecret.substring(0, 4) + '...' + loadedJwtSecret.substring(loadedJwtSecret.length - 4));
-}
+console.log('JWT_SECRET:', process.env.JWT_SECRET ? 'SET' : 'NOT SET');
+console.log('PHONEPE_MERCHANT_ID:', process.env.PHONEPE_MERCHANT_ID ? 'SET' : 'NOT SET');
+console.log('PHONEPE_API_KEY:', process.env.PHONEPE_API_KEY ? 'SET' : 'NOT SET');
 console.log('---');
 
 // Trust proxy - required for rate limiting behind reverse proxy
@@ -233,13 +232,6 @@ app.use(helmet({
 // SECURITY: Cookie parser for HttpOnly cookies
 app.use(cookieParser());
 
-// CORS is completely handled by nginx - no backend configuration needed -- REMOVED, handled by cors package now
-
-// CORS is completely handled by nginx - no backend CORS configuration needed -- REMOVED, handled by cors package now
-
-// CORS is completely handled by nginx - no backend CORS middleware needed -- REMOVED, handled by cors package now
-// This prevents duplicate CORS headers that cause browser errors -- REMOVED, handled by cors package now
-
 // middlewares
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
@@ -323,8 +315,6 @@ app.use('/api/stock', stockRouter)
 
 // Legacy routes for backward compatibility
 app.use('/api/product', productRouter)
-// Removed duplicate order route registration to fix /api/orders/phonepe endpoint
-// app.use('/api/order', orderRouter)
 
 // Public orders debug route (before any middleware)
 app.get('/api/orders/public-list', async (req, res) => {
@@ -432,7 +422,7 @@ app.get('/api/debug/checkout-flow', (req, res) => {
 app.get('/api/csrf-token', (req, res) => {
   try {
     // SECURITY: Generate CSRF token for form protection
-            const csrfToken = randomBytes(32).toString('hex');
+    const csrfToken = randomBytes(32).toString('hex');
     
     // SECURITY: Set CSRF token in HttpOnly cookie
     res.cookie('csrf-token', csrfToken, {
@@ -539,36 +529,40 @@ try {
   console.log('Server will continue without Firebase Admin SDK');
 }
 
-// Graceful shutdown
-process.on('SIGTERM', () => {
-    console.log('Received SIGTERM. Performing graceful shutdown...');
-    server.close(() => {
-        console.log('Server closed. Exiting process.');
-        process.exit(0);
-    });
-});
-
-// Also handle SIGINT (Ctrl+C) for development
-process.on('SIGINT', () => {
-    console.log('Received SIGINT. Performing graceful shutdown...');
-    server.close(() => {
-        console.log('Server closed. Exiting process.');
-        process.exit(0);
-    });
-});
-
+// Start the server
 const server = app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on port ${PORT} (all interfaces)`);
+    console.log(`✅ Server running on port ${PORT} (all interfaces)`);
+    console.log(`✅ Environment: ${process.env.NODE_ENV}`);
+    console.log(`✅ MongoDB: ${process.env.MONGODB_URI ? 'CONFIGURED' : 'NOT CONFIGURED'}`);
+    console.log(`✅ JWT: ${process.env.JWT_SECRET ? 'CONFIGURED' : 'NOT CONFIGURED'}`);
+    console.log(`✅ PhonePe: ${process.env.PHONEPE_MERCHANT_ID ? 'CONFIGURED' : 'NOT CONFIGURED'}`);
 });
 
 // Handle server errors
 server.on('error', (error) => {
     if (error.code === 'EADDRINUSE') {
-        console.error(`Port ${PORT} is already in use. Please choose a different port or stop the running process.`);
+        console.error(`❌ Port ${PORT} is already in use. Please choose a different port or stop the running process.`);
     } else {
-        console.error('Server error:', error);
+        console.error('❌ Server error:', error);
     }
 });
 
-console.log('Backend server started - latest code loaded');
-console.log('DEBUG: Loaded PHONEPE_MERCHANT_ID:', process.env.PHONEPE_MERCHANT_ID);
+// Graceful shutdown handlers
+const gracefulShutdown = (signal) => {
+    console.log(`\n🛑 Received ${signal}. Performing graceful shutdown...`);
+    server.close(() => {
+        console.log('✅ Server closed. Exiting process.');
+        process.exit(0);
+    });
+    
+    // Force close after 10 seconds
+    setTimeout(() => {
+        console.log('⚠️ Forcing shutdown after timeout');
+        process.exit(1);
+    }, 10000);
+};
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+console.log('🚀 Backend server started successfully!');
