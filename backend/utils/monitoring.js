@@ -245,9 +245,34 @@ function generateAlertMessage(severity, metrics) {
   return messages.join('\n');
 }
 
+/**
+ * Track stock reservation events
+ * @param {boolean} success - Whether the reservation was successful
+ * @param {Object} details - Additional details about the reservation
+ */
+export async function trackStockReservation(success, details = {}) {
+  try {
+    const event = {
+      timestamp: new Date(),
+      success,
+      type: 'stock_reservation',
+      ...details
+    };
+    
+    // Log event for monitoring
+    console.log(`📊 STOCK RESERVATION:`, event);
+    
+    // Track the event using the main tracking function
+    await trackStockEvent(success, { ...details, type: 'stock_reservation' });
+  } catch (error) {
+    console.error('Failed to track stock reservation:', error);
+  }
+}
+
 // Export monitoring functions
 export const monitoring = {
   trackStockEvent,
+  trackStockReservation,
   getStockHealthMetrics,
   sendStockAlert
 };

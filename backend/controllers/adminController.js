@@ -4,7 +4,6 @@ import CheckoutSession from '../models/CheckoutSession.js';
 import { expireOldReservations } from '../workers/reservationExpiryWorker.js';
 import productModel from '../models/productModel.js';
 import Reservation from '../models/Reservation.js';
-import CheckoutSession from '../models/CheckoutSession.js';
 
 /**
  * Admin controller for system maintenance and cleanup

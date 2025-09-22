@@ -9,6 +9,7 @@ import mongoose from 'mongoose';
 import productModel from '../models/productModel.js';
 import Reservation from '../models/Reservation.js';
 import CheckoutSession from '../models/CheckoutSession.js';
+import PaymentSession from '../models/paymentSessionModel.js';
 import { releaseStockReservation } from '../utils/stock.js';
 
 const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/shithaa-ecom';
