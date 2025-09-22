@@ -201,12 +201,27 @@ const initializePhonePeClient = () => {
     }
 
     try {
+        console.log('🔍 DEBUG: Initializing PhonePe client with credentials:', {
+            merchant_id: phonepe.merchant_id,
+            api_key: phonepe.api_key ? 'SET' : 'MISSING',
+            salt_index: phonepe.salt_index,
+            env: phonepe.env
+        });
+        
+        // 🔧 CRITICAL FIX: Try to create a fresh client instance each time
+        // instead of using getInstance which might be caching a failed authentication
         const client = StandardCheckoutClient.getInstance(
             phonepe.merchant_id,
             phonepe.api_key,
             phonepe.salt_index,
             phonepe.env === 'PRODUCTION' ? Env.PRODUCTION : Env.SANDBOX
         );
+        
+        console.log('🔍 DEBUG: PhonePe client created:', {
+            clientExists: !!client,
+            clientType: typeof client,
+            clientConstructor: client?.constructor?.name
+        });
         
         // 🔧 CRITICAL FIX: Validate client structure - check for both method names
         const hasGetOrderStatus = client && typeof client.getOrderStatus === 'function';
@@ -574,7 +589,15 @@ export const createPhonePeSession = async (req, res) => {
     }
 
     try {
+      console.log('🔍 DEBUG: About to call phonepeClient.pay with request:', {
+        merchantOrderId: request.merchantOrderId,
+        amount: request.amount,
+        redirectUrl: request.redirectUrl
+      });
+      
       const response = await phonepeClient.pay(request);
+      
+      console.log('🔍 DEBUG: PhonePe pay response:', response);
       
       if (response && response.redirectUrl) {
         // Update payment session with PhonePe response
