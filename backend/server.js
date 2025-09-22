@@ -351,12 +351,12 @@ app.get('/api/cors-test', (req, res) => {
 });
 
 // Health check endpoint - PRODUCTION OPTIMIZED WITH MONITORING
-app.get('/api/health', (req, res) => {
+app.get('/api/health', async (req, res) => {
   // Check MongoDB connection
   const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
   
   // Get comprehensive health status
-  const healthStatus = getHealthStatus();
+  const healthStatus = await getHealthStatus();
   
   // Check memory usage
   const memUsage = process.memoryUsage();
@@ -367,16 +367,16 @@ app.get('/api/health', (req, res) => {
     external: Math.round(memUsage.external / 1024 / 1024)
   };
   
+  const status = healthStatus && healthStatus.healthScore && healthStatus.healthScore >= 90 ? 'ok' : 'warning';
+
   res.json({ 
-    status: healthStatus.healthy ? 'ok' : 'warning',
+    status: status,
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     database: dbStatus,
     memory: memUsageMB,
     environment: process.env.NODE_ENV || 'development',
-    monitoring: healthStatus.metrics,
-    issues: healthStatus.issues,
-    alerts: healthStatus.issues.length > 0 ? healthStatus.issues : null
+    monitoring: healthStatus,
   });
 });
 
