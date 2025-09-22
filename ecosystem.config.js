@@ -74,5 +74,27 @@ module.exports = {
       min_uptime: '10s',
       max_restarts: 5
     }
+    ,
+    {
+      name: 'shithaa-stock-monitoring-worker',
+      script: 'workers/monitoringWorker.js',
+      cwd: '/var/www/shithaa-ecom/backend',
+      instances: 1,
+      exec_mode: 'fork',
+      autorestart: true,
+      watch: false,
+      max_memory_restart: '512M',
+      env: {
+        NODE_ENV: 'production',
+        MONITORING_WEBHOOK_URL: process.env.MONITORING_WEBHOOK_URL,
+        NOTIFICATION_WEBHOOK_URL: process.env.NOTIFICATION_WEBHOOK_URL
+      },
+      error_file: './logs/stock-monitoring-worker-err.log',
+      out_file: './logs/stock-monitoring-worker-out.log',
+      log_file: './logs/stock-monitoring-worker-combined.log',
+      time: true,
+      min_uptime: '10s',
+      max_restarts: 5
+    }
   ]
 } 

@@ -77,11 +77,15 @@ export async function phonePeWebhookHandler(req, res) {
       console.log('🔔 WEBHOOK: Found payment session:', paymentSession._id, 'Order exists:', !!order);
       
       if (isSuccess) {
-        console.log('🔔 WEBHOOK: Payment successful, creating order and reducing stock');
+        console.log('🔔 WEBHOOK: Payment successful, creating order and confirming stock');
         
-        // Create order if it doesn't exist
-        if (!order) {
-          try {
+        // Start a MongoDB transaction for atomicity
+        const session = await mongoose.startSession();
+        await session.startTransaction();
+        
+        try {
+          // Create order if it doesn't exist
+          if (!order) {
             // Create order from payment session data
             const orderPayload = paymentSession.orderPayload;
             
@@ -96,55 +100,129 @@ export async function phonePeWebhookHandler(req, res) {
             orderPayload.status = 'Pending';
             orderPayload.paidAt = new Date();
             orderPayload.phonepeResponse = req.body;
+            orderPayload.stockConfirmed = false;
 
-            order = await orderModel.create(orderPayload);
+            // Create order within transaction
+            order = await orderModel.create([orderPayload], { session });
+            order = order[0]; // MongoDB returns array for transactional create
             console.log('🔔 WEBHOOK: Order created successfully:', order.orderId);
 
             // Update payment session with order ID
-            paymentSession.orderId = order._id;
-            paymentSession.status = 'success';
-            await paymentSession.save();
-          } catch (orderCreationError) {
-            console.error('🔔 WEBHOOK: Failed to create order after successful payment:', orderCreationError);
-            
-            // Update payment session to failed since order creation failed
-            paymentSession.status = 'failed';
-            paymentSession.error = orderCreationError.message;
-            await paymentSession.save();
-            
-            return errorResponse(res, 500, 'Payment successful but order creation failed. Please contact support.');
+            await PaymentSession.findByIdAndUpdate(
+              paymentSession._id,
+              { 
+                orderId: order._id,
+                status: 'success',
+                updatedAt: new Date()
+              },
+              { session }
+            );
           }
-        }
-        
-        // Check if stock is already confirmed
-        if (!order.stockConfirmed) {
-          try {
-            // Import and call confirmOrderStock to handle stock reduction
-            const { confirmOrderStock } = await import('../controllers/orderController.js');
-            console.log('🔔 WEBHOOK: Reducing stock for order:', order._id);
-            await confirmOrderStock(order._id);
-            console.log('🔔 WEBHOOK: Stock reduction completed successfully');
+          
+          // Check if stock is already confirmed
+          if (!order.stockConfirmed) {
+            console.log('🔔 WEBHOOK: Confirming stock for order:', order._id);
+            
+            // Get checkout session to confirm stock
+            const checkoutSession = await CheckoutSession.findOne({ 
+              sessionId: paymentSession.sessionId 
+            }).session(session);
+            
+            if (!checkoutSession) {
+              throw new Error('Checkout session not found');
+            }
+            
+            if (!checkoutSession.stockReserved) {
+              throw new Error('Stock was not reserved for this session');
+            }
+            
+            // Import stock utils
+            const { confirmStockReservation } = await import('../utils/stock.js');
+            
+            // Confirm stock for each item atomically
+            for (const item of checkoutSession.items) {
+              const confirmed = await confirmStockReservation(
+                item.productId,
+                item.size,
+                item.quantity,
+                { session }
+              );
+              
+              if (!confirmed) {
+                throw new Error(`Failed to confirm stock for item ${item.productId} size ${item.size}`);
+              }
+              
+              console.log(`🔔 WEBHOOK: Stock confirmed for ${item.name} (${item.size}) x${item.quantity}`);
+            }
+            
+            // Mark checkout session as completed
+            await CheckoutSession.findByIdAndUpdate(
+              checkoutSession._id,
+              {
+                status: 'completed',
+                stockReserved: false,
+                completedAt: new Date(),
+                updatedAt: new Date()
+              },
+              { session }
+            );
             
             // Update order with stock confirmation
-            await orderModel.findByIdAndUpdate(order._id, {
-              stockConfirmed: true,
-              stockConfirmedAt: new Date(),
-              updatedAt: new Date()
-            });
-          } catch (stockError) {
-            console.error('🔔 WEBHOOK: Stock deduction failed for order', order.orderId, 'after successful payment!', stockError);
-            // If stock deduction fails, mark the order as having stock issues
+            await orderModel.findByIdAndUpdate(
+              order._id,
+              {
+                stockConfirmed: true,
+                stockConfirmedAt: new Date(),
+                updatedAt: new Date()
+              },
+              { session }
+            );
+            
+            // Mark reservation as confirmed
+            await Reservation.findOneAndUpdate(
+              { checkoutSessionId: checkoutSession._id },
+              {
+                status: 'confirmed',
+                confirmedAt: new Date(),
+                updatedAt: new Date()
+              },
+              { session }
+            );
+            
+            console.log('🔔 WEBHOOK: Stock confirmation completed successfully');
+          } else {
+            console.log('🔔 WEBHOOK: Stock already confirmed for order:', order.orderId);
+          }
+          
+          // Commit transaction
+          await session.commitTransaction();
+          console.log('🔔 WEBHOOK: Transaction committed successfully');
+          
+        } catch (error) {
+          // Rollback transaction on any error
+          await session.abortTransaction();
+          console.error('🔔 WEBHOOK: Transaction failed:', error);
+          
+          // Update order status if it exists
+          if (order) {
             await orderModel.findByIdAndUpdate(order._id, {
               paymentStatus: 'paid_stock_failed',
               orderStatus: 'On Hold',
               status: 'Payment Received, Stock Issue',
               updatedAt: new Date()
             });
-            
-            return errorResponse(res, 500, 'Payment successful, but stock update failed. Please contact support.');
           }
-        } else {
-          console.log('🔔 WEBHOOK: Stock already confirmed for order:', order.orderId);
+          
+          // Update payment session status
+          await PaymentSession.findByIdAndUpdate(paymentSession._id, {
+            status: 'failed',
+            error: error.message,
+            updatedAt: new Date()
+          });
+          
+          return errorResponse(res, 500, 'Payment successful, but order/stock update failed. Please contact support.');
+        } finally {
+          await session.endSession();
         }
         
         // Update order status to paid (if not already updated)
@@ -198,36 +276,116 @@ export async function phonePeWebhookHandler(req, res) {
       } else {
         console.log('🔔 WEBHOOK: Payment failed or timed out, releasing stock');
         
-        // Update payment session status to failed
-        paymentSession.status = 'failed';
-        paymentSession.phonepeResponse = req.body;
-        paymentSession.failedAt = new Date();
-        await paymentSession.save();
-        console.log('🔔 WEBHOOK: Payment session updated to failed status');
-
-        // 🔧 CRITICAL FIX: Release stock for failed/timed out payments
+        // Start a MongoDB transaction for atomicity
+        const session = await mongoose.startSession();
+        await session.startTransaction();
+        
         try {
+          // Update payment session status to failed
+          await PaymentSession.findByIdAndUpdate(
+            paymentSession._id,
+            {
+              status: 'failed',
+              phonepeResponse: req.body,
+              failedAt: new Date(),
+              updatedAt: new Date(),
+              failureReason: payload.message || 'Payment failed or timed out'
+            },
+            { session }
+          );
+          
           // Find and release stock from the checkout session
-          const checkoutSession = await CheckoutSession.findOne({ sessionId: paymentSession.sessionId });
+          const checkoutSession = await CheckoutSession.findOne({ 
+            sessionId: paymentSession.sessionId 
+          }).session(session);
+          
           if (checkoutSession && checkoutSession.stockReserved) {
             console.log('🔔 WEBHOOK: Found checkout session with reserved stock, releasing...');
             
-            // Release stock for each item
+            // Import stock utils
+            const { releaseStockReservation } = await import('../utils/stock.js');
+            
+            // Release stock for each item atomically
             for (const item of checkoutSession.items) {
-              await releaseStockReservation(item.productId, item.size, item.quantity);
+              const released = await releaseStockReservation(
+                item.productId,
+                item.size,
+                item.quantity,
+                { session }
+              );
+              
+              if (!released) {
+                throw new Error(`Failed to release stock for item ${item.productId} size ${item.size}`);
+              }
+              
               console.log(`🔔 WEBHOOK: Released stock for ${item.name} (${item.size}) x${item.quantity}`);
             }
             
-            // Mark session as failed and stock as released
-            checkoutSession.status = 'failed';
-            checkoutSession.stockReserved = false;
-            await checkoutSession.save();
+            // Mark checkout session as failed and stock as released
+            await CheckoutSession.findByIdAndUpdate(
+              checkoutSession._id,
+              {
+                status: 'failed',
+                stockReserved: false,
+                failedAt: new Date(),
+                updatedAt: new Date(),
+                failureReason: payload.message || 'Payment failed or timed out'
+              },
+              { session }
+            );
+            
+            // Mark reservation as failed
+            await Reservation.findOneAndUpdate(
+              { checkoutSessionId: checkoutSession._id },
+              {
+                status: 'failed',
+                failedAt: new Date(),
+                updatedAt: new Date(),
+                failureReason: payload.message || 'Payment failed or timed out'
+              },
+              { session }
+            );
+            
             console.log('🔔 WEBHOOK: Checkout session marked as failed and stock released');
           } else {
             console.log('🔔 WEBHOOK: No checkout session found or no stock reserved');
           }
+          
+          // If order was created (edge case), mark it as failed
+          if (order) {
+            await orderModel.findByIdAndUpdate(
+              order._id,
+              {
+                paymentStatus: 'failed',
+                orderStatus: 'Failed',
+                status: 'Payment Failed',
+                failedAt: new Date(),
+                updatedAt: new Date(),
+                failureReason: payload.message || 'Payment failed or timed out'
+              },
+              { session }
+            );
+          }
+          
+          // Commit transaction
+          await session.commitTransaction();
+          console.log('🔔 WEBHOOK: Transaction committed successfully');
+          
         } catch (error) {
-          console.error('🔔 WEBHOOK: Error releasing stock:', error);
+          // Rollback transaction on any error
+          await session.abortTransaction();
+          console.error('🔔 WEBHOOK: Transaction failed:', error);
+          
+          // Try to update payment session status without transaction
+          await PaymentSession.findByIdAndUpdate(paymentSession._id, {
+            status: 'failed',
+            error: error.message,
+            updatedAt: new Date()
+          });
+          
+          return errorResponse(res, 500, 'Failed to process payment failure. Please contact support.');
+        } finally {
+          await session.endSession();
         }
       }
     }

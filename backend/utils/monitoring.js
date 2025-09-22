@@ -1,280 +1,253 @@
+import mongoose from 'mongoose';
+import productModel from '../models/productModel.js';
+import Reservation from '../models/Reservation.js';
+import CheckoutSession from '../models/CheckoutSession.js';
+import PaymentSession from '../models/paymentSessionModel.js';
+
 /**
- * Production Monitoring and Alerting System
- * Designed for high-traffic e-commerce with 30k+ users
+ * Track stock management events for monitoring
+ * @param {boolean} success - Whether the operation was successful
+ * @param {Object} details - Additional details about the operation
  */
-
-import fs from 'fs';
-import path from 'path';
-
-class ProductionMonitor {
-    constructor() {
-        this.metrics = {
-            requests: 0,
-            errors: 0,
-            responseTime: [],
-            memoryUsage: [],
-            dbConnections: 0,
-            stockReservations: 0,
-            payments: 0,
-            failedPayments: 0
-        };
-        
-        this.alerts = [];
-        this.thresholds = {
-            maxResponseTime: 5000, // 5 seconds
-            maxMemoryUsage: 500, // 500MB
-            maxErrorRate: 0.05, // 5%
-            maxDbConnections: 10,
-            minStockAvailability: 0.1 // 10%
-        };
-        
-        this.startTime = Date.now();
-        this.lastAlertTime = 0;
-        this.alertCooldown = 60000; // 1 minute between alerts
+export async function trackStockEvent(success, details = {}) {
+  try {
+    const event = {
+      timestamp: new Date(),
+      success,
+      ...details
+    };
+    
+    // Log event for monitoring
+    console.log(`📊 STOCK EVENT:`, event);
+    
+    // Here you would typically send this to your monitoring system
+    // For example: Datadog, New Relic, CloudWatch, etc.
+    if (process.env.MONITORING_WEBHOOK_URL) {
+      try {
+        await fetch(process.env.MONITORING_WEBHOOK_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(event)
+        });
+      } catch (error) {
+        console.error('Failed to send event to monitoring webhook:', error);
+      }
     }
-
-    // Track request metrics
-    trackRequest(responseTime, isError = false) {
-        this.metrics.requests++;
-        this.metrics.responseTime.push(responseTime);
-        
-        if (isError) {
-            this.metrics.errors++;
-        }
-        
-        // Keep only last 1000 response times for memory efficiency
-        if (this.metrics.responseTime.length > 1000) {
-            this.metrics.responseTime = this.metrics.responseTime.slice(-1000);
-        }
-        
-        this.checkThresholds();
-    }
-
-    // Track memory usage
-    trackMemoryUsage() {
-        const memUsage = process.memoryUsage();
-        const memUsageMB = Math.round(memUsage.heapUsed / 1024 / 1024);
-        
-        this.metrics.memoryUsage.push(memUsageMB);
-        
-        // Keep only last 100 memory readings
-        if (this.metrics.memoryUsage.length > 100) {
-            this.metrics.memoryUsage = this.metrics.memoryUsage.slice(-100);
-        }
-    }
-
-    // Track stock operations
-    trackStockReservation(success = true) {
-        if (success) {
-            this.metrics.stockReservations++;
-        }
-    }
-
-    // Track payment operations
-    trackPayment(success = true) {
-        if (success) {
-            this.metrics.payments++;
-        } else {
-            this.metrics.failedPayments++;
-        }
-    }
-
-    // Check if thresholds are exceeded
-    checkThresholds() {
-        const now = Date.now();
-        
-        // Cooldown check
-        if (now - this.lastAlertTime < this.alertCooldown) {
-            return;
-        }
-        
-        const avgResponseTime = this.getAverageResponseTime();
-        const errorRate = this.getErrorRate();
-        const avgMemoryUsage = this.getAverageMemoryUsage();
-        
-        // Check response time threshold
-        if (avgResponseTime > this.thresholds.maxResponseTime) {
-            this.triggerAlert('HIGH_RESPONSE_TIME', {
-                current: avgResponseTime,
-                threshold: this.thresholds.maxResponseTime,
-                message: `Average response time ${avgResponseTime}ms exceeds threshold`
-            });
-        }
-        
-        // Check error rate threshold
-        if (errorRate > this.thresholds.maxErrorRate) {
-            this.triggerAlert('HIGH_ERROR_RATE', {
-                current: errorRate,
-                threshold: this.thresholds.maxErrorRate,
-                message: `Error rate ${(errorRate * 100).toFixed(2)}% exceeds threshold`
-            });
-        }
-        
-        // Check memory usage threshold
-        if (avgMemoryUsage > this.thresholds.maxMemoryUsage) {
-            this.triggerAlert('HIGH_MEMORY_USAGE', {
-                current: avgMemoryUsage,
-                threshold: this.thresholds.maxMemoryUsage,
-                message: `Memory usage ${avgMemoryUsage}MB exceeds threshold`
-            });
-        }
-    }
-
-    // Trigger alert
-    triggerAlert(type, data) {
-        const alert = {
-            type,
-            timestamp: new Date().toISOString(),
-            data,
-            uptime: process.uptime(),
-            metrics: this.getCurrentMetrics()
-        };
-        
-        this.alerts.push(alert);
-        this.lastAlertTime = Date.now();
-        
-        // Log alert
-        console.error('🚨 PRODUCTION ALERT:', alert);
-        
-        // Write to log file
-        this.writeAlertToFile(alert);
-        
-        // Keep only last 100 alerts
-        if (this.alerts.length > 100) {
-            this.alerts = this.alerts.slice(-100);
-        }
-    }
-
-    // Write alert to file
-    writeAlertToFile(alert) {
-        try {
-            const logDir = path.join(process.cwd(), 'logs');
-            if (!fs.existsSync(logDir)) {
-                fs.mkdirSync(logDir, { recursive: true });
-            }
-            
-            const alertFile = path.join(logDir, 'alerts.log');
-            const logEntry = `${alert.timestamp} [${alert.type}] ${alert.data.message}\n`;
-            
-            fs.appendFileSync(alertFile, logEntry);
-        } catch (error) {
-            console.error('Failed to write alert to file:', error);
-        }
-    }
-
-    // Get current metrics
-    getCurrentMetrics() {
-        return {
-            requests: this.metrics.requests,
-            errors: this.metrics.errors,
-            errorRate: this.getErrorRate(),
-            avgResponseTime: this.getAverageResponseTime(),
-            avgMemoryUsage: this.getAverageMemoryUsage(),
-            uptime: process.uptime(),
-            stockReservations: this.metrics.stockReservations,
-            payments: this.metrics.payments,
-            failedPayments: this.metrics.failedPayments,
-            paymentSuccessRate: this.getPaymentSuccessRate()
-        };
-    }
-
-    // Get average response time
-    getAverageResponseTime() {
-        if (this.metrics.responseTime.length === 0) return 0;
-        return Math.round(
-            this.metrics.responseTime.reduce((a, b) => a + b, 0) / this.metrics.responseTime.length
-        );
-    }
-
-    // Get error rate
-    getErrorRate() {
-        if (this.metrics.requests === 0) return 0;
-        return this.metrics.errors / this.metrics.requests;
-    }
-
-    // Get average memory usage
-    getAverageMemoryUsage() {
-        if (this.metrics.memoryUsage.length === 0) return 0;
-        return Math.round(
-            this.metrics.memoryUsage.reduce((a, b) => a + b, 0) / this.metrics.memoryUsage.length
-        );
-    }
-
-    // Get payment success rate
-    getPaymentSuccessRate() {
-        const totalPayments = this.metrics.payments + this.metrics.failedPayments;
-        if (totalPayments === 0) return 1;
-        return this.metrics.payments / totalPayments;
-    }
-
-    // Get health status
-    getHealthStatus() {
-        const metrics = this.getCurrentMetrics();
-        
-        const status = {
-            healthy: true,
-            issues: [],
-            metrics
-        };
-        
-        if (metrics.avgResponseTime > this.thresholds.maxResponseTime) {
-            status.healthy = false;
-            status.issues.push('High response time');
-        }
-        
-        if (metrics.errorRate > this.thresholds.maxErrorRate) {
-            status.healthy = false;
-            status.issues.push('High error rate');
-        }
-        
-        if (metrics.avgMemoryUsage > this.thresholds.maxMemoryUsage) {
-            status.healthy = false;
-            status.issues.push('High memory usage');
-        }
-        
-        if (metrics.paymentSuccessRate < 0.95) {
-            status.healthy = false;
-            status.issues.push('Low payment success rate');
-        }
-        
-        return status;
-    }
-
-    // Reset metrics (call periodically)
-    resetMetrics() {
-        this.metrics = {
-            requests: 0,
-            errors: 0,
-            responseTime: [],
-            memoryUsage: [],
-            dbConnections: 0,
-            stockReservations: 0,
-            payments: 0,
-            failedPayments: 0
-        };
-    }
+  } catch (error) {
+    console.error('Failed to track stock event:', error);
+  }
 }
 
-// Create singleton instance
-const monitor = new ProductionMonitor();
+/**
+ * Get current stock health metrics
+ * @returns {Promise<Object>} Stock health metrics
+ */
+export async function getStockHealthMetrics() {
+  try {
+    const now = new Date();
+    const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+    
+    // Get products with high reservation ratios
+    const productsWithHighReservation = await productModel.find({
+      'sizes': {
+        $elemMatch: {
+          stock: { $gt: 0 },
+          reserved: { $gt: 0 },
+          $expr: {
+            $gte: [
+              { $divide: ['$reserved', '$stock'] },
+              0.8 // 80% or more of stock reserved
+            ]
+          }
+        }
+      }
+    });
+    
+    // Get stuck reservations (active for more than 5 minutes)
+    const stuckReservations = await Reservation.find({
+      status: 'active',
+      createdAt: { $lt: fiveMinutesAgo }
+    });
+    
+    // Get stuck checkout sessions
+    const stuckSessions = await CheckoutSession.find({
+      stockReserved: true,
+      status: { $in: ['pending', 'awaiting_payment'] },
+      createdAt: { $lt: fiveMinutesAgo }
+    });
+    
+    // Get failed payment sessions with reserved stock
+    const failedPayments = await PaymentSession.find({
+      status: 'failed',
+      createdAt: { $gt: fiveMinutesAgo }
+    });
+    
+    // Calculate metrics
+    const metrics = {
+      timestamp: now,
+      productsWithHighReservation: productsWithHighReservation.length,
+      stuckReservations: stuckReservations.length,
+      stuckSessions: stuckSessions.length,
+      recentFailedPayments: failedPayments.length,
+      details: {
+        highReservationProducts: productsWithHighReservation.map(p => ({
+          id: p._id,
+          name: p.name,
+          sizes: p.sizes.filter(s => s.reserved / s.stock >= 0.8).map(s => ({
+            size: s.size,
+            stock: s.stock,
+            reserved: s.reserved,
+            reservationRatio: s.reserved / s.stock
+          }))
+        })),
+        stuckReservations: stuckReservations.map(r => ({
+          id: r._id,
+          createdAt: r.createdAt,
+          items: r.items
+        })),
+        stuckSessions: stuckSessions.map(s => ({
+          id: s.sessionId,
+          createdAt: s.createdAt,
+          items: s.items
+        }))
+      }
+    };
+    
+    // Calculate health score
+    const healthScore = calculateHealthScore(metrics);
+    metrics.healthScore = healthScore;
+    
+    // Send alerts if needed
+    if (healthScore < 70) {
+      await sendStockAlert('CRITICAL', metrics);
+    } else if (healthScore < 90) {
+      await sendStockAlert('WARNING', metrics);
+    }
+    
+    return metrics;
+  } catch (error) {
+    console.error('Failed to get stock health metrics:', error);
+    throw error;
+  }
+}
+
+/**
+ * Calculate stock system health score (0-100)
+ * @param {Object} metrics - Stock health metrics
+ * @returns {number} Health score
+ */
+function calculateHealthScore(metrics) {
+  let score = 100;
+  
+  // Deduct for high reservation products
+  if (metrics.productsWithHighReservation > 0) {
+    score -= Math.min(30, metrics.productsWithHighReservation * 5);
+  }
+  
+  // Deduct for stuck reservations
+  if (metrics.stuckReservations > 0) {
+    score -= Math.min(30, metrics.stuckReservations * 3);
+  }
+  
+  // Deduct for stuck sessions
+  if (metrics.stuckSessions > 0) {
+    score -= Math.min(20, metrics.stuckSessions * 2);
+  }
+  
+  // Deduct for recent failed payments
+  if (metrics.recentFailedPayments > 0) {
+    score -= Math.min(20, metrics.recentFailedPayments * 2);
+  }
+  
+  return Math.max(0, Math.round(score));
+}
+
+/**
+ * Send stock management alerts
+ * @param {string} severity - Alert severity (CRITICAL or WARNING)
+ * @param {Object} metrics - Stock health metrics
+ */
+async function sendStockAlert(severity, metrics) {
+  try {
+    const alert = {
+      severity,
+      timestamp: new Date(),
+      metrics,
+      message: generateAlertMessage(severity, metrics)
+    };
+    
+    // Log alert
+    console.log(`🚨 STOCK ALERT [${severity}]:`, alert);
+    
+    // Send to monitoring system
+    if (process.env.MONITORING_WEBHOOK_URL) {
+      try {
+        await fetch(process.env.MONITORING_WEBHOOK_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(alert)
+        });
+      } catch (error) {
+        console.error('Failed to send alert to monitoring webhook:', error);
+      }
+    }
+    
+    // Send to notification service (e.g., email, SMS)
+    if (process.env.NOTIFICATION_WEBHOOK_URL) {
+      try {
+        await fetch(process.env.NOTIFICATION_WEBHOOK_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(alert)
+        });
+      } catch (error) {
+        console.error('Failed to send alert to notification webhook:', error);
+      }
+    }
+  } catch (error) {
+    console.error('Failed to send stock alert:', error);
+  }
+}
+
+/**
+ * Generate alert message from metrics
+ * @param {string} severity - Alert severity
+ * @param {Object} metrics - Stock health metrics
+ * @returns {string} Alert message
+ */
+function generateAlertMessage(severity, metrics) {
+  const messages = [];
+  
+  if (severity === 'CRITICAL') {
+    messages.push('🚨 CRITICAL: Stock management system requires immediate attention!');
+  } else {
+    messages.push('⚠️ WARNING: Stock management system needs attention');
+  }
+  
+  messages.push(`Health Score: ${metrics.healthScore}/100`);
+  
+  if (metrics.productsWithHighReservation > 0) {
+    messages.push(`- ${metrics.productsWithHighReservation} products have >80% stock reserved`);
+  }
+  
+  if (metrics.stuckReservations > 0) {
+    messages.push(`- ${metrics.stuckReservations} stuck reservations need cleanup`);
+  }
+  
+  if (metrics.stuckSessions > 0) {
+    messages.push(`- ${metrics.stuckSessions} checkout sessions with reserved stock`);
+  }
+  
+  if (metrics.recentFailedPayments > 0) {
+    messages.push(`- ${metrics.recentFailedPayments} recent failed payments need review`);
+  }
+  
+  return messages.join('\n');
+}
 
 // Export monitoring functions
-export const trackRequest = (responseTime, isError) => monitor.trackRequest(responseTime, isError);
-export const trackMemoryUsage = () => monitor.trackMemoryUsage();
-export const trackStockReservation = (success) => monitor.trackStockReservation(success);
-export const trackPayment = (success) => monitor.trackPayment(success);
-export const getHealthStatus = () => monitor.getHealthStatus();
-export const getCurrentMetrics = () => monitor.getCurrentMetrics();
-export const resetMetrics = () => monitor.resetMetrics();
-
-// Start memory tracking
-setInterval(() => {
-    monitor.trackMemoryUsage();
-}, 30000); // Every 30 seconds
-
-// Reset metrics every hour
-setInterval(() => {
-    monitor.resetMetrics();
-}, 3600000); // Every hour
-
-export default monitor;
+export const monitoring = {
+  trackStockEvent,
+  getStockHealthMetrics,
+  sendStockAlert
+};

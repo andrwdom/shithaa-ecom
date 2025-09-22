@@ -19,152 +19,208 @@ const cleanupAbandonedOrders = async () => {
   try {
     console.log(`🚨 [${correlationId}] Starting abandoned order cleanup...`);
     
-    // 1. Clean up reservations older than 5 minutes
-    const oldReservations = await Reservation.find({
-      status: 'active',
-      createdAt: { $lt: new Date(Date.now() - 5 * 60 * 1000) }
-    });
+    // Start a MongoDB transaction for atomicity
+    const session = await mongoose.startSession();
+    await session.startTransaction();
     
-    console.log(`[${correlationId}] Found ${oldReservations.length} old reservations to clean`);
-    
-    let reservationsCleaned = 0;
-    for (const reservation of oldReservations) {
-      try {
-        // Release stock for each item
-        for (const item of reservation.items) {
-          await releaseStockReservation(item.productId, item.size, item.quantity);
+    try {
+      // 1. Clean up reservations older than 14 minutes (PhonePe session timeout)
+      const oldReservations = await Reservation.find({
+        status: 'active',
+        $or: [
+          // Older than 14 minutes
+          { createdAt: { $lt: new Date(Date.now() - 14 * 60 * 1000) } },
+          // Failed payments
+          { status: 'failed' },
+          // Corrupted reservations
+          { items: { $size: 0 } },
+          { items: null },
+          { expiresAt: { $exists: false } }
+        ]
+      }).session(session);
+      
+      console.log(`[${correlationId}] Found ${oldReservations.length} old reservations to clean`);
+      
+      let reservationsCleaned = 0;
+      for (const reservation of oldReservations) {
+        try {
+          // Release stock for each item atomically
+          if (reservation.items && reservation.items.length > 0) {
+            for (const item of reservation.items) {
+              const released = await releaseStockReservation(
+                item.productId,
+                item.size,
+                item.quantity,
+                { session }
+              );
+              
+              if (!released) {
+                console.error(`[${correlationId}] Failed to release stock for item in reservation ${reservation._id}`);
+                continue;
+              }
+            }
+          }
+          
+          // Mark as expired
+          await Reservation.findByIdAndUpdate(
+            reservation._id,
+            {
+              status: 'expired',
+              expiredAt: new Date(),
+              reason: 'Timeout cleanup',
+              updatedAt: new Date()
+            },
+            { session }
+          );
+          
+          reservationsCleaned++;
+          console.log(`[${correlationId}] Cleaned reservation: ${reservation._id}`);
+        } catch (error) {
+          console.error(`[${correlationId}] Error cleaning reservation ${reservation._id}:`, error);
         }
-        
-        // Mark as expired
-        await Reservation.findByIdAndUpdate(reservation._id, {
-          status: 'expired',
-          expiredAt: new Date(),
-          reason: 'Timeout cleanup'
-        });
-        
-        reservationsCleaned++;
-        console.log(`[${correlationId}] Cleaned reservation: ${reservation._id}`);
-      } catch (error) {
-        console.error(`[${correlationId}] Error cleaning reservation ${reservation._id}:`, error);
       }
-    }
-    
-      // 2. Clean up checkout sessions that are either:
-      // - Past their timeout (15 minutes)
-      // - Past their expiry (10 minutes)
-      // - Failed payments (immediately)
-      // - Older than 5 minutes and in a terminal state
+      
+      // 2. Clean up checkout sessions
       const now = new Date();
-      // First find ALL sessions with reserved stock to debug
-      const allReservedSessions = await CheckoutSession.find({
-        stockReserved: true
-      });
-      console.log(`[${correlationId}] DEBUG: Found ${allReservedSessions.length} total sessions with reserved stock`);
-      for (const session of allReservedSessions) {
-        console.log(`[${correlationId}] DEBUG: Session ${session.sessionId}:`, {
-          status: session.status,
-          stockReserved: session.stockReserved,
-          createdAt: session.createdAt,
-          timeoutAt: session.timeoutAt,
-          expiresAt: session.expiresAt,
-          items: session.items.map(item => ({
-            name: item.name,
-            size: item.size,
-            quantity: item.quantity
-          }))
-        });
-      }
-
-      // Now find sessions that need cleanup
       const oldSessions = await CheckoutSession.find({
         stockReserved: true,
         $or: [
-          // Sessions that have timed out (no response after 15 minutes)
+          // Sessions that have timed out (no response after 14 minutes - PhonePe timeout)
           { timeoutAt: { $lt: now } },
-          // Sessions that have expired (payment window closed after 10 minutes)
+          // Sessions that have expired (payment window closed)
           { expiresAt: { $lt: now } },
           // Failed payments should be cleaned up immediately
           { status: 'failed' },
           // Sessions that are old and in a terminal state
           {
             status: { $in: ['pending', 'awaiting_payment'] },
-            createdAt: { $lt: new Date(now - 5 * 60 * 1000) }
+            createdAt: { $lt: new Date(now - 14 * 60 * 1000) }
           },
-          // CRITICAL: Also clean up sessions with no status (corrupted)
+          // Corrupted sessions
           { status: { $exists: false } },
-          // CRITICAL: Clean up sessions with no items (corrupted)
           { items: { $size: 0 } },
-          // CRITICAL: Clean up sessions with no timeoutAt (corrupted)
+          { items: null },
           { timeoutAt: { $exists: false } }
         ]
-      });
-
-      // Log which conditions matched
-      console.log(`[${correlationId}] DEBUG: Found ${oldSessions.length} sessions to clean. Matching conditions:`);
-      for (const session of oldSessions) {
-        const conditions = [];
-        if (session.timeoutAt < now) conditions.push('TIMEOUT');
-        if (session.expiresAt < now) conditions.push('EXPIRED');
-        if (session.status === 'failed') conditions.push('FAILED');
-        if (['pending', 'awaiting_payment'].includes(session.status) && 
-            session.createdAt < new Date(now - 5 * 60 * 1000)) conditions.push('OLD_PENDING');
-        
-        console.log(`[${correlationId}] DEBUG: Session ${session.sessionId} matched conditions:`, conditions);
-      }
-    
-    console.log(`[${correlationId}] Found ${oldSessions.length} old checkout sessions to clean`);
-    
-    let sessionsCleaned = 0;
-    for (const session of oldSessions) {
-      try {
-        // Release stock for each item
-        for (const item of session.items) {
-          await releaseStockReservation(item.productId, item.size, item.quantity);
-        }
-        
-        // Mark as expired
-        await CheckoutSession.findByIdAndUpdate(session._id, {
-          status: 'expired',
-          stockReserved: false,
-          expiredAt: new Date()
-        });
-        
-        sessionsCleaned++;
-        console.log(`[${correlationId}] Cleaned session: ${session.sessionId}`);
-      } catch (error) {
-        console.error(`[${correlationId}] Error cleaning session ${session.sessionId}:`, error);
-      }
-    }
-    
-    // 3. Force cleanup any stuck stock (emergency fallback)
-    const productsWithReserved = await productModel.find({
-      'sizes.reserved': { $gt: 0 }
-    });
-    
-    if (productsWithReserved.length > 0) {
-      console.log(`[${correlationId}] Found ${productsWithReserved.length} products with reserved stock - force cleaning...`);
+      }).session(session);
       
-      for (const product of productsWithReserved) {
-        for (const size of product.sizes) {
-          if (size.reserved > 0) {
-            await productModel.updateOne(
-              { _id: product._id, 'sizes.size': size.size },
-              { $set: { 'sizes.$.reserved': 0 } }
+      console.log(`[${correlationId}] Found ${oldSessions.length} old checkout sessions to clean`);
+      
+      let sessionsCleaned = 0;
+      for (const checkoutSession of oldSessions) {
+        try {
+          // Get associated payment session
+          const paymentSession = await PaymentSession.findOne({
+            sessionId: checkoutSession.sessionId
+          }).session(session);
+          
+          // Release stock for each item atomically
+          if (checkoutSession.items && checkoutSession.items.length > 0) {
+            for (const item of checkoutSession.items) {
+              const released = await releaseStockReservation(
+                item.productId,
+                item.size,
+                item.quantity,
+                { session }
+              );
+              
+              if (!released) {
+                console.error(`[${correlationId}] Failed to release stock for item in session ${checkoutSession.sessionId}`);
+                continue;
+              }
+            }
+          }
+          
+          // Mark checkout session as expired
+          await CheckoutSession.findByIdAndUpdate(
+            checkoutSession._id,
+            {
+              status: 'expired',
+              stockReserved: false,
+              expiredAt: new Date(),
+              updatedAt: new Date(),
+              reason: 'Timeout cleanup'
+            },
+            { session }
+          );
+          
+          // Update payment session if it exists
+          if (paymentSession) {
+            await PaymentSession.findByIdAndUpdate(
+              paymentSession._id,
+              {
+                status: 'expired',
+                expiredAt: new Date(),
+                updatedAt: new Date()
+              },
+              { session }
             );
-            console.log(`[${correlationId}] Force released ${size.reserved} units of ${product.name} size ${size.size}`);
+          }
+          
+          sessionsCleaned++;
+          console.log(`[${correlationId}] Cleaned session: ${checkoutSession.sessionId}`);
+        } catch (error) {
+          console.error(`[${correlationId}] Error cleaning session ${checkoutSession.sessionId}:`, error);
+        }
+      }
+      
+      // 3. Verify and fix any inconsistencies (emergency fallback)
+      const productsWithReserved = await productModel.find({
+        'sizes.reserved': { $gt: 0 }
+      }).session(session);
+      
+      if (productsWithReserved.length > 0) {
+        console.log(`[${correlationId}] Found ${productsWithReserved.length} products with reserved stock - verifying...`);
+        
+        for (const product of productsWithReserved) {
+          for (const size of product.sizes) {
+            if (size.reserved > 0) {
+              // Check if there are any active reservations for this product/size
+              const activeReservations = await Reservation.find({
+                status: 'active',
+                'items.productId': product._id,
+                'items.size': size.size
+              }).session(session);
+              
+              const activeCheckoutSessions = await CheckoutSession.find({
+                stockReserved: true,
+                status: { $in: ['pending', 'awaiting_payment'] },
+                'items.productId': product._id,
+                'items.size': size.size
+              }).session(session);
+              
+              // If no active reservations or sessions, reset reserved count
+              if (activeReservations.length === 0 && activeCheckoutSessions.length === 0) {
+                await productModel.updateOne(
+                  { _id: product._id, 'sizes.size': size.size },
+                  { $set: { 'sizes.$.reserved': 0 } },
+                  { session }
+                );
+                console.log(`[${correlationId}] Reset reserved count for ${product.name} size ${size.size} (no active reservations)`);
+              }
+            }
           }
         }
       }
+      
+      // Commit transaction
+      await session.commitTransaction();
+      console.log(`✅ [${correlationId}] Cleanup completed: ${reservationsCleaned} reservations, ${sessionsCleaned} sessions cleaned`);
+      
+      return {
+        success: true,
+        reservationsCleaned,
+        sessionsCleaned,
+        productsWithReserved: productsWithReserved.length
+      };
+      
+    } catch (error) {
+      // Rollback transaction on any error
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      await session.endSession();
     }
-    
-    console.log(`✅ [${correlationId}] Cleanup completed: ${reservationsCleaned} reservations, ${sessionsCleaned} sessions cleaned`);
-    
-    return {
-      success: true,
-      reservationsCleaned,
-      sessionsCleaned,
-      productsWithReserved: productsWithReserved.length
-    };
     
   } catch (error) {
     console.error(`❌ [${correlationId}] Cleanup failed:`, error);
