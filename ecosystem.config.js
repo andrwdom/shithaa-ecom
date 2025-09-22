@@ -27,10 +27,10 @@ module.exports = {
       autorestart: true,
       watch: false,
       max_memory_restart: '1G',
+      env_file: './backend/.env',
       env: {
         NODE_ENV: 'production',
-        PORT: 4000,
-        JWT_SECRET: 'shithaa-ecom-secret-key-for-jwt-2025'
+        PORT: 4000
       },
       error_file: './backend/logs/backend-err.log',
       out_file: './backend/logs/backend-out.log',
