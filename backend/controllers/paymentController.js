@@ -605,6 +605,13 @@ export const createPhonePeSession = async (req, res) => {
       }
     } catch (error) {
       console.error(`[${correlationId}] PhonePe payment creation failed:`, error);
+      
+      // 롤백: Release the stock reservation on PhonePe API failure
+      if (paymentSession) {
+        console.log(`[${correlationId}] Releasing stock due to PhonePe API failure.`);
+        await releaseStockOnPaymentFailure(paymentSession, correlationId);
+      }
+
       console.error('Amount details:', {
         finalAmount,
         amountInPaise,
