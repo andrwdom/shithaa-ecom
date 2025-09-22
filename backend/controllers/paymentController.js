@@ -621,10 +621,32 @@ export const createPhonePeSession = async (req, res) => {
           total: checkoutSession.total
         }
       });
+
+      // Provide specific error messages based on error type
+      let userMessage = 'Payment service temporarily unavailable';
+      let errorCode = 'PAYMENT_SERVICE_ERROR';
+      
+      if (error.type === 'UnauthorizedAccess') {
+        userMessage = 'Payment gateway authentication failed. Please contact support.';
+        errorCode = 'AUTHENTICATION_ERROR';
+        console.error(`[${correlationId}] PhonePe authentication failed - check credentials and IP whitelisting`);
+      } else if (error.httpStatusCode === 401) {
+        userMessage = 'Payment gateway authentication failed. Please contact support.';
+        errorCode = 'AUTHENTICATION_ERROR';
+      } else if (error.httpStatusCode === 403) {
+        userMessage = 'Payment gateway access denied. Please contact support.';
+        errorCode = 'ACCESS_DENIED';
+      } else if (error.httpStatusCode >= 500) {
+        userMessage = 'Payment gateway is temporarily unavailable. Please try again later.';
+        errorCode = 'GATEWAY_ERROR';
+      }
+
       return res.status(500).json({
         success: false,
-        message: 'Failed to create payment',
-        error: error.message
+        message: userMessage,
+        error: error.message,
+        errorCode: errorCode,
+        retryable: error.httpStatusCode >= 500 || error.type === 'UnauthorizedAccess'
       });
     }
   } catch (error) {
