@@ -29,7 +29,8 @@ module.exports = {
       max_memory_restart: '1G',
       env: {
         NODE_ENV: 'production',
-        PORT: 4000
+        PORT: 4000,
+        JWT_SECRET: 'shithaa-ecom-secret-key-for-jwt-2025'
       },
       error_file: './backend/logs/backend-err.log',
       out_file: './backend/logs/backend-out.log',
@@ -65,7 +66,8 @@ module.exports = {
       watch: false,
       max_memory_restart: '512M',
       env: {
-        NODE_ENV: 'production'
+        NODE_ENV: 'production',
+        JWT_SECRET: 'shithaa-ecom-secret-key-for-jwt-2025'
       },
       error_file: './logs/stock-cleanup-worker-err.log',
       out_file: './logs/stock-cleanup-worker-out.log',
@@ -86,6 +88,7 @@ module.exports = {
       max_memory_restart: '512M',
       env: {
         NODE_ENV: 'production',
+        JWT_SECRET: 'shithaa-ecom-secret-key-for-jwt-2025',
         MONITORING_WEBHOOK_URL: process.env.MONITORING_WEBHOOK_URL,
         NOTIFICATION_WEBHOOK_URL: process.env.NOTIFICATION_WEBHOOK_URL
       },
