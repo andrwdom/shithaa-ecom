@@ -27,7 +27,7 @@ module.exports = {
       autorestart: true,
       watch: false,
       max_memory_restart: '1G',
-      env_file: './backend/.env',
+      env_file: '/var/www/shithaa-ecom/backend/.env',
       env: {
         NODE_ENV: 'production',
         PORT: 4000

@@ -1,20 +1,20 @@
 import express from 'express'
-import 'dotenv/config'
+import dotenv from 'dotenv'
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+
+// Load .env file from the correct path
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+dotenv.config({ path: join(__dirname, '.env') });
 import { existsSync } from 'fs';
 import cors from 'cors';
 import { trackRequest, trackMemoryUsage, getHealthStatus } from './utils/monitoring.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-// Load environment variables from the correct path
-import dotenv from 'dotenv';
+// Verify .env file loading
 const envPath = join(__dirname, '.env');
 console.log('🔧 Loading .env from:', envPath);
 console.log('🔧 .env file exists:', existsSync(envPath));
-dotenv.config({ path: envPath });
 import rateLimit from 'express-rate-limit'
 import cookieParser from 'cookie-parser'
 import helmet from 'helmet'
