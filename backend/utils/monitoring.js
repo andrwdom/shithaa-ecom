@@ -48,20 +48,43 @@ export async function getStockHealthMetrics() {
     const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
     
     // Get products with high reservation ratios
-    const productsWithHighReservation = await productModel.find({
-      'sizes': {
-        $elemMatch: {
-          stock: { $gt: 0 },
-          reserved: { $gt: 0 },
-          $expr: {
-            $gte: [
-              { $divide: ['$reserved', '$stock'] },
-              0.8 // 80% or more of stock reserved
-            ]
+    const productsWithHighReservation = await productModel.aggregate([
+      {
+        $match: {
+          'sizes.stock': { $gt: 0 },
+          'sizes.reserved': { $gt: 0 }
+        }
+      },
+      {
+        $addFields: {
+          sizes: {
+            $map: {
+              input: '$sizes',
+              as: 'size',
+              in: {
+                $mergeObjects: [
+                  '$$size',
+                  {
+                    reservationRatio: {
+                      $cond: {
+                        if: { $gt: ['$$size.stock', 0] },
+                        then: { $divide: ['$$size.reserved', '$$size.stock'] },
+                        else: 0
+                      }
+                    }
+                  }
+                ]
+              }
+            }
           }
         }
+      },
+      {
+        $match: {
+          'sizes.reservationRatio': { $gte: 0.8 }
+        }
       }
-    });
+    ]);
     
     // Get stuck reservations (active for more than 5 minutes)
     const stuckReservations = await Reservation.find({
@@ -269,10 +292,35 @@ export async function trackStockReservation(success, details = {}) {
   }
 }
 
+/**
+ * Track payment events
+ * @param {boolean} success - Whether the payment was successful
+ * @param {Object} details - Additional details about the payment
+ */
+export async function trackPayment(success, details = {}) {
+  try {
+    const event = {
+      timestamp: new Date(),
+      success,
+      type: 'payment',
+      ...details
+    };
+    
+    // Log event for monitoring
+    console.log(`📊 PAYMENT EVENT:`, event);
+    
+    // Track the event using the main tracking function
+    await trackStockEvent(success, { ...details, type: 'payment' });
+  } catch (error) {
+    console.error('Failed to track payment:', error);
+  }
+}
+
 // Export monitoring functions
 export const monitoring = {
   trackStockEvent,
   trackStockReservation,
+  trackPayment,
   getStockHealthMetrics,
   sendStockAlert
 };
