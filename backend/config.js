@@ -95,6 +95,29 @@ export const config = {
         expiryMinutes: parseInt(process.env.RESERVATION_EXPIRY_MINUTES || '15', 10),
         autoExpiryEnabled: process.env.RESERVATION_AUTO_EXPIRY === 'true' || true
     },
+    
+    // Redis Configuration
+    redis: {
+        host: process.env.REDIS_HOST || 'localhost',
+        port: parseInt(process.env.REDIS_PORT || '6379', 10),
+        password: process.env.REDIS_PASSWORD || undefined,
+        db: parseInt(process.env.REDIS_DB || '0', 10),
+        retryDelayOnFailover: 100,
+        maxRetriesPerRequest: 3,
+        lazyConnect: true,
+        keepAlive: 30000,
+        connectTimeout: 10000,
+        commandTimeout: 5000,
+        // Cache TTL settings (in seconds)
+        ttl: {
+            products: parseInt(process.env.REDIS_PRODUCTS_TTL || '300', 10), // 5 minutes
+            categories: parseInt(process.env.REDIS_CATEGORIES_TTL || '3600', 10), // 1 hour
+            cart: parseInt(process.env.REDIS_CART_TTL || '3600', 10), // 1 hour
+            user: parseInt(process.env.REDIS_USER_TTL || '86400', 10), // 24 hours
+            sessions: parseInt(process.env.REDIS_SESSIONS_TTL || '86400', 10), // 24 hours
+            static: parseInt(process.env.REDIS_STATIC_TTL || '7200', 10) // 2 hours
+        }
+    },
 };
 
 // Log configuration on startup

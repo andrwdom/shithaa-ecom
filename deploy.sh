@@ -67,7 +67,22 @@ mkdir -p /var/www/shithaa-ecom/admin/logs
 mkdir -p /var/www/shithaa-ecom/uploads
 mkdir -p /var/www/shithaa-ecom/scripts
 
-print_header "STEP 4: INSTALL BACKEND DEPENDENCIES"
+print_header "STEP 4: INSTALL REDIS"
+
+# Install Redis if not already installed
+print_status "Checking Redis installation..."
+if ! command -v redis-server &> /dev/null; then
+    print_status "Installing Redis..."
+    apt update
+    apt install -y redis-server
+    systemctl start redis-server
+    systemctl enable redis-server
+    print_status "✅ Redis installed and started"
+else
+    print_status "✅ Redis is already installed"
+fi
+
+print_header "STEP 5: INSTALL BACKEND DEPENDENCIES"
 
 # Install backend dependencies
 print_status "Installing backend dependencies..."
@@ -81,42 +96,42 @@ npm install https://phonepe.mycloudrepo.io/public/repositories/phonepe-pg-sdk-no
 print_status "Installing other backend dependencies..."
 npm install
 
-print_header "STEP 5: INSTALL FRONTEND DEPENDENCIES"
+print_header "STEP 6: INSTALL FRONTEND DEPENDENCIES"
 
 # Install frontend dependencies
 print_status "Installing frontend dependencies..."
 cd /var/www/shithaa-ecom/frontend
 npm install
 
-print_header "STEP 6: INSTALL ADMIN DEPENDENCIES"
+print_header "STEP 7: INSTALL ADMIN DEPENDENCIES"
 
 # Install admin dependencies
 print_status "Installing admin dependencies..."
 cd /var/www/shithaa-ecom/admin
 npm install
 
-print_header "STEP 7: BUILD FRONTEND"
+print_header "STEP 8: BUILD FRONTEND"
 
 # Build frontend
 print_status "Building frontend..."
 cd /var/www/shithaa-ecom/frontend
 npm run build
 
-print_header "STEP 8: BUILD ADMIN"
+print_header "STEP 9: BUILD ADMIN"
 
 # Build admin
 print_status "Building admin..."
 cd /var/www/shithaa-ecom/admin
 npm run build
 
-print_header "STEP 9: START APPLICATION"
+print_header "STEP 10: START APPLICATION"
 
 # Start the application
 print_status "Starting application..."
 cd /var/www/shithaa-ecom
 pm2 start ecosystem.config.js
 
-print_header "STEP 10: VERIFY DEPLOYMENT"
+print_header "STEP 11: VERIFY DEPLOYMENT"
 
 # Wait a moment for services to start
 print_status "Waiting for services to start..."

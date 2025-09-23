@@ -41,6 +41,8 @@ import heroImagesRouter from './routes/heroImagesRoute.js'
 import reservationRouter from './routes/reservationRoute.js'
 import adminRouter from './routes/adminRoute.js'
 import stockRouter from './routes/stockRoutes.js'
+import cachedRoutes from './routes/cachedRoutes.js'
+import redisService from './services/redisService.js'
 import admin from 'firebase-admin'
 import orderModel from './models/orderModel.js'
 import Category from './models/Category.js'
@@ -315,6 +317,9 @@ app.use('/api/reservations', reservationRouter)
 app.use('/api/admin', adminRouter)
 app.use('/api/stock', stockRouter)
 
+// Cached routes (high performance)
+app.use('/api/cached', cachedRoutes)
+
 // Legacy routes for backward compatibility
 app.use('/api/product', productRouter)
 
@@ -342,10 +347,78 @@ app.get('/api/cors-test', (req, res) => {
   });
 });
 
+// Cache management endpoints
+app.get('/api/cache/stats', async (req, res) => {
+  try {
+    const stats = await redisService.getStats();
+    res.json({
+      success: true,
+      data: stats
+    });
+  } catch (error) {
+    console.error('Cache stats error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get cache stats'
+    });
+  }
+});
+
+app.post('/api/cache/clear', async (req, res) => {
+  try {
+    const { pattern } = req.body;
+    
+    if (pattern) {
+      const deleted = await redisService.delPattern(pattern);
+      res.json({
+        success: true,
+        message: `Cleared ${deleted} keys matching pattern: ${pattern}`
+      });
+    } else {
+      // Clear all caches
+      await redisService.delPattern('*');
+      res.json({
+        success: true,
+        message: 'All caches cleared'
+      });
+    }
+  } catch (error) {
+    console.error('Cache clear error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to clear cache'
+    });
+  }
+});
+
+app.get('/api/cache/keys', async (req, res) => {
+  try {
+    const { pattern = '*' } = req.query;
+    const keys = await redisService.client.keys(pattern);
+    res.json({
+      success: true,
+      data: {
+        keys: keys,
+        count: keys.length
+      }
+    });
+  } catch (error) {
+    console.error('Cache keys error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get cache keys'
+    });
+  }
+});
+
 // Health check endpoint - PRODUCTION OPTIMIZED WITH MONITORING
 app.get('/api/health', async (req, res) => {
   // Check MongoDB connection
   const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+  
+  // Check Redis connection
+  const redisStatus = redisService.isAvailable() ? 'connected' : 'disconnected';
+  const redisStats = await redisService.getStats();
   
   // Get comprehensive health status
   const healthStatus = await getHealthStatus();
@@ -366,9 +439,11 @@ app.get('/api/health', async (req, res) => {
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     database: dbStatus,
+    redis: redisStatus,
     memory: memUsageMB,
     environment: process.env.NODE_ENV || 'development',
     monitoring: healthStatus,
+    cache: redisStats,
   });
 });
 

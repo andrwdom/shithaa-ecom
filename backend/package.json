@@ -23,6 +23,7 @@
     "express-rate-limit": "^7.5.0",
     "firebase-admin": "^13.4.0",
     "helmet": "^8.0.0",
+    "ioredis": "^5.4.1",
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^6.17.0",
     "mongoose": "^8.5.3",
@@ -30,6 +31,7 @@
     "nodemailer": "^7.0.5",
     "nodemon": "^3.1.4",
     "pg-sdk-node": "https://phonepe.mycloudrepo.io/public/repositories/phonepe-pg-sdk-node/releases/v2/phonepe-pg-sdk-node.tgz",
+    "redis": "^4.6.14",
     "sharp": "^0.33.2",
     "validator": "^13.12.0",
     "zod": "^3.24.1"
