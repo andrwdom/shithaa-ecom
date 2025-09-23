@@ -103,7 +103,7 @@ console.log('   8. Monitor memory usage and restart if needed');
 
 // Security checklist
 console.log('\n🔒 Security Checklist:');
-// // // // // console.log("   ✅ JWT tokens with proper expiration");
+// console.log("   ✅ JWT tokens with proper expiration");
 console.log('   ✅ Rate limiting on all endpoints');
 console.log('   ✅ Input validation and sanitization');
 console.log('   ✅ CORS properly configured');

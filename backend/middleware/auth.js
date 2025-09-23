@@ -13,7 +13,7 @@ export const verifyToken = async (req, res, next) => {
         return res.status(401).json({ success: false, message: 'Access Denied. No token provided.' });
     }
 
-    //     // // // // console.log('Auth middleware - Request authentication:', {
+    // console.log('Auth middleware - Request authentication:', {
     //   hasCookieToken: !!req.cookies?.token,
     //   hasAuthHeader: !!req.headers.authorization,
     //   hasTokenHeader: !!req.headers.token,
@@ -23,22 +23,22 @@ export const verifyToken = async (req, res, next) => {
     // });
 
     if (!token) {
-      // // // // console.log("token: [REDACTED]");
+      // console.log("token: [REDACTED]");
       return errorResponse(res, 401, 'Access token required. Please log in to continue.');
     }
 
-    // // // // // // console.log("Auth middleware - Token found, length: [REDACTED]");
+    // console.log("Auth middleware - Token found, length: [REDACTED]");
 
     try {
       const decoded = jwt.verify(token, JWT_SECRET);
       req.user = decoded;
-      // // // // // // // // // console.log("Auth middleware - Token verified successfully for user: [REDACTED]");
+      // console.log("Auth middleware - Token verified successfully for user: [REDACTED]");
       next();
     } catch (jwtError) {
-      // // // // console.log("Auth middleware - JWT verification failed: [REDACTED]");
+      // console.log("Auth middleware - JWT verification failed: [REDACTED]");
 
       if (jwtError.name === 'TokenExpiredError') {
-        // // // // // console.log('Auth middleware - Token expired:', {
+        // console.log('Auth middleware - Token expired:', {
         //   expiredAt: jwtError.expiredAt,
         //   currentTime: new Date(),
         //   timeDifference: new Date() - jwtError.expiredAt
@@ -51,7 +51,7 @@ export const verifyToken = async (req, res, next) => {
           message: 'Please log out and log back in to refresh your session.'
         });
       } else if (jwtError.name === 'JsonWebTokenError') {
-        // // // // console.log("token: [REDACTED]");
+        // console.log("token: [REDACTED]");
         return errorResponse(res, 401, 'Invalid token format. Please log in again.');
       } else {
         // // // console.log('Auth middleware - JWT verification failed:', jwtError.message);
@@ -75,7 +75,7 @@ export const optionalAuth = async (req, res, next) => {
     }
     
     if (!token) {
-      // // // // console.log("token: [REDACTED]");
+      // console.log("token: [REDACTED]");
       req.user = null;
       return next();
     }
@@ -83,15 +83,15 @@ export const optionalAuth = async (req, res, next) => {
     try {
       const decoded = jwt.verify(token, JWT_SECRET);
       req.user = decoded;
-      // // // // // // // // // console.log("Optional auth middleware - Token verified for user: [REDACTED]");
+      // console.log("Optional auth middleware - Token verified for user: [REDACTED]");
       next();
     } catch (jwtError) {
       if (jwtError.name === 'TokenExpiredError') {
-        // // // // console.log("token: [REDACTED]");
+        // console.log("token: [REDACTED]");
         req.user = null;
         return next();
       } else {
-        // // // // console.log("token: [REDACTED]");
+        // console.log("token: [REDACTED]");
         req.user = null;
         return next();
       }

@@ -355,7 +355,7 @@ export const firebaseLogin = async (req, res) => {
       }
 
       // Fallback for LOCAL DEVELOPMENT ONLY when Firebase Admin is not available
-      // // // // console.log("token: [REDACTED]");
+      // console.log("token: [REDACTED]");
       let email = 'test@example.com';
       try {
         const tokenParts = idToken.split('.');
