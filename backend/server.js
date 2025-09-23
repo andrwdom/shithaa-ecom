@@ -80,12 +80,12 @@ const allowedOrigins = [
 const corsOptions = {
     origin: (origin, callback) => {
         // Enhanced logging for debugging
-        // // // console.log('CORS Check:', {
-            origin: origin || 'undefined',
-            referer: origin ? 'N/A' : 'No origin header',
-            userAgent: 'N/A', // Will be filled by caller
-            timestamp: new Date().toISOString()
-        });
+        // console.log('CORS Check:', {
+        //     origin: origin || 'undefined',
+        //     referer: origin ? 'N/A' : 'No origin header',
+        //     userAgent: 'N/A', // Will be filled by caller
+        //     timestamp: new Date().toISOString()
+        // });
         
         // Allow requests with no origin (like mobile apps, curl requests, or server-to-server)
         // Also allow all origins in development
