@@ -181,9 +181,9 @@ async function testComprehensiveStockManagement() {
     // Check if second user would be blocked
     const availableForSecondUser = afterFirstSize.stock - afterFirstSize.reserved;
     if (availableForSecondUser === 0) {
-      console.log('✅ Second user would be blocked (race condition handled correctly)');
+      // console.log('✅ Second user would be blocked (race condition handled correctly)');
     } else {
-      console.log('❌ Second user would not be blocked (race condition not handled)');
+      // console.log('❌ Second user would not be blocked (race condition not handled)');
     }
 
     // Cleanup

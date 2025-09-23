@@ -42,7 +42,7 @@ async function quickCleanup() {
     
     // 2. Delete all users (nuclear option)
     const userResult = await userModel.deleteMany({});
-    console.log(`🗑️  Deleted ${userResult.deletedCount} users`);
+    // console.log(`🗑️  Deleted ${userResult.deletedCount} users`);
     
     // 3. Delete all wishlists
     const wishlistResult = await wishlistModel.deleteMany({});

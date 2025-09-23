@@ -91,7 +91,7 @@ if (!allEnvVarsSet) {
 console.log('\n✅ All environment variables set');
 
 // Performance recommendations
-console.log('\n📊 Performance Recommendations for 30k+ Users:');
+// // // console.log('\n📊 Performance Recommendations for 30k+ Users:');
 console.log('   1. Use PM2 cluster mode: pm2 start ecosystem.config.cjs -i max');
 console.log('   2. Set up Nginx load balancing if needed');
 console.log('   3. Monitor /api/health endpoint for system status');
@@ -103,7 +103,7 @@ console.log('   8. Monitor memory usage and restart if needed');
 
 // Security checklist
 console.log('\n🔒 Security Checklist:');
-console.log('   ✅ JWT tokens with proper expiration');
+// // // // // console.log("   ✅ JWT tokens with proper expiration");
 console.log('   ✅ Rate limiting on all endpoints');
 console.log('   ✅ Input validation and sanitization');
 console.log('   ✅ CORS properly configured');
@@ -126,6 +126,6 @@ console.log('   1. Start the application: pm2 start ecosystem.config.cjs');
 console.log('   2. Monitor logs: pm2 logs');
 console.log('   3. Check health: curl https://shithaa.in/api/health');
 console.log('   4. Set up log rotation and monitoring alerts');
-console.log('   5. Test critical user flows (browse, add to cart, checkout)');
+// // // console.log('   5. Test critical user flows (browse, add to cart, checkout)');
 
 console.log('\n🚀 Ready to handle 30k+ Instagram followers!');

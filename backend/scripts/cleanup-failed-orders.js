@@ -49,8 +49,8 @@ const cleanupFailedOrders = async () => {
     console.log('\n📋 Orders to be deleted:');
     failedOrders.forEach((order, index) => {
       console.log(`${index + 1}. Order ID: ${order.orderId || order._id}`);
-      console.log(`   Customer: ${order.customerName || order.userInfo?.name || 'Unknown'}`);
-      console.log(`   Email: ${order.email || order.userInfo?.email || 'Unknown'}`);
+      // console.log(`   Customer: ${order.customerName || order.userInfo?.name || 'Unknown'}`);
+      // console.log(`   Email: ${order.email || order.userInfo?.email || 'Unknown'}`);
       console.log(`   Amount: ₹${order.totalAmount || order.total || order.totalPrice || 0}`);
       console.log(`   Status: ${order.paymentStatus} | ${order.orderStatus} | ${order.status}`);
       console.log(`   Created: ${order.createdAt || order.placedAt}`);

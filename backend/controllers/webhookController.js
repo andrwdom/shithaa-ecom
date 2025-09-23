@@ -244,7 +244,7 @@ export async function phonePeWebhookHandler(req, res) {
           try {
             const { userModel } = await import('../models/userModel.js');
             await userModel.findByIdAndUpdate(order.userId, { cartData: {} });
-            console.log('🔔 WEBHOOK: User cart cleared successfully');
+            // console.log('🔔 WEBHOOK: User cart cleared successfully');
           } catch (cartError) {
             console.warn('🔔 WEBHOOK: Failed to clear user cart:', cartError);
           }

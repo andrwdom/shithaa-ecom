@@ -22,7 +22,7 @@ async function migrateOrderUserIds() {
       order.userId = userId;
       await order.save();
       updated++;
-      console.log(`Updated order ${order._id} with userId ${userId}`);
+      // console.log(`Updated order ${order._id} with userId ${userId}`);
     }
   }
   console.log(`Migration complete. Updated ${updated} orders.`);

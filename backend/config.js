@@ -4,13 +4,13 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-// Debug: Log environment variables
-console.log('🔍 DEBUG: Environment variables loaded:', {
-    PHONEPE_ENV: process.env.PHONEPE_ENV,
-    PHONEPE_MERCHANT_ID: process.env.PHONEPE_MERCHANT_ID ? 'SET' : 'MISSING',
-    PHONEPE_API_KEY: process.env.PHONEPE_API_KEY ? 'SET' : 'MISSING',
-    PHONEPE_SALT_INDEX: process.env.PHONEPE_SALT_INDEX
-});
+// Debug: Log environment variables (commented out for security)
+// console.log('🔍 DEBUG: Environment variables loaded:', {
+//     PHONEPE_ENV: process.env.PHONEPE_ENV,
+//     PHONEPE_MERCHANT_ID: process.env.PHONEPE_MERCHANT_ID ? 'SET' : 'MISSING',
+//     PHONEPE_API_KEY: process.env.PHONEPE_API_KEY ? 'SET' : 'MISSING',
+//     PHONEPE_SALT_INDEX: process.env.PHONEPE_SALT_INDEX
+// });
 
 // CRITICAL: Read the JWT_SECRET once and export it for consistency.
 const JWT_SECRET = process.env.JWT_SECRET;

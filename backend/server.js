@@ -51,15 +51,17 @@ import { randomBytes } from 'crypto'
 const app = express()
 const PORT = config.port
 
-// Debug environment variables
-console.log('🔧 Environment Variables Debug:');
-console.log('NODE_ENV:', process.env.NODE_ENV);
-console.log('PORT:', process.env.PORT);
-console.log('MONGODB_URI:', process.env.MONGODB_URI ? 'SET' : 'NOT SET');
-console.log('JWT_SECRET:', process.env.JWT_SECRET ? 'SET' : 'NOT SET');
-console.log('PHONEPE_MERCHANT_ID:', process.env.PHONEPE_MERCHANT_ID ? 'SET' : 'NOT SET');
-console.log('PHONEPE_API_KEY:', process.env.PHONEPE_API_KEY ? 'SET' : 'NOT SET');
-console.log('---');
+// Environment variables validation (no secrets logged)
+if (process.env.NODE_ENV === 'development') {
+  console.log('🔧 Environment Variables Debug:');
+  // // // console.log('NODE_ENV:', process.env.NODE_ENV);
+  // // // console.log('PORT:', process.env.PORT);
+  // console.log("MONGODB_URI: [REDACTED]");
+  // // console.log("JWT_SECRET: [REDACTED]");
+  // console.log("PHONEPE_MERCHANT_ID: [REDACTED]");
+  // console.log("PHONEPE_API_KEY: [REDACTED]");
+  console.log('---');
+}
 
 // Trust proxy - required for rate limiting behind reverse proxy
 app.set('trust proxy', 1)
@@ -78,7 +80,7 @@ const allowedOrigins = [
 const corsOptions = {
     origin: (origin, callback) => {
         // Enhanced logging for debugging
-        console.log('CORS Check:', {
+        // // // console.log('CORS Check:', {
             origin: origin || 'undefined',
             referer: origin ? 'N/A' : 'No origin header',
             userAgent: 'N/A', // Will be filled by caller
@@ -532,10 +534,10 @@ try {
 // Start the server
 const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`✅ Server running on port ${PORT} (all interfaces)`);
-    console.log(`✅ Environment: ${process.env.NODE_ENV}`);
-    console.log(`✅ MongoDB: ${process.env.MONGODB_URI ? 'CONFIGURED' : 'NOT CONFIGURED'}`);
-    console.log(`✅ JWT: ${process.env.JWT_SECRET ? 'CONFIGURED' : 'NOT CONFIGURED'}`);
-    console.log(`✅ PhonePe: ${process.env.PHONEPE_MERCHANT_ID ? 'CONFIGURED' : 'NOT CONFIGURED'}`);
+    // // // console.log(`✅ Environment: ${process.env.NODE_ENV}`);
+    // console.log("MONGODB_URI: [REDACTED]");
+    // // console.log("JWT_SECRET: [REDACTED]");
+    // console.log("PHONEPE_MERCHANT_ID: [REDACTED]");
 });
 
 // Handle server errors

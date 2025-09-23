@@ -61,7 +61,7 @@ async function showCurrentStats() {
   const wishlistCount = await wishlistModel.countDocuments();
   
   console.log(`   - Orders: ${orderCount}`);
-  console.log(`   - Users: ${userCount}`);
+  // console.log(`   - Users: ${userCount}`);
   console.log(`   - Wishlists: ${wishlistCount}`);
   
   return { orderCount, userCount, wishlistCount };
@@ -69,7 +69,7 @@ async function showCurrentStats() {
 
 async function safeOrderCleanup() {
   console.log('\n🧹 Starting SAFE order cleanup...');
-  console.log('   (Only deleting orders, preserving users and functionality)');
+  // console.log('   (Only deleting orders, preserving users and functionality)');
   
   try {
     // 1. Delete ALL orders (this is what you want)
@@ -83,12 +83,12 @@ async function safeOrderCleanup() {
     console.log(`✅ Cleaned up ${emptyWishlists.deletedCount} empty wishlists`);
     
     // 3. IMPORTANT: Keep all user accounts intact
-    console.log('\n👤 Preserving all user accounts (Google accounts, etc.)...');
+    // console.log('\n👤 Preserving all user accounts (Google accounts, etc.)...');
     const userCount = await userModel.countDocuments();
-    console.log(`✅ Kept ${userCount} user accounts intact`);
+    // console.log(`✅ Kept ${userCount} user accounts intact`);
     
     console.log('\n🎉 SAFE order cleanup completed successfully!');
-    console.log('   Your users can still login and place new orders!');
+    // console.log('   Your users can still login and place new orders!');
     
   } catch (error) {
     console.error('❌ Error during cleanup:', error);
@@ -103,9 +103,9 @@ async function verifyFunctionality() {
     // Check if users still exist
     const userCount = await userModel.countDocuments();
     if (userCount > 0) {
-      console.log(`✅ User accounts preserved: ${userCount} users`);
+      // console.log(`✅ User accounts preserved: ${userCount} users`);
     } else {
-      console.log('⚠️  Warning: No users found after cleanup');
+      // console.log('⚠️  Warning: No users found after cleanup');
     }
     
     // Check if orders are gone
@@ -121,7 +121,7 @@ async function verifyFunctionality() {
     console.log(`✅ Wishlist system ready: ${wishlistCount} active wishlists`);
     
     console.log('\n🎯 System Status: READY FOR NEW ORDERS');
-    console.log('   - Users can login with their Google accounts');
+    // console.log('   - Users can login with their Google accounts');
     console.log('   - Cart functionality preserved (handled by controller)');
     console.log('   - Wishlist functionality preserved');
     console.log('   - Order placement will work normally');
@@ -152,12 +152,12 @@ async function main() {
     // Confirm before proceeding
     console.log('\n⚠️  CONFIRMATION REQUIRED:');
     console.log('   This will delete ALL orders but keep:');
-    console.log('   ✅ User accounts (Google accounts)');
+    // console.log('   ✅ User accounts (Google accounts)');
     console.log('   ✅ Cart functionality (handled by controller)');
     console.log('   ✅ Wishlist functionality');
     console.log('   ✅ All other system features');
     console.log('');
-    console.log('   After cleanup, users can still login and place new orders!');
+    // console.log('   After cleanup, users can still login and place new orders!');
     console.log('');
     
     // In production, you might want to add a confirmation prompt here
@@ -175,7 +175,7 @@ async function main() {
     
     console.log('\n✅ SAFE cleanup completed successfully!');
     console.log('   Your site is ready for real customers with clean order history.');
-    console.log('   All functionality preserved - users can login and order normally!');
+    // console.log('   All functionality preserved - users can login and order normally!');
     
   } catch (error) {
     console.error('\n❌ Cleanup failed:', error.message);

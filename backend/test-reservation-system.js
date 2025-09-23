@@ -49,7 +49,7 @@ async function testReservationSystem() {
     console.log('\n🚀 Starting concurrent reservation test...');
     
     // User 1: Check availability and reserve
-    console.log('\n👤 User 1: Checking stock availability...');
+    // console.log('\n👤 User 1: Checking stock availability...');
     const availability1 = await checkStockAvailability(testProduct._id, testSize.size, 1);
     console.log(`   Available: ${availability1.available}`);
     console.log(`   Available stock: ${availability1.availableStock}`);
@@ -67,16 +67,16 @@ async function testReservationSystem() {
           { $set: { 'sizes.$.reserved': (testSize.reserved || 0) + 1 } }
         );
         
-        console.log('   ✅ User 1 reservation successful');
+        // console.log('   ✅ User 1 reservation successful');
       } catch (error) {
-        console.log(`   ❌ User 1 reservation failed: ${error.message}`);
+        // console.log(`   ❌ User 1 reservation failed: ${error.message}`);
       }
     } else {
       console.log(`   ❌ Stock not available: ${availability1.error}`);
     }
     
     // User 2: Try to reserve the same stock
-    console.log('\n👤 User 2: Checking stock availability...');
+    // console.log('\n👤 User 2: Checking stock availability...');
     const availability2 = await checkStockAvailability(testProduct._id, testSize.size, 1);
     console.log(`   Available: ${availability2.available}`);
     console.log(`   Available stock: ${availability2.availableStock}`);
@@ -87,9 +87,9 @@ async function testReservationSystem() {
       try {
         const reservation2 = await reserveStock(testProduct._id, testSize.size, 1);
         console.log(`   🔒 Stock reserved: ${reservation2.reserved} units`);
-        console.log('   ✅ User 2 reservation successful');
+        // console.log('   ✅ User 2 reservation successful');
       } catch (error) {
-        console.log(`   ❌ User 2 reservation failed: ${error.message}`);
+        // console.log(`   ❌ User 2 reservation failed: ${error.message}`);
       }
     } else {
       console.log(`   ❌ Stock not available: ${availability2.error}`);
@@ -105,7 +105,7 @@ async function testReservationSystem() {
     console.log(`   Available: ${finalSize.stock - finalSize.reserved}`);
     
     // Simulate User 1 payment success
-    console.log('\n💳 User 1: Payment successful, confirming stock...');
+    // console.log('\n💳 User 1: Payment successful, confirming stock...');
     try {
       const confirmation = await confirmStockReservation(testProduct._id, testSize.size, 1);
       console.log(`   ✅ Stock confirmed: ${confirmation.stockDecremented} units`);
@@ -119,13 +119,13 @@ async function testReservationSystem() {
     const finalProductAfterConfirmation = await productModel.findById(testProduct._id);
     const finalSizeAfterConfirmation = finalProductAfterConfirmation.sizes.find(s => s.size === testSize.size);
     
-    console.log('\n📊 Final State After User 1 Payment:');
+    // console.log('\n📊 Final State After User 1 Payment:');
     console.log(`   Stock: ${finalSizeAfterConfirmation.stock}`);
     console.log(`   Reserved: ${finalSizeAfterConfirmation.reserved}`);
     console.log(`   Available: ${finalSizeAfterConfirmation.stock - finalSizeAfterConfirmation.reserved}`);
     
     // Test User 2 trying to buy again
-    console.log('\n👤 User 2: Trying to buy again after User 1 confirmed...');
+    // console.log('\n👤 User 2: Trying to buy again after User 1 confirmed...');
     const finalAvailability = await checkStockAvailability(testProduct._id, testSize.size, 1);
     console.log(`   Available: ${finalAvailability.available}`);
     console.log(`   Available stock: ${finalAvailability.availableStock}`);
@@ -137,8 +137,8 @@ async function testReservationSystem() {
     }
     
     console.log('\n🎯 Test Summary:');
-    console.log('   ✅ User 1 successfully reserved and confirmed stock');
-    console.log('   ❌ User 2 could not reserve stock (prevented overselling)');
+    // console.log('   ✅ User 1 successfully reserved and confirmed stock');
+    // console.log('   ❌ User 2 could not reserve stock (prevented overselling)');
     console.log('   🔒 Reservation system prevented double-sale of limited stock');
     
   } catch (error) {

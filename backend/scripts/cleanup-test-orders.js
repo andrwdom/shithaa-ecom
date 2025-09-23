@@ -183,7 +183,7 @@ async function identifyTestOrders() {
 }
 
 async function identifyTestUsers() {
-  console.log('\n🔍 Identifying test users...');
+  // console.log('\n🔍 Identifying test users...');
   
   const allUsers = await userModel.find({}).lean();
   const testUsers = [];
@@ -252,9 +252,9 @@ async function cleanupTestData() {
     // 2. Delete test users
     const testUsers = await identifyTestUsers();
     if (testUsers.length > 0) {
-      console.log(`\n👤 Found ${testUsers.length} test users to delete:`);
+      // console.log(`\n👤 Found ${testUsers.length} test users to delete:`);
       testUsers.forEach(user => {
-        console.log(`   - ${user.name} (${user.email}) - ${user.reason}`);
+        // console.log(`   - ${user.name} (${user.email}) - ${user.reason}`);
       });
       
       const userIds = testUsers.map(user => user._id);
@@ -264,9 +264,9 @@ async function cleanupTestData() {
       
       // Delete users
       const deleteResult = await userModel.deleteMany({ _id: { $in: userIds } });
-      console.log(`✅ Deleted ${deleteResult.deletedCount} test users and related data`);
+      // console.log(`✅ Deleted ${deleteResult.deletedCount} test users and related data`);
     } else {
-      console.log('✅ No test users found');
+      // console.log('✅ No test users found');
     }
     
     // 3. Clean up empty wishlists
@@ -293,7 +293,7 @@ async function showDatabaseStats() {
   const wishlistCount = await wishlistModel.countDocuments();
   
   console.log(`   - Orders: ${orderCount}`);
-  console.log(`   - Users: ${userCount}`);
+  // console.log(`   - Users: ${userCount}`);
   console.log(`   - Wishlists: ${wishlistCount}`);
 }
 
@@ -313,10 +313,10 @@ async function main() {
     const initialOrderCount = await orderModel.countDocuments();
     const initialUserCount = await userModel.countDocuments();
     console.log(`   - Orders: ${initialOrderCount}`);
-    console.log(`   - Users: ${initialUserCount}`);
+    // console.log(`   - Users: ${initialUserCount}`);
     
     // Confirm before proceeding
-    console.log('\n⚠️  WARNING: This will permanently delete all test orders and users!');
+    // console.log('\n⚠️  WARNING: This will permanently delete all test orders and users!');
     console.log('   Make sure you have a backup if needed.');
     
     // In production, you might want to add a confirmation prompt here

@@ -17,7 +17,7 @@ async function setAdmin() {
 
         let user = await userModel.findOne({ email });
         if (!user) {
-            console.log('User not found, creating new admin user...');
+            // console.log('User not found, creating new admin user...');
             user = new userModel({
                 name: 'Admin User',
                 email: email,

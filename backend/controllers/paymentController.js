@@ -417,7 +417,7 @@ export const createPhonePeSession = async (req, res) => {
     }
     
     const userEmail = email || checkoutSession.userEmail;
-    console.log(`[${correlationId}] User email:`, userEmail);
+    // console.log(`[${correlationId}] User email:`, userEmail);
     
     // 🔑 NEW: Stock is already reserved, so we don't need to validate again
     // The reservation system ensures stock availability
@@ -841,7 +841,7 @@ export const phonePeCallback = async (req, res) => {
           try {
             const { userModel } = await import('../models/userModel.js');
             await userModel.findByIdAndUpdate(order.userId, { cartData: {} });
-            console.log('User cart cleared successfully');
+            // console.log('User cart cleared successfully');
           } catch (cartError) {
             console.error('Failed to clear user cart:', cartError);
           }
@@ -884,7 +884,7 @@ export const phonePeCallback = async (req, res) => {
           try {
             const { userModel } = await import('../models/userModel.js');
             await userModel.findByIdAndUpdate(order.userId, { cartData: {} });
-            console.log('User cart cleared successfully');
+            // console.log('User cart cleared successfully');
           } catch (cartError) {
             console.error('Failed to clear user cart:', cartError);
           }
@@ -1168,7 +1168,7 @@ export const verifyPhonePePayment = async (req, res) => {
             try {
               const { userModel } = await import('../models/userModel.js');
               await userModel.findByIdAndUpdate(order.userId, { cartData: {} });
-              console.log('User cart cleared successfully');
+              // console.log('User cart cleared successfully');
             } catch (cartError) {
               console.error('Failed to clear user cart:', cartError);
             }
@@ -1201,7 +1201,7 @@ export const verifyPhonePePayment = async (req, res) => {
             try {
               const { userModel } = await import('../models/userModel.js');
               await userModel.findByIdAndUpdate(order.userId, { cartData: {} });
-              console.log('User cart cleared successfully');
+              // console.log('User cart cleared successfully');
             } catch (cartError) {
               console.error('Failed to clear user cart:', cartError);
             }

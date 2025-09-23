@@ -113,7 +113,7 @@ const addToCart = async (req, res) => {
         const { userId, itemId, size } = req.body
 
         if (!userId || !itemId || !size) {
-            console.log('❌ Missing required fields:', { userId: !!userId, itemId: !!itemId, size: !!size });
+            // console.log('❌ Missing required fields:', { userId: !!userId, itemId: !!itemId, size: !!size });
             return res.status(400).json({ 
                 success: false, 
                 message: "Missing required fields: userId, itemId, size" 
@@ -122,7 +122,7 @@ const addToCart = async (req, res) => {
 
         const userData = await userModel.findById(userId)
         if (!userData) {
-            console.log('❌ User not found:', userId);
+            // console.log('❌ User not found:', userId);
             return res.status(404).json({ 
                 success: false, 
                 message: "User not found" 
@@ -179,19 +179,19 @@ const updateCart = async (req, res) => {
 // Get user cart data
 const getUserCart = async (req, res) => {
     try {
-        console.log('🔍 getUserCart called with:', req.body);
+        // console.log('🔍 getUserCart called with:', req.body);
         const { userId } = req.body
         
         if (!userId) {
-            console.log('❌ No userId provided');
+            // console.log('❌ No userId provided');
             return res.status(400).json({ success: false, message: 'userId required' });
         }
         
         const userData = await userModel.findById(userId)
-        console.log('🔍 User found:', !!userData);
+        // console.log('🔍 User found:', !!userData);
         
         if (!userData) {
-            console.log('❌ User not found');
+            // console.log('❌ User not found');
             return res.status(404).json({ success: false, message: 'User not found' });
         }
         
@@ -499,19 +499,19 @@ const removeFromCart = async (req, res) => {
 // Get cart items by userId without authentication (for frontend restoration)
 const getCartItemsByUserId = async (req, res) => {
     try {
-        console.log('🔍 getCartItemsByUserId called with:', req.body);
+        // console.log('🔍 getCartItemsByUserId called with:', req.body);
         const { userId } = req.body
         
         if (!userId) {
-            console.log('❌ No userId provided');
+            // console.log('❌ No userId provided');
             return res.status(400).json({ success: false, message: 'userId required' });
         }
         
         const userData = await userModel.findById(userId)
-        console.log('🔍 User found:', !!userData);
+        // console.log('🔍 User found:', !!userData);
         
         if (!userData) {
-            console.log('❌ User not found');
+            // console.log('❌ User not found');
             return res.status(404).json({ success: false, message: 'User not found' });
         }
         

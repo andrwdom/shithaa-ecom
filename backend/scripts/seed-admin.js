@@ -19,7 +19,7 @@ async function seedAdmin() {
     const existingAdmin = await userModel.findOne({ email: adminEmail, role: 'admin' });
     
     if (existingAdmin) {
-      console.log('✅ Admin user already exists:', existingAdmin.email);
+      // console.log('✅ Admin user already exists:', existingAdmin.email);
       return;
     }
 
@@ -37,10 +37,10 @@ async function seedAdmin() {
 
     await adminUser.save();
     
-    console.log('✅ Admin user created successfully:');
+    // console.log('✅ Admin user created successfully:');
     console.log(`   Email: ${adminEmail}`);
-    console.log(`   Role: ${adminUser.role}`);
-    console.log(`   ID: ${adminUser._id}`);
+    // console.log(`   Role: ${adminUser.role}`);
+    // console.log(`   ID: ${adminUser._id}`);
     
   } catch (error) {
     console.error('❌ Error seeding admin user:', error);

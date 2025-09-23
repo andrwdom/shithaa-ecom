@@ -44,8 +44,8 @@ export const getUserOrders = async (req, res) => {
           return res.status(400).json({ message: 'No valid user identifier found' });
         }
         // Full debug logging
-        console.log('getUserOrders FULL DEBUG:');
-        console.log('req.user:', req.user);
+        // console.log('getUserOrders FULL DEBUG:');
+        // console.log('req.user:', req.user);
         console.log('orQuery:', JSON.stringify(orQuery, null, 2));
         const orders = await orderModel.find({ $or: orQuery })
             .sort({ date: -1 })
@@ -53,7 +53,7 @@ export const getUserOrders = async (req, res) => {
             .limit(Number(limit));
         console.log('Orders found:', orders.length);
         orders.forEach((order, idx) => {
-          console.log(`Order[${idx}]: _id=${order._id}, userId=${order.userId}, email=${order.email}, isTestOrder=${order.isTestOrder}`);
+          // console.log(`Order[${idx}]: _id=${order._id}, userId=${order.userId}, email=${order.email}, isTestOrder=${order.isTestOrder}`);
         });
         const total = await orderModel.countDocuments({ $or: orQuery });
         const totalPages = Math.ceil(total / limit);
@@ -258,12 +258,12 @@ const createStructuredOrder = async (req, res) => {
     console.log('=== CREATE STRUCTURED ORDER DEBUG ===');
     console.log('Request body:', JSON.stringify(req.body, null, 2));
     console.log('Request headers:', req.headers);
-    console.log('User info:', req.user);
+    // console.log('User info:', req.user);
     
     let { userInfo, shippingInfo, items, couponUsed, totalAmount, paymentStatus, createdAt } = req.body;
     
     console.log('Parsed fields:');
-    console.log('- userInfo:', userInfo);
+    // console.log('- userInfo:', userInfo);
     console.log('- shippingInfo:', shippingInfo);
     console.log('- items:', items);
     console.log('- totalAmount:', totalAmount);

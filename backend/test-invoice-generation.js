@@ -73,13 +73,13 @@ const testScenarios = [
         name: 'User Invoice Generation',
         description: 'Test invoice generation for user email',
         test: async () => {
-            console.log('\n🧪 Testing user invoice generation...');
+            // console.log('\n🧪 Testing user invoice generation...');
             
             try {
                 const pdfBuffer = await generateInvoiceBuffer(testOrderData);
                 
                 if (pdfBuffer && pdfBuffer.length > 0) {
-                    console.log(`✅ User invoice generated successfully (${pdfBuffer.length} bytes)`);
+                    // console.log(`✅ User invoice generated successfully (${pdfBuffer.length} bytes)`);
                     
                     // Save test PDF for inspection
                     const fs = await import('fs');
@@ -89,11 +89,11 @@ const testScenarios = [
                     
                     return true;
                 } else {
-                    console.log('❌ User invoice generation failed - empty buffer');
+                    // console.log('❌ User invoice generation failed - empty buffer');
                     return false;
                 }
             } catch (error) {
-                console.log('❌ User invoice generation error:', error.message);
+                // console.log('❌ User invoice generation error:', error.message);
                 return false;
             }
         }

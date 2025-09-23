@@ -28,9 +28,9 @@ try {
   const orderModel = await import('../models/orderModel.js');
   console.log('✅ orderModel imported successfully');
   
-  console.log('👤 Importing userModel...');
+  // console.log('👤 Importing userModel...');
   const userModel = await import('../models/userModel.js');
-  console.log('✅ userModel imported successfully');
+  // console.log('✅ userModel imported successfully');
   
   console.log('❤️ Importing Wishlist...');
   const wishlistModel = await import('../models/Wishlist.js');

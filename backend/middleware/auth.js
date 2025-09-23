@@ -13,42 +13,36 @@ export const verifyToken = async (req, res, next) => {
         return res.status(401).json({ success: false, message: 'Access Denied. No token provided.' });
     }
 
-    console.log('Auth middleware - Request authentication:', {
-      hasCookieToken: !!req.cookies?.token,
-      hasAuthHeader: !!req.headers.authorization,
-      hasTokenHeader: !!req.headers.token,
-      tokenFound: !!token,
-      method: req.method,
-      url: req.url
-    });
+    //     // // // // console.log('Auth middleware - Request authentication:', {
+    //   hasCookieToken: !!req.cookies?.token,
+    //   hasAuthHeader: !!req.headers.authorization,
+    //   hasTokenHeader: !!req.headers.token,
+    //   tokenFound: !!token,
+    //   method: req.method,
+    //   url: req.url
+    // });
 
     if (!token) {
-      console.log('Auth middleware - No token provided in cookies or headers');
+      // // // // console.log("token: [REDACTED]");
       return errorResponse(res, 401, 'Access token required. Please log in to continue.');
     }
 
-    console.log('Auth middleware - Token found, length:', token.length);
+    // // // // // // console.log("Auth middleware - Token found, length: [REDACTED]");
 
     try {
       const decoded = jwt.verify(token, JWT_SECRET);
       req.user = decoded;
-      console.log('Auth middleware - Token verified successfully for user:', decoded.email);
+      // // // // // // // // // console.log("Auth middleware - Token verified successfully for user: [REDACTED]");
       next();
     } catch (jwtError) {
-      console.log('Auth middleware - JWT verification failed:', {
-        error: jwtError.name,
-        message: jwtError.message,
-        tokenLength: token.length,
-        tokenStart: token.substring(0, 20) + '...',
-        currentTime: new Date()
-      });
+      // // // // console.log("Auth middleware - JWT verification failed: [REDACTED]");
 
       if (jwtError.name === 'TokenExpiredError') {
-        console.log('Auth middleware - Token expired:', {
-          expiredAt: jwtError.expiredAt,
-          currentTime: new Date(),
-          timeDifference: new Date() - jwtError.expiredAt
-        });
+        // // // // // console.log('Auth middleware - Token expired:', {
+        //   expiredAt: jwtError.expiredAt,
+        //   currentTime: new Date(),
+        //   timeDifference: new Date() - jwtError.expiredAt
+        // });
 
         // Return a specific error for expired tokens
         return errorResponse(res, 401, 'Your session has expired. Please log in again to continue.', {
@@ -57,10 +51,10 @@ export const verifyToken = async (req, res, next) => {
           message: 'Please log out and log back in to refresh your session.'
         });
       } else if (jwtError.name === 'JsonWebTokenError') {
-        console.log('Auth middleware - Invalid token format');
+        // // // // console.log("token: [REDACTED]");
         return errorResponse(res, 401, 'Invalid token format. Please log in again.');
       } else {
-        console.log('Auth middleware - JWT verification failed:', jwtError.message);
+        // // // console.log('Auth middleware - JWT verification failed:', jwtError.message);
         return errorResponse(res, 401, 'Invalid token. Please log in again.');
       }
     }
@@ -81,7 +75,7 @@ export const optionalAuth = async (req, res, next) => {
     }
     
     if (!token) {
-      console.log('Optional auth middleware - No token provided, proceeding as guest');
+      // // // // console.log("token: [REDACTED]");
       req.user = null;
       return next();
     }
@@ -89,15 +83,15 @@ export const optionalAuth = async (req, res, next) => {
     try {
       const decoded = jwt.verify(token, JWT_SECRET);
       req.user = decoded;
-      console.log('Optional auth middleware - Token verified for user:', decoded.email);
+      // // // // // // // // // console.log("Optional auth middleware - Token verified for user: [REDACTED]");
       next();
     } catch (jwtError) {
       if (jwtError.name === 'TokenExpiredError') {
-        console.log('Optional auth middleware - Token expired, proceeding as guest');
+        // // // // console.log("token: [REDACTED]");
         req.user = null;
         return next();
       } else {
-        console.log('Optional auth middleware - Invalid token, proceeding as guest');
+        // // // // console.log("token: [REDACTED]");
         req.user = null;
         return next();
       }

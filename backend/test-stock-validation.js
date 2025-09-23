@@ -117,7 +117,7 @@ class StockValidationTester {
 
       // Insert test user
       await this.db.collection('users').insertOne(TEST_USER);
-      console.log('✅ Test user created');
+      // console.log('✅ Test user created');
 
       return true;
     } catch (error) {

@@ -22,7 +22,7 @@ async function main() {
     console.log('No orders found');
   } else {
     orders.forEach(o => {
-      console.log({
+      // console.log({
         _id: o._id,
         email: o.email,
         userInfo: o.userInfo,

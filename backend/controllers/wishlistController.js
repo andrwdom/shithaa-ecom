@@ -7,9 +7,9 @@ export const addToWishlist = async (req, res) => {
     const { productId } = req.body;
     const userId = req.user.id;
 
-    console.log('Add to wishlist - User ID:', userId);
+    // console.log('Add to wishlist - User ID:', userId);
     console.log('Add to wishlist - Product ID:', productId);
-    console.log('Add to wishlist - User object:', req.user);
+    // console.log('Add to wishlist - User object:', req.user);
 
     // Check if product exists
     const product = await Product.findById(productId);
@@ -49,7 +49,7 @@ export const removeFromWishlist = async (req, res) => {
     const { productId } = req.params;
     const userId = req.user.id;
 
-    console.log('Remove from wishlist - User ID:', userId);
+    // console.log('Remove from wishlist - User ID:', userId);
     console.log('Remove from wishlist - Product ID:', productId);
 
     const deletedItem = await Wishlist.findOneAndDelete({ user: userId, product: productId });
@@ -74,8 +74,8 @@ export const getWishlist = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    console.log('Get wishlist - User ID:', userId);
-    console.log('Get wishlist - User object:', req.user);
+    // console.log('Get wishlist - User ID:', userId);
+    // console.log('Get wishlist - User object:', req.user);
 
     const wishlistItems = await Wishlist.find({ user: userId })
       .populate('product', 'name price originalPrice images description category categorySlug sizes customId')
@@ -110,7 +110,7 @@ export const getWishlistCount = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    console.log('Get wishlist count - User ID:', userId);
+    // console.log('Get wishlist count - User ID:', userId);
 
     const count = await Wishlist.countDocuments({ user: userId });
 
