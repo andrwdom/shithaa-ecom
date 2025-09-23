@@ -40,7 +40,7 @@ const EXPECTED_INDEXES = [
     'rating_-1',
     'updatedAt_-1',
     'categorySlug_1_inStock_1',
-    'categorySlug_1_price_1',
+    // 'categorySlug_1_price_1', // REMOVED - replaced by more efficient partial index
     'categorySlug_1_isNewArrival_1',
     'categorySlug_1_isBestSeller_1',
     'categorySlug_1_sleeveType_1',
@@ -55,7 +55,7 @@ const EXPECTED_INDEXES = [
     'createdAt_-1_categorySlug_1',
     'updatedAt_-1_categorySlug_1',
     '_id_1_customId_1',
-    'category_price_in_stock',
+    'category_price_in_stock', // Partial index - more efficient than full categorySlug_1_price_1
     'size_category_with_stock'
 ];
 
