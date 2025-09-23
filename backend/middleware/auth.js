@@ -69,7 +69,7 @@ export const optionalAuth = async (req, res, next) => {
     // Check for token in HttpOnly cookies first
     let token = req.cookies?.token;
     
-    // Fallback to Authorization header for backward compatibility
+    // Check Authorization header for backward compatibility
     if (!token) {
       token = req.headers.authorization?.split(' ')[1] || req.headers.token;
     }

@@ -64,36 +64,82 @@ productSchema.pre('save', function(next) {
     next();
 });
 
-// Add explicit unique index for customId
-productSchema.index({ customId: 1 }, { unique: true });
+// =============================================================================
+// 🚀 PRODUCTION-OPTIMIZED INDEXES FOR HIGH-TRAFFIC E-COMMERCE
+// =============================================================================
 
-// 🔧 PRODUCTION OPTIMIZED: Comprehensive indexes for high-traffic e-commerce
-// Category and filtering indexes
-productSchema.index({ categorySlug: 1 }); // For category-based queries
-productSchema.index({ category: 1 }); // For category name queries
-productSchema.index({ price: 1 }); // For price range queries
-productSchema.index({ createdAt: -1 }); // For sorting by creation date
-productSchema.index({ isNewArrival: 1 }); // For new arrival filters
-productSchema.index({ isBestSeller: 1 }); // For best seller filters
-productSchema.index({ inStock: 1 }); // For stock availability queries
-productSchema.index({ 'sizes.stock': 1 }); // For stock queries
-productSchema.index({ 'sizes.size': 1 }); // For size filtering
-productSchema.index({ sleeveType: 1 }); // For sleeve type filtering
+// 1. UNIQUE INDEXES (Critical for data integrity)
+productSchema.index({ customId: 1 }, { unique: true }); // Custom ID lookup
 
-// Compound indexes for complex queries (CRITICAL for performance)
+// 2. SINGLE FIELD INDEXES (Most frequently queried fields)
+productSchema.index({ categorySlug: 1 }); // Primary category filtering
+productSchema.index({ category: 1 }); // Category name filtering (backup)
+productSchema.index({ price: 1 }); // Price range queries
+productSchema.index({ inStock: 1 }); // Stock availability
+productSchema.index({ isNewArrival: 1 }); // New arrivals filter
+productSchema.index({ isBestSeller: 1 }); // Best sellers filter
+productSchema.index({ sleeveType: 1 }); // Sleeve type filtering
+productSchema.index({ 'sizes.size': 1 }); // Size filtering
+productSchema.index({ 'sizes.stock': 1 }); // Stock level queries
+
+// 3. SORTING INDEXES (Optimized for common sort patterns)
+productSchema.index({ createdAt: -1 }); // Newest first (default)
+productSchema.index({ displayOrder: 1 }); // Custom display order
+productSchema.index({ rating: -1 }); // Highest rated first
+productSchema.index({ updatedAt: -1 }); // Recently updated
+
+// 4. COMPOUND INDEXES (Critical for complex queries - order matters!)
+// Category + Filter combinations (most common queries)
 productSchema.index({ categorySlug: 1, inStock: 1 }); // Category + stock
 productSchema.index({ categorySlug: 1, price: 1 }); // Category + price range
 productSchema.index({ categorySlug: 1, isNewArrival: 1 }); // Category + new arrivals
 productSchema.index({ categorySlug: 1, isBestSeller: 1 }); // Category + best sellers
+productSchema.index({ categorySlug: 1, sleeveType: 1 }); // Category + sleeve type
+
+// Filter + Sort combinations
 productSchema.index({ inStock: 1, price: 1 }); // Stock + price range
+productSchema.index({ isNewArrival: 1, createdAt: -1 }); // New arrivals + date
+productSchema.index({ isBestSeller: 1, rating: -1 }); // Best sellers + rating
+
+// Size + Stock combinations (for size filtering with stock)
+productSchema.index({ 'sizes.size': 1, 'sizes.stock': 1 }); // Size + stock level
+productSchema.index({ categorySlug: 1, 'sizes.size': 1 }); // Category + size
+
+// Display order combinations
 productSchema.index({ displayOrder: 1, categorySlug: 1 }); // Display order + category
+productSchema.index({ displayOrder: 1, inStock: 1 }); // Display order + stock
 
-// Text search index for product search
-productSchema.index({ name: 'text', description: 'text' }); // Text search index
+// 5. TEXT SEARCH INDEX (For product search functionality)
+productSchema.index({ 
+    name: 'text', 
+    description: 'text',
+    customId: 'text'
+}, { 
+    weights: { 
+        name: 10,        // Name matches are most important
+        customId: 8,     // Custom ID matches are very important
+        description: 1   // Description matches are less important
+    },
+    name: 'product_search_index'
+});
 
-// Performance indexes for admin operations
+// 6. ADMIN/OPERATIONAL INDEXES
 productSchema.index({ createdAt: -1, categorySlug: 1 }); // Admin product listing
-productSchema.index({ updatedAt: -1 }); // For recent updates
+productSchema.index({ updatedAt: -1, categorySlug: 1 }); // Recent updates by category
+productSchema.index({ _id: 1, customId: 1 }); // ID + customId lookup (for admin)
+
+// 7. PARTIAL INDEXES (For better performance on filtered data)
+// Only index products that are in stock (reduces index size)
+productSchema.index({ categorySlug: 1, price: 1 }, { 
+    partialFilterExpression: { inStock: true },
+    name: 'category_price_in_stock'
+});
+
+// Only index products with stock > 0 for size queries
+productSchema.index({ 'sizes.size': 1, categorySlug: 1 }, {
+    partialFilterExpression: { 'sizes.stock': { $gt: 0 } },
+    name: 'size_category_with_stock'
+});
 
 const productModel = mongoose.models.product || mongoose.model("product", productSchema);
 

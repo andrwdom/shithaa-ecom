@@ -346,55 +346,10 @@ export const firebaseLogin = async (req, res) => {
     } catch (err) {
       console.error('Firebase token verification failed:', err);
 
-      // CRITICAL: In production, never fall back. Always fail securely.
-      if (process.env.NODE_ENV === 'production') {
-        return res.status(500).json({ 
-          success: false, 
-          message: 'Could not verify login. Server configuration error.' 
-        });
-      }
-
-      // Fallback for LOCAL DEVELOPMENT ONLY when Firebase Admin is not available
-      // console.log("token: [REDACTED]");
-      let email = 'test@example.com';
-      try {
-        const tokenParts = idToken.split('.');
-        if (tokenParts.length === 3) {
-          const payload = JSON.parse(Buffer.from(tokenParts[1], 'base64').toString());
-          email = payload.email || 'test@example.com';
-        }
-      } catch (e) {
-        // Ignore parsing errors
-      }
-      
-      let user = await userModel.findOne({ email });
-      if (!user) {
-        user = await userModel.create({ name: 'Test User', email, password: '' });
-      }
-      
-      const accessToken = createToken({ id: user._id, email: user.email, role: 'user' }, '24h');
-      const refreshToken = createToken({ id: user._id, email: user.email, role: 'user', type: 'refresh' }, '7d');
-      
-      res.cookie('token', accessToken, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax',
-          maxAge: 24 * 60 * 60 * 1000,
-          path: '/'
-      });
-      
-      res.cookie('refresh_token', refreshToken, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax',
-          maxAge: 7 * 24 * 60 * 60 * 1000,
-          path: '/'
-      });
-      
-      return res.json({ 
-        success: true, 
-        data: { user, token: accessToken }, 
-        message: 'Login successful (using fallback authentication)' 
+      // SECURITY: Always fail securely - no authentication bypasses
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Authentication failed. Please try again or contact support.' 
       });
     }
 
@@ -405,10 +360,12 @@ export const firebaseLogin = async (req, res) => {
     // Find or create user in your DB
     let user = await userModel.findOne({ email: decoded.email });
     if (!user) {
+      // SECURITY: Create user with proper validation - no empty passwords
+      const hashedPassword = await bcrypt.hash(decoded.uid + Date.now(), 10); // Generate secure password
       user = await userModel.create({
         name: decoded.name || '',
         email: decoded.email,
-        password: '', // Not used for Firebase users
+        password: hashedPassword, // Secure password for Firebase users
       });
     } else if (decoded.name && decoded.name !== user.name) {
       // Always sync Google display name to user model if changed
