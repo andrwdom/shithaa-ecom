@@ -80,7 +80,7 @@ export const metadata: Metadata = {
     description: 'Discover elegant maternity wear, mom wear, and feeding essentials at Shithaa. Premium quality, comfortable designs for expecting mothers. Best maternity clothing online.',
     images: [
       {
-        url: '/shithaa-logo.jpg',
+        url: '/images/logos/shithaa-logo.webp',
         width: 1200,
         height: 630,
         alt: 'Shithaa - Elegant Maternity & Feeding Wear - Premium Maternity Clothing',
@@ -91,7 +91,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Shithaa - Elegant Maternity & Feeding Wear | Premium Maternity Clothing',
     description: 'Discover elegant maternity wear, mom wear, and feeding essentials at Shithaa. Premium quality, comfortable designs for expecting mothers. Best maternity clothing online.',
-    images: ['/shithaa-logo.jpg'],
+    images: ['/images/logos/shithaa-logo.webp'],
     creator: '@shithaa',
     site: '@shithaa',
   },
@@ -127,9 +127,9 @@ export default function RootLayout({
     <html lang="en" className={`${playfairDisplay.variable} ${inter.variable}`}>
       <head>
         {/* Favicon Setup */}
-        <link rel="icon" href="/shithaa-logo.jpg" type="image/jpeg" />
-        <link rel="shortcut icon" href="/shithaa-logo.jpg" type="image/jpeg" />
-        <link rel="apple-touch-icon" href="/shithaa-logo.jpg" />
+        <link rel="icon" href="/images/logos/shithaa-logo.webp" type="image/webp" />
+        <link rel="shortcut icon" href="/images/logos/shithaa-logo.webp" type="image/webp" />
+        <link rel="apple-touch-icon" href="/images/logos/shithaa-logo.webp" />
         <link rel="manifest" href="/site.webmanifest" />
         <meta name="theme-color" content="#473C66" />
         <meta name="msapplication-TileColor" content="#473C66" />
@@ -137,7 +137,7 @@ export default function RootLayout({
         <meta name="format-detection" content="telephone=no" />
         
         {/* Preload critical images */}
-        <link rel="preload" as="image" href="/shithaa-logo.jpg" type="image/jpeg" fetchpriority="high" />
+        <link rel="preload" as="image" href="/images/logos/shithaa-logo.webp" type="image/webp" fetchpriority="high" />
         
         {/* WebP preloads will be added after running the optimization script */}
         
@@ -150,7 +150,7 @@ export default function RootLayout({
               "@type": "Organization",
               "name": "Shithaa",
               "url": "https://shithaa.in",
-              "logo": "https://shithaa.in/shithaa-logo.jpg",
+              "logo": "https://shithaa.in/images/logos/shithaa-logo.webp",
               "description": "Elegant Maternity & Feeding Wear - Premium Maternity Clothing",
               "address": {
                 "@type": "PostalAddress",
@@ -203,7 +203,7 @@ export default function RootLayout({
               "name": "Shithaa",
               "description": "Elegant Maternity & Feeding Wear - Premium Maternity Clothing",
               "url": "https://shithaa.in",
-              "logo": "https://shithaa.in/shithaa-logo.jpg",
+              "logo": "https://shithaa.in/images/logos/shithaa-logo.webp",
               "category": "Fashion & Apparel",
               "slogan": "Elegant Maternity & Feeding Wear",
               "knowsAbout": [

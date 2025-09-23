@@ -39,17 +39,22 @@ export default function OptimizedImage({
   const [imageError, setImageError] = useState(false)
   const [fallbackSrc, setFallbackSrc] = useState<string>('')
 
-  // Generate fallback image URL
+  // Generate fallback image URL - ensure Cloudflare domain
   useEffect(() => {
     if (src && !src.startsWith('data:')) {
-      // Try to create a fallback URL
+      // Try to create a fallback URL through Cloudflare
       const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://shithaa.in'
-      const fullSrc = src.startsWith('http') ? src : `${baseUrl}${src}`
+      let fullSrc = src.startsWith('http') ? src : `${baseUrl}${src}`
+      
+      // Ensure all URLs go through Cloudflare domain
+      if (fullSrc.includes('localhost:4000') || fullSrc.includes('127.0.0.1')) {
+        fullSrc = fullSrc.replace(/https?:\/\/[^\/]+/, 'https://shithaa.in')
+      }
       
       // If it's a hero thumbnail, try the original image path
       if (src.includes('/uploads/hero-thumbs/')) {
         const originalPath = src.replace('/uploads/hero-thumbs/', '/uploads/')
-        setFallbackSrc(originalPath)
+        setFallbackSrc(originalPath.startsWith('http') ? originalPath : `${baseUrl}${originalPath}`)
       } else {
         setFallbackSrc(fullSrc)
       }

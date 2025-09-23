@@ -40,6 +40,9 @@ const nextConfig = {
     minimumCacheTTL: 60 * 60 * 24 * 30, // 30 days
     dangerouslyAllowSVG: true,
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
+    // Cloudflare optimization settings
+    loader: 'default',
+    loaderFile: './lib/image-loader.js',
   },
   experimental: {
     // optimizeCss: true, // Temporarily disabled to fix build error

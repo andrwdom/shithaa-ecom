@@ -2,6 +2,7 @@
 import { motion } from "framer-motion"
 import { Heart, Instagram, Sparkles, Quote, Baby, Users, Smile } from "lucide-react"
 import Image from "next/image"
+import OptimizedStaticImage from "@/components/optimized-static-image"
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -102,7 +103,7 @@ export default function AboutPage() {
                 {/* Founder Image */}
                 <div className="relative">
                   <div className="bg-white rounded-2xl p-3 shadow-lg transform rotate-2">
-                    <Image
+                    <OptimizedStaticImage
                       src="/about-us.jpg"
                       alt="Founder of Shithaa with her child, representing the mother-child bond"
                       width={250}

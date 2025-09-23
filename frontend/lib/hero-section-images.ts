@@ -108,13 +108,22 @@ function shuffleArray<T>(array: T[]): T[] {
 function normalizeImageUrl(url: string): string {
   if (!url) return ''
   
-  // Handle relative URLs
+  // Handle relative URLs - ensure they go through Cloudflare domain
   if (url.startsWith('/')) {
-    return url
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://shithaa.in'
+    return `${baseUrl}${url}`
   }
   
-  // Handle absolute URLs
+  // Handle absolute URLs - ensure they go through Cloudflare domain
   if (url.startsWith('http')) {
+    // If it's already using our domain, keep it
+    if (url.includes('shithaa.in')) {
+      return url
+    }
+    // Convert any VPS direct URLs to Cloudflare domain
+    if (url.includes('localhost:4000') || url.includes('127.0.0.1')) {
+      return url.replace(/https?:\/\/[^\/]+/, 'https://shithaa.in')
+    }
     return url
   }
   
