@@ -4,6 +4,9 @@ import { dirname, join } from 'path';
 import { existsSync } from 'fs';
 import dotenv from 'dotenv';
 
+// Initialize Sentry for error monitoring (non-intrusive)
+import * as Sentry from '@sentry/node';
+
 // Load .env file from the correct path FIRST
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -14,6 +17,16 @@ console.log('🔧 .env file exists:', existsSync(envPath));
 
 // Load environment variables
 dotenv.config({ path: envPath });
+
+// Initialize Sentry (only in production to avoid breaking dev)
+if (process.env.NODE_ENV === 'production' && process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    tracesSampleRate: 0.1,
+    debug: false,
+  });
+  console.log('✅ Sentry initialized for error monitoring');
+}
 
 // Now import config (which also loads dotenv but won't conflict)
 import { config } from './config.js'
@@ -72,6 +85,8 @@ app.set('trust proxy', 1)
 const allowedOrigins = [
     'https://shithaa.in',
     'https://www.shithaa.in',
+    'http://shithaa.in',         // HTTP version for compatibility (temporary)
+    'http://www.shithaa.in',     // HTTP www version (temporary)
     'https://admin.shithaa.in',  // Admin panel
     'http://localhost:3000',     // Frontend dev
     'http://localhost:5173',     // Admin dev
@@ -81,17 +96,16 @@ const allowedOrigins = [
 
 const corsOptions = {
     origin: (origin, callback) => {
-        // Enhanced logging for debugging
-        // console.log('CORS Check:', {
-        //     origin: origin || 'undefined',
-        //     referer: origin ? 'N/A' : 'No origin header',
-        //     userAgent: 'N/A', // Will be filled by caller
-        //     timestamp: new Date().toISOString()
-        // });
+        // Enhanced logging for debugging (temporarily enabled)
+        console.log('CORS Check:', {
+            origin: origin || 'undefined',
+            timestamp: new Date().toISOString()
+        });
         
         // Allow requests with no origin (like mobile apps, curl requests, or server-to-server)
         // Also allow all origins in development
         if (!origin || allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
+            console.log('✅ CORS allowed for origin:', origin || 'no origin');
             callback(null, true);
         } else {
             console.log('❌ CORS blocked origin:', origin);
@@ -111,6 +125,11 @@ const corsOptions = {
 // CRITICAL: Handle CORS and preflight requests BEFORE any other middleware
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
+
+// Add Sentry request handler (non-intrusive - only in production)
+if (process.env.NODE_ENV === 'production' && process.env.SENTRY_DSN) {
+  app.use(Sentry.requestHandler());
+}
 
 // Connect to MongoDB
 connectDB().then(async () => {
@@ -546,6 +565,11 @@ app.use((err, req, res, next) => {
         next(err);
     }
 });
+
+// Add Sentry error handler (non-intrusive - only in production)
+if (process.env.NODE_ENV === 'production' && process.env.SENTRY_DSN) {
+  app.use(Sentry.errorHandler());
+}
 
 // General error handling middleware - PRODUCTION OPTIMIZED
 app.use((err, req, res, next) => {

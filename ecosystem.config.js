@@ -94,6 +94,24 @@ export default {
       out_file: './backend/logs/stock-cleanup-worker-out.log',
       log_file: './backend/logs/stock-cleanup-worker-combined.log',
       time: true
+    },
+    {
+      name: 'shithaa-reservation-expiry-worker',
+      script: 'backend/workers/reservationExpiryWorker.js',
+      cwd: '/var/www/shithaa-ecom',
+      instances: 1,
+      exec_mode: 'fork',
+      autorestart: true,
+      watch: false,
+      max_memory_restart: '500M',
+      env_file: '/var/www/shithaa-ecom/backend/.env',
+      env: {
+        NODE_ENV: 'production'
+      },
+      error_file: './backend/logs/reservation-expiry-worker-err.log',
+      out_file: './backend/logs/reservation-expiry-worker-out.log',
+      log_file: './backend/logs/reservation-expiry-worker-combined.log',
+      time: true
     }
   ]
 };

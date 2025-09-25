@@ -1,4 +1,6 @@
 /** @type {import('next').NextConfig} */
+import { withSentryConfig } from '@sentry/nextjs';
+
 const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
@@ -130,4 +132,16 @@ const nextConfig = {
   },
 }
 
-export default nextConfig
+// Wrap with Sentry configuration (non-intrusive)
+const sentryWebpackPluginOptions = {
+  // Additional config options for the Sentry webpack plugin
+  silent: true, // Suppresses source map uploading logs during build
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  // Only upload source maps in production
+  widenClientFileUpload: true,
+  hideSourceMaps: true,
+  disableLogger: true,
+};
+
+export default withSentryConfig(nextConfig, sentryWebpackPluginOptions);
