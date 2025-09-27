@@ -118,12 +118,12 @@ export async function phonePeWebhookHandler(req, res) {
               orderStatus: 'CONFIRMED', 
               paymentStatus: 'PAID',
               confirmedAt: new Date(),
-              paidAt: new Date(),
-              phonepeResponse: req.body,
-              updatedAt: new Date()
-            },
-            { session }
-          );
+                paidAt: new Date(),
+                phonepeResponse: req.body,
+                updatedAt: new Date()
+              },
+              { session }
+            );
           
           // Check if stock is already confirmed
           if (!draftOrder.stockConfirmed) {
