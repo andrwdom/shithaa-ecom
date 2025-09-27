@@ -49,6 +49,7 @@ import monitoringRouter from './routes/monitoring.js'
 import maintenanceRouter from './routes/maintenance.js'
 import webhookManagementRouter from './routes/webhookManagement.js'
 import { maintenanceMode } from './middleware/maintenanceMode.js'
+import { startReconciliationCron } from './utils/reconciliation.js'
 import { requestLogger, quickRequestLogger, fileRequestLogger } from './middleware/requestLogger.js'
 import redisService from './services/redisService.js'
 import admin from 'firebase-admin'
@@ -674,6 +675,10 @@ async function startServer() {
       console.log(`✅ MongoDB: ${process.env.MONGODB_URI ? 'CONFIGURED' : 'NOT CONFIGURED'}`);
       console.log(`✅ JWT: ${process.env.JWT_SECRET ? 'CONFIGURED' : 'NOT CONFIGURED'}`);
       console.log(`✅ PhonePe: ${process.env.PHONEPE_MERCHANT_ID ? 'CONFIGURED' : 'NOT CONFIGURED'}`);
+      
+      // Start reconciliation cron job for draft orders
+      startReconciliationCron();
+      console.log(`✅ Reconciliation cron job started`);
   });
   
   return server;

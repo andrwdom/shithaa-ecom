@@ -35,7 +35,11 @@ const orderSchema = new mongoose.Schema({
     }],
     totalPrice: { type: Number },
     paymentMethod: { type: String },
-    status: { type: String, default: 'Pending' },
+    status: { 
+        type: String, 
+        enum: ['DRAFT', 'PENDING', 'CONFIRMED', 'SHIPPED', 'DELIVERED', 'CANCELLED'],
+        default: 'DRAFT' 
+    },
     // New structured fields
     userInfo: {
         userId: { type: mongoose.Schema.Types.ObjectId, ref: 'user' },
@@ -80,8 +84,16 @@ const orderSchema = new mongoose.Schema({
     },
     shippingCost: Number,
     total: Number,
-    paymentStatus: { type: String, default: 'pending' },
-    orderStatus: { type: String, default: 'pending' },
+    paymentStatus: { 
+        type: String, 
+        enum: ['PENDING', 'PAID', 'FAILED', 'REFUNDED'],
+        default: 'PENDING' 
+    },
+    orderStatus: { 
+        type: String, 
+        enum: ['DRAFT', 'PENDING', 'CONFIRMED', 'SHIPPED', 'DELIVERED', 'CANCELLED'],
+        default: 'DRAFT' 
+    },
     placedAt: { type: Date, default: Date.now },
     isTestOrder: { type: Boolean, default: false },
     orderId: { type: String, required: true },
@@ -109,6 +121,12 @@ const orderSchema = new mongoose.Schema({
     // Stock management fields
     stockConfirmed: { type: Boolean, default: false },
     stockConfirmedAt: { type: Date },
+    stockReserved: { type: Boolean, default: false }, // Track if stock is temp-reserved
+    
+    // Idempotency and reliability fields
+    idempotencyKey: { type: String, sparse: true }, // For safe retries
+    draftCreatedAt: { type: Date, default: Date.now }, // When draft was created
+    confirmedAt: { type: Date }, // When payment was confirmed
     
     // Shipping tracking information
     shippingTracking: {
@@ -148,6 +166,9 @@ const orderSchema = new mongoose.Schema({
 // Add explicit unique index for orderId
 orderSchema.index({ orderId: 1 }, { unique: true });
 
+// Add unique index for idempotency key (critical for preventing duplicates)
+orderSchema.index({ idempotencyKey: 1 }, { unique: true, sparse: true });
+
 // 🔧 PRODUCTION OPTIMIZED: Comprehensive indexes for high-traffic e-commerce
 // Basic indexes
 orderSchema.index({ userId: 1 }); // For user-specific order queries
@@ -172,6 +193,10 @@ orderSchema.index({ isTestOrder: 1, placedAt: -1 }); // Test orders filtering
 orderSchema.index({ total: 1, placedAt: -1 }); // Revenue analysis
 orderSchema.index({ 'shippingInfo.state': 1, placedAt: -1 }); // Geographic analysis
 orderSchema.index({ stockConfirmed: 1, orderStatus: 1 }); // Stock management
+
+// Draft order management indexes (critical for reconciliation)
+orderSchema.index({ status: 1, paymentStatus: 1, draftCreatedAt: -1 }); // Find unconfirmed drafts
+orderSchema.index({ phonepeTransactionId: 1, status: 1 }); // Webhook processing
 
 // Note: checkoutSessionId index already exists via unique: true in schema
 

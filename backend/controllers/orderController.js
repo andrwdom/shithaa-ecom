@@ -238,7 +238,7 @@ export const createOrder = async (req, res) => {
             })),
             totalPrice,
             paymentMethod,
-            status: 'Pending',
+            status: 'PENDING',
             isTestOrder: isTestOrder || false,
             userId: req.body.userId || (req.user && req.user.id),
             userInfo: { email: userEmail },
@@ -352,9 +352,9 @@ const createStructuredOrder = async (req, res) => {
       items: itemsWithIds,
       couponUsed: couponUsed || null,
       totalAmount,
-      status: 'Pending',
-      orderStatus: 'Pending',
-      paymentStatus: paymentStatus === 'paid' ? 'paid' : 'pending',
+      status: 'PENDING',
+      orderStatus: 'PENDING',
+      paymentStatus: paymentStatus === 'paid' ? 'PAID' : 'PENDING',
       createdAt: createdAt ? new Date(createdAt) : new Date(),
       email: userEmail,
       userId: userInfo.userId || undefined,
@@ -452,7 +452,7 @@ const placeOrder = async (req, res) => {
       })),
       totalPrice,
       paymentMethod,
-      status: 'Pending',
+      status: 'PENDING',
       isTestOrder: isTestOrder || false,
       userId: req.user && req.user.id,
       userInfo: { email: userEmail },
@@ -1059,7 +1059,7 @@ export const getOrdersByEmail = async (req, res) => {
     // Patch: always include a top-level status field for frontend compatibility
     orders = orders.map(order => {
       const o = order.toObject();
-      o.status = o.status || o.orderStatus || o.paymentStatus || 'Pending';
+      o.status = o.status || o.orderStatus || o.paymentStatus || 'PENDING';
       return o;
     });
     res.json({ success: true, orders });

@@ -54,69 +54,55 @@ export async function phonePeWebhookHandler(req, res) {
     if (payload.orderId && payload.state) {
       console.log('🔔 WEBHOOK: Processing payment update for orderId:', payload.orderId, 'state:', payload.state);
       
-      // Find the payment session by PhonePe transaction ID
-      const paymentSession = await PaymentSession.findOne({ phonepeTransactionId: payload.orderId });
-      
-      // ---------- IDP GUARD (MOVED UP) ----------
       const state = (payload?.state || payload?.status || payload?.transactionStatus || '').toString().toUpperCase();
       const isSuccess = ['COMPLETED','SUCCESS','PAID','CAPTURED','OK'].includes(state);
 
-      // Ensure payment session exists BEFORE processing
-      if (!paymentSession) {
-        EnhancedLogger.criticalAlert('WEBHOOK: Payment session not found', {
+      // 🔑 DRAFT ORDER PATTERN: Find draft order by PhonePe transaction ID
+      const draftOrder = await orderModel.findOne({ 
+        phonepeTransactionId: payload.orderId,
+        status: 'DRAFT'
+      });
+      
+      if (!draftOrder) {
+        // Check if order already exists and is confirmed (idempotency)
+        const existingOrder = await orderModel.findOne({ 
+          phonepeTransactionId: payload.orderId,
+          paymentStatus: 'PAID'
+        });
+        
+        if (existingOrder) {
+          console.log('🔔 WEBHOOK: Order already confirmed, skipping duplicate processing');
+          return res.status(200).json({ 
+            success: true, 
+            message: 'already_processed',
+            orderId: existingOrder._id 
+          });
+        }
+        
+        EnhancedLogger.criticalAlert('WEBHOOK: Draft order not found', {
           correlationId,
           orderId: payload.orderId,
           state: state,
           payload: payload
         });
-        return res.status(404).json({ success: false, message: 'payment_session_not_found' });
+        return res.status(404).json({ success: false, message: 'draft_order_not_found' });
       }
       
-      EnhancedLogger.webhookLog('INFO', 'Found payment session, updating status', {
+      EnhancedLogger.webhookLog('INFO', 'Found draft order, processing payment update', {
         correlationId,
-        sessionId: paymentSession._id,
-        phonepeTransactionId: paymentSession.phonepeTransactionId,
-        userEmail: paymentSession.userEmail,
-        newStatus: payload.state === 'COMPLETED' ? 'success' : 'failed',
+        orderId: draftOrder._id,
+        phonepeTransactionId: draftOrder.phonepeTransactionId,
+        userEmail: draftOrder.userInfo?.email,
+        newStatus: isSuccess ? 'CONFIRMED' : 'CANCELLED',
         state: payload.state
       });
       
-      paymentSession.status = payload.state === 'COMPLETED' ? 'success' : 'failed';
-      await paymentSession.save();
-      
-      EnhancedLogger.webhookLog('SUCCESS', 'Payment session updated successfully', {
-        correlationId,
-        sessionId: paymentSession._id,
-        status: paymentSession.status
-      });
-
-      // Check if order already exists (created on successful payment)
-      let order = null;
-      if (paymentSession.orderId) {
-        order = await orderModel.findById(paymentSession.orderId);
-      }
-
-      // Idempotency guard: skip if order already exists and is confirmed
-      if (order && order.stockConfirmed) {
-        console.log('🔔 WEBHOOK: order already exists and stock confirmed for payment session', paymentSession._id.toString());
-        // If payment success reported but order.status isn't 'paid', fix that without touching stock
-        if (isSuccess && order.status !== 'paid') {
-          order.status = 'paid';
-          order.paymentId = payload.paymentId || payload.transactionId || order.paymentId;
-          await order.save();
-        }
-        return res.status(200).json({ success: true, message: 'already_processed' });
-      }
-      // ---------- END IDP GUARD ----------
-      
-      console.log('🔔 WEBHOOK: Found payment session:', paymentSession._id, 'Order exists:', !!order);
-      
       if (isSuccess) {
-        EnhancedLogger.webhookLog('INFO', 'Payment successful, creating order and confirming stock', {
+        EnhancedLogger.webhookLog('INFO', 'Payment successful, confirming draft order', {
           correlationId,
-          sessionId: paymentSession._id,
-          phonepeTransactionId: paymentSession.phonepeTransactionId,
-          userEmail: paymentSession.userEmail
+          orderId: draftOrder._id,
+          phonepeTransactionId: draftOrder.phonepeTransactionId,
+          userEmail: draftOrder.userInfo?.email
         });
         
         // Start a MongoDB transaction for atomicity
@@ -124,130 +110,30 @@ export async function phonePeWebhookHandler(req, res) {
         await session.startTransaction();
         
         try {
-          // Create order if it doesn't exist
-          if (!order) {
-            // Create order from payment session data
-            const orderPayload = paymentSession.orderPayload;
-            
-            // 🔑 CRITICAL FIX: Check if orderPayload exists with fallback
-            if (!orderPayload) {
-              EnhancedLogger.criticalAlert('WEBHOOK: Order payload is missing for payment session', {
-                correlationId,
-                sessionId: paymentSession._id,
-                phonepeTransactionId: paymentSession.phonepeTransactionId,
-                userEmail: paymentSession.userEmail
-              });
-              
-              // FALLBACK: Try to create order from payment session data
-              EnhancedLogger.webhookLog('WARN', 'Attempting fallback order creation from payment session data', {
-                correlationId,
-                sessionId: paymentSession._id
-              });
-              
-              if (!paymentSession.orderData) {
-                EnhancedLogger.criticalAlert('WEBHOOK: Both orderPayload and orderData are missing for payment session', {
-                  correlationId,
-                  sessionId: paymentSession._id,
-                  phonepeTransactionId: paymentSession.phonepeTransactionId,
-                  userEmail: paymentSession.userEmail
-                });
-                throw new Error('Order payload and orderData are missing from payment session');
-              }
-              
-              // Create minimal order from available data
-              const fallbackOrderData = {
-                orderId: `ORD_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                userInfo: {
-                  email: paymentSession.userEmail,
-                  userId: paymentSession.userId
-                },
-                shippingInfo: paymentSession.orderData.shipping || {},
-                cartItems: paymentSession.orderData.cartItems || [],
-                items: paymentSession.orderData.cartItems || [],
-                totalAmount: paymentSession.orderData.amount || 0,
-                total: paymentSession.orderData.amount || 0,
-                subtotal: paymentSession.orderData.amount || 0,
-                paymentStatus: 'paid',
-                orderStatus: 'Pending',
-                status: 'Pending',
-                paymentMethod: 'PhonePe',
-                phonepeTransactionId: paymentSession.phonepeTransactionId,
-                paidAt: new Date(),
-                phonepeResponse: req.body,
-                stockConfirmed: false,
-                metadata: {
-                  checkoutSessionId: paymentSession.sessionId,
-                  source: 'webhook_fallback',
-                  correlationId: `webhook_${Date.now()}`
-                }
-              };
-              
-              order = await orderModel.create([fallbackOrderData], { session });
-              order = order[0];
-              
-              EnhancedLogger.orderLog('SUCCESS', 'Fallback order created successfully', {
-                correlationId,
-                orderId: order.orderId,
-                phonepeTransactionId: order.phonepeTransactionId,
-                userEmail: order.userInfo?.email,
-                source: 'webhook_fallback'
-              });
-            } else {
-              // Normal order creation with orderPayload
-            orderPayload.paymentStatus = 'paid';
-            orderPayload.orderStatus = 'Pending';
-            orderPayload.status = 'Pending';
-            orderPayload.paidAt = new Date();
-            orderPayload.phonepeResponse = req.body;
-            orderPayload.stockConfirmed = false;
-
-            // Create order within transaction
-            order = await orderModel.create([orderPayload], { session });
-            order = order[0]; // MongoDB returns array for transactional create
-              
-              EnhancedLogger.orderLog('SUCCESS', 'Order created successfully', {
-                correlationId,
-                orderId: order.orderId,
-                phonepeTransactionId: order.phonepeTransactionId,
-                userEmail: order.userInfo?.email,
-                source: 'webhook_normal'
-              });
-            }
-
-            // Update payment session with order ID
-            await PaymentSession.findByIdAndUpdate(
-              paymentSession._id,
-              { 
-                orderId: order._id,
-                status: 'success',
-                updatedAt: new Date()
-              },
-              { session }
-            );
-          }
+          // 🔑 DRAFT ORDER CONFIRMATION: Update draft to confirmed status
+          await orderModel.findByIdAndUpdate(
+            draftOrder._id,
+            {
+              status: 'CONFIRMED',
+              orderStatus: 'CONFIRMED', 
+              paymentStatus: 'PAID',
+              confirmedAt: new Date(),
+              paidAt: new Date(),
+              phonepeResponse: req.body,
+              updatedAt: new Date()
+            },
+            { session }
+          );
           
           // Check if stock is already confirmed
-          if (!order.stockConfirmed) {
-            console.log('🔔 WEBHOOK: Confirming stock for order:', order._id);
-            
-            // Get checkout session to confirm stock
-            const checkoutSession = await CheckoutSession.findOne({ 
-              sessionId: paymentSession.sessionId 
-            }).session(session);
-            
-            if (!checkoutSession) {
-              throw new Error('Checkout session not found');
-            }
-            
-            if (!checkoutSession.stockReserved) {
-              throw new Error('Stock was not reserved for this session');
-            }
+          if (!draftOrder.stockConfirmed) {
+            console.log('🔔 WEBHOOK: Confirming stock for draft order:', draftOrder._id);
             
             // Import stock utils
             const { confirmStockReservation } = await import('../utils/stock.js');
             
-            // Confirm stock for each item atomically
-            for (const item of checkoutSession.items) {
+            // Confirm stock for each item atomically (convert reserved to confirmed)
+            for (const item of draftOrder.cartItems) {
               const confirmed = await confirmStockReservation(
                 item.productId,
                 item.size,
@@ -262,21 +148,9 @@ export async function phonePeWebhookHandler(req, res) {
               console.log(`🔔 WEBHOOK: Stock confirmed for ${item.name} (${item.size}) x${item.quantity}`);
             }
             
-            // Mark checkout session as completed
-            await CheckoutSession.findByIdAndUpdate(
-              checkoutSession._id,
-              {
-                status: 'completed',
-                stockReserved: false,
-                completedAt: new Date(),
-                updatedAt: new Date()
-              },
-              { session }
-            );
-            
             // Update order with stock confirmation
             await orderModel.findByIdAndUpdate(
-              order._id,
+              draftOrder._id,
               {
                 stockConfirmed: true,
                 stockConfirmedAt: new Date(),
@@ -285,25 +159,33 @@ export async function phonePeWebhookHandler(req, res) {
               { session }
             );
             
-            // Mark reservation as confirmed
-            await Reservation.findOneAndUpdate(
-              { checkoutSessionId: checkoutSession._id },
-              {
-                status: 'confirmed',
-                confirmedAt: new Date(),
-                updatedAt: new Date()
-              },
-              { session }
-            );
-            
             console.log('🔔 WEBHOOK: Stock confirmation completed successfully');
           } else {
-            console.log('🔔 WEBHOOK: Stock already confirmed for order:', order.orderId);
+            console.log('🔔 WEBHOOK: Stock already confirmed for order:', draftOrder.orderId);
           }
           
           // Commit transaction
           await session.commitTransaction();
           console.log('🔔 WEBHOOK: Transaction committed successfully');
+          
+          // Log successful order confirmation
+          EnhancedLogger.orderLog('SUCCESS', 'Draft order confirmed and stock confirmed successfully', {
+            correlationId,
+            orderId: draftOrder.orderId,
+            phonepeTransactionId: draftOrder.phonepeTransactionId,
+            userEmail: draftOrder.userInfo?.email,
+            totalAmount: draftOrder.totalAmount,
+            itemsCount: draftOrder.cartItems?.length || 0,
+            source: 'webhook'
+          });
+          
+          // Send success response
+          return res.status(200).json({ 
+            success: true, 
+            message: 'order_confirmed_successfully',
+            orderId: draftOrder._id,
+            orderNumber: draftOrder.orderId
+          });
           
         } catch (error) {
           // Rollback transaction on any error
@@ -312,40 +194,29 @@ export async function phonePeWebhookHandler(req, res) {
           console.error('🔔 WEBHOOK: Error details:', {
             message: error.message,
             stack: error.stack,
-            paymentSessionId: paymentSession._id,
-            phonepeTransactionId: paymentSession.phonepeTransactionId,
-            hasOrderPayload: !!paymentSession.orderPayload,
-            hasOrderData: !!paymentSession.orderData
+            orderId: draftOrder._id,
+            phonepeTransactionId: draftOrder.phonepeTransactionId
           });
           
           // Log critical error for monitoring
-          console.error('🚨 CRITICAL: Order creation failed for successful payment:', {
-            paymentSessionId: paymentSession._id,
-            phonepeTransactionId: paymentSession.phonepeTransactionId,
-            userEmail: paymentSession.userEmail,
-            amount: paymentSession.orderData?.amount || 'unknown',
+          console.error('🚨 CRITICAL: Draft order confirmation failed for successful payment:', {
+            orderId: draftOrder._id,
+            phonepeTransactionId: draftOrder.phonepeTransactionId,
+            userEmail: draftOrder.userInfo?.email,
+            amount: draftOrder.totalAmount,
             error: error.message
           });
           
-          // Update order status if it exists
-          if (order) {
-            await orderModel.findByIdAndUpdate(order._id, {
-              paymentStatus: 'paid_stock_failed',
-              orderStatus: 'On Hold',
-              status: 'Payment Received, Stock Issue',
-              error: error.message,
-              updatedAt: new Date()
-            });
-          }
-          
-          // Update payment session status
-          await PaymentSession.findByIdAndUpdate(paymentSession._id, {
-            status: 'failed',
+          // Update draft order status to indicate payment received but confirmation failed
+          await orderModel.findByIdAndUpdate(draftOrder._id, {
+            paymentStatus: 'PAID',
+            status: 'PENDING_CONFIRMATION',
+            orderStatus: 'PENDING_CONFIRMATION',
             error: error.message,
             updatedAt: new Date()
           });
           
-          return errorResponse(res, 500, 'Payment successful, but order/stock update failed. Please contact support.');
+          return errorResponse(res, 500, 'Payment successful, but order confirmation failed. Please contact support.');
         } finally {
           await session.endSession();
         }
@@ -353,9 +224,9 @@ export async function phonePeWebhookHandler(req, res) {
         // Update order status to paid (if not already updated)
         const updateData = {
           payment: true,
-          paymentStatus: 'paid',
-          orderStatus: 'Pending',
-          status: 'Pending',
+          paymentStatus: 'PAID',
+          orderStatus: 'PENDING',
+          status: 'PENDING',
           paidAt: new Date(),
           phonepeResponse: req.body,
           updatedAt: new Date()
@@ -399,119 +270,13 @@ export async function phonePeWebhookHandler(req, res) {
         }
         
       } else {
-        console.log('🔔 WEBHOOK: Payment failed or timed out, releasing stock');
+        // Payment failed - cancel draft order
+        console.log('🔔 WEBHOOK: Payment failed for orderId:', payload.orderId, 'state:', payload.state);
         
-        // Start a MongoDB transaction for atomicity
-        const session = await mongoose.startSession();
-        await session.startTransaction();
+        // Cancel draft order and release stock
+        await cancelDraftOrder(draftOrder._id, `Payment failed: ${payload.state}`);
         
-        try {
-          // Update payment session status to failed
-          await PaymentSession.findByIdAndUpdate(
-            paymentSession._id,
-            {
-              status: 'failed',
-              phonepeResponse: req.body,
-              failedAt: new Date(),
-              updatedAt: new Date(),
-              failureReason: payload.message || 'Payment failed or timed out'
-            },
-            { session }
-          );
-          
-          // Find and release stock from the checkout session
-          const checkoutSession = await CheckoutSession.findOne({ 
-            sessionId: paymentSession.sessionId 
-          }).session(session);
-          
-          if (checkoutSession && checkoutSession.stockReserved) {
-            console.log('🔔 WEBHOOK: Found checkout session with reserved stock, releasing...');
-            
-            // Import stock utils
-            const { releaseStockReservation } = await import('../utils/stock.js');
-            
-            // Release stock for each item atomically
-            for (const item of checkoutSession.items) {
-              const released = await releaseStockReservation(
-                item.productId,
-                item.size,
-                item.quantity,
-                { session }
-              );
-              
-              if (!released) {
-                throw new Error(`Failed to release stock for item ${item.productId} size ${item.size}`);
-              }
-              
-              console.log(`🔔 WEBHOOK: Released stock for ${item.name} (${item.size}) x${item.quantity}`);
-            }
-            
-            // Mark checkout session as failed and stock as released
-            await CheckoutSession.findByIdAndUpdate(
-              checkoutSession._id,
-              {
-                status: 'failed',
-                stockReserved: false,
-                failedAt: new Date(),
-                updatedAt: new Date(),
-                failureReason: payload.message || 'Payment failed or timed out'
-              },
-              { session }
-            );
-            
-            // Mark reservation as failed
-            await Reservation.findOneAndUpdate(
-              { checkoutSessionId: checkoutSession._id },
-              {
-                status: 'failed',
-                failedAt: new Date(),
-                updatedAt: new Date(),
-                failureReason: payload.message || 'Payment failed or timed out'
-              },
-              { session }
-            );
-            
-            console.log('🔔 WEBHOOK: Checkout session marked as failed and stock released');
-          } else {
-            console.log('🔔 WEBHOOK: No checkout session found or no stock reserved');
-          }
-          
-          // If order was created (edge case), mark it as failed
-          if (order) {
-            await orderModel.findByIdAndUpdate(
-              order._id,
-              {
-                paymentStatus: 'failed',
-                orderStatus: 'Failed',
-                status: 'Payment Failed',
-                failedAt: new Date(),
-                updatedAt: new Date(),
-                failureReason: payload.message || 'Payment failed or timed out'
-              },
-              { session }
-            );
-          }
-          
-          // Commit transaction
-          await session.commitTransaction();
-          console.log('🔔 WEBHOOK: Transaction committed successfully');
-          
-        } catch (error) {
-          // Rollback transaction on any error
-          await session.abortTransaction();
-          console.error('🔔 WEBHOOK: Transaction failed:', error);
-          
-          // Try to update payment session status without transaction
-          await PaymentSession.findByIdAndUpdate(paymentSession._id, {
-            status: 'failed',
-            error: error.message,
-            updatedAt: new Date()
-          });
-          
-          return errorResponse(res, 500, 'Failed to process payment failure. Please contact support.');
-        } finally {
-          await session.endSession();
-        }
+        return res.status(200).json({ success: true, message: 'payment_failed' });
       }
     }
     
@@ -563,5 +328,47 @@ async function releaseOrderStockReservation(orderId) {
     }
   } catch (err) {
     console.error('releaseOrderStockReservation error', err);
+  }
+}
+
+// Helper function to cancel draft orders and release stock
+async function cancelDraftOrder(orderId, reason) {
+  try {
+    console.log(`Cancelling draft order ${orderId}: ${reason}`);
+    
+    const order = await orderModel.findById(orderId);
+    if (!order) {
+      console.log(`Order ${orderId} not found for cancellation`);
+      return;
+    }
+
+    // Release stock if it was reserved
+    if (order.stockReserved && order.cartItems) {
+      const { releaseStockReservation } = await import('../utils/stock.js');
+      for (const item of order.cartItems) {
+        try {
+          await releaseStockReservation(item.productId, item.size, item.quantity);
+          console.log(`Released stock for ${item.name} (${item.size}) x${item.quantity}`);
+        } catch (error) {
+          console.error(`Failed to release stock for ${item.name}:`, error);
+        }
+      }
+    }
+
+    // Update order status
+    await orderModel.findByIdAndUpdate(orderId, {
+      status: 'CANCELLED',
+      orderStatus: 'CANCELLED',
+      paymentStatus: 'FAILED',
+      metadata: {
+        ...order.metadata,
+        cancellationReason: reason,
+        cancelledAt: new Date()
+      }
+    });
+
+    console.log(`Draft order ${orderId} cancelled successfully`);
+  } catch (error) {
+    console.error(`Failed to cancel draft order ${orderId}:`, error);
   }
 } 

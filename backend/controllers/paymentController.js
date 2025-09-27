@@ -10,8 +10,9 @@ import { getUniqueOrderId } from './orderController.js';
 import { trackPayment } from '../utils/monitoring.js';
 import { StandardCheckoutClient, Env, StandardCheckoutPayRequest } from 'pg-sdk-node';
 import { randomUUID } from 'crypto';
+import { v4 as uuidv4 } from 'uuid';
 import { generateInvoiceBuffer, sendInvoiceEmail } from '../utils/invoiceGenerator.js';
-import { releaseStockReservation } from '../utils/stock.js';
+import { releaseStockReservation, reserveStock, confirmStockReservation } from '../utils/stock.js';
 import { config } from '../config.js';
 import mongoose from 'mongoose';
 
@@ -105,8 +106,8 @@ const processPaymentWithoutTransaction = async (paymentSession, merchantTransact
     }
 
     // 3. Prepare order data
-    orderPayload.paymentStatus = 'paid';
-    orderPayload.orderStatus = 'Pending';
+    orderPayload.paymentStatus = 'PAID';
+    orderPayload.orderStatus = 'PENDING';
     orderPayload.status = 'Pending';
     orderPayload.paidAt = new Date();
     orderPayload.phonepeResponse = phonepeResponse;
@@ -335,12 +336,14 @@ function cleanMobileNumber(number) {
   return digits.slice(-10);
 }
 
-// Create PhonePe payment session using SDK
+// Create PhonePe payment session using SDK with DRAFT ORDER PATTERN
 export const createPhonePeSession = async (req, res) => {
   const correlationId = req.headers['x-request-id'] || `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const idempotencyKey = req.headers['idempotency-key'] || uuidv4(); // Client sends this, or generate
   
   try {
-    console.log(`[${correlationId}] Creating PhonePe payment session`);
+    console.log(`[${correlationId}] Creating PhonePe payment session with DRAFT ORDER pattern`);
+    console.log(`[${correlationId}] Idempotency Key: ${idempotencyKey}`);
     
     const { checkoutSessionId, shipping, cartItems, orderSummary, userId, email, checkoutMode } = req.body;
     
@@ -366,260 +369,213 @@ export const createPhonePeSession = async (req, res) => {
         message: 'Checkout session has expired'
       });
     }
+
+    // 🔑 STEP 1: IDEMPOTENCY CHECK - If same key exists and not failed, reuse
+    const existingOrder = await orderModel.findOne({ 
+      idempotencyKey, 
+      status: { $ne: 'CANCELLED' } // Reuse if not cancelled
+    });
     
-    // 🔧 CRITICAL FIX: Reserve stock when creating payment session
-    if (!checkoutSession.stockReserved) {
-      console.log(`[${correlationId}] Reserving stock for session ${checkoutSessionId}`);
-      
-      try {
-        // Import stock utils
-        const { reserveStock, checkStockAvailability } = await import('../utils/stock.js');
-        
-        // First check if stock is available
-        for (const item of checkoutSession.items) {
-          const availability = await checkStockAvailability(item.productId, item.size, item.quantity);
-          if (!availability.available) {
-            console.error(`[${correlationId}] Stock not available for ${item.name}:`, availability);
-            return res.status(400).json({
-              success: false,
-              message: `Insufficient stock for ${item.name} (${item.size}). Available: ${availability.availableStock}, Requested: ${item.quantity}`
-            });
-          }
-        }
-        
-        // Now reserve stock for each item
-        
-        // Reserve stock for each item
-        for (const item of checkoutSession.items) {
-          console.log(`[${correlationId}] Reserving stock for ${item.name} (${item.size}) x${item.quantity}`);
-          const reserved = await reserveStock(item.productId, item.size, item.quantity);
-          if (!reserved) {
-            console.error(`[${correlationId}] Failed to reserve stock for ${item.name}`);
-            return res.status(400).json({
-              success: false,
-              message: `Insufficient stock for ${item.name} (${item.size})`
-            });
-          }
-        }
-        
-        // Mark session as having reserved stock
-        checkoutSession.stockReserved = true;
-        await checkoutSession.save();
-        console.log(`[${correlationId}] Stock reserved successfully`);
-      } catch (error) {
-        console.error(`[${correlationId}] Error reserving stock:`, error);
-        return res.status(500).json({
+    if (existingOrder) {
+      console.log(`[${correlationId}] Reusing existing order for idempotency key: ${idempotencyKey}`);
+      return res.json({
+        success: true,
+        orderId: existingOrder._id, // Give customer order ref upfront
+        phonepeTransactionId: existingOrder.phonepeTransactionId,
+        redirectUrl: existingOrder.metadata?.phonepeRedirectUrl,
+        message: 'Session reused for safety'
+      });
+    }
+    
+    // 🔑 STEP 2: VALIDATE UPFRONT (stock, etc.) - Fail fast, no payment if issues
+    console.log(`[${correlationId}] Validating stock and cart data upfront`);
+    
+    const { checkStockAvailability } = await import('../utils/stock.js');
+    
+    // First check if stock is available
+    for (const item of checkoutSession.items) {
+      const availability = await checkStockAvailability(item.productId, item.size, item.quantity);
+      if (!availability.available) {
+        console.error(`[${correlationId}] Stock not available for ${item.name}:`, availability);
+        return res.status(400).json({
           success: false,
-          message: 'Failed to reserve stock',
-          error: error.message
+          message: `Insufficient stock for ${item.name} (${item.size}). Available: ${availability.availableStock}, Requested: ${item.quantity}`
         });
       }
     }
     
     const userEmail = email || checkoutSession.userEmail;
-    // console.log(`[${correlationId}] User email:`, userEmail);
     
-    // 🔑 NEW: Stock is already reserved, so we don't need to validate again
-    // The reservation system ensures stock availability
-    console.log(`[${correlationId}] Stock already reserved for session, proceeding with payment`);
+    // 🔑 STEP 3: CREATE DRAFT ORDER IMMEDIATELY (with temp stock reserve)
+    console.log(`[${correlationId}] Creating DRAFT order immediately`);
     
-    // Generate unique transaction ID and prepare data
     const phonepeTransactionId = randomUUID();
     const orderId = await getUniqueOrderId();
     
-    // 🔑 CRITICAL FIX: Only create payment session, NOT the order yet
-    // Order will be created only after successful payment verification
-    let paymentSession;
-
-    // Prepare payment session data (order data will be created later on payment success)
-    const paymentSessionData = {
-      sessionId: checkoutSessionId,
-      phonepeTransactionId,
-      userId: checkoutSession.userId,
-      userEmail,
-      orderData: {
-        amount: checkoutSession.total,
-        shipping: {
-          ...shipping,
-          addressLine2: shipping.addressLine2 || '',
-          country: shipping.country || 'India'
-        },
-        cartItems: checkoutSession.items
-      },
-      status: 'pending',
-      stockReserved: true, // Stock is already reserved
-      metadata: {
-        userAgent: req.headers['user-agent'],
-        ipAddress: req.ip || req.connection.remoteAddress,
-        checkoutSource: checkoutSession.source,
-        correlationId
-      }
-    };
-
-    // 🔍 DEBUG: Log checkout session items to see if size is present
-    console.log(`[${correlationId}] Checkout session items:`, JSON.stringify(checkoutSession.items, null, 2));
+    // Start MongoDB transaction for atomicity
+    const session = await mongoose.startSession();
     
-    // Prepare order data for later creation (only on payment success)
-    const orderPayload = {
-      orderId,
-      userInfo: {
-        userId: checkoutSession.userId,
-        email: userEmail,
-        name: shipping.fullName,
-        phone: shipping.phone
-      },
-      shippingInfo: {
-        fullName: shipping.fullName,
-        email: userEmail,
-        phone: shipping.phone,
-        addressLine1: shipping.addressLine1,
-        addressLine2: shipping.addressLine2 || '',
-        city: shipping.city,
-        state: shipping.state,
-        postalCode: shipping.postalCode,
-        country: shipping.country || 'India'
-      },
-      // 🔧 CRITICAL FIX: Set multiple amount fields for frontend compatibility
-      cartItems: checkoutSession.items,
-      items: checkoutSession.items, // Legacy compatibility
-      totalAmount: checkoutSession.total,
-      total: checkoutSession.total, // Additional field
-      totalPrice: checkoutSession.total, // Legacy compatibility
-      amount: checkoutSession.total, // Legacy compatibility
-      subtotal: checkoutSession.subtotal,
-      shippingCost: checkoutSession.shippingCost || 0,
-      // 🔧 FIX: Pass offer details from checkout session to order
-      offerDetails: checkoutSession.offerDetails || {
-        offerApplied: false,
-        offerType: null,
-        offerDiscount: 0,
-        offerDescription: null,
-        offerCalculation: {
-          completeSets: 0,
-          remainingItems: 0,
-          originalPrice: 0,
-          offerPrice: 0,
-          savings: 0
-        }
-      },
-      status: 'Pending',
-      orderStatus: 'Pending',
-      paymentStatus: 'Pending',
-      paymentMethod: 'PhonePe',
-      phonepeTransactionId,
-      stockConfirmed: false, // Stock will be confirmed on payment success
-      metadata: {
-        checkoutSessionId,
-        correlationId,
-        source: checkoutSession.source
-      }
-    };
-
-    // Store order payload in payment session for later creation
-    paymentSessionData.orderPayload = orderPayload;
-
-    // 🔍 DEBUG: Log order payload that will be created on payment success
-    console.log(`[${correlationId}] Order payload prepared for payment success:`, JSON.stringify(orderPayload, null, 2));
-
-    // Execute database operations (NO ORDER CREATION YET)
     try {
-      paymentSession = await PaymentSession.create(paymentSessionData);
-      
-      // Update checkout session with transaction ID
-      await CheckoutSession.findByIdAndUpdate(checkoutSession._id, {
-        orderId,
-        phonepeTransactionId,
-        status: 'awaiting_payment'
+      await session.withTransaction(async () => {
+        // Create DRAFT order immediately
+        const draftOrder = await orderModel.create([{
+          orderId,
+          userInfo: {
+            userId: checkoutSession.userId,
+            email: userEmail,
+            name: shipping.fullName
+          },
+          shippingInfo: {
+            fullName: shipping.fullName,
+            email: userEmail,
+            phone: shipping.phone,
+            addressLine1: shipping.addressLine1,
+            addressLine2: shipping.addressLine2 || '',
+            city: shipping.city,
+            state: shipping.state,
+            postalCode: shipping.postalCode,
+            country: shipping.country || 'India'
+          },
+          cartItems: checkoutSession.items,
+          items: checkoutSession.items, // Legacy compatibility
+          totalAmount: checkoutSession.total,
+          total: checkoutSession.total,
+          subtotal: checkoutSession.subtotal,
+          shippingCost: checkoutSession.shippingCost || 0,
+          offerDetails: checkoutSession.offerDetails || {
+            offerApplied: false,
+            offerType: null,
+            offerDiscount: 0,
+            offerDescription: null,
+            offerCalculation: {
+              completeSets: 0,
+              remainingItems: 0,
+              originalPrice: 0,
+              offerPrice: 0,
+              savings: 0
+            }
+          },
+          status: 'DRAFT', // Key: Draft status
+          orderStatus: 'DRAFT',
+          paymentStatus: 'PENDING',
+          paymentMethod: 'PhonePe',
+          phonepeTransactionId,
+          idempotencyKey, // Critical for idempotency
+          stockReserved: false, // Will be set to true after stock reservation
+          stockConfirmed: false,
+          draftCreatedAt: new Date(),
+          metadata: {
+            checkoutSessionId,
+            correlationId,
+            source: checkoutSession.source,
+            idempotencyKey
+          }
+        }], { session });
+
+        const createdDraftOrder = draftOrder[0];
+        console.log(`[${correlationId}] DRAFT order created: ${createdDraftOrder.orderId}`);
+
+        // Reserve stock atomically for the draft order
+        for (const item of checkoutSession.items) {
+          console.log(`[${correlationId}] Reserving stock for ${item.name} (${item.size}) x${item.quantity}`);
+          const reserved = await reserveStock(item.productId, item.size, item.quantity, { session });
+          if (!reserved) {
+            throw new Error(`Failed to reserve stock for ${item.name} (${item.size})`);
+          }
+        }
+
+        // Mark order as having reserved stock
+        await orderModel.findByIdAndUpdate(
+          createdDraftOrder._id,
+          { stockReserved: true },
+          { session }
+        );
+
+        // Mark checkout session as having reserved stock
+        checkoutSession.stockReserved = true;
+        checkoutSession.status = 'awaiting_payment';
+        await checkoutSession.save({ session });
+
+        console.log(`[${correlationId}] Stock reserved successfully for draft order`);
       });
-
-      if (!paymentSession) {
-        throw new Error('Failed to create payment session');
-      }
-
-      console.log(`[${correlationId}] Payment session created successfully, order will be created on payment success`);
-
     } catch (error) {
-      console.error(`[${correlationId}] Database operations failed:`, error);
+      console.error(`[${correlationId}] Draft order creation failed:`, error);
       return res.status(500).json({
         success: false,
-        message: 'Failed to create payment session',
+        message: 'Failed to create draft order',
         error: error.message
       });
+    } finally {
+      await session.endSession();
     }
 
-    // Initialize PhonePe client and create payment request in parallel
-    // 🔑 CRITICAL FIX: The redirect URL MUST contain the transaction ID for the frontend to verify the payment.
+    // 🔑 STEP 4: CREATE PHONEPE PAYMENT SESSION
+    console.log(`[${correlationId}] Creating PhonePe payment session for draft order`);
+    
+    // Get the created draft order
+    const draftOrder = await orderModel.findOne({ idempotencyKey });
+    if (!draftOrder) {
+      throw new Error('Draft order not found after creation');
+    }
+
+    // Create PhonePe payment request
     const redirectUrl = `${process.env.FRONTEND_URL || 'https://shithaa.in'}/payment/phonepe/callback?merchantTransactionId=${phonepeTransactionId}`;
-    const callbackUrl = `${process.env.VPS_BASE_URL || 'https://shithaa.in'}/api/payment/phonepe/webhook`;
     
     // Calculate final amount including shipping
-    const finalAmount = checkoutSession.total; // total already includes shipping from checkout session
-    console.log('🔍 DEBUG: Payment amount calculation:', {
-      subtotal: checkoutSession.subtotal,
-      shipping: checkoutSession.shippingCost,
-      total: checkoutSession.total,
-      finalAmount: finalAmount,
-      offerDetails: checkoutSession.offerDetails,
-      discount: checkoutSession.discount
-    });
-
-    // Convert amount to paise (1 rupee = 100 paise)
+    const finalAmount = checkoutSession.total;
     const amountInPaise = Math.round(finalAmount * 100);
     
-    console.log('🔍 DEBUG: Converting amount to paise:', {
-      finalAmountRupees: finalAmount,
-      amountInPaise: amountInPaise
+    console.log(`[${correlationId}] PhonePe payment details:`, {
+      merchantOrderId: phonepeTransactionId,
+      amount: amountInPaise,
+      redirectUrl
     });
 
     const request = StandardCheckoutPayRequest.builder()
       .merchantOrderId(phonepeTransactionId)
       .amount(amountInPaise)
       .redirectUrl(redirectUrl)
-      // .callbackUrl(callbackUrl) // 🔑 FIX: This method does not exist in the SDK and was causing the crash. The callback is set in the PhonePe dashboard.
       .build();
 
-    // Get PhonePe client instance (cached singleton)
+    // Get PhonePe client instance
     const phonepeClient = initializePhonePeClient();
     if (!phonepeClient) {
+      // If PhonePe fails, cancel the draft order and release stock
+      await cancelDraftOrder(draftOrder._id, 'PhonePe client initialization failed');
       return res.status(500).json({
         success: false,
         message: 'Payment service not available',
-        error: 'PhonePe client initialization failed - check environment variables'
+        error: 'PhonePe client initialization failed'
       });
     }
 
     try {
-      console.log('🔍 DEBUG: About to call phonepeClient.pay with request:', {
-        merchantOrderId: request.merchantOrderId,
-        amount: request.amount,
-        redirectUrl: request.redirectUrl
-      });
-      
       const response = await phonepeClient.pay(request);
       
-      console.log('🔍 DEBUG: PhonePe pay response:', response);
-      
       if (response && response.redirectUrl) {
-        // Update payment session with PhonePe response
-        await PaymentSession.findByIdAndUpdate(paymentSession._id, {
-          'phonepeResponse.redirectUrl': response.redirectUrl,
-          'phonepeResponse.merchantOrderId': phonepeTransactionId,
-          'phonepeResponse.responseCode': response.code || 'SUCCESS',
-          'phonepeResponse.responseMessage': response.message || 'Payment session created'
+        // Update draft order with PhonePe response
+        await orderModel.findByIdAndUpdate(draftOrder._id, {
+          'metadata.phonepeRedirectUrl': response.redirectUrl,
+          'metadata.phonepeResponse': {
+            redirectUrl: response.redirectUrl,
+            merchantOrderId: phonepeTransactionId,
+            responseCode: response.code || 'SUCCESS',
+            responseMessage: response.message || 'Payment session created'
+          }
         });
 
+        console.log(`[${correlationId}] PhonePe payment session created successfully`);
+        
         return res.json({
           success: true,
-          sessionId: checkoutSessionId,
+          orderId: draftOrder._id, // Customer gets this immediately
           phonepeTransactionId: phonepeTransactionId,
-          redirectUrl: response.redirectUrl
+          redirectUrl: response.redirectUrl,
+          message: 'Draft order created - proceed to pay'
         });
       } else {
-        await PaymentSession.findByIdAndUpdate(paymentSession._id, {
-          'phonepeResponse.responseCode': 'FAILED',
-          'phonepeResponse.responseMessage': 'PhonePe response missing redirectUrl'
-        });
-        
+        // If PhonePe fails, cancel the draft order
+        await cancelDraftOrder(draftOrder._id, 'PhonePe response missing redirectUrl');
         return res.status(400).json({
           success: false,
           message: 'Failed to create payment session',
@@ -629,47 +585,13 @@ export const createPhonePeSession = async (req, res) => {
     } catch (error) {
       console.error(`[${correlationId}] PhonePe payment creation failed:`, error);
       
-      // 롤백: Release the stock reservation on PhonePe API failure
-      if (paymentSession) {
-        console.log(`[${correlationId}] Releasing stock due to PhonePe API failure.`);
-        await releaseStockOnPaymentFailure(paymentSession, correlationId);
-      }
-
-      console.error('Amount details:', {
-        finalAmount,
-        amountInPaise,
-        checkoutSession: {
-          subtotal: checkoutSession.subtotal,
-          shipping: checkoutSession.shippingCost,
-          total: checkoutSession.total
-        }
-      });
-
-      // Provide specific error messages based on error type
-      let userMessage = 'Payment service temporarily unavailable';
-      let errorCode = 'PAYMENT_SERVICE_ERROR';
-      
-      if (error.type === 'UnauthorizedAccess') {
-        userMessage = 'Payment gateway authentication failed. Please contact support.';
-        errorCode = 'AUTHENTICATION_ERROR';
-        console.error(`[${correlationId}] PhonePe authentication failed - check credentials and IP whitelisting`);
-      } else if (error.httpStatusCode === 401) {
-        userMessage = 'Payment gateway authentication failed. Please contact support.';
-        errorCode = 'AUTHENTICATION_ERROR';
-      } else if (error.httpStatusCode === 403) {
-        userMessage = 'Payment gateway access denied. Please contact support.';
-        errorCode = 'ACCESS_DENIED';
-      } else if (error.httpStatusCode >= 500) {
-        userMessage = 'Payment gateway is temporarily unavailable. Please try again later.';
-        errorCode = 'GATEWAY_ERROR';
-      }
+      // Cancel draft order and release stock on PhonePe failure
+      await cancelDraftOrder(draftOrder._id, `PhonePe API error: ${error.message}`);
 
       return res.status(500).json({
         success: false,
-        message: userMessage,
-        error: error.message,
-        errorCode: errorCode,
-        retryable: error.httpStatusCode >= 500 || error.type === 'UnauthorizedAccess'
+        message: 'Payment service temporarily unavailable',
+        error: error.message
       });
     }
   } catch (error) {
@@ -685,6 +607,47 @@ export const createPhonePeSession = async (req, res) => {
     });
   }
 };
+
+// Helper function to cancel draft orders and release stock
+async function cancelDraftOrder(orderId, reason) {
+  try {
+    console.log(`Cancelling draft order ${orderId}: ${reason}`);
+    
+    const order = await orderModel.findById(orderId);
+    if (!order) {
+      console.log(`Order ${orderId} not found for cancellation`);
+      return;
+    }
+
+    // Release stock if it was reserved
+    if (order.stockReserved && order.cartItems) {
+      for (const item of order.cartItems) {
+        try {
+          await releaseStockReservation(item.productId, item.size, item.quantity);
+          console.log(`Released stock for ${item.name} (${item.size}) x${item.quantity}`);
+        } catch (error) {
+          console.error(`Failed to release stock for ${item.name}:`, error);
+        }
+      }
+    }
+
+    // Update order status
+    await orderModel.findByIdAndUpdate(orderId, {
+      status: 'CANCELLED',
+      orderStatus: 'CANCELLED',
+      paymentStatus: 'FAILED',
+      metadata: {
+        ...order.metadata,
+        cancellationReason: reason,
+        cancelledAt: new Date()
+      }
+    });
+
+    console.log(`Draft order ${orderId} cancelled successfully`);
+  } catch (error) {
+    console.error(`Failed to cancel draft order ${orderId}:`, error);
+  }
+}
 
 // PhonePe payment callback using SDK - ATOMIC VERSION
 export const phonePeCallback = async (req, res) => {
@@ -1341,8 +1304,8 @@ export const verifyPhonePePayment = async (req, res) => {
       success: true,
       data: {
         orderId: order?._id || null,
-        orderStatus: order?.orderStatus || (isSuccess ? 'Pending' : 'Failed'),
-        paymentStatus: order?.paymentStatus || (isSuccess ? 'paid' : 'failed'),
+        orderStatus: order?.orderStatus || (isSuccess ? 'PENDING' : 'FAILED'),
+        paymentStatus: order?.paymentStatus || (isSuccess ? 'PAID' : 'FAILED'),
         state: paymentStatus?.state || paymentStatus?.status,
         code: paymentStatus?.responseCode || paymentStatus?.code,
         status: paymentStatus?.state || paymentStatus?.status,
@@ -1378,9 +1341,9 @@ export const dummyPaymentSuccess = async (req, res) => {
     if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
     // Mark as paid
     order.payment = true;
-    order.paymentStatus = 'paid';
-    order.orderStatus = 'Pending';
-    order.status = 'Pending';
+    order.paymentStatus = 'PAID';
+    order.orderStatus = 'PENDING';
+    order.status = 'PENDING';
     await order.save();
     // Generate and send invoice
     try {

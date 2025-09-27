@@ -14,7 +14,7 @@ export const updateOrderStatus = async (req, res) => {
             });
         }
 
-        const validStatuses = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
+        const validStatuses = ['DRAFT', 'PENDING', 'CONFIRMED', 'SHIPPED', 'DELIVERED', 'CANCELLED'];
         if (!validStatuses.includes(status)) {
             return res.status(400).json({
                 success: false,
@@ -25,7 +25,7 @@ export const updateOrderStatus = async (req, res) => {
         const updateData = { orderStatus: status };
         
         // Add shipping details if provided
-        if (status === 'Shipped' && shippingPartner && trackingId) {
+        if (status === 'SHIPPED' && shippingPartner && trackingId) {
             updateData.shippingDetails = {
                 partner: shippingPartner,
                 trackingId: trackingId,
@@ -47,7 +47,7 @@ export const updateOrderStatus = async (req, res) => {
         }
 
         // Send email notification based on status
-        if (status === 'Shipped' && shippingPartner && trackingId) {
+        if (status === 'SHIPPED' && shippingPartner && trackingId) {
             await sendShippingNotification(order, {
                 partner: shippingPartner,
                 trackingId: trackingId

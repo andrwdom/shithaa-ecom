@@ -17,7 +17,7 @@ const phonepeClient = StandardCheckoutClient.getInstance(
 
 async function reconcilePendingOrders() {
   await mongoose.connect(process.env.MONGODB_URI);
-  const pendingOrders = await orderModel.find({ paymentStatus: 'pending', phonepeTransactionId: { $exists: true, $ne: null } });
+  const pendingOrders = await orderModel.find({ paymentStatus: 'PENDING', phonepeTransactionId: { $exists: true, $ne: null } });
   for (const order of pendingOrders) {
     try {
       // 🔧 CRITICAL FIX: Try both method names for PhonePe SDK compatibility

@@ -51,8 +51,8 @@ const recoverOrders = async () => {
           // Use orderPayload if available
           orderData = { ...session.orderPayload };
           orderData.paymentStatus = 'paid';
-          orderData.orderStatus = 'Pending';
-          orderData.status = 'Pending';
+          orderData.orderStatus = 'PENDING';
+          orderData.status = 'PENDING';
           orderData.paidAt = new Date();
           orderData.phonepeResponse = session.phonepeResponse || {};
           orderData.stockConfirmed = false;
@@ -73,8 +73,8 @@ const recoverOrders = async () => {
             total: session.orderData.amount || 0,
             subtotal: session.orderData.amount || 0,
             paymentStatus: 'paid',
-            orderStatus: 'Pending',
-            status: 'Pending',
+            orderStatus: 'PENDING',
+            status: 'PENDING',
             paymentMethod: 'PhonePe',
             phonepeTransactionId: session.phonepeTransactionId,
             paidAt: new Date(),

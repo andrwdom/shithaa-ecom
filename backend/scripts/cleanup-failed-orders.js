@@ -30,11 +30,11 @@ const cleanupFailedOrders = async () => {
     const failedOrders = await orderModel.find({
       $or: [
         { paymentStatus: 'failed' },
-        { paymentStatus: 'pending' },
+        { paymentStatus: 'PENDING' },
         { orderStatus: 'Failed' },
-        { orderStatus: 'Pending' },
+        { orderStatus: 'PENDING' },
         { status: 'Payment Failed' },
-        { status: 'Pending' }
+        { status: 'PENDING' }
       ]
     });
     
@@ -61,11 +61,11 @@ const cleanupFailedOrders = async () => {
     const deleteResult = await orderModel.deleteMany({
       $or: [
         { paymentStatus: 'failed' },
-        { paymentStatus: 'pending' },
+        { paymentStatus: 'PENDING' },
         { orderStatus: 'Failed' },
-        { orderStatus: 'Pending' },
+        { orderStatus: 'PENDING' },
         { status: 'Payment Failed' },
-        { status: 'Pending' }
+        { status: 'PENDING' }
       ]
     });
     
