@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const RawWebhookSchema = new mongoose.Schema({
   provider: { type: String, required: true },
@@ -17,4 +17,4 @@ RawWebhookSchema.index({ receivedAt: 1 }, { expireAfterSeconds: 172800 });
 // Compound index for efficient querying
 RawWebhookSchema.index({ processed: 1, processing: 1, receivedAt: 1 });
 
-module.exports = mongoose.models.RawWebhook || mongoose.model('RawWebhook', RawWebhookSchema);
+export default mongoose.models.RawWebhook || mongoose.model('RawWebhook', RawWebhookSchema);

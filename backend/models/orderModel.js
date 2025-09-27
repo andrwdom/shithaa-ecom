@@ -87,6 +87,7 @@ const orderSchema = new mongoose.Schema({
     orderId: { type: String, required: true },
     // Payment gateway fields
     phonepeTransactionId: { type: String },
+    gateway_txn_id: { type: String, unique: true, sparse: true },
     // Link to CheckoutSession snapshot to enforce single source of truth
     checkoutSessionId: { type: String, unique: true, sparse: true },
     // Flow source for analytics and isolation guarantees

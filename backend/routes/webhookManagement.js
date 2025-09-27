@@ -1,6 +1,7 @@
-const express = require('express');
-const RawWebhook = require('../models/RawWebhook');
-const Orders = require('../models/Order');
+import express from 'express';
+import RawWebhook from '../models/RawWebhook.js';
+import orderModel from '../models/orderModel.js';
+
 const router = express.Router();
 
 // Get all raw webhooks with pagination and filtering
@@ -179,12 +180,12 @@ router.get('/webhook-orders', async (req, res) => {
     const skip = (parseInt(page) - 1) * parseInt(limit);
     
     const [orders, total] = await Promise.all([
-      Orders.find(query)
+      orderModel.find(query)
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(parseInt(limit))
         .lean(),
-      Orders.countDocuments(query)
+      orderModel.countDocuments(query)
     ]);
 
     res.json({
@@ -251,7 +252,7 @@ router.post('/webhooks/:id/create-order', async (req, res) => {
     }
 
     // Check if order already exists
-    const existingOrder = await Orders.findOne({ gateway_txn_id: gatewayTxnId });
+    const existingOrder = await orderModel.findOne({ gateway_txn_id: gatewayTxnId });
     if (existingOrder) {
       return res.status(409).json({
         success: false,
@@ -263,8 +264,11 @@ router.post('/webhooks/:id/create-order', async (req, res) => {
     // Create order
     const orderData = {
       gateway_txn_id: gatewayTxnId,
+      phonepeTransactionId: gatewayTxnId, // Also set the existing field
+      orderId: `WEBHOOK-${Date.now()}`,
       status: 'paid',
       paymentStatus: 'completed',
+      total: amount ? amount / 100 : 0,
       totalAmount: amount ? amount / 100 : 0,
       meta: {
         provider: webhook.provider,
@@ -272,10 +276,11 @@ router.post('/webhooks/:id/create-order', async (req, res) => {
         webhookData: event,
         manuallyCreated: true
       },
-      createdAt: new Date()
+      createdAt: new Date(),
+      placedAt: new Date()
     };
 
-    const order = await Orders.create(orderData);
+    const order = await orderModel.create(orderData);
     
     // Mark webhook as processed
     webhook.processed = true;
@@ -299,4 +304,4 @@ router.post('/webhooks/:id/create-order', async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

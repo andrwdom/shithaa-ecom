@@ -1,15 +1,13 @@
-// processRawWebhooks.js
-// Run this with pm2 as a separate process or cron every 30s
-const mongoose = require('mongoose');
-const RawWebhook = require('../models/RawWebhook');
-const Orders = require('../models/Order');
-const MONGO = process.env.MONGO_URI;
+import mongoose from 'mongoose';
+import RawWebhook from '../models/RawWebhook.js';
+import orderModel from '../models/orderModel.js';
+
+const MONGO_URI = 'mongodb://shithaa:shithaamongopassword255506511ypyq2jvcl@localhost:27017/shitha_maternity_db';
 
 async function processPhonePeWebhook(raw) {
   try {
     const event = JSON.parse(raw.raw);
     
-    // Extract PhonePe transaction details
     const gatewayTxnId = event?.transactionId || event?.data?.transactionId || event?.data?.merchantTransactionId;
     const amount = event?.amount || event?.data?.amount;
     const status = event?.state || event?.data?.state;
@@ -21,7 +19,6 @@ async function processPhonePeWebhook(raw) {
       return { success: false, reason: 'missing_txn_id' };
     }
 
-    // Only process completed payments
     if (status !== 'COMPLETED' && status !== 'SUCCESS') {
       raw.processed = true;
       raw.error = `payment_not_completed: ${status}`;
@@ -29,22 +26,25 @@ async function processPhonePeWebhook(raw) {
       return { success: false, reason: `payment_not_completed: ${status}` };
     }
 
-    // Idempotent create: try insert; if dup -> mark processed
     try {
       const orderData = {
         gateway_txn_id: gatewayTxnId,
+        phonepeTransactionId: gatewayTxnId, // Also set the existing field
+        orderId: `WEBHOOK-${Date.now()}`,
         status: 'paid',
         paymentStatus: 'completed',
-        totalAmount: amount ? amount / 100 : 0, // Convert from paise to rupees
+        total: amount ? amount / 100 : 0,
+        totalAmount: amount ? amount / 100 : 0,
         meta: {
           provider: 'phonepe',
           rawWebhookId: raw._id,
           webhookData: event
         },
-        createdAt: new Date()
+        createdAt: new Date(),
+        placedAt: new Date()
       };
 
-      await Orders.create(orderData);
+      await orderModel.create(orderData);
       
       raw.processed = true;
       raw.processedAt = new Date();
@@ -54,7 +54,6 @@ async function processPhonePeWebhook(raw) {
       return { success: true, orderId: gatewayTxnId };
       
     } catch (err) {
-      // duplicate key => order already exists
       if (err.code === 11000) {
         raw.processed = true;
         raw.processedAt = new Date();
@@ -79,7 +78,6 @@ async function processRazorpayWebhook(raw) {
   try {
     const event = JSON.parse(raw.raw);
     
-    // Extract Razorpay transaction details
     const gatewayTxnId = event?.payload?.payment?.entity?.id || event?.payment?.entity?.id;
     const amount = event?.payload?.payment?.entity?.amount || event?.payment?.entity?.amount;
     const status = event?.payload?.payment?.entity?.status || event?.payment?.entity?.status;
@@ -91,30 +89,31 @@ async function processRazorpayWebhook(raw) {
       return { success: false, reason: 'missing_txn_id' };
     }
 
-    // Only process captured payments
-    if (status !== 'captured') {
+    if (status !== 'captured' && status !== 'authorized') {
       raw.processed = true;
-      raw.error = `payment_not_captured: ${status}`;
+      raw.error = `payment_not_completed: ${status}`;
       await raw.save();
-      return { success: false, reason: `payment_not_captured: ${status}` };
+      return { success: false, reason: `payment_not_completed: ${status}` };
     }
 
-    // Idempotent create: try insert; if dup -> mark processed
     try {
       const orderData = {
         gateway_txn_id: gatewayTxnId,
+        orderId: `WEBHOOK-${Date.now()}`,
         status: 'paid',
         paymentStatus: 'completed',
-        totalAmount: amount ? amount / 100 : 0, // Convert from paise to rupees
+        total: amount ? amount / 100 : 0,
+        totalAmount: amount ? amount / 100 : 0,
         meta: {
           provider: 'razorpay',
           rawWebhookId: raw._id,
           webhookData: event
         },
-        createdAt: new Date()
+        createdAt: new Date(),
+        placedAt: new Date()
       };
 
-      await Orders.create(orderData);
+      await orderModel.create(orderData);
       
       raw.processed = true;
       raw.processedAt = new Date();
@@ -124,7 +123,6 @@ async function processRazorpayWebhook(raw) {
       return { success: true, orderId: gatewayTxnId };
       
     } catch (err) {
-      // duplicate key => order already exists
       if (err.code === 11000) {
         raw.processed = true;
         raw.processedAt = new Date();
@@ -167,7 +165,6 @@ async function processOne(raw) {
     return result;
   } catch (err) {
     console.error('❌ Error processing raw webhook', err, raw._id);
-    // leave processed=false so it will be retried
     raw.error = (raw.error || '') + '|' + err.message;
     await raw.save().catch(() => {});
     throw err;
@@ -176,14 +173,13 @@ async function processOne(raw) {
 
 async function run() {
   try {
-    await mongoose.connect(MONGO, { 
+    await mongoose.connect(MONGO_URI, { 
       useNewUrlParser: true, 
       useUnifiedTopology: true 
     });
     
     console.log('🔗 Connected to MongoDB');
     
-    // Pick oldest unprocessed webhook
     const raw = await RawWebhook.findOneAndUpdate(
       { processed: false, processing: false }, 
       { $set: { processing: true } }, 
@@ -201,7 +197,6 @@ async function run() {
       process.exit(0);
     } catch (err) {
       console.error('❌ Process failed', err);
-      // Reset processing flag on error
       await RawWebhook.findByIdAndUpdate(raw._id, { $set: { processing: false } });
       process.exit(1);
     }
@@ -211,7 +206,6 @@ async function run() {
   }
 }
 
-// Handle graceful shutdown
 process.on('SIGINT', async () => {
   console.log('🛑 Shutting down webhook processor...');
   await mongoose.connection.close();

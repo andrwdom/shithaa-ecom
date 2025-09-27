@@ -57,7 +57,7 @@ import stockRouter from './routes/stockRoutes.js'
 import cachedRoutes from './routes/cachedRoutes.js'
 import monitoringRouter from './routes/monitoring.js'
 import maintenanceRouter from './routes/maintenance.js'
-const webhookManagementRouter = require('./routes/webhookManagement.js')
+import webhookManagementRouter from './routes/webhookManagement.js'
 import { maintenanceMode } from './middleware/maintenanceMode.js'
 import { requestLogger, quickRequestLogger, fileRequestLogger } from './middleware/requestLogger.js'
 import redisService from './services/redisService.js'

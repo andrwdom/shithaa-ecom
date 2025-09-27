@@ -1,5 +1,6 @@
-const express = require('express');
-const RawWebhook = require('../models/RawWebhook');
+import express from 'express';
+import RawWebhook from '../models/RawWebhook.js';
+
 const router = express.Router();
 
 // PhonePe webhook - receives raw body and saves immediately
@@ -75,4 +76,4 @@ router.post('/webhook/:provider', express.raw({ type: '*/*', limit: '1mb' }), as
   }
 });
 
-module.exports = router;
+export default router;
