@@ -58,6 +58,7 @@ import cachedRoutes from './routes/cachedRoutes.js'
 import monitoringRouter from './routes/monitoring.js'
 import maintenanceRouter from './routes/maintenance.js'
 import { maintenanceMode } from './middleware/maintenanceMode.js'
+import { requestLogger, quickRequestLogger, fileRequestLogger } from './middleware/requestLogger.js'
 import redisService from './services/redisService.js'
 import admin from 'firebase-admin'
 import orderModel from './models/orderModel.js'
@@ -264,6 +265,9 @@ app.use(express.urlencoded({ extended: true }))
 
 // MAINTENANCE MODE MIDDLEWARE - Apply before other routes
 app.use(maintenanceMode)
+
+// ENHANCED REQUEST LOGGING - Log all critical endpoints
+app.use(requestLogger)
 
 // PRODUCTION MONITORING: Request tracking middleware
 app.use((req, res, next) => {
