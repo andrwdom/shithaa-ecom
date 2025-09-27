@@ -1123,58 +1123,53 @@ export const verifyPhonePePayment = async (req, res) => {
             await session.endSession();
             
             try {
-              // Fallback: Non-transactional approach
-              order = await processPaymentWithoutTransaction(paymentSession, merchantTransactionId, correlationId, paymentStatus);
+              // Fallback: Non-transactional approach - just confirm the existing order
+              await orderModel.findByIdAndUpdate(order._id, {
+                status: 'CONFIRMED',
+                orderStatus: 'CONFIRMED', 
+                paymentStatus: 'PAID',
+                paidAt: new Date(),
+                confirmedAt: new Date(),
+                phonepeResponse: paymentStatus
+              });
 
-          // Clear user's cart (non-blocking)
-          if (order.userId) {
-            try {
-              const { userModel } = await import('../models/userModel.js');
-              await userModel.findByIdAndUpdate(order.userId, { cartData: {} });
-              // console.log('User cart cleared successfully');
-            } catch (cartError) {
-              console.error('Failed to clear user cart:', cartError);
-            }
-          }
+              // Clear user's cart (non-blocking)
+              if (order.userId) {
+                try {
+                  const { userModel } = await import('../models/userModel.js');
+                  await userModel.findByIdAndUpdate(order.userId, { cartData: {} });
+                } catch (cartError) {
+                  console.error('Failed to clear user cart:', cartError);
+                }
+              }
 
-          // Send invoice email (non-blocking)
-          try {
-            const { generateInvoiceBuffer, sendInvoiceEmail } = await import('../utils/invoiceGenerator.js');
-            generateInvoiceBuffer(order)
-              .then(pdfBuffer => sendInvoiceEmail(order, pdfBuffer))
-              .catch(err => console.error('Error sending invoice from verify endpoint:', err));
-          } catch (err) {
-            console.error('Error preparing invoice from verify endpoint:', err);
-          }
+              // Send invoice email (non-blocking)
+              try {
+                const { generateInvoiceBuffer, sendInvoiceEmail } = await import('../utils/invoiceGenerator.js');
+                generateInvoiceBuffer(order)
+                  .then(pdfBuffer => sendInvoiceEmail(order, pdfBuffer))
+                  .catch(err => console.error('Error sending invoice from verify endpoint:', err));
+              } catch (err) {
+                console.error('Error preparing invoice from verify endpoint:', err);
+              }
               
             } catch (fallbackError) {
               console.error(`[${correlationId}] Fallback processing also failed in verify:`, fallbackError);
               
-              // Update payment session to failed
-              await PaymentSession.findByIdAndUpdate(paymentSession._id, {
-                status: 'failed',
-                error: fallbackError.message,
-                phonepeResponse: paymentStatus
-              });
-              
               return res.status(500).json({
                 success: false,
-                message: 'Order creation failed during verification',
+                message: 'Order confirmation failed during verification',
                 error: fallbackError.message,
                 data: null
               });
-        }
+            }
       } else {
-            // Other transaction errors - update payment session to failed
-            await PaymentSession.findByIdAndUpdate(paymentSession._id, {
-              status: 'failed',
-              error: transactionError.message,
-              phonepeResponse: paymentStatus
-            });
+            // Other transaction errors - just log and return error
+            console.error(`[${correlationId}] Transaction error:`, transactionError);
             
             return res.status(500).json({
               success: false,
-              message: 'Order creation failed during verification',
+              message: 'Order confirmation failed during verification',
               error: transactionError.message,
               data: null
             });
