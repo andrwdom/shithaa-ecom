@@ -130,6 +130,10 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 
+// CRITICAL: Mount raw webhook route BEFORE body parsers to capture raw payload
+import rawWebhookRouter from './routes/rawWebhook.js';
+app.use(rawWebhookRouter);
+
 // Add Sentry request handler (non-intrusive - only in production)
 if (process.env.NODE_ENV === 'production' && process.env.SENTRY_DSN) {
   app.use(Sentry.requestHandler());
