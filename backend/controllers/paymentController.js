@@ -1163,7 +1163,7 @@ export const verifyPhonePePayment = async (req, res) => {
                 data: null
               });
             }
-      } else {
+          } else {
             // Other transaction errors - just log and return error
             console.error(`[${correlationId}] Transaction error:`, transactionError);
             
