@@ -5,11 +5,19 @@ import { successResponse, errorResponse } from '../utils/response.js';
 import crypto from 'crypto';
 import Reservation from '../models/Reservation.js';
 import { releaseStockReservation } from '../utils/stock.js';
+import EnhancedLogger from '../utils/enhancedLogger.js';
+import PaymentMonitor from '../utils/paymentMonitor.js';
 
 // POST /phonepe/webhook
 export async function phonePeWebhookHandler(req, res) {
+  const correlationId = req.headers['x-request-id'] || `webhook_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  
   try {
-    console.log('🔔 WEBHOOK: PhonePe webhook received:', req.body);
+    EnhancedLogger.webhookLog('INFO', 'PhonePe webhook received', {
+      correlationId,
+      webhookData: req.body,
+      headers: req.headers
+    });
     
     // Validate webhook signature
     const authHeader = req.headers['authorization'];
@@ -18,17 +26,29 @@ export async function phonePeWebhookHandler(req, res) {
     const expected = crypto.createHash('sha256').update(`${username}:${password}`).digest('hex');
     
     if (authHeader !== expected) {
-      console.error('🔔 WEBHOOK: Invalid webhook signature');
+      EnhancedLogger.webhookLog('ERROR', 'Invalid webhook signature', {
+        correlationId,
+        expected: expected.substring(0, 10) + '...',
+        received: authHeader ? authHeader.substring(0, 10) + '...' : 'null'
+      });
       return res.status(401).json({ success: false, message: 'Invalid webhook signature' });
     }
     
     const { payload, event } = req.body;
     if (!payload || !event) {
-      console.error('🔔 WEBHOOK: Invalid webhook payload');
+      EnhancedLogger.webhookLog('ERROR', 'Invalid webhook payload', {
+        correlationId,
+        payload: payload,
+        event: event
+      });
       return errorResponse(res, 400, 'Invalid webhook payload');
     }
     
-    console.log('🔔 WEBHOOK: Processing event:', event, 'with payload:', payload);
+    EnhancedLogger.webhookLog('INFO', 'Processing webhook event', {
+      correlationId,
+      event: event,
+      payload: payload
+    });
     
     // Payment status update
     if (payload.orderId && payload.state) {
@@ -43,14 +63,32 @@ export async function phonePeWebhookHandler(req, res) {
 
       // Ensure payment session exists BEFORE processing
       if (!paymentSession) {
-        console.warn('🔔 WEBHOOK: payment session not found for payload', payload);
+        EnhancedLogger.criticalAlert('WEBHOOK: Payment session not found', {
+          correlationId,
+          orderId: payload.orderId,
+          state: state,
+          payload: payload
+        });
         return res.status(404).json({ success: false, message: 'payment_session_not_found' });
       }
       
-      console.log('🔔 WEBHOOK: Found payment session, updating status to:', payload.state);
+      EnhancedLogger.webhookLog('INFO', 'Found payment session, updating status', {
+        correlationId,
+        sessionId: paymentSession._id,
+        phonepeTransactionId: paymentSession.phonepeTransactionId,
+        userEmail: paymentSession.userEmail,
+        newStatus: payload.state === 'COMPLETED' ? 'success' : 'failed',
+        state: payload.state
+      });
+      
       paymentSession.status = payload.state === 'COMPLETED' ? 'success' : 'failed';
       await paymentSession.save();
-      console.log('🔔 WEBHOOK: Payment session updated successfully');
+      
+      EnhancedLogger.webhookLog('SUCCESS', 'Payment session updated successfully', {
+        correlationId,
+        sessionId: paymentSession._id,
+        status: paymentSession.status
+      });
 
       // Check if order already exists (created on successful payment)
       let order = null;
@@ -74,7 +112,12 @@ export async function phonePeWebhookHandler(req, res) {
       console.log('🔔 WEBHOOK: Found payment session:', paymentSession._id, 'Order exists:', !!order);
       
       if (isSuccess) {
-        console.log('🔔 WEBHOOK: Payment successful, creating order and confirming stock');
+        EnhancedLogger.webhookLog('INFO', 'Payment successful, creating order and confirming stock', {
+          correlationId,
+          sessionId: paymentSession._id,
+          phonepeTransactionId: paymentSession.phonepeTransactionId,
+          userEmail: paymentSession.userEmail
+        });
         
         // Start a MongoDB transaction for atomicity
         const session = await mongoose.startSession();
@@ -88,13 +131,26 @@ export async function phonePeWebhookHandler(req, res) {
             
             // 🔑 CRITICAL FIX: Check if orderPayload exists with fallback
             if (!orderPayload) {
-              console.error(`🔔 WEBHOOK: Order payload is missing for payment session ${paymentSession._id}`);
+              EnhancedLogger.criticalAlert('WEBHOOK: Order payload is missing for payment session', {
+                correlationId,
+                sessionId: paymentSession._id,
+                phonepeTransactionId: paymentSession.phonepeTransactionId,
+                userEmail: paymentSession.userEmail
+              });
               
               // FALLBACK: Try to create order from payment session data
-              console.log('🔔 WEBHOOK: Attempting fallback order creation from payment session data');
+              EnhancedLogger.webhookLog('WARN', 'Attempting fallback order creation from payment session data', {
+                correlationId,
+                sessionId: paymentSession._id
+              });
               
               if (!paymentSession.orderData) {
-                console.error(`🔔 WEBHOOK: Both orderPayload and orderData are missing for payment session ${paymentSession._id}`);
+                EnhancedLogger.criticalAlert('WEBHOOK: Both orderPayload and orderData are missing for payment session', {
+                  correlationId,
+                  sessionId: paymentSession._id,
+                  phonepeTransactionId: paymentSession.phonepeTransactionId,
+                  userEmail: paymentSession.userEmail
+                });
                 throw new Error('Order payload and orderData are missing from payment session');
               }
               
@@ -128,7 +184,14 @@ export async function phonePeWebhookHandler(req, res) {
               
               order = await orderModel.create([fallbackOrderData], { session });
               order = order[0];
-              console.log('🔔 WEBHOOK: Fallback order created successfully:', order.orderId);
+              
+              EnhancedLogger.orderLog('SUCCESS', 'Fallback order created successfully', {
+                correlationId,
+                orderId: order.orderId,
+                phonepeTransactionId: order.phonepeTransactionId,
+                userEmail: order.userInfo?.email,
+                source: 'webhook_fallback'
+              });
             } else {
               // Normal order creation with orderPayload
               orderPayload.paymentStatus = 'paid';
@@ -141,7 +204,14 @@ export async function phonePeWebhookHandler(req, res) {
               // Create order within transaction
               order = await orderModel.create([orderPayload], { session });
               order = order[0]; // MongoDB returns array for transactional create
-              console.log('🔔 WEBHOOK: Order created successfully:', order.orderId);
+              
+              EnhancedLogger.orderLog('SUCCESS', 'Order created successfully', {
+                correlationId,
+                orderId: order.orderId,
+                phonepeTransactionId: order.phonepeTransactionId,
+                userEmail: order.userInfo?.email,
+                source: 'webhook_normal'
+              });
             }
 
             // Update payment session with order ID
