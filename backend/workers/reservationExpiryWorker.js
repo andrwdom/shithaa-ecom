@@ -257,6 +257,9 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       setInterval(runWorker, 2 * 60 * 1000);
       
       console.log('🔄 [Reservation Worker] Started - will run every 2 minutes');
+      
+      // Keep the process alive - don't exit
+      // PM2 will handle the process lifecycle
     })
     .catch((error) => {
       console.error('❌ [Reservation Worker] Failed to connect to MongoDB:', error);
@@ -274,5 +277,16 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     console.log('🛑 [Reservation Worker] Shutting down gracefully...');
     mongoose.connection.close();
     process.exit(0);
-    });
+  });
+  
+  // Keep the process alive
+  process.on('uncaughtException', (error) => {
+    console.error('❌ [Reservation Worker] Uncaught Exception:', error);
+    // Don't exit, let PM2 handle it
+  });
+  
+  process.on('unhandledRejection', (reason, promise) => {
+    console.error('❌ [Reservation Worker] Unhandled Rejection at:', promise, 'reason:', reason);
+    // Don't exit, let PM2 handle it
+  });
 }
