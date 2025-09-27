@@ -57,6 +57,7 @@ import stockRouter from './routes/stockRoutes.js'
 import cachedRoutes from './routes/cachedRoutes.js'
 import monitoringRouter from './routes/monitoring.js'
 import maintenanceRouter from './routes/maintenance.js'
+const webhookManagementRouter = require('./routes/webhookManagement.js')
 import { maintenanceMode } from './middleware/maintenanceMode.js'
 import { requestLogger, quickRequestLogger, fileRequestLogger } from './middleware/requestLogger.js'
 import redisService from './services/redisService.js'
@@ -131,7 +132,7 @@ app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 
 // CRITICAL: Mount raw webhook route BEFORE body parsers to capture raw payload
-import rawWebhookRouter from './routes/rawWebhook.js';
+const rawWebhookRouter = require('./routes/rawWebhook.js');
 app.use(rawWebhookRouter);
 
 // Add Sentry request handler (non-intrusive - only in production)
@@ -358,6 +359,9 @@ app.use('/api/monitoring', monitoringRouter)
 
 // Maintenance routes (admin access)
 app.use('/api/maintenance', maintenanceRouter)
+
+// Webhook management routes (admin access)
+app.use('/api/webhook-management', webhookManagementRouter)
 
 // Legacy routes for backward compatibility
 app.use('/api/product', productRouter)
