@@ -194,16 +194,16 @@ export async function phonePeWebhookHandler(req, res) {
               });
             } else {
               // Normal order creation with orderPayload
-              orderPayload.paymentStatus = 'paid';
-              orderPayload.orderStatus = 'Pending';
-              orderPayload.status = 'Pending';
-              orderPayload.paidAt = new Date();
-              orderPayload.phonepeResponse = req.body;
-              orderPayload.stockConfirmed = false;
+            orderPayload.paymentStatus = 'paid';
+            orderPayload.orderStatus = 'Pending';
+            orderPayload.status = 'Pending';
+            orderPayload.paidAt = new Date();
+            orderPayload.phonepeResponse = req.body;
+            orderPayload.stockConfirmed = false;
 
-              // Create order within transaction
-              order = await orderModel.create([orderPayload], { session });
-              order = order[0]; // MongoDB returns array for transactional create
+            // Create order within transaction
+            order = await orderModel.create([orderPayload], { session });
+            order = order[0]; // MongoDB returns array for transactional create
               
               EnhancedLogger.orderLog('SUCCESS', 'Order created successfully', {
                 correlationId,

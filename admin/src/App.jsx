@@ -5,6 +5,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import Add from './pages/Add'
 import List from './pages/List'
 import Orders from './pages/Orders'
+import Dashboard from './pages/Dashboard'
 import CouponManagement from './pages/CouponManagement'
 import Login from './components/Login'
 import { ToastContainer } from 'react-toastify';
@@ -63,6 +64,11 @@ const App = () => {
                 <Sidebar />
                 <div className='w-[70%] mx-auto ml-[max(5vw,25px)] my-8 text-gray-600 text-base'>
                   <Routes>
+                    <Route path="/" element={
+                      <ProtectedRoute token={token}>
+                        <Dashboard token={token} />
+                      </ProtectedRoute>
+                    } />
                     <Route path="/orders" element={
                       <ProtectedRoute token={token}>
                         <Orders token={token} setToken={setToken} />
@@ -93,7 +99,7 @@ const App = () => {
                         <ShippingRules token={token} />
                       </ProtectedRoute>
                     } />
-                    <Route path="*" element={<Navigate to="/orders" replace />} />
+                    <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
                 </div>
               </div>

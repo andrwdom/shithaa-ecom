@@ -55,6 +55,9 @@ import reservationRouter from './routes/reservationRoute.js'
 import adminRouter from './routes/adminRoute.js'
 import stockRouter from './routes/stockRoutes.js'
 import cachedRoutes from './routes/cachedRoutes.js'
+import monitoringRouter from './routes/monitoring.js'
+import maintenanceRouter from './routes/maintenance.js'
+import { maintenanceMode } from './middleware/maintenanceMode.js'
 import redisService from './services/redisService.js'
 import admin from 'firebase-admin'
 import orderModel from './models/orderModel.js'
@@ -259,6 +262,9 @@ app.use(cookieParser());
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
+// MAINTENANCE MODE MIDDLEWARE - Apply before other routes
+app.use(maintenanceMode)
+
 // PRODUCTION MONITORING: Request tracking middleware
 app.use((req, res, next) => {
     const startTime = Date.now();
@@ -338,6 +344,12 @@ app.use('/api/stock', stockRouter)
 
 // Cached routes (high performance)
 app.use('/api/cached', cachedRoutes)
+
+// Monitoring routes (admin access)
+app.use('/api/monitoring', monitoringRouter)
+
+// Maintenance routes (admin access)
+app.use('/api/maintenance', maintenanceRouter)
 
 // Legacy routes for backward compatibility
 app.use('/api/product', productRouter)
