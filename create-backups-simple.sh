@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Immediate Backup Script for Shithaa E-commerce
-# Creates database and code backups before making critical changes
+# Simple Backup Script for Shithaa E-commerce
+# Creates database and code backups with better error handling
 
 set -e
 
@@ -18,22 +18,31 @@ echo ""
 echo "🗄️  CREATING MONGODB BACKUP..."
 echo "Backup location: $BACKUP_DIR/mongodb/"
 
-if [ -z "$MONGODB_URI" ]; then
-    echo "❌ MONGODB_URI not set. Loading from .env file..."
+# Try to get MongoDB URI from environment or .env file
+MONGODB_URI=""
+
+# First try environment variable
+if [ -n "$MONGODB_URI" ]; then
+    echo "✅ Using MONGODB_URI from environment"
+else
+    # Try to load from .env file
     if [ -f "/var/www/shithaa-ecom/backend/.env" ]; then
-        # Load environment variables from .env file safely
-        set -a  # automatically export all variables
-        source /var/www/shithaa-ecom/backend/.env
-        set +a  # stop automatically exporting
-        echo "✅ Loaded environment variables from .env"
+        echo "📄 Loading MONGODB_URI from .env file..."
+        MONGODB_URI=$(grep "^MONGODB_URI=" /var/www/shithaa-ecom/backend/.env | cut -d '=' -f2- | tr -d '"' | tr -d "'")
+        if [ -n "$MONGODB_URI" ]; then
+            echo "✅ Found MONGODB_URI in .env file"
+        else
+            echo "❌ MONGODB_URI not found in .env file"
+        fi
     else
-        echo "❌ .env file not found. Please set MONGODB_URI manually."
-        exit 1
+        echo "❌ .env file not found at /var/www/shithaa-ecom/backend/.env"
     fi
 fi
 
 if [ -n "$MONGODB_URI" ]; then
     echo "📊 Starting MongoDB dump..."
+    echo "URI: ${MONGODB_URI:0:20}..." # Show first 20 chars for security
+    
     mongodump --uri="$MONGODB_URI" --out="$BACKUP_DIR/mongodb/"
     
     if [ $? -eq 0 ]; then
@@ -42,10 +51,13 @@ if [ -n "$MONGODB_URI" ]; then
         echo "   Size: $(du -sh $BACKUP_DIR/mongodb/ | cut -f1)"
     else
         echo "❌ MongoDB backup failed!"
-        exit 1
+        echo "   This might be due to connection issues or permissions"
+        echo "   Continuing with code backup..."
     fi
 else
-    echo "❌ MONGODB_URI still not available. Skipping database backup."
+    echo "❌ MONGODB_URI not available. Skipping database backup."
+    echo "   You can manually backup MongoDB later with:"
+    echo "   mongodump --uri='your-mongodb-uri' --out='$BACKUP_DIR/mongodb/'"
 fi
 
 # 2. Code Snapshot
