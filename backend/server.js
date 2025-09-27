@@ -4,9 +4,6 @@ import { dirname, join } from 'path';
 import { existsSync } from 'fs';
 import dotenv from 'dotenv';
 
-// Initialize Sentry for error monitoring (non-intrusive)
-import * as Sentry from '@sentry/node';
-
 // Load .env file from the correct path FIRST
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -18,15 +15,8 @@ console.log('🔧 .env file exists:', existsSync(envPath));
 // Load environment variables
 dotenv.config({ path: envPath });
 
-// Initialize Sentry (only in production to avoid breaking dev)
-if (process.env.NODE_ENV === 'production' && process.env.SENTRY_DSN) {
-  Sentry.init({
-    dsn: process.env.SENTRY_DSN,
-    tracesSampleRate: 0.1,
-    debug: false,
-  });
-  console.log('✅ Sentry initialized for error monitoring');
-}
+// Initialize Sentry for error monitoring (non-intrusive)
+let Sentry = null;
 
 // Now import config (which also loads dotenv but won't conflict)
 import { config } from './config.js'
@@ -654,14 +644,42 @@ try {
   console.log('Server will continue without Firebase Admin SDK');
 }
 
-// Start the server
-const server = app.listen(PORT, '0.0.0.0', () => {
-    console.log(`✅ Server running on port ${PORT} (all interfaces)`);
-    console.log(`✅ Environment: ${process.env.NODE_ENV}`);
-    console.log(`✅ MongoDB: ${process.env.MONGODB_URI ? 'CONFIGURED' : 'NOT CONFIGURED'}`);
-    console.log(`✅ JWT: ${process.env.JWT_SECRET ? 'CONFIGURED' : 'NOT CONFIGURED'}`);
-    console.log(`✅ PhonePe: ${process.env.PHONEPE_MERCHANT_ID ? 'CONFIGURED' : 'NOT CONFIGURED'}`);
-});
+// Initialize Sentry dynamically
+async function initializeSentry() {
+  try {
+    const sentryModule = await import('@sentry/node');
+    Sentry = sentryModule;
+    
+    if (process.env.NODE_ENV === 'production' && process.env.SENTRY_DSN) {
+      Sentry.init({
+        dsn: process.env.SENTRY_DSN,
+        tracesSampleRate: 0.1,
+        debug: false,
+      });
+      console.log('✅ Sentry initialized for error monitoring');
+    }
+  } catch (err) {
+    console.log('⚠️ Sentry not available, error monitoring disabled');
+  }
+}
+
+// Initialize Sentry and start server
+async function startServer() {
+  await initializeSentry();
+  
+  // Start the server
+  const server = app.listen(PORT, '0.0.0.0', () => {
+      console.log(`✅ Server running on port ${PORT} (all interfaces)`);
+      console.log(`✅ Environment: ${process.env.NODE_ENV}`);
+      console.log(`✅ MongoDB: ${process.env.MONGODB_URI ? 'CONFIGURED' : 'NOT CONFIGURED'}`);
+      console.log(`✅ JWT: ${process.env.JWT_SECRET ? 'CONFIGURED' : 'NOT CONFIGURED'}`);
+      console.log(`✅ PhonePe: ${process.env.PHONEPE_MERCHANT_ID ? 'CONFIGURED' : 'NOT CONFIGURED'}`);
+  });
+  
+  return server;
+}
+
+const server = await startServer();
 
 // Handle server errors
 server.on('error', (error) => {
