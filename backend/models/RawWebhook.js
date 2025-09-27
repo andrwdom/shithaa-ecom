@@ -4,7 +4,7 @@ const RawWebhookSchema = new mongoose.Schema({
   provider: { type: String, required: true },
   headers: { type: mongoose.Schema.Types.Mixed },
   raw: { type: String, required: true },
-  receivedAt: { type: Date, default: Date.now, index: true },
+  receivedAt: { type: Date, default: Date.now },
   processed: { type: Boolean, default: false, index: true },
   processedAt: Date,
   error: String,

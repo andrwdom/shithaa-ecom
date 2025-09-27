@@ -122,7 +122,7 @@ app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 
 // CRITICAL: Mount raw webhook route BEFORE body parsers to capture raw payload
-const rawWebhookRouter = require('./routes/rawWebhook.js');
+import rawWebhookRouter from './routes/rawWebhook.js';
 app.use(rawWebhookRouter);
 
 // Add Sentry request handler (non-intrusive - only in production)
