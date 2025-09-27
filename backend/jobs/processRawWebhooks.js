@@ -31,10 +31,26 @@ async function processPhonePeWebhook(raw) {
         gateway_txn_id: gatewayTxnId,
         phonepeTransactionId: gatewayTxnId, // Also set the existing field
         orderId: `WEBHOOK-${Date.now()}`,
-        status: 'paid',
-        paymentStatus: 'completed',
+        status: 'CONFIRMED',
+        orderStatus: 'CONFIRMED',
+        paymentStatus: 'PAID',
         total: amount ? amount / 100 : 0,
         totalAmount: amount ? amount / 100 : 0,
+        // Add required shipping info with defaults
+        shippingInfo: {
+          fullName: 'Webhook Order',
+          email: 'webhook@shithaa.in',
+          phone: '0000000000',
+          addressLine1: 'Webhook Address',
+          city: 'Webhook City',
+          state: 'Webhook State',
+          postalCode: '000000',
+          country: 'India'
+        },
+        userInfo: {
+          email: 'webhook@shithaa.in',
+          name: 'Webhook Order'
+        },
         meta: {
           provider: 'phonepe',
           rawWebhookId: raw._id,
@@ -100,10 +116,26 @@ async function processRazorpayWebhook(raw) {
       const orderData = {
         gateway_txn_id: gatewayTxnId,
         orderId: `WEBHOOK-${Date.now()}`,
-        status: 'paid',
-        paymentStatus: 'completed',
+        status: 'CONFIRMED',
+        orderStatus: 'CONFIRMED',
+        paymentStatus: 'PAID',
         total: amount ? amount / 100 : 0,
         totalAmount: amount ? amount / 100 : 0,
+        // Add required shipping info with defaults
+        shippingInfo: {
+          fullName: 'Webhook Order',
+          email: 'webhook@shithaa.in',
+          phone: '0000000000',
+          addressLine1: 'Webhook Address',
+          city: 'Webhook City',
+          state: 'Webhook State',
+          postalCode: '000000',
+          country: 'India'
+        },
+        userInfo: {
+          email: 'webhook@shithaa.in',
+          name: 'Webhook Order'
+        },
         meta: {
           provider: 'razorpay',
           rawWebhookId: raw._id,

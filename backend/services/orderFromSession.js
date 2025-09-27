@@ -37,7 +37,7 @@ export async function createOrderFromCheckoutSession(sessionId, { paymentStatus,
 
   // Mark session as paid (best-effort)
   try {
-    s.status = 'paid';
+    s.status = 'completed';
     await s.save();
   } catch {}
 

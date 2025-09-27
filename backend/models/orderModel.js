@@ -124,7 +124,7 @@ const orderSchema = new mongoose.Schema({
     stockReserved: { type: Boolean, default: false }, // Track if stock is temp-reserved
     
     // Idempotency and reliability fields
-    idempotencyKey: { type: String, sparse: true }, // For safe retries
+    idempotencyKey: { type: String }, // For safe retries
     draftCreatedAt: { type: Date, default: Date.now }, // When draft was created
     confirmedAt: { type: Date }, // When payment was confirmed
     
