@@ -230,63 +230,60 @@ export const getReservationStats = async (req, res) => {
   }
 };
 
-// If running as standalone script
-if (import.meta.url === `file://${process.argv[1]}`) {
-  // Connect to MongoDB
-  const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/shithaa-ecom';
-  
-  const runWorker = async () => {
-    try {
-      console.log('🔄 [Reservation Worker] Starting cleanup cycle...');
-      const result = await expireOldReservations();
-      console.log('✅ [Reservation Worker] Cleanup completed:', result);
-    } catch (error) {
-      console.error('❌ [Reservation Worker] Cleanup failed:', error);
-    }
-  };
+// Always run as a persistent worker when imported
+const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/shithaa-ecom';
 
-  // Connect to MongoDB and start the worker
-  mongoose.connect(mongoUri)
-    .then(() => {
-      console.log('✅ [Reservation Worker] Connected to MongoDB');
-      
-      // Run immediately on startup
-      runWorker();
-      
-      // Then run every 2 minutes (120000ms)
-      setInterval(runWorker, 2 * 60 * 1000);
-      
-      console.log('🔄 [Reservation Worker] Started - will run every 2 minutes');
-      
-      // Keep the process alive - don't exit
-      // PM2 will handle the process lifecycle
-    })
-    .catch((error) => {
-      console.error('❌ [Reservation Worker] Failed to connect to MongoDB:', error);
-      process.exit(1);
-    });
+const runWorker = async () => {
+  try {
+    console.log('🔄 [Reservation Worker] Starting cleanup cycle...');
+    const result = await expireOldReservations();
+    console.log('✅ [Reservation Worker] Cleanup completed:', result);
+  } catch (error) {
+    console.error('❌ [Reservation Worker] Cleanup failed:', error);
+  }
+};
 
-  // Handle graceful shutdown
-  process.on('SIGINT', () => {
-    console.log('🛑 [Reservation Worker] Shutting down gracefully...');
-    mongoose.connection.close();
-    process.exit(0);
+// Connect to MongoDB and start the worker
+mongoose.connect(mongoUri)
+  .then(() => {
+    console.log('✅ [Reservation Worker] Connected to MongoDB');
+    
+    // Run immediately on startup
+    runWorker();
+    
+    // Then run every 2 minutes (120000ms)
+    setInterval(runWorker, 2 * 60 * 1000);
+    
+    console.log('🔄 [Reservation Worker] Started - will run every 2 minutes');
+    
+    // Keep the process alive - don't exit
+    // PM2 will handle the process lifecycle
+  })
+  .catch((error) => {
+    console.error('❌ [Reservation Worker] Failed to connect to MongoDB:', error);
+    process.exit(1);
   });
 
-  process.on('SIGTERM', () => {
-    console.log('🛑 [Reservation Worker] Shutting down gracefully...');
-    mongoose.connection.close();
-    process.exit(0);
-  });
-  
-  // Keep the process alive
-  process.on('uncaughtException', (error) => {
-    console.error('❌ [Reservation Worker] Uncaught Exception:', error);
-    // Don't exit, let PM2 handle it
-  });
-  
-  process.on('unhandledRejection', (reason, promise) => {
-    console.error('❌ [Reservation Worker] Unhandled Rejection at:', promise, 'reason:', reason);
-    // Don't exit, let PM2 handle it
-  });
-}
+// Handle graceful shutdown
+process.on('SIGINT', () => {
+  console.log('🛑 [Reservation Worker] Shutting down gracefully...');
+  mongoose.connection.close();
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  console.log('🛑 [Reservation Worker] Shutting down gracefully...');
+  mongoose.connection.close();
+  process.exit(0);
+});
+
+// Keep the process alive
+process.on('uncaughtException', (error) => {
+  console.error('❌ [Reservation Worker] Uncaught Exception:', error);
+  // Don't exit, let PM2 handle it
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ [Reservation Worker] Unhandled Rejection at:', promise, 'reason:', reason);
+  // Don't exit, let PM2 handle it
+});
