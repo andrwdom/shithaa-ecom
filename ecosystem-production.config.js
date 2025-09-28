@@ -14,9 +14,9 @@ export default {
         NODE_ENV: 'production',
         PORT: 4000
       },
-      error_file: '/var/log/shithaa/backend-error.log',
-      out_file: '/var/log/shithaa/backend-out.log',
-      log_file: '/var/log/shithaa/backend-combined.log',
+      error_file: './backend/logs/backend-error.log',
+      out_file: './backend/logs/backend-out.log',
+      log_file: './backend/logs/backend-combined.log',
       time: true,
       merge_logs: true,
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
@@ -42,9 +42,9 @@ export default {
         NODE_ENV: 'production',
         PORT: 3000
       },
-      error_file: '/var/log/shithaa/frontend-error.log',
-      out_file: '/var/log/shithaa/frontend-out.log',
-      log_file: '/var/log/shithaa/frontend-combined.log',
+      error_file: './frontend/logs/frontend-error.log',
+      out_file: './frontend/logs/frontend-out.log',
+      log_file: './frontend/logs/frontend-combined.log',
       time: true,
       // Process management
       min_uptime: '10s',
@@ -65,9 +65,9 @@ export default {
         NODE_ENV: 'production',
         PORT: 4173
       },
-      error_file: '/var/log/shithaa/admin-error.log',
-      out_file: '/var/log/shithaa/admin-out.log',
-      log_file: '/var/log/shithaa/admin-combined.log',
+      error_file: './admin/logs/admin-error.log',
+      out_file: './admin/logs/admin-out.log',
+      log_file: './admin/logs/admin-combined.log',
       time: true,
       // Process management
       min_uptime: '10s',
@@ -87,9 +87,9 @@ export default {
       env: {
         NODE_ENV: 'production'
       },
-      error_file: '/var/log/shithaa/stock-monitoring-worker-error.log',
-      out_file: '/var/log/shithaa/stock-monitoring-worker-out.log',
-      log_file: '/var/log/shithaa/stock-monitoring-worker-combined.log',
+      error_file: './backend/logs/stock-monitoring-worker-error.log',
+      out_file: './backend/logs/stock-monitoring-worker-out.log',
+      log_file: './backend/logs/stock-monitoring-worker-combined.log',
       time: true,
       // Process management
       min_uptime: '10s',
@@ -109,9 +109,9 @@ export default {
       env: {
         NODE_ENV: 'production'
       },
-      error_file: '/var/log/shithaa/stock-cleanup-worker-error.log',
-      out_file: '/var/log/shithaa/stock-cleanup-worker-out.log',
-      log_file: '/var/log/shithaa/stock-cleanup-worker-combined.log',
+      error_file: './backend/logs/stock-cleanup-worker-error.log',
+      out_file: './backend/logs/stock-cleanup-worker-out.log',
+      log_file: './backend/logs/stock-cleanup-worker-combined.log',
       time: true,
       // Process management
       min_uptime: '10s',
@@ -131,9 +131,9 @@ export default {
       env: {
         NODE_ENV: 'production'
       },
-      error_file: '/var/log/shithaa/reservation-expiry-worker-error.log',
-      out_file: '/var/log/shithaa/reservation-expiry-worker-out.log',
-      log_file: '/var/log/shithaa/reservation-expiry-worker-combined.log',
+      error_file: './backend/logs/reservation-expiry-worker-error.log',
+      out_file: './backend/logs/reservation-expiry-worker-out.log',
+      log_file: './backend/logs/reservation-expiry-worker-combined.log',
       time: true,
       // Process management - CRITICAL: Prevent SIGINT loop
       min_uptime: '30s',
@@ -156,9 +156,9 @@ export default {
       env: {
         NODE_ENV: 'production'
       },
-      error_file: '/var/log/shithaa/webhook-processor-error.log',
-      out_file: '/var/log/shithaa/webhook-processor-out.log',
-      log_file: '/var/log/shithaa/webhook-processor-combined.log',
+      error_file: './backend/logs/webhook-processor-error.log',
+      out_file: './backend/logs/webhook-processor-out.log',
+      log_file: './backend/logs/webhook-processor-combined.log',
       time: true,
       // Process management
       min_uptime: '10s',
@@ -180,9 +180,9 @@ export default {
       env: {
         NODE_ENV: 'production'
       },
-      error_file: '/var/log/shithaa/reconciliation-worker-error.log',
-      out_file: '/var/log/shithaa/reconciliation-worker-out.log',
-      log_file: '/var/log/shithaa/reconciliation-worker-combined.log',
+      error_file: './backend/logs/reconciliation-worker-error.log',
+      out_file: './backend/logs/reconciliation-worker-out.log',
+      log_file: './backend/logs/reconciliation-worker-combined.log',
       time: true,
       // Process management
       min_uptime: '10s',
