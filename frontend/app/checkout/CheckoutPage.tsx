@@ -51,6 +51,7 @@ export default function CheckoutPage() {
   const { user, logout } = useAuth(); // Get logout function from useAuth
   const [checkoutSessionId, setCheckoutSessionId] = useState<string | null>(null);
   const [isSessionLoading, setIsSessionLoading] = useState(false);
+  const [paymentInitiated, setPaymentInitiated] = useState(false); // 🔧 NEW: Track if payment has been initiated
 
   // Use the centralized checkout flow manager instead of individual contexts
   const { 
@@ -427,13 +428,19 @@ export default function CheckoutPage() {
     document.addEventListener('visibilitychange', handleVisibilityChange);
     
     return () => {
-      // Stop managing the checkout session
-      stopCheckoutSession();
+      // 🔧 CRITICAL FIX: Only cancel session if payment hasn't been initiated
+      // If payment was initiated, the draft order owns the stock reservation
+      if (!paymentInitiated) {
+        console.log('[CheckoutPage] 🧹 Cleanup: Cancelling session (payment not initiated)');
+        stopCheckoutSession();
+      } else {
+        console.log('[CheckoutPage] 🧹 Cleanup: Skipping cancel (payment initiated)');
+      }
       
       window.removeEventListener('beforeunload', handleBeforeUnload);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [checkoutSessionId, user?.mongoId, user?.token]);
+  }, [checkoutSessionId, user?.mongoId, user?.token, paymentInitiated]);
 
   // We now create the checkout session in handlePhonePePayment when we have all the data
 
@@ -621,6 +628,10 @@ export default function CheckoutPage() {
       }
 
       console.log('[CheckoutPage] ✅ Payment session created, redirecting to PhonePe...');
+      
+      // 🔧 CRITICAL FIX: Mark payment as initiated BEFORE redirect
+      // This prevents the cleanup function from cancelling the session
+      setPaymentInitiated(true);
       
       // Store success/failure URLs in localStorage for redirection after payment
       if (data.successUrl) localStorage.setItem('payment_success_url', data.successUrl);
