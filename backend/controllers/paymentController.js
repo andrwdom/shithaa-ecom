@@ -507,28 +507,53 @@ export const createPhonePeSession = async (req, res) => {
         const createdDraftOrder = draftOrder[0];
         console.log(`[${correlationId}] DRAFT order created: ${createdDraftOrder.orderId}`);
 
-        // Reserve stock atomically for the draft order
-        for (const item of checkoutSession.items) {
-          console.log(`[${correlationId}] Reserving stock for ${item.name} (${item.size}) x${item.quantity}`);
-          const reserved = await reserveStock(item.productId, item.size, item.quantity, { session });
-          if (!reserved) {
-            throw new Error(`Failed to reserve stock for ${item.name} (${item.size})`);
+        // 🔧 CRITICAL FIX: Only reserve stock if not already reserved
+        if (checkoutSession.stockReserved) {
+          console.log(`[${correlationId}] ✅ Stock already reserved for this checkout session, skipping reservation`);
+          Logger.info('stock_reservation_skipped', {
+            correlationId,
+            checkoutSessionId,
+            reason: 'already_reserved',
+            orderId: createdDraftOrder.orderId
+          });
+          
+          // Mark order as having reserved stock (it's already reserved in checkout session)
+          await orderModel.findByIdAndUpdate(
+            createdDraftOrder._id,
+            { stockReserved: true },
+            { session }
+          );
+        } else {
+          // Reserve stock atomically for the draft order
+          console.log(`[${correlationId}] Reserving stock for draft order...`);
+          for (const item of checkoutSession.items) {
+            console.log(`[${correlationId}] Reserving stock for ${item.name} (${item.size}) x${item.quantity}`);
+            const reserved = await reserveStock(item.productId, item.size, item.quantity, { session });
+            if (!reserved) {
+              throw new Error(`Failed to reserve stock for ${item.name} (${item.size})`);
+            }
           }
+
+          // Mark order as having reserved stock
+          await orderModel.findByIdAndUpdate(
+            createdDraftOrder._id,
+            { stockReserved: true },
+            { session }
+          );
+
+          // Mark checkout session as having reserved stock
+          checkoutSession.stockReserved = true;
+          checkoutSession.status = 'awaiting_payment';
+          await checkoutSession.save({ session });
+
+          console.log(`[${correlationId}] Stock reserved successfully for draft order`);
+          Logger.info('stock_reserved', {
+            correlationId,
+            checkoutSessionId,
+            orderId: createdDraftOrder.orderId,
+            itemCount: checkoutSession.items.length
+          });
         }
-
-        // Mark order as having reserved stock
-        await orderModel.findByIdAndUpdate(
-          createdDraftOrder._id,
-          { stockReserved: true },
-          { session }
-        );
-
-        // Mark checkout session as having reserved stock
-        checkoutSession.stockReserved = true;
-        checkoutSession.status = 'awaiting_payment';
-        await checkoutSession.save({ session });
-
-        console.log(`[${correlationId}] Stock reserved successfully for draft order`);
       });
     } catch (error) {
       console.error(`[${correlationId}] Draft order creation failed:`, error);
