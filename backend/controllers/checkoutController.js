@@ -700,7 +700,7 @@ export const cancelCheckoutSession = async (req, res) => {
     
     // 🔧 CRITICAL FIX: Wait for any pending transactions to commit
     // This prevents race condition where draft order exists but isn't committed yet
-    await new Promise(resolve => setTimeout(resolve, 500)); // 500ms delay
+    await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay
     
     // 🔧 CRITICAL FIX: Check if there's a draft order with this session
     // If there is, DON'T release stock because the order owns it now

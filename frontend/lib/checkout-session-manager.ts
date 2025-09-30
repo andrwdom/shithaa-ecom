@@ -43,36 +43,29 @@ class CheckoutSessionManagerClass {
     }
 
     const url = `/api/checkout/session/${this.sessionId}/cancel`;
-    const headers = { 'Authorization': `Bearer ${this.token}` };
+    const headers = { 'Authorization': `Bearer ${this.token}`, 'Content-Type': 'application/json' };
 
     try {
-      // Try Beacon first (most reliable on tab close)
-      const ok = navigator.sendBeacon(url, new Blob([], { type: 'application/json' }));
-      if (ok) {
-        console.log('[CheckoutSession] ✅ Session cancelled via sendBeacon');
-        return true;
-      }
-    } catch (error) {
-      console.warn('[CheckoutSession] sendBeacon failed:', error);
-    }
-
-    try {
-      // Fallback: keepalive fetch
+      // 🔧 FIX: Use fetch with keepalive ONLY (more reliable than sendBeacon)
+      // sendBeacon was causing double requests
       const response = await fetch(url, { 
         method: 'POST', 
         headers, 
-        keepalive: true 
+        keepalive: true,
+        body: JSON.stringify({}) // Empty body to satisfy backend
       });
       
       if (response.ok) {
-        console.log('[CheckoutSession] ✅ Session cancelled via fetch');
+        console.log('[CheckoutSession] ✅ Session cancelled successfully');
         return true;
+      } else {
+        console.warn('[CheckoutSession] ⚠️ Cancel request failed:', response.status);
+        return false;
       }
     } catch (error) {
-      console.warn('[CheckoutSession] fetch fallback failed:', error);
+      console.warn('[CheckoutSession] ❌ Cancel request error:', error);
+      return false;
     }
-
-    return false;
   }
 
   /**
