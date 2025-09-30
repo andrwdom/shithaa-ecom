@@ -698,33 +698,48 @@ export const cancelCheckoutSession = async (req, res) => {
       return errorResponse(res, 404, 'Checkout session not found');
     }
     
-    // 🔧 CRITICAL FIX: Wait for any pending transactions to commit
+    // 🔧 CRITICAL FIX: Retry logic to check for draft order with exponential backoff
     // This prevents race condition where draft order exists but isn't committed yet
-    // Increased to 2 seconds to handle slower transaction commits
-    await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second delay
+    let draftOrder = null;
+    const maxRetries = 3;
+    const delays = [1000, 2000, 3000]; // 1s, 2s, 3s delays
     
-    // 🔧 CRITICAL FIX: Check if there's a draft order with this session
-    // If there is, DON'T release stock because the order owns it now
-    const draftOrder = await orderModel.findOne({ 
-      checkoutSessionId: sessionId,
-      status: { $in: ['DRAFT', 'PENDING', 'CONFIRMED'] }
-    });
-    
-    if (draftOrder) {
-      console.log(`[${correlationId}] ⚠️ Draft order ${draftOrder.orderId} exists for session ${sessionId} - NOT releasing stock`);
-      console.log(`[${correlationId}] Order status: ${draftOrder.status}, stockReserved: ${draftOrder.stockReserved}`);
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      if (attempt > 0) {
+        console.log(`[${correlationId}] Retry ${attempt}/${maxRetries}: Checking for draft order after ${delays[attempt - 1]}ms delay...`);
+      }
       
-      // Just mark session as cancelled, but DON'T release stock
-      session.status = 'cancelled';
-      await session.save();
+      // Wait before checking (except first attempt)
+      if (attempt > 0) {
+        await new Promise(resolve => setTimeout(resolve, delays[attempt - 1]));
+      }
       
-      return successResponse(res, {
-        message: 'Checkout session cancelled (order exists, stock retained)',
-        status: session.status,
-        hasOrder: true,
-        orderId: draftOrder.orderId
+      // Check if there's a draft order with this session
+      draftOrder = await orderModel.findOne({ 
+        checkoutSessionId: sessionId,
+        status: { $in: ['DRAFT', 'PENDING', 'CONFIRMED'] }
       });
+      
+      if (draftOrder) {
+        console.log(`[${correlationId}] ⚠️ Draft order ${draftOrder.orderId} found on attempt ${attempt + 1} for session ${sessionId} - NOT releasing stock`);
+        console.log(`[${correlationId}] Order status: ${draftOrder.status}, stockReserved: ${draftOrder.stockReserved}`);
+        
+        // Just mark session as cancelled, but DON'T release stock
+        session.status = 'cancelled';
+        await session.save();
+        
+        return successResponse(res, {
+          message: 'Checkout session cancelled (order exists, stock retained)',
+          status: session.status,
+          hasOrder: true,
+          orderId: draftOrder.orderId
+        });
+      }
+      
+      console.log(`[${correlationId}] Attempt ${attempt + 1}/${maxRetries}: No draft order found yet`);
     }
+    
+    console.log(`[${correlationId}] No draft order found after ${maxRetries} attempts - proceeding with stock release`);
     
     // Release stock if reserved AND no draft order exists
     if (session.stockReserved) {

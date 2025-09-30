@@ -397,6 +397,13 @@ export default function CheckoutPage() {
   // 🚀 NEW: Instant stock release on page exit/cancel
   useEffect(() => {
     const handlePageExit = async () => {
+      // 🔧 CRITICAL FIX: Don't cancel if payment was initiated
+      // The draft order now owns the stock reservation
+      if (paymentInitiated) {
+        console.log('🚀 Payment initiated - NOT cancelling session on page exit');
+        return;
+      }
+      
       if (checkoutSessionId && user?.mongoId) {
         try {
           console.log('🚀 Releasing stock instantly on page exit...');

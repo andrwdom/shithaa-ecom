@@ -1121,15 +1121,30 @@ export const verifyPhonePePayment = async (req, res) => {
                 throw new Error(`Invalid item data: ${JSON.stringify(item)}`);
               }
 
-              const stockConfirmed = await confirmStockReservation(
+              let stockConfirmed = await confirmStockReservation(
                 productId, 
                 item.size, 
                 item.quantity, 
                 { session }
               );
               
+              // 🚨 EMERGENCY FALLBACK: If confirmation failed (reserved = 0 due to race condition),
+              // try direct stock deduction since payment was already successful
               if (!stockConfirmed) {
-                throw new Error(`Stock confirmation failed for ${item.name} (${item.size})`);
+                console.log(`⚠️ Stock confirmation failed for ${item.name} (${item.size}), attempting emergency deduction...`);
+                const { emergencyStockDeduction } = await import('../utils/stock.js');
+                stockConfirmed = await emergencyStockDeduction(
+                  productId,
+                  item.size,
+                  item.quantity,
+                  { session }
+                );
+                
+                if (!stockConfirmed) {
+                  throw new Error(`Stock confirmation AND emergency deduction failed for ${item.name} (${item.size})`);
+                }
+                
+                console.log(`✅ EMERGENCY: Successfully recovered from stock confirmation failure using direct deduction`);
               }
             }
 

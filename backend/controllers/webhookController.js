@@ -134,15 +134,30 @@ export async function phonePeWebhookHandler(req, res) {
             
             // Confirm stock for each item atomically (convert reserved to confirmed)
             for (const item of draftOrder.cartItems) {
-              const confirmed = await confirmStockReservation(
+              let confirmed = await confirmStockReservation(
                 item.productId,
                 item.size,
                 item.quantity,
                 { session }
               );
               
+              // 🚨 EMERGENCY FALLBACK: If confirmation failed (reserved = 0 due to race condition),
+              // try direct stock deduction since payment was already successful
               if (!confirmed) {
-                throw new Error(`Failed to confirm stock for item ${item.productId} size ${item.size}`);
+                console.log(`⚠️ WEBHOOK: Stock confirmation failed for ${item.name} (${item.size}), attempting emergency deduction...`);
+                const { emergencyStockDeduction } = await import('../utils/stock.js');
+                confirmed = await emergencyStockDeduction(
+                  item.productId,
+                  item.size,
+                  item.quantity,
+                  { session }
+                );
+                
+                if (!confirmed) {
+                  throw new Error(`Failed to confirm stock for item ${item.productId} size ${item.size}`);
+                }
+                
+                console.log(`✅ WEBHOOK: Successfully recovered from stock confirmation failure using emergency deduction`);
               }
               
               console.log(`🔔 WEBHOOK: Stock confirmed for ${item.name} (${item.size}) x${item.quantity}`);

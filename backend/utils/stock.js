@@ -290,6 +290,75 @@ export async function confirmStockReservation(productId, size, quantity, options
 }
 
 /**
+ * EMERGENCY FALLBACK: Deduct stock directly when reservation was lost (payment already successful)
+ * Use this ONLY when payment succeeded but stock confirmation failed due to race condition
+ * @param {string} productId - Product ID
+ * @param {string} size - Size to deduct
+ * @param {number} quantity - Quantity to deduct
+ * @param {Object} options - Additional options including session
+ * @returns {Promise<boolean>} - Result of the deduction
+ */
+export async function emergencyStockDeduction(productId, size, quantity, options = {}) {
+    if (quantity <= 0) {
+        throw new Error('Quantity must be positive for deduction');
+    }
+    
+    const { session } = options;
+    
+    try {
+        console.log(`⚠️ EMERGENCY: Attempting direct stock deduction for product ${productId} size ${size} quantity ${quantity}`);
+        
+        // Get current product state
+        const product = await productModel.findById(productId).session(session);
+        if (!product) {
+            console.error(`Emergency deduction failed - Product not found: ${productId}`);
+            return false;
+        }
+        
+        const sizeData = product.sizes.find(s => s.size === size);
+        if (!sizeData) {
+            console.error(`Emergency deduction failed - Size '${size}' not found in product ${productId}`);
+            return false;
+        }
+        
+        console.log(`⚠️ Current state: stock=${sizeData.stock}, reserved=${sizeData.reserved}`);
+        
+        // Deduct from available stock only (don't touch reserved as it's already 0)
+        const result = await productModel.updateOne(
+            {
+                _id: productId,
+                'sizes.size': size,
+                'sizes.stock': { $gte: quantity }
+            },
+            {
+                $inc: { 
+                    'sizes.$[elem].stock': -quantity
+                }
+            },
+            { 
+                session,
+                arrayFilters: [
+                    { 'elem.size': size, 'elem.stock': { $gte: quantity } }
+                ]
+            }
+        );
+        
+        const success = !!(result && (result.modifiedCount > 0 || result.nModified > 0));
+        
+        if (success) {
+            console.log(`✅ EMERGENCY: Stock deducted successfully: ${quantity} units for product ${productId} size ${size}`);
+        } else {
+            console.error(`❌ EMERGENCY: Stock deduction failed - insufficient stock for product ${productId} size ${size}`);
+        }
+        
+        return success;
+    } catch (error) {
+        console.error('❌ Emergency stock deduction failed:', error);
+        return false;
+    }
+}
+
+/**
  * Release stock reservation (decrement reserved field only)
  * @param {string} productId - Product ID
  * @param {string} size - Size to release
