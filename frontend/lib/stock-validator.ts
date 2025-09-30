@@ -27,7 +27,8 @@ export interface StockValidationResult {
  */
 export const validateStockAvailability = async (
   items: StockValidationItem[],
-  token?: string
+  token?: string,
+  checkoutSessionId?: string
 ): Promise<StockValidationResult> => {
   try {
     const headers: Record<string, string> = {
@@ -41,7 +42,10 @@ export const validateStockAvailability = async (
     const response = await fetch(`/api/checkout/validate-stock?t=${Date.now()}`, {
       method: 'POST',
       headers,
-      body: JSON.stringify({ items })
+      body: JSON.stringify({ 
+        items,
+        checkoutSessionId // 🔧 FIX: Exclude current checkout session's reservation
+      })
     });
 
     const data = await response.json();

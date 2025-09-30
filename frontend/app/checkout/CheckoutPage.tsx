@@ -508,7 +508,12 @@ export default function CheckoutPage() {
         name: item.name
       }));
       
-      const stockValidation = await validateStockAvailability(stockValidationItems, user?.token);
+      // 🔧 FIX: Pass existing checkout session ID to exclude its reservation
+      const stockValidation = await validateStockAvailability(
+        stockValidationItems, 
+        user?.token,
+        checkoutSessionId || undefined // Exclude current session's reservation if retrying payment
+      );
       
       if (!stockValidation.isValid) {
         const unavailableItems = stockValidation.unavailableItems && Array.isArray(stockValidation.unavailableItems) && stockValidation.unavailableItems.length > 0
@@ -547,17 +552,20 @@ export default function CheckoutPage() {
         throw new Error(sessionResponse.message || 'Failed to create checkout session');
       }
 
-      const checkoutSessionId = sessionResponse.data.sessionId;
-      console.log('[CheckoutPage] ✅ Checkout session created:', checkoutSessionId);
+      const newCheckoutSessionId = sessionResponse.data.sessionId;
+      console.log('[CheckoutPage] ✅ Checkout session created:', newCheckoutSessionId);
+      
+      // 🔧 FIX: Update state with the new checkout session ID
+      setCheckoutSessionId(newCheckoutSessionId);
       
       // Start managing the checkout session for cleanup
       if (user?.token) {
-        startCheckoutSession(checkoutSessionId, user.token);
+        startCheckoutSession(newCheckoutSessionId, user.token);
       }
       
       // 🔑 CRITICAL: Reserve stock before creating payment session
       console.log('[CheckoutPage] 🔄 Reserving stock for checkout session...');
-      const stockReservationResponse = await authenticatedFetchJson(`/api/checkout/session/${checkoutSessionId}/reserve-stock`, {
+      const stockReservationResponse = await authenticatedFetchJson(`/api/checkout/session/${newCheckoutSessionId}/reserve-stock`, {
         method: 'POST',
       });
 
@@ -578,7 +586,7 @@ export default function CheckoutPage() {
       }));
 
       const paymentData = {
-        checkoutSessionId,
+        checkoutSessionId: newCheckoutSessionId,
         shipping,
         cartItems,
         orderSummary,

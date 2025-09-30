@@ -754,13 +754,13 @@ export const validateStock = async (req, res) => {
   const correlationId = req.headers['x-request-id'] || `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   
   try {
-    const { items } = req.body;
+    const { items, checkoutSessionId } = req.body;
     
     if (!items || !Array.isArray(items) || items.length === 0) {
       return errorResponse(res, 400, 'Items array is required');
     }
 
-    console.log(`[ValidateStock:${correlationId}] Validating stock for ${items.length} items`);
+    console.log(`[ValidateStock:${correlationId}] Validating stock for ${items.length} items${checkoutSessionId ? ` (excluding session: ${checkoutSessionId})` : ''}`);
 
     const unavailableItems = [];
     
@@ -769,7 +769,8 @@ export const validateStock = async (req, res) => {
         const stockCheck = await checkStockAvailability(
           item.productId, 
           item.size, 
-          item.quantity
+          item.quantity,
+          checkoutSessionId // 🔧 FIX: Exclude current checkout session's reservation
         );
         
         if (!stockCheck.available) {
