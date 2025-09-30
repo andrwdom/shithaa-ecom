@@ -403,17 +403,36 @@ export const createPhonePeSession = async (req, res) => {
     // 🔑 STEP 2: VALIDATE UPFRONT (stock, etc.) - Fail fast, no payment if issues
     console.log(`[${correlationId}] Validating stock and cart data upfront`);
     
-    const { checkStockAvailability } = await import('../utils/stock.js');
-        
-        // First check if stock is available
-        for (const item of checkoutSession.items) {
-          const availability = await checkStockAvailability(item.productId, item.size, item.quantity);
-          if (!availability.available) {
-            console.error(`[${correlationId}] Stock not available for ${item.name}:`, availability);
-            return res.status(400).json({
-              success: false,
-              message: `Insufficient stock for ${item.name} (${item.size}). Available: ${availability.availableStock}, Requested: ${item.quantity}`
-        });
+    // 🔧 CRITICAL FIX: Skip stock validation if already reserved for this session
+    if (checkoutSession.stockReserved) {
+      console.log(`[${correlationId}] ✅ Stock already reserved for this checkout session, skipping validation`);
+      Logger.info('stock_validation_skipped', {
+        correlationId,
+        checkoutSessionId,
+        reason: 'already_reserved',
+        itemCount: checkoutSession.items.length
+      });
+    } else {
+      // Only validate if stock NOT yet reserved
+      const { checkStockAvailability } = await import('../utils/stock.js');
+          
+      // First check if stock is available
+      for (const item of checkoutSession.items) {
+        const availability = await checkStockAvailability(item.productId, item.size, item.quantity);
+        if (!availability.available) {
+          console.error(`[${correlationId}] Stock not available for ${item.name}:`, availability);
+          Logger.error('stock_validation_failed', new Error('Insufficient stock'), {
+            correlationId,
+            productName: item.name,
+            size: item.size,
+            available: availability.availableStock,
+            requested: item.quantity
+          });
+          return res.status(400).json({
+            success: false,
+            message: `Insufficient stock for ${item.name} (${item.size}). Available: ${availability.availableStock}, Requested: ${item.quantity}`
+          });
+        }
       }
     }
     
