@@ -15,6 +15,7 @@ import { generateInvoiceBuffer, sendInvoiceEmail } from '../utils/invoiceGenerat
 import { releaseStockReservation, reserveStock, confirmStockReservation } from '../utils/stock.js';
 import { config } from '../config.js';
 import mongoose from 'mongoose';
+import Logger from '../utils/logger.js';
 
 // Helper function to get user email for orders
 const getOrderUserEmail = (req, email) => {
@@ -342,12 +343,24 @@ export const createPhonePeSession = async (req, res) => {
   const idempotencyKey = req.headers['idempotency-key'] || uuidv4(); // Client sends this, or generate
   
   try {
+    const { checkoutSessionId, shipping, cartItems, orderSummary, userId, email, checkoutMode } = req.body;
+    
+    // Log payment initiation
+    Logger.payment(correlationId, 'initiated', {
+      checkoutSessionId,
+      idempotencyKey,
+      userId,
+      email,
+      amount: orderSummary?.total,
+      itemCount: cartItems?.length || 0,
+      checkoutMode
+    });
+    
     console.log(`[${correlationId}] Creating PhonePe payment session with DRAFT ORDER pattern`);
     console.log(`[${correlationId}] Idempotency Key: ${idempotencyKey}`);
     
-    const { checkoutSessionId, shipping, cartItems, orderSummary, userId, email, checkoutMode } = req.body;
-    
     if (!checkoutSessionId) {
+      Logger.warn('payment_missing_session', { correlationId });
       return res.status(400).json({
         success: false,
         message: 'Checkout session ID is required'

@@ -8,6 +8,7 @@ import Coupon from '../models/Coupon.js';
 import mongoose from 'mongoose';
 import crypto from 'crypto';
 import counterModel from '../models/counterModel.js';
+import Logger from '../utils/logger.js';
 
 // global variables
 const currency = 'inr'
@@ -184,7 +185,6 @@ async function getUniqueOrderId() {
 // PATCH createOrder
 export const createOrder = async (req, res) => {
     try {
-        console.log('Order Body:', req.body); // TEMP LOG FOR TESTING
         const {
             customerName,
             email,
@@ -196,7 +196,21 @@ export const createOrder = async (req, res) => {
             isTestOrder
         } = req.body;
 
+        // Log order creation attempt
+        Logger.info('order_creation_attempt', {
+            customerName,
+            email,
+            itemCount: items?.length || 0,
+            totalPrice,
+            paymentMethod,
+            isTestOrder: isTestOrder || false,
+            userId: req.body.userId || req.user?.id
+        });
+
         if (!customerName || !email || !phone || !address || !items || !totalPrice || !paymentMethod) {
+            Logger.warn('order_creation_validation_failed', {
+                missing: { customerName: !customerName, email: !email, phone: !phone, address: !address, items: !items, totalPrice: !totalPrice, paymentMethod: !paymentMethod }
+            });
             return res.status(400).json({ message: 'Missing required fields' });
         }
 
@@ -245,8 +259,27 @@ export const createOrder = async (req, res) => {
             orderId
         };
         const order = await orderModel.create(orderData);
+        
+        // Log successful order creation
+        Logger.order(order._id.toString(), 'created', {
+            customerName,
+            email: userEmail,
+            itemCount: items.length,
+            totalPrice,
+            paymentMethod,
+            orderId: order.orderId,
+            userId: order.userId
+        });
+        
         res.status(201).json({ success: true, order });
     } catch (err) {
+        // Log order creation failure
+        Logger.error('order_creation_failed', err, {
+            customerName: req.body.customerName,
+            email: req.body.email,
+            itemCount: req.body.items?.length || 0,
+            totalPrice: req.body.totalPrice
+        });
         console.error('Create Order Error:', err);
         res.status(500).json({ message: 'Server error while creating order' });
     }

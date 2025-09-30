@@ -52,6 +52,7 @@ import bulletproofWebhookRouter from './controllers/bulletproofWebhookController
 import { maintenanceMode } from './middleware/maintenanceMode.js'
 import { startReconciliationCron } from './utils/reconciliation.js'
 import { requestLogger, quickRequestLogger, fileRequestLogger } from './middleware/requestLogger.js'
+import Logger from './utils/logger.js'
 import redisService from './services/redisService.js'
 import admin from 'firebase-admin'
 import orderModel from './models/orderModel.js'
@@ -74,6 +75,13 @@ if (process.env.NODE_ENV === 'development') {
   console.log('PHONEPE_API_KEY:', process.env.PHONEPE_API_KEY ? 'SET' : 'NOT SET');
   console.log('---');
 }
+
+// Log server startup
+Logger.info('server_starting', {
+  port: PORT,
+  nodeEnv: process.env.NODE_ENV,
+  timestamp: new Date().toISOString()
+})
 
 // Trust proxy - required for rate limiting behind reverse proxy
 app.set('trust proxy', 1)
@@ -137,6 +145,8 @@ if (process.env.NODE_ENV === 'production' && process.env.SENTRY_DSN) {
 
 // Connect to MongoDB
 connectDB().then(async () => {
+  Logger.info('mongodb_connected', { timestamp: Date.now() });
+  
   // Auto-seed default categories if none exist
   const count = await Category.countDocuments();
   if (count === 0) {
@@ -145,12 +155,16 @@ connectDB().then(async () => {
       { name: 'Zipless feeding lounge wear', slug: 'zipless-feeding-lounge-wear', description: 'Lounge wear for feeding without zips.' },
       { name: 'Non feeding lounge wear', slug: 'non-feeding-lounge-wear', description: 'Lounge wear for non-feeding mothers.' }
     ]);
-    console.log('Default categories seeded!');
+    Logger.info('categories_seeded', { count: 3 });
   }
   else {
-    console.log('Categories already exist, skipping seeding.');
+    Logger.info('categories_exist', { count });
   }
 }).catch(err => {
+  Logger.error('mongodb_connection_failed', err, {
+    timestamp: Date.now(),
+    critical: true
+  });
   console.error('MongoDB connection error:', err);
 });
 
@@ -693,22 +707,27 @@ const server = await startServer();
 // Handle server errors
 server.on('error', (error) => {
     if (error.code === 'EADDRINUSE') {
+        Logger.error('server_port_in_use', error, { port: PORT, critical: true });
         console.error(`❌ Port ${PORT} is already in use. Please choose a different port or stop the running process.`);
     } else {
+        Logger.error('server_error', error, { critical: true });
         console.error('❌ Server error:', error);
     }
 });
 
 // Graceful shutdown handlers
 const gracefulShutdown = (signal) => {
+    Logger.warn('server_shutdown_initiated', { signal, timestamp: Date.now() });
     console.log(`\n🛑 Received ${signal}. Performing graceful shutdown...`);
     server.close(() => {
+        Logger.info('server_closed', { signal });
         console.log('✅ Server closed. Exiting process.');
         process.exit(0);
     });
     
     // Force close after 10 seconds
     setTimeout(() => {
+        Logger.warn('server_forced_shutdown', { signal, reason: 'timeout' });
         console.log('⚠️ Forcing shutdown after timeout');
         process.exit(1);
     }, 10000);
