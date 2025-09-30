@@ -3,6 +3,7 @@ import CheckoutSession from '../models/CheckoutSession.js';
 import PaymentEvent from '../models/PaymentEvent.js';
 import Reservation from '../models/Reservation.js';
 import productModel from '../models/productModel.js';
+import orderModel from '../models/orderModel.js';
 import { successResponse, errorResponse } from '../utils/response.js';
 import { checkStockAvailability, reserveStock, releaseStockReservation } from '../utils/stock.js';
 import mongoose from 'mongoose';
@@ -697,9 +698,34 @@ export const cancelCheckoutSession = async (req, res) => {
       return errorResponse(res, 404, 'Checkout session not found');
     }
     
-    // Release stock if reserved
+    // 🔧 CRITICAL FIX: Check if there's a draft order with this session
+    // If there is, DON'T release stock because the order owns it now
+    const draftOrder = await orderModel.findOne({ 
+      checkoutSessionId: sessionId,
+      status: { $in: ['DRAFT', 'PENDING', 'CONFIRMED'] }
+    });
+    
+    if (draftOrder) {
+      console.log(`[${correlationId}] ⚠️ Draft order ${draftOrder.orderId} exists for session ${sessionId} - NOT releasing stock`);
+      console.log(`[${correlationId}] Order status: ${draftOrder.status}, stockReserved: ${draftOrder.stockReserved}`);
+      
+      // Just mark session as cancelled, but DON'T release stock
+      session.status = 'cancelled';
+      await session.save();
+      
+      return successResponse(res, {
+        message: 'Checkout session cancelled (order exists, stock retained)',
+        status: session.status,
+        hasOrder: true,
+        orderId: draftOrder.orderId
+      });
+    }
+    
+    // Release stock if reserved AND no draft order exists
     if (session.stockReserved) {
       try {
+        console.log(`[${correlationId}] No draft order found - releasing stock for session ${sessionId}`);
+        
         // Release stock for all items
         const stockOperations = [];
         for (const item of session.items) {
