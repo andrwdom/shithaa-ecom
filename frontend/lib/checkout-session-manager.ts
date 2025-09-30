@@ -13,6 +13,7 @@ class CheckoutSessionManagerClass {
   private sessionId: string | null = null;
   private token: string | null = null;
   private isActive: boolean = false;
+  private paymentInitiated: boolean = false; // 🔧 NEW: Track if payment was initiated
   private cleanupHandlers: (() => void)[] = [];
 
   /**
@@ -32,6 +33,15 @@ class CheckoutSessionManagerClass {
     this.isActive = false;
     this.cleanupHandlers.forEach(cleanup => cleanup());
     this.cleanupHandlers = [];
+  }
+
+  /**
+   * 🔧 NEW: Mark that payment has been initiated
+   * This prevents automatic session cancellation on page unload
+   */
+  markPaymentInitiated() {
+    this.paymentInitiated = true;
+    console.log('[CheckoutSession] 💳 Payment initiated - session will NOT be cancelled on redirect');
   }
 
   /**
@@ -73,9 +83,12 @@ class CheckoutSessionManagerClass {
    */
   private wireUpGuards() {
     const handler = () => {
-      if (this.isActive) {
+      // 🔧 CRITICAL FIX: Don't cancel if payment was initiated
+      if (this.isActive && !this.paymentInitiated) {
         console.log('[CheckoutSession] 🚨 User leaving checkout, cancelling session...');
         this.cancelSession();
+      } else if (this.paymentInitiated) {
+        console.log('[CheckoutSession] ✅ Payment initiated - skipping cancel');
       }
     };
 
@@ -135,6 +148,10 @@ export const stopCheckoutSession = () => {
 
 export const cancelCheckoutSession = () => {
   return checkoutSessionManager.cancelSession();
+};
+
+export const markPaymentInitiated = () => {
+  checkoutSessionManager.markPaymentInitiated();
 };
 
 export const getCheckoutSessionInfo = () => {

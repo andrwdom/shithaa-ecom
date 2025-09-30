@@ -1,0 +1,5 @@
+[33meac683b[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mdevelop[m[33m, [m[1;31morigin/develop[m[33m)[m CRITICAL FIX: Prevent stock release during payment redirect - Increased backend delay to 2s - Added paymentInitiated flag to skip session cancel on redirect
+[33m69f1703[m CRITICAL FIX: Prevent double cancel requests + increase delay to 1s
+[33mbcbc4ed[m CRITICAL FIX: Add delay in cancelCheckoutSession to wait for transaction commit
+[33m12deff3[m CRITICAL FIX: Prevent workers from releasing stock when draft order exists
+[33m814215d[m CRITICAL FIX: Prevent race condition - Don't release stock if draft order exists

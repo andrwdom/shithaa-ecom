@@ -12,7 +12,7 @@ import { useAuth } from '@/components/auth/useAuth'
 import { calculateShippingCost, ShippingInfo } from '@/lib/shipping-calculator'
 import { authenticatedFetch, authenticatedFetchJson } from '@/lib/api-utils';
 import { validateStockAvailability } from '@/lib/stock-validator';
-import { startCheckoutSession, stopCheckoutSession } from '@/lib/checkout-session-manager';
+import { startCheckoutSession, stopCheckoutSession, markPaymentInitiated } from '@/lib/checkout-session-manager';
 
 function ProductPreviewSection({ items, onEdit }: any) {
   if (!items || items.length === 0) {
@@ -630,8 +630,9 @@ export default function CheckoutPage() {
       console.log('[CheckoutPage] ✅ Payment session created, redirecting to PhonePe...');
       
       // 🔧 CRITICAL FIX: Mark payment as initiated BEFORE redirect
-      // This prevents the cleanup function from cancelling the session
+      // This prevents BOTH the cleanup function AND session manager from cancelling the session
       setPaymentInitiated(true);
+      markPaymentInitiated(); // Tell the session manager too!
       
       // Store success/failure URLs in localStorage for redirection after payment
       if (data.successUrl) localStorage.setItem('payment_success_url', data.successUrl);
