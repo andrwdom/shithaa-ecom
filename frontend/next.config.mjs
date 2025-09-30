@@ -48,7 +48,16 @@ const nextConfig = {
   },
   experimental: {
     // optimizeCss: true, // Temporarily disabled to fix build error
-    optimizePackageImports: ['@radix-ui/react-icons'],
+    optimizePackageImports: [
+      '@radix-ui/react-icons',
+      '@radix-ui/react-dialog',
+      '@radix-ui/react-select',
+      '@radix-ui/react-separator',
+      '@radix-ui/react-label',
+      '@radix-ui/react-radio-group',
+      'lucide-react',
+      'framer-motion'
+    ],
   },
   compress: true,
   poweredByHeader: false,
@@ -64,18 +73,54 @@ const nextConfig = {
   // Optimize bundle size
   webpack: (config, { dev, isServer }) => {
     if (!dev && !isServer) {
+      // Aggressive code splitting for mobile performance
       config.optimization.splitChunks = {
         chunks: 'all',
         cacheGroups: {
+          default: false,
+          vendors: false,
+          // Split large UI libraries
+          radixUI: {
+            test: /[\\/]node_modules[\\/]@radix-ui[\\/]/,
+            name: 'radix-ui',
+            priority: 10,
+            reuseExistingChunk: true,
+          },
+          // Split Framer Motion (animation library)
+          framerMotion: {
+            test: /[\\/]node_modules[\\/]framer-motion[\\/]/,
+            name: 'framer-motion',
+            priority: 10,
+            reuseExistingChunk: true,
+          },
+          // Split Firebase (auth library)
+          firebase: {
+            test: /[\\/]node_modules[\\/]firebase[\\/]/,
+            name: 'firebase',
+            priority: 10,
+            reuseExistingChunk: true,
+          },
+          // Common vendor libraries
           vendor: {
             test: /[\\/]node_modules[\\/]/,
-            name: 'vendors',
-            chunks: 'all',
+            name: 'vendor',
+            priority: 5,
+            reuseExistingChunk: true,
+          },
+          // Common code across pages
+          common: {
+            minChunks: 2,
+            priority: 5,
+            reuseExistingChunk: true,
           },
         },
-      }
+      };
+      
+      // Tree shaking for production
+      config.optimization.usedExports = true;
+      config.optimization.sideEffects = true;
     }
-    return config
+    return config;
   },
   headers: async () => {
     return [
