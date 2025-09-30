@@ -1,4 +1,6 @@
 // Next.js instrumentation file for Sentry
+import * as Sentry from '@sentry/nextjs';
+
 export async function register() {
   if (process.env.NEXT_RUNTIME === 'nodejs') {
     // Server-side Sentry initialization
@@ -13,7 +15,17 @@ export async function register() {
   }
 }
 
+// Add onRequestError hook for better error tracking
+export async function onRequestError(err: unknown, request: {
+  path: string;
+  method: string;
+  headers: Record<string, string | string[] | undefined>;
+}) {
+  // Use Sentry.captureRequestError to instrument the onRequestError hook
+  Sentry.captureRequestError(err, request);
+}
+
 // Client-side initialization
 if (typeof window !== 'undefined') {
-  import('./sentry.client.config.js').then(({ init }) => init());
+  import('./instrumentation-client.ts').then(({ init }) => init());
 }
