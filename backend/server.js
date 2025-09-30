@@ -48,6 +48,7 @@ import cachedRoutes from './routes/cachedRoutes.js'
 import monitoringRouter from './routes/monitoring.js'
 import maintenanceRouter from './routes/maintenance.js'
 import webhookManagementRouter from './routes/webhookManagement.js'
+import bulletproofWebhookRouter from './controllers/bulletproofWebhookController.js'
 import { maintenanceMode } from './middleware/maintenanceMode.js'
 import { startReconciliationCron } from './utils/reconciliation.js'
 import { requestLogger, quickRequestLogger, fileRequestLogger } from './middleware/requestLogger.js'
@@ -125,6 +126,9 @@ app.options('*', cors(corsOptions));
 // CRITICAL: Mount raw webhook route BEFORE body parsers to capture raw payload
 import rawWebhookRouter from './routes/rawWebhook.js';
 app.use(rawWebhookRouter);
+
+// Mount bulletproof webhook routes (TEST MODE - different path to avoid conflicts)
+app.use('/api/webhooks-test', bulletproofWebhookRouter);
 
 // Add Sentry request handler (non-intrusive - only in production)
 if (process.env.NODE_ENV === 'production' && process.env.SENTRY_DSN) {

@@ -9,6 +9,7 @@ const RawWebhookSchema = new mongoose.Schema({
   processedAt: Date,
   error: String,
   processing: { type: Boolean, default: false, index: true }
+  // Removed new fields to avoid breaking existing code
 });
 
 // TTL - auto-delete after 48 hours (172800 seconds)

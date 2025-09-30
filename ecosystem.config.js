@@ -132,5 +132,6 @@ module.exports = {
       time: true,
       cron_restart: '*/1 * * * *' // Restart every minute to process webhooks
     }
+    // REMOVED: shithaa-reconcile-payments to avoid conflict with existing shithaa-reconciliation-worker
   ]
 };
