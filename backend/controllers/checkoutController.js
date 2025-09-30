@@ -698,6 +698,10 @@ export const cancelCheckoutSession = async (req, res) => {
       return errorResponse(res, 404, 'Checkout session not found');
     }
     
+    // 🔧 CRITICAL FIX: Wait for any pending transactions to commit
+    // This prevents race condition where draft order exists but isn't committed yet
+    await new Promise(resolve => setTimeout(resolve, 500)); // 500ms delay
+    
     // 🔧 CRITICAL FIX: Check if there's a draft order with this session
     // If there is, DON'T release stock because the order owns it now
     const draftOrder = await orderModel.findOne({ 
