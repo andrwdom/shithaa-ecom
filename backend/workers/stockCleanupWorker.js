@@ -10,6 +10,7 @@ import productModel from '../models/productModel.js';
 import Reservation from '../models/Reservation.js';
 import CheckoutSession from '../models/CheckoutSession.js';
 import PaymentSession from '../models/paymentSessionModel.js';
+import orderModel from '../models/orderModel.js'; // 🔧 NEW: Import orderModel
 import { releaseStockReservation } from '../utils/stock.js';
 
 const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/shithaa-ecom';
@@ -110,6 +111,34 @@ const cleanupAbandonedOrders = async () => {
       let sessionsCleaned = 0;
       for (const checkoutSession of oldSessions) {
         try {
+          // 🔧 CRITICAL FIX: Check if there's a draft order with this session
+          // If there is, DON'T release stock because the order owns it now
+          const draftOrder = await orderModel.findOne({ 
+            checkoutSessionId: checkoutSession.sessionId,
+            status: { $in: ['DRAFT', 'PENDING', 'CONFIRMED'] }
+          }).session(session);
+          
+          if (draftOrder) {
+            console.log(`[${correlationId}] ⚠️ Draft order ${draftOrder.orderId} exists for session ${checkoutSession.sessionId} - NOT releasing stock`);
+            console.log(`[${correlationId}] Order status: ${draftOrder.status}, stockReserved: ${draftOrder.stockReserved}`);
+            
+            // Just mark session as expired, but DON'T release stock
+            await CheckoutSession.findByIdAndUpdate(
+              checkoutSession._id,
+              {
+                status: 'expired',
+                stockReserved: true, // Keep this true since order owns the reservation
+                expiredAt: new Date(),
+                updatedAt: new Date()
+              },
+              { session }
+            );
+            continue; // Skip to next session
+          }
+          
+          // No draft order exists, safe to release stock
+          console.log(`[${correlationId}] No draft order found for session ${checkoutSession.sessionId} - releasing stock`);
+          
           // Get associated payment session
           const paymentSession = await PaymentSession.findOne({
             sessionId: checkoutSession.sessionId

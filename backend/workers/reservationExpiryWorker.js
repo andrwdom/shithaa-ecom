@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import Reservation from '../models/Reservation.js';
 import CheckoutSession from '../models/CheckoutSession.js';
+import orderModel from '../models/orderModel.js'; // 🔧 NEW: Import orderModel
 import { releaseStockReservation } from '../utils/stock.js';
 import { successResponse, errorResponse } from '../utils/response.js';
 
@@ -89,10 +90,30 @@ export const expireOldReservations = async () => {
     });
     
     if (veryOldSessions.length > 0) {
-      console.log(`[${correlationId}] Found ${veryOldSessions.length} very old sessions, forcing stock release...`);
+      console.log(`[${correlationId}] Found ${veryOldSessions.length} very old sessions, checking for draft orders...`);
       
       for (const session of veryOldSessions) {
         try {
+          // 🔧 CRITICAL FIX: Check if there's a draft order with this session
+          // If there is, DON'T release stock because the order owns it now
+          const draftOrder = await orderModel.findOne({ 
+            checkoutSessionId: session.sessionId,
+            status: { $in: ['DRAFT', 'PENDING', 'CONFIRMED'] }
+          });
+          
+          if (draftOrder) {
+            console.log(`[${correlationId}] ⚠️ Draft order ${draftOrder.orderId} exists for session ${session.sessionId} - NOT releasing stock`);
+            console.log(`[${correlationId}] Order status: ${draftOrder.status}, stockReserved: ${draftOrder.stockReserved}`);
+            
+            // Just mark session as expired, but DON'T release stock
+            session.status = 'expired';
+            await session.save();
+            continue; // Skip to next session
+          }
+          
+          // No draft order exists, safe to release stock
+          console.log(`[${correlationId}] No draft order found for session ${session.sessionId} - releasing stock`);
+          
           // Force release stock
           const releasePromises = session.items.map(item =>
             releaseStockReservation(item.productId, item.size, item.quantity).catch(error => {
@@ -126,10 +147,30 @@ export const expireOldReservations = async () => {
     });
     
     if (stuckSessions.length > 0) {
-      console.log(`[${correlationId}] Found ${stuckSessions.length} stuck sessions, forcing cleanup...`);
+      console.log(`[${correlationId}] Found ${stuckSessions.length} stuck sessions, checking for draft orders...`);
       
       for (const session of stuckSessions) {
         try {
+          // 🔧 CRITICAL FIX: Check if there's a draft order with this session
+          // If there is, DON'T release stock because the order owns it now
+          const draftOrder = await orderModel.findOne({ 
+            checkoutSessionId: session.sessionId,
+            status: { $in: ['DRAFT', 'PENDING', 'CONFIRMED'] }
+          });
+          
+          if (draftOrder) {
+            console.log(`[${correlationId}] ⚠️ Draft order ${draftOrder.orderId} exists for stuck session ${session.sessionId} - NOT releasing stock`);
+            console.log(`[${correlationId}] Order status: ${draftOrder.status}, stockReserved: ${draftOrder.stockReserved}`);
+            
+            // Just mark session as expired, but DON'T release stock
+            session.status = 'expired';
+            await session.save();
+            continue; // Skip to next session
+          }
+          
+          // No draft order exists, safe to release stock
+          console.log(`[${correlationId}] No draft order found for stuck session ${session.sessionId} - releasing stock`);
+          
           // Force release stock
           const releasePromises = session.items.map(item =>
             releaseStockReservation(item.productId, item.size, item.quantity).catch(error => {
