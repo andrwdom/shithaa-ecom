@@ -380,7 +380,15 @@ export default function UnifiedCheckout() {
     
     if (items.length === 0) {
       return (
-        <div className="container mx-auto px-4 py-8 max-w-2xl text-center">
+        <div 
+          className="container mx-auto px-4 py-8 max-w-2xl text-center"
+          style={{
+            // Enable pull-to-refresh on mobile
+            WebkitOverflowScrolling: 'touch',
+            overscrollBehaviorY: 'auto',
+            touchAction: 'pan-y pinch-zoom'
+          }}
+        >
           <ShoppingCart className="h-16 w-16 text-gray-400 mx-auto mb-4" />
           <h1 className="text-3xl font-bold mb-4">No Items to Checkout</h1>
           <p className="text-gray-600 mb-8">
@@ -396,7 +404,16 @@ export default function UnifiedCheckout() {
     }
 
     return (
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
+      <div 
+        className="container mx-auto px-4 py-8 max-w-6xl"
+        style={{
+          // Enable pull-to-refresh on mobile
+          WebkitOverflowScrolling: 'touch',
+          overscrollBehaviorY: 'auto',
+          overscrollBehaviorX: 'contain',
+          touchAction: 'pan-y pinch-zoom'
+        }}
+      >
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold mb-4">
