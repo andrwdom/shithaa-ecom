@@ -1,6 +1,6 @@
 "use client"
 import { createContext, useContext, useEffect, useState } from "react";
-import { onAuthStateChanged, signOut, User } from "firebase/auth";
+import { onAuthStateChanged, signOut, User, getIdToken } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { useRouter } from 'next/navigation';
 import { toast } from "sonner";
@@ -123,11 +123,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  // Function to get ID token
+  const getIdTokenFromAuth = async (forceRefresh: boolean = false) => {
+    if (!user) {
+      throw new Error('No user logged in');
+    }
+    return await getIdToken(user, forceRefresh);
+  };
+
   // Merge Firebase user and MongoDB user
   const mergedUser = user && mongoUser ? { ...user, mongoId: mongoUser._id, mongoEmail: mongoUser.email } : user;
 
   return (
-    <AuthContext.Provider value={{ user: mergedUser, loading, logout }}>
+    <AuthContext.Provider value={{ user: mergedUser, loading, logout, getIdToken: getIdTokenFromAuth }}>
       {children}
     </AuthContext.Provider>
   );
