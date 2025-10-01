@@ -46,11 +46,11 @@ export default function HeroCategoryCard({
   
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
   const isMobile = useRef(false)
-  const isIntersecting = useRef(false) // Changed to false initially, will be set by observer
+  const isIntersecting = useRef(true) // Start as true - assume visible on mount for above-fold content
   const intersectionObserver = useRef<IntersectionObserver | null>(null)
   const cardRef = useRef<HTMLDivElement>(null)
   const imageRefs = useRef<Map<string, HTMLImageElement>>(new Map())
-  const [isVisible, setIsVisible] = useState(false) // Track visibility state
+  const [isVisible, setIsVisible] = useState(true) // Start as visible for immediate display
 
   // Detect mobile on mount
   useEffect(() => {
@@ -62,7 +62,7 @@ export default function HeroCategoryCard({
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
-  // Setup intersection observer for performance optimization
+  // Setup intersection observer for performance optimization (pause when off-screen)
   useEffect(() => {
     if (cardRef.current) {
       intersectionObserver.current = new IntersectionObserver(
@@ -85,7 +85,7 @@ export default function HeroCategoryCard({
         },
         { 
           threshold: 0.01, // Lower threshold for earlier detection
-          rootMargin: '50px' // Start loading slightly before entering viewport
+          rootMargin: '200px' // Start loading well before entering viewport
         }
       )
       
@@ -206,15 +206,16 @@ export default function HeroCategoryCard({
 
   // Get current image - prioritize VPS images over placeholders
   const currentImage = useMemo(() => {
-    if (hasVpsImages && images.length > 0) {
+    // If we have VPS images, use them
+    if (images.length > 0 && hasVpsImages) {
       return images[currentImageIndex]
     }
-    // Return placeholder image when VPS images are not yet loaded
+    // Always return placeholder image as fallback (even while loading)
     return {
       src: getPlaceholderImage(categorySlug),
       alt: `${title} - ${categorySlug}`,
       lqip: '',
-      productId: '',
+      productId: 'placeholder',
       productName: title,
       productSlug: categorySlug,
       thumbUrl: getPlaceholderImage(categorySlug),
@@ -222,7 +223,7 @@ export default function HeroCategoryCard({
       width: 400,
       height: 600
     }
-  }, [hasVpsImages, images, currentImageIndex, title, categorySlug])
+  }, [images, hasVpsImages, currentImageIndex, title, categorySlug])
 
   // Event handlers
   const handleCardClick = () => {

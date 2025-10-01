@@ -7,8 +7,9 @@ import { HERO_SECTION_CATEGORIES } from "@/lib/hero-section-images"
 
 const EnhancedHeroSection = () => {
   const [allImages, setAllImages] = useState<string[]>([])
-  const [isPreloading, setIsPreloading] = useState(false) // Changed to false to immediately show cards
+  const [isPreloading, setIsPreloading] = useState(false)
   const [preloadProgress, setPreloadProgress] = useState(0)
+  const [isReady, setIsReady] = useState(true) // Always ready to show immediately
 
   const handleCategoryClick = useCallback((slug: string) => {
     window.location.href = `/collections/${slug}`
@@ -86,24 +87,19 @@ const EnhancedHeroSection = () => {
           </p>
         </div>
 
-        {/* Category Cards Grid - Now immediately visible */}
+        {/* Category Cards Grid - Render immediately without animation delays */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 max-w-7xl mx-auto">
-          {HERO_SECTION_CATEGORIES.map((category, index) => (
-            <div
+          {HERO_SECTION_CATEGORIES.map((category) => (
+            <HeroCategoryCard
               key={category.id}
-              className="transition-all duration-700 ease-out opacity-100 translate-y-0"
-              style={{ transitionDelay: `${index * 100}ms` }}
-            >
-              <HeroCategoryCard
-                categoryId={category.id.toString()}
-                categorySlug={category.slug}
-                title={category.title}
-                ctaText={category.ctaText}
-                isComingSoon={category.isComingSoon}
-                maxImages={6}
-                onClick={() => !category.isComingSoon && handleCategoryClick(category.slug)}
-              />
-            </div>
+              categoryId={category.id.toString()}
+              categorySlug={category.slug}
+              title={category.title}
+              ctaText={category.ctaText}
+              isComingSoon={category.isComingSoon}
+              maxImages={6}
+              onClick={() => !category.isComingSoon && handleCategoryClick(category.slug)}
+            />
           ))}
         </div>
       </div>

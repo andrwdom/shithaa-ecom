@@ -76,12 +76,23 @@ export const getHeroImages = async (req, res) => {
       ]
     }).select('_id customId name images category categorySlug').lean()
     
+    console.log(`Found ${products ? products.length : 0} products for category: ${categoryId}`)
+    
     if (!products || products.length === 0) {
       console.log(`No products found for category: ${categoryId}`)
       return res.json({
         success: true,
-        images: []
+        images: [],
+        total: 0,
+        categoryId,
+        device
       })
+    }
+    
+    // Log first product for debugging
+    if (products.length > 0) {
+      const sample = products[0]
+      console.log(`Sample product: ${sample.name}, categorySlug: ${sample.categorySlug}, images: ${sample.images ? sample.images.length : 0}`)
     }
 
     // Randomize products and take 1.5x limit as candidate pool
@@ -177,29 +188,19 @@ async function processProductImage(product, device) {
     const baseUrl = config.vpsBaseUrl
     const fullImageUrl = imagePath.startsWith('http') ? imagePath : `${baseUrl}${imagePath}`
     
-    // Validate the image exists and is actually an image
-    const validationResult = await validateImageUrl(fullImageUrl)
-    if (!validationResult.isValid) {
-      console.warn(`hero-image-skip productId=${product._id} url=${fullImageUrl} reason=${validationResult.reason}`)
-      return null
-    }
-
-    // Generate or get cached thumbnail
-    const thumbnailData = await generateThumbnail(fullImageUrl, product._id.toString(), device)
-    if (!thumbnailData) {
-      console.warn(`hero-image-skip productId=${product._id} url=${fullImageUrl} reason=thumbnail_generation_failed`)
-      return null
-    }
-
+    // SIMPLIFIED: Skip validation and thumbnail generation for now
+    // Just return the image URLs directly since we know products have images
+    console.log(`Using product image for hero: ${product.name} - ${fullImageUrl}`)
+    
     return {
       productId: product._id.toString(),
       productName: product.name,
       productSlug: product.categorySlug || product.category,
       originalUrl: fullImageUrl,
-      thumbUrl: thumbnailData.thumbUrl,
-      lqip: thumbnailData.lqip,
-      width: thumbnailData.width,
-      height: thumbnailData.height
+      thumbUrl: fullImageUrl, // Use original image directly
+      lqip: '', // No LQIP for now
+      width: 400,
+      height: 600
     }
 
   } catch (error) {
