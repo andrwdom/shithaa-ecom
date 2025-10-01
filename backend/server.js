@@ -55,7 +55,7 @@ import maintenanceRouter from './routes/maintenance.js'
 import webhookManagementRouter from './routes/webhookManagement.js'
 import atomicPaymentRouter from './routes/atomicPaymentRoute.js'
 import systemMonitoringRouter from './routes/monitoringRoute.js'
-import bulletproofWebhookRouter from './controllers/bulletproofWebhookController.js'
+import bulletproofWebhookRouter from './routes/bulletproofWebhook.js'
 import { maintenanceMode } from './middleware/maintenanceMode.js'
 import { startReconciliationCron } from './utils/reconciliation.js'
 import { requestLogger, quickRequestLogger, fileRequestLogger } from './middleware/requestLogger.js'
@@ -142,8 +142,8 @@ app.options('*', cors(corsOptions));
 import rawWebhookRouter from './routes/rawWebhook.js';
 app.use(rawWebhookRouter);
 
-// Mount bulletproof webhook routes (TEST MODE - different path to avoid conflicts)
-app.use('/api/webhooks-test', bulletproofWebhookRouter);
+// Mount bulletproof webhook routes (PRIMARY WEBHOOK HANDLER)
+app.use('/api/phonepe', bulletproofWebhookRouter);
 
 // Initialize Sentry properly
 if (process.env.NODE_ENV === 'production' && process.env.SENTRY_DSN) {
