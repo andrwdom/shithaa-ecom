@@ -403,34 +403,21 @@ export const createPhonePeSession = async (req, res) => {
     // 🔑 STEP 2: VALIDATE UPFRONT (stock, etc.) - Fail fast, no payment if issues
     console.log(`[${correlationId}] Validating stock and cart data upfront`);
     
-    // 🔧 CRITICAL FIX: Skip stock validation if already reserved for this session
+    // 🔑 CRITICAL: Check if stock is already reserved
     if (checkoutSession.stockReserved) {
-      console.log(`[${correlationId}] ✅ Stock already reserved for this checkout session, skipping validation`);
-      Logger.info('stock_validation_skipped', {
-        correlationId,
-        checkoutSessionId,
-        reason: 'already_reserved',
-        itemCount: checkoutSession.items.length
-      });
+      console.log(`[${correlationId}] ✅ Stock already reserved, proceeding to draft order creation`);
     } else {
-      // Only validate if stock NOT yet reserved
+      console.log(`[${correlationId}] ⚠️  Stock NOT reserved yet - this should not happen in the new flow!`);
+      // Validate stock availability as fallback
       const { checkStockAvailability } = await import('../utils/stock.js');
-          
-      // First check if stock is available
+      
       for (const item of checkoutSession.items) {
         const availability = await checkStockAvailability(item.productId, item.size, item.quantity);
         if (!availability.available) {
           console.error(`[${correlationId}] Stock not available for ${item.name}:`, availability);
-          Logger.error('stock_validation_failed', new Error('Insufficient stock'), {
-            correlationId,
-            productName: item.name,
-            size: item.size,
-            available: availability.availableStock,
-            requested: item.quantity
-          });
-          return res.status(400).json({
+          return res.status(409).json({
             success: false,
-            message: `Insufficient stock for ${item.name} (${item.size}). Available: ${availability.availableStock}, Requested: ${item.quantity}`
+            message: `Out of stock: ${item.name} (${item.size})`
           });
         }
       }
@@ -507,53 +494,27 @@ export const createPhonePeSession = async (req, res) => {
         const createdDraftOrder = draftOrder[0];
         console.log(`[${correlationId}] DRAFT order created: ${createdDraftOrder.orderId}`);
 
-        // 🔧 CRITICAL FIX: Only reserve stock if not already reserved
-        if (checkoutSession.stockReserved) {
-          console.log(`[${correlationId}] ✅ Stock already reserved for this checkout session, skipping reservation`);
-          Logger.info('stock_reservation_skipped', {
-            correlationId,
-            checkoutSessionId,
-            reason: 'already_reserved',
-            orderId: createdDraftOrder.orderId
-          });
-          
-          // Mark order as having reserved stock (it's already reserved in checkout session)
-          await orderModel.findByIdAndUpdate(
-            createdDraftOrder._id,
-            { stockReserved: true },
-            { session }
-          );
-        } else {
-          // Reserve stock atomically for the draft order
-          console.log(`[${correlationId}] Reserving stock for draft order...`);
-          for (const item of checkoutSession.items) {
-            console.log(`[${correlationId}] Reserving stock for ${item.name} (${item.size}) x${item.quantity}`);
-            const reserved = await reserveStock(item.productId, item.size, item.quantity, { session });
-            if (!reserved) {
-              throw new Error(`Failed to reserve stock for ${item.name} (${item.size})`);
-            }
-          }
-
-          // Mark order as having reserved stock
-          await orderModel.findByIdAndUpdate(
-            createdDraftOrder._id,
-            { stockReserved: true },
-            { session }
-          );
-
-          // Mark checkout session as having reserved stock
-          checkoutSession.stockReserved = true;
-          checkoutSession.status = 'awaiting_payment';
-          await checkoutSession.save({ session });
-
-          console.log(`[${correlationId}] Stock reserved successfully for draft order`);
-          Logger.info('stock_reserved', {
-            correlationId,
-            checkoutSessionId,
-            orderId: createdDraftOrder.orderId,
-            itemCount: checkoutSession.items.length
-          });
-        }
+        // 🔑 Stock is ALREADY reserved in checkout session, just mark the order
+        console.log(`[${correlationId}] ✅ Using pre-reserved stock from checkout session`);
+        
+        await orderModel.findByIdAndUpdate(
+          createdDraftOrder._id,
+          { stockReserved: true },
+          { session }
+        );
+        
+        // Update checkout session status
+        checkoutSession.status = 'awaiting_payment';
+        await checkoutSession.save({ session });
+        
+        console.log(`[${correlationId}] Draft order linked to reserved stock`);
+        Logger.info('draft_order_created', {
+          correlationId,
+          checkoutSessionId,
+          orderId: createdDraftOrder.orderId,
+          itemCount: checkoutSession.items.length,
+          stockAlreadyReserved: true
+        });
       });
     } catch (error) {
       console.error(`[${correlationId}] Draft order creation failed:`, error);

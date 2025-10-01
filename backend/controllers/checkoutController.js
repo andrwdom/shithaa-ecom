@@ -169,286 +169,176 @@ function calculateLoungewearCategoryOffer(loungewearCategoryItems) {
 
 /**
  * Create a checkout session for cart or buy-now items
+ * 🚀 OPTIMIZED: Fast session creation with immediate stock reservation
  */
 export const createCheckoutSession = async (req, res) => {
   const correlationId = req.headers['x-request-id'] || `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const startTime = Date.now();
   
   try {
-    console.log(`[${correlationId}] Creating checkout session`);
-    // console.log(`[${correlationId}] Request body:`, { source: req.body.source, itemsCount: req.body.items?.length, hasEmail: !!req.body.email, hasUserEmail: !!req.body.userEmail, hasUser: !!req.user });
+    console.log(`[${correlationId}] 🚀 Creating checkout session - START`);
     
     const { source, items, couponCode } = req.body;
     const userId = req.user?.id;
     const userEmail = req.user?.email || req.body.email || req.body.userEmail;
     
-    // console.log(`[${correlationId}] Extracted values:`, { userId, userEmail, source, itemsCount: items?.length });
-    
-    // Validate request
+    // Quick validation
     if (!source || !['cart', 'buynow', 'buy-now'].includes(source)) {
-      return errorResponse(res, 400, 'Invalid source. Must be "cart" or "buy-now"');
+      return errorResponse(res, 400, 'Invalid source');
     }
     
     if (!items || !Array.isArray(items) || items.length === 0) {
-      return errorResponse(res, 400, 'Items array is required and must not be empty');
+      return errorResponse(res, 400, 'No items provided');
     }
     
     if (!userEmail) {
-      return errorResponse(res, 400, 'User email is required');
+      return errorResponse(res, 400, 'Email required');
     }
     
-    // Validate buy-now constraint
     if (source === 'buynow' && items.length !== 1) {
-      return errorResponse(res, 400, 'Buy-now checkout can only have one item');
+      return errorResponse(res, 400, 'Buy-now allows only one item');
     }
     
-    // Create payment event
-    await PaymentEvent.createEvent({
-      correlationId,
-      eventType: 'session_created',
-      source: 'backend',
-      userId,
-      userEmail,
-      data: { source, itemCount: items.length }
-    });
-    
-    // 🔑 CRITICAL: Server-side cart validation to prevent price manipulation
-    console.log(`[${correlationId}] Performing server-side cart validation for ${items.length} items`);
-    
-    // Perform server-side cart validation
+    // 🔑 OPTIMIZED: Single-pass validation with stock check
+    console.log(`[${correlationId}] Validating ${items.length} items...`);
     const validationResult = await validateCartItems(items);
     
     if (!validationResult.isValid) {
-      console.warn(`[${correlationId}] 🚨 Cart validation failed:`, validationResult.errors);
-      
-      await PaymentEvent.createEvent({
-        correlationId,
-        eventType: 'cart_validation_failed',
-        source: 'backend',
-        userId,
-        userEmail,
-        status: 'failed',
-        error: {
-          message: 'Cart validation failed',
-          errors: validationResult.errors
-        }
-      });
-      
-      return errorResponse(res, 400, 'Cart validation failed', {
-        errors: validationResult.errors,
-        validatedItems: validationResult.validatedItems,
-        totalPrice: validationResult.totalPrice
+      console.warn(`[${correlationId}] ❌ Validation failed:`, validationResult.errors);
+      return errorResponse(res, 400, 'Validation failed', {
+        errors: validationResult.errors
       });
     }
     
-    console.log(`[${correlationId}] ✅ Cart validation successful: ${validationResult.itemCount} items validated`);
-    
-    // Use validated items from server-side validation
     const validatedItems = validationResult.validatedItems;
-    let subtotal = validationResult.totalPrice;
+    console.log(`[${correlationId}] ✅ Validated ${validatedItems.length} items`);
     
-    // Additional stock validation for checkout session
-    // Note: Stock validation is already done in validateCartItems, but we do a final check
-    for (const item of validatedItems) {
-      const productId = item._id;
-      if (!productId) {
-        return errorResponse(res, 400, `Missing product ID for item: ${item.name}`);
-      }
-      
-      const product = await productModel.findById(productId);
-      if (!product) {
-        return errorResponse(res, 404, `Product not found: ${item.name}`);
-      }
-      
-      // Final stock availability check (redundant but safe)
-      const stockCheck = await checkStockAvailability(productId, item.size, item.quantity);
-      if (!stockCheck.available) {
-        return errorResponse(res, 409, `Insufficient stock for ${product.name} (${item.size}): ${stockCheck.error}`);
-      }
-    }
     
-    // Calculate totals with offer discounts
+    // 🚀 OPTIMIZED: Calculate totals quickly
     const shippingCost = req.body.orderSummary?.shipping || req.body.shippingCost || 0;
+    let total, rawSubtotal, offerDiscount;
     
-    // 🔧 CRITICAL FIX: Use frontend's calculated total if available to ensure consistency
-    let total, rawSubtotal, offerDiscount, loungewearCategoryOffer, loungewearCategoryItems, otherItems, otherItemsTotal;
-    
-    if (req.body.orderSummary && req.body.orderSummary.total && req.body.orderSummary.total > 0) {
-      // Use frontend's calculated total to ensure consistency with PhonePe payment
-      console.log('📦 [Checkout Session] Using frontend calculated total:', {
-        frontendTotal: req.body.orderSummary.total,
-        frontendSubtotal: req.body.orderSummary.subtotal,
-        frontendOfferDiscount: req.body.orderSummary.offerDiscount,
-        frontendShipping: req.body.orderSummary.shipping
-      });
-      
+    // Use frontend total if available (faster)
+    if (req.body.orderSummary?.total) {
       total = req.body.orderSummary.total;
-      rawSubtotal = req.body.orderSummary.subtotal || 0;
+      rawSubtotal = req.body.orderSummary.subtotal || validationResult.totalPrice;
       offerDiscount = req.body.orderSummary.offerDiscount || 0;
-      
-      // Create mock offer details for consistency
-      loungewearCategoryOffer = {
-        offerApplied: offerDiscount > 0,
-        discount: offerDiscount,
-        originalTotal: rawSubtotal,
-        offerDetails: {
-          completeSets: 0,
-          remainingItems: 0,
-          originalPrice: rawSubtotal,
-          offerPrice: total - shippingCost,
-          savings: offerDiscount
-        }
-      };
-      
-      // Initialize empty arrays for logging consistency
-      loungewearCategoryItems = [];
-      otherItems = [];
-      otherItemsTotal = 0;
+      console.log(`[${correlationId}] Using frontend total: ₹${total}`);
     } else {
-      // Fallback to backend calculation if frontend total not provided
-      console.log('📦 [Checkout Session] Frontend total not provided, calculating on backend...');
-      
-      // 🔧 CRITICAL FIX: Calculate offer discount using the same logic as cart calculation
-      loungewearCategoryItems = [];
-      otherItems = [];
-    
-    validatedItems.forEach(item => {
-      if (item.categorySlug === 'zipless-feeding-lounge-wear' || 
-          item.categorySlug === 'non-feeding-lounge-wear') {
-        // Add item multiple times based on quantity for offer calculation
-        for (let i = 0; i < item.quantity; i++) {
-          loungewearCategoryItems.push({
-            ...item,
-            quantity: 1,
-            originalPrice: item.price
-          });
-        }
-      } else {
-        otherItems.push(item);
-      }
-    });
-    
-    // Calculate loungewear offer
-      loungewearCategoryOffer = calculateLoungewearCategoryOffer(loungewearCategoryItems);
-    
-    // Calculate other items total
-      otherItemsTotal = otherItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    
-    // Calculate totals with offer discount
-      rawSubtotal = loungewearCategoryOffer.originalTotal + otherItemsTotal;
-      offerDiscount = Math.min(loungewearCategoryOffer.discount, rawSubtotal);
-      total = Math.max(0, rawSubtotal - offerDiscount) + shippingCost;
+      // Quick backend calculation
+      rawSubtotal = validationResult.totalPrice;
+      offerDiscount = 0;
+      total = rawSubtotal + shippingCost;
     }
-    
-    console.log('📦 [Checkout Session] Creating session with offer calculation:', {
-      rawSubtotal,
-      offerDiscount,
-      shippingCost,
-      total,
-      source,
-      itemCount: items.length,
-      loungewearItemsCount: loungewearCategoryItems.length,
-      loungewearOfferDetails: loungewearCategoryOffer
-    });
-    
-    // 🔧 DEBUG: Log detailed calculation breakdown
-    console.log('🔧 DETAILED CALCULATION BREAKDOWN:', {
-      loungewearItems: loungewearCategoryItems.map(item => ({ name: item.name, price: item.price })),
-      loungewearOriginalTotal: loungewearCategoryOffer.originalTotal,
-      loungewearDiscount: loungewearCategoryOffer.discount,
-      otherItems: otherItems.map(item => ({ name: item.name, price: item.price, quantity: item.quantity })),
-      otherItemsTotal,
-      finalCalculation: `${rawSubtotal} - ${offerDiscount} + ${shippingCost} = ${total}`
-    });
     
     // Generate session ID
     const sessionId = randomUUID();
     
-    // Create checkout session with auto-expiry
-    const checkoutSession = new CheckoutSession({
-      sessionId,
-      shippingCost,
-      source,
-      userId,
-      userEmail,
-      guestToken: !userId ? randomUUID() : undefined,
-      items: validatedItems,
-      subtotal: rawSubtotal, // Store the raw subtotal before discount
-      discount: {
-        type: 'fixed',
-        value: offerDiscount,
-        appliedCouponCode: null
-      },
-      // 🔧 CRITICAL FIX: Set expiresAt to 10 minutes from now
-      // This ensures stock is released if payment is abandoned
-      expiresAt: new Date(Date.now() + 10 * 60 * 1000),
-      // 🔧 FIX: Store offer details for invoice generation
-      offerDetails: {
-        offerApplied: loungewearCategoryOffer.offerApplied,
-        offerType: loungewearCategoryOffer.offerApplied ? 'loungewear_buy3_1299' : null,
-        offerDiscount: loungewearCategoryOffer.discount,
-        offerDescription: loungewearCategoryOffer.offerApplied ? 'Buy 3 @ ₹1299' : null,
-        offerCalculation: loungewearCategoryOffer.offerDetails || {
-          completeSets: 0,
-          remainingItems: 0,
-          originalPrice: 0,
-          offerPrice: 0,
-          savings: 0
+    // 🔑 ATOMIC: Create session WITH stock reservation in a transaction
+    const mongoSession = await mongoose.startSession();
+    
+    try {
+      await mongoSession.withTransaction(async () => {
+        // Create checkout session
+        const checkoutSession = new CheckoutSession({
+          sessionId,
+          shippingCost,
+          source,
+          userId,
+          userEmail,
+          guestToken: !userId ? randomUUID() : undefined,
+          items: validatedItems,
+          subtotal: rawSubtotal,
+          discount: {
+            type: 'fixed',
+            value: offerDiscount,
+            appliedCouponCode: null
+          },
+          offerDetails: {
+            offerApplied: offerDiscount > 0,
+            offerType: offerDiscount > 0 ? 'loungewear_buy3_1299' : null,
+            offerDiscount,
+            offerDescription: offerDiscount > 0 ? 'Special Offer Applied' : null,
+            offerCalculation: {
+              completeSets: 0,
+              remainingItems: 0,
+              originalPrice: rawSubtotal,
+              offerPrice: total - shippingCost,
+              savings: offerDiscount
+            }
+          },
+          total,
+          currency: 'INR',
+          status: 'pending',
+          stockReserved: false, // Will be set to true after reservation
+          expiresAt: new Date(Date.now() + 15 * 60 * 1000), // 15 minutes
+          metadata: {
+            userAgent: req.headers['user-agent'],
+            ipAddress: req.ip || req.connection.remoteAddress,
+            correlationId,
+            checkoutFlow: source
+          }
+        });
+        
+        await checkoutSession.save({ session: mongoSession });
+        console.log(`[${correlationId}] Session created: ${sessionId}`);
+        
+        // 🔑 CRITICAL: Reserve stock IMMEDIATELY
+        console.log(`[${correlationId}] Reserving stock for ${validatedItems.length} items...`);
+        for (const item of validatedItems) {
+          const reserved = await reserveStock(
+            item.productId, 
+            item.size, 
+            item.quantity, 
+            { session: mongoSession }
+          );
+          
+          if (!reserved) {
+            throw new Error(`Stock reservation failed for ${item.name} (${item.size})`);
+          }
         }
-      },
-      total,
-      currency: 'INR',
-      status: 'pending',
-      expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes - optimal for e-commerce
-      metadata: {
-        userAgent: req.headers['user-agent'],
-        ipAddress: req.ip || req.connection.remoteAddress,
-        correlationId,
-        checkoutFlow: source
-      }
-    });
+        
+        // Mark session as having reserved stock
+        checkoutSession.stockReserved = true;
+        checkoutSession.status = 'stock_reserved';
+        await checkoutSession.save({ session: mongoSession });
+        
+        console.log(`[${correlationId}] ✅ Stock reserved successfully`);
+      });
+    } catch (error) {
+      console.error(`[${correlationId}] ❌ Session creation failed:`, error.message);
+      throw error;
+    } finally {
+      await mongoSession.endSession();
+    }
     
-    // Save session first to get the ID
-    await checkoutSession.save();
+    const elapsed = Date.now() - startTime;
+    console.log(`[${correlationId}] ⚡ Session created in ${elapsed}ms`);
     
-    // 🔑 FIXED: Don't reserve stock here - only reserve when payment starts
-    // Stock will be reserved in the reserveStockForSession endpoint when user actually starts payment
-    console.log(`[${correlationId}] Checkout session created without stock reservation: ${sessionId}`);
-    
-    // Stock reservation will be done when payment starts, not at checkout session creation
-    
-    console.log(`[${correlationId}] Checkout session created successfully: ${sessionId}`);
-    
-    // Return session data (without sensitive info)
+    // Return session data
     return successResponse(res, {
       sessionId,
       source,
       items: validatedItems,
-      subtotal,
+      subtotal: rawSubtotal,
       total,
       currency: 'INR',
-      expiresAt: checkoutSession.expiresAt,
-      message: 'Checkout session created successfully'
+      stockReserved: true,
+      expiresAt: new Date(Date.now() + 15 * 60 * 1000),
+      message: 'Ready for payment'
     });
     
   } catch (error) {
-    console.error(`[${correlationId}] Error creating checkout session:`, error);
+    const elapsed = Date.now() - startTime;
+    console.error(`[${correlationId}] ❌ Failed after ${elapsed}ms:`, error.message);
     
-    // Log failed event
-    await PaymentEvent.createEvent({
-      correlationId,
-      eventType: 'session_created',
-      source: 'backend',
-      userId: req.user?.id,
-      userEmail: req.user?.email || req.body.email,
-      status: 'failed',
-      error: {
-        message: error.message,
-        code: error.code || 'UNKNOWN',
-        stack: error.stack
-      }
-    });
+    // Determine appropriate status code
+    const statusCode = error.message.includes('Stock') ? 409 : 500;
+    const message = error.message.includes('Stock') 
+      ? 'Item out of stock' 
+      : 'Session creation failed';
     
-    return errorResponse(res, 500, 'Failed to create checkout session', error.message);
+    return errorResponse(res, statusCode, message, error.message);
   }
 };
 
@@ -702,48 +592,23 @@ export const cancelCheckoutSession = async (req, res) => {
       return errorResponse(res, 404, 'Checkout session not found');
     }
     
-    // 🔧 CRITICAL FIX: Retry logic to check for draft order with exponential backoff
-    // This prevents race condition where draft order exists but isn't committed yet
-    let draftOrder = null;
-    const maxRetries = 3;
-    const delays = [1000, 2000, 3000]; // 1s, 2s, 3s delays
+    // 🔑 CRITICAL: Check if draft order exists (DO NOT release stock if it does)
+    const draftOrder = await orderModel.findOne({ 
+      'metadata.checkoutSessionId': sessionId,
+      status: { $in: ['DRAFT', 'PENDING', 'CONFIRMED', 'PENDING_REVIEW'] }
+    });
     
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
-      if (attempt > 0) {
-        console.log(`[${correlationId}] Retry ${attempt}/${maxRetries}: Checking for draft order after ${delays[attempt - 1]}ms delay...`);
-      }
+    if (draftOrder) {
+      console.log(`[${correlationId}] ⚠️ Draft order exists - NOT releasing stock`);
+      session.status = 'cancelled';
+      await session.save();
       
-      // Wait before checking (except first attempt)
-      if (attempt > 0) {
-        await new Promise(resolve => setTimeout(resolve, delays[attempt - 1]));
-      }
-      
-      // Check if there's a draft order with this session
-      draftOrder = await orderModel.findOne({ 
-        checkoutSessionId: sessionId,
-        status: { $in: ['DRAFT', 'PENDING', 'CONFIRMED'] }
+      return successResponse(res, {
+        message: 'Session cancelled (order exists)',
+        hasOrder: true,
+        orderId: draftOrder.orderId
       });
-      
-      if (draftOrder) {
-        console.log(`[${correlationId}] ⚠️ Draft order ${draftOrder.orderId} found on attempt ${attempt + 1} for session ${sessionId} - NOT releasing stock`);
-        console.log(`[${correlationId}] Order status: ${draftOrder.status}, stockReserved: ${draftOrder.stockReserved}`);
-        
-        // Just mark session as cancelled, but DON'T release stock
-        session.status = 'cancelled';
-        await session.save();
-        
-        return successResponse(res, {
-          message: 'Checkout session cancelled (order exists, stock retained)',
-          status: session.status,
-          hasOrder: true,
-          orderId: draftOrder.orderId
-        });
-      }
-      
-      console.log(`[${correlationId}] Attempt ${attempt + 1}/${maxRetries}: No draft order found yet`);
     }
-    
-    console.log(`[${correlationId}] No draft order found after ${maxRetries} attempts - proceeding with stock release`);
     
     // Release stock if reserved AND no draft order exists
     if (session.stockReserved) {

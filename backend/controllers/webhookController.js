@@ -7,6 +7,7 @@ import Reservation from '../models/Reservation.js';
 import { releaseStockReservation } from '../utils/stock.js';
 import EnhancedLogger from '../utils/enhancedLogger.js';
 import PaymentMonitor from '../utils/paymentMonitor.js';
+import mongoose from 'mongoose';
 
 // POST /phonepe/webhook
 export async function phonePeWebhookHandler(req, res) {
@@ -98,200 +99,131 @@ export async function phonePeWebhookHandler(req, res) {
       });
       
       if (isSuccess) {
-        EnhancedLogger.webhookLog('INFO', 'Payment successful, confirming draft order', {
-          correlationId,
-          orderId: draftOrder._id,
-          phonepeTransactionId: draftOrder.phonepeTransactionId,
-          userEmail: draftOrder.userInfo?.email
-        });
+        console.log(`[${correlationId}] ✅ Payment SUCCESS - confirming order`);
         
-        // Start a MongoDB transaction for atomicity
-        const session = await mongoose.startSession();
-        await session.startTransaction();
+        // Start MongoDB transaction
+        const mongoSession = await mongoose.startSession();
         
         try {
-          // 🔑 DRAFT ORDER CONFIRMATION: Update draft to confirmed status
-          await orderModel.findByIdAndUpdate(
-            draftOrder._id,
-            {
-              status: 'CONFIRMED',
-              orderStatus: 'CONFIRMED', 
-              paymentStatus: 'PAID',
-              confirmedAt: new Date(),
-                paidAt: new Date(),
-                phonepeResponse: req.body,
-                updatedAt: new Date()
-              },
-              { session }
-            );
-          
-          // Check if stock is already confirmed
-          if (!draftOrder.stockConfirmed) {
-            console.log('🔔 WEBHOOK: Confirming stock for draft order:', draftOrder._id);
-            
+          await mongoSession.withTransaction(async () => {
             // Import stock utils
             const { confirmStockReservation } = await import('../utils/stock.js');
             
-            // Confirm stock for each item atomically (convert reserved to confirmed)
+            // Confirm stock for each item (converts reserved→actual stock deduction)
             for (const item of draftOrder.cartItems) {
-              let confirmed = await confirmStockReservation(
+              const confirmed = await confirmStockReservation(
                 item.productId,
                 item.size,
                 item.quantity,
-                { session }
+                { session: mongoSession }
               );
               
-              // 🚨 EMERGENCY FALLBACK: If confirmation failed (reserved = 0 due to race condition),
-              // try direct stock deduction since payment was already successful
               if (!confirmed) {
-                console.log(`⚠️ WEBHOOK: Stock confirmation failed for ${item.name} (${item.size}), attempting emergency deduction...`);
-                const { emergencyStockDeduction } = await import('../utils/stock.js');
-                confirmed = await emergencyStockDeduction(
-                  item.productId,
-                  item.size,
-                  item.quantity,
-                  { session }
-                );
-                
-                if (!confirmed) {
-                  throw new Error(`Failed to confirm stock for item ${item.productId} size ${item.size}`);
-                }
-                
-                console.log(`✅ WEBHOOK: Successfully recovered from stock confirmation failure using emergency deduction`);
+                throw new Error(`Stock confirmation failed: ${item.name} (${item.size})`);
               }
               
-              console.log(`🔔 WEBHOOK: Stock confirmed for ${item.name} (${item.size}) x${item.quantity}`);
+              console.log(`[${correlationId}] Confirmed: ${item.name} x${item.quantity}`);
             }
             
-            // Update order with stock confirmation
+            // Update order to CONFIRMED
             await orderModel.findByIdAndUpdate(
               draftOrder._id,
               {
+                status: 'CONFIRMED',
+                orderStatus: 'CONFIRMED', 
+                paymentStatus: 'PAID',
                 stockConfirmed: true,
-                stockConfirmedAt: new Date(),
+                confirmedAt: new Date(),
+                paidAt: new Date(),
+                phonepeResponse: payload,
                 updatedAt: new Date()
               },
-              { session }
+              { session: mongoSession }
             );
             
-            console.log('🔔 WEBHOOK: Stock confirmation completed successfully');
-          } else {
-            console.log('🔔 WEBHOOK: Stock already confirmed for order:', draftOrder.orderId);
-          }
-          
-          // Commit transaction
-          await session.commitTransaction();
-          console.log('🔔 WEBHOOK: Transaction committed successfully');
-          
-          // Log successful order confirmation
-          EnhancedLogger.orderLog('SUCCESS', 'Draft order confirmed and stock confirmed successfully', {
-            correlationId,
-            orderId: draftOrder.orderId,
-            phonepeTransactionId: draftOrder.phonepeTransactionId,
-            userEmail: draftOrder.userInfo?.email,
-            totalAmount: draftOrder.totalAmount,
-            itemsCount: draftOrder.cartItems?.length || 0,
-            source: 'webhook'
+            console.log(`[${correlationId}] ✅ Order confirmed: ${draftOrder.orderId}`);
           });
           
-          // Send success response
+          // Send invoice email (non-blocking, outside transaction)
+          setTimeout(async () => {
+            try {
+              const { generateInvoiceBuffer, sendInvoiceEmail } = await import('../utils/invoiceGenerator.js');
+              const order = await orderModel.findById(draftOrder._id);
+              const pdfBuffer = await generateInvoiceBuffer(order);
+              await sendInvoiceEmail(order, pdfBuffer);
+              console.log(`[${correlationId}] Invoice sent`);
+            } catch (err) {
+              console.error(`[${correlationId}] Invoice error:`, err.message);
+            }
+          }, 100);
+          
           return res.status(200).json({ 
             success: true, 
-            message: 'order_confirmed_successfully',
+            message: 'order_confirmed',
             orderId: draftOrder._id,
             orderNumber: draftOrder.orderId
           });
           
         } catch (error) {
-          // Rollback transaction on any error
-          await session.abortTransaction();
-          console.error('🔔 WEBHOOK: Transaction failed:', error);
-          console.error('🔔 WEBHOOK: Error details:', {
-            message: error.message,
-            stack: error.stack,
-            orderId: draftOrder._id,
-            phonepeTransactionId: draftOrder.phonepeTransactionId
-          });
+          console.error(`[${correlationId}] ❌ Confirmation failed:`, error.message);
           
-          // Log critical error for monitoring
-          console.error('🚨 CRITICAL: Draft order confirmation failed for successful payment:', {
-            orderId: draftOrder._id,
-            phonepeTransactionId: draftOrder.phonepeTransactionId,
-            userEmail: draftOrder.userInfo?.email,
-            amount: draftOrder.totalAmount,
-            error: error.message
-          });
-          
-          // Update draft order status to indicate payment received but confirmation failed
+          // Mark order as needing manual review
           await orderModel.findByIdAndUpdate(draftOrder._id, {
             paymentStatus: 'PAID',
-            status: 'PENDING_CONFIRMATION',
-            orderStatus: 'PENDING_CONFIRMATION',
-            error: error.message,
-            updatedAt: new Date()
+            status: 'PENDING_REVIEW',
+            orderStatus: 'PENDING_REVIEW',
+            metadata: {
+              ...draftOrder.metadata,
+              confirmationError: error.message,
+              reviewRequired: true
+            }
           });
           
-          return errorResponse(res, 500, 'Payment successful, but order confirmation failed. Please contact support.');
+          return res.status(200).json({ 
+            success: true, 
+            message: 'payment_received_pending_review',
+            orderId: draftOrder._id
+          });
         } finally {
-          await session.endSession();
-        }
-        
-        // Update order status to paid (if not already updated)
-        const updateData = {
-          payment: true,
-          paymentStatus: 'PAID',
-          orderStatus: 'PENDING',
-          status: 'PENDING',
-          paidAt: new Date(),
-          phonepeResponse: req.body,
-          updatedAt: new Date()
-        };
-        
-        await orderModel.findByIdAndUpdate(order._id, updateData);
-        console.log('🔔 WEBHOOK: Order updated successfully to paid status');
-        
-        // Clear user's cart and clean up reservations (non-blocking)
-        if (order.userId) {
-          try {
-            const { userModel } = await import('../models/userModel.js');
-            await userModel.findByIdAndUpdate(order.userId, { cartData: {} });
-            // console.log('🔔 WEBHOOK: User cart cleared successfully');
-          } catch (cartError) {
-            console.warn('🔔 WEBHOOK: Failed to clear user cart:', cartError);
-          }
-        }
-        
-        // 🔑 CRITICAL: Clean up reservation after successful payment
-        try {
-          const { Reservation } = await import('../models/Reservation.js');
-          await Reservation.findOneAndUpdate(
-            { checkoutSessionId: order.metadata?.checkoutSessionId },
-            { status: 'confirmed', updatedAt: new Date() }
-          );
-          console.log('🔔 WEBHOOK: Reservation marked as confirmed');
-        } catch (reservationError) {
-          console.warn('🔔 WEBHOOK: Failed to update reservation status:', reservationError);
-        }
-        
-        // Send invoice email (non-blocking)
-        try {
-          const { generateInvoiceBuffer, sendInvoiceEmail } = await import('../utils/invoiceGenerator.js');
-          const freshOrder = await orderModel.findById(order._id);
-          const pdfBuffer = await generateInvoiceBuffer(freshOrder);
-          await sendInvoiceEmail(freshOrder, pdfBuffer);
-          console.log('🔔 WEBHOOK: Invoice email sent successfully');
-        } catch (err) {
-          console.error('🔔 WEBHOOK: Invoice email error:', err);
+          await mongoSession.endSession();
         }
         
       } else {
-        // Payment failed - cancel draft order
-        console.log('🔔 WEBHOOK: Payment failed for orderId:', payload.orderId, 'state:', payload.state);
+        // Payment FAILED - cancel order and release stock
+        console.log(`[${correlationId}] ❌ Payment FAILED - cancelling order`);
         
-        // Cancel draft order and release stock
-        await cancelDraftOrder(draftOrder._id, `Payment failed: ${payload.state}`);
+        try {
+          // Release reserved stock
+          if (draftOrder.stockReserved && draftOrder.cartItems) {
+            const { releaseStockReservation } = await import('../utils/stock.js');
+            
+            for (const item of draftOrder.cartItems) {
+              await releaseStockReservation(item.productId, item.size, item.quantity);
+              console.log(`[${correlationId}] Released: ${item.name} x${item.quantity}`);
+            }
+          }
+          
+          // Update order to CANCELLED
+          await orderModel.findByIdAndUpdate(draftOrder._id, {
+            status: 'CANCELLED',
+            orderStatus: 'CANCELLED',
+            paymentStatus: 'FAILED',
+            cancelledAt: new Date(),
+            cancellationReason: `Payment failed: ${payload.state}`,
+            phonepeResponse: payload,
+            updatedAt: new Date()
+          });
+          
+          console.log(`[${correlationId}] ✅ Order cancelled and stock released`);
+          
+        } catch (error) {
+          console.error(`[${correlationId}] Error cancelling order:`, error.message);
+        }
         
-        return res.status(200).json({ success: true, message: 'payment_failed' });
+        return res.status(200).json({ 
+          success: true, 
+          message: 'payment_failed_order_cancelled'
+        });
       }
     }
     
