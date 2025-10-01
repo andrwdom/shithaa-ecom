@@ -45,8 +45,8 @@ RESPONSE=$(curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$CLOUDFLA
     -H "Content-Type: application/json" \
     --data '{"purge_everything":true}')
 
-# Check if successful
-if echo "$RESPONSE" | grep -q '"success":true'; then
+# Check if successful (check for both "success":true and "success": true with space)
+if echo "$RESPONSE" | grep -q '"success":[[:space:]]*true'; then
     echo -e "${GREEN}✅ Cloudflare cache purged successfully!${NC}"
     echo ""
     echo -e "${GREEN}🎉 All users will now get the latest version IMMEDIATELY!${NC}"
