@@ -53,8 +53,8 @@ export default function InstagramOptimizations() {
           transition-delay: 0s !important;
         }
         
-        /* Optimize scrolling */
-        body {
+        /* Optimize scrolling - GLOBAL APPLICATION */
+        html, body, *, *:before, *:after {
           -webkit-overflow-scrolling: touch;
           overscroll-behavior-x: contain; /* Prevent horizontal overscroll only */
           overscroll-behavior-y: auto; /* Allow vertical overscroll for pull-to-refresh */

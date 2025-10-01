@@ -71,7 +71,7 @@ const nextConfig = {
   },
   compress: true,
   poweredByHeader: false,
-  generateEtags: false,
+  generateEtags: true, // Enable ETags for better cache invalidation
   reactStrictMode: true,
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production',
@@ -162,10 +162,10 @@ const nextConfig = {
             key: 'Referrer-Policy',
             value: 'origin-when-cross-origin',
           },
-          // Add cache headers for images
+          // Add cache headers for HTML pages - SHORT CACHE for instant updates
           {
             key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
+            value: 'public, max-age=60, must-revalidate', // 1 minute cache only
           },
         ],
       },
@@ -178,13 +178,13 @@ const nextConfig = {
           },
         ],
       },
-      // Fix static asset MIME type issues
+      // Fix static asset MIME type issues - SHORTER CACHE for CSS/JS updates
       {
         source: '/_next/static/(.*)',
         headers: [
           {
             key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
+            value: 'public, max-age=300, must-revalidate', // 5 minutes cache for CSS/JS
           },
           {
             key: 'X-Content-Type-Options',

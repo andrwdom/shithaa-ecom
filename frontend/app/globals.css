@@ -78,6 +78,21 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+
+  /* CRITICAL: Enable pull-to-refresh on ALL mobile pages */
+  @media (max-width: 768px) {
+    html, body, #__next, main, .page-container {
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior-x: contain; /* Prevent horizontal overscroll only */
+      overscroll-behavior-y: auto; /* Allow vertical overscroll for pull-to-refresh */
+    }
+    
+    /* Apply to all scrollable containers */
+    *, *:before, *:after {
+      overscroll-behavior-x: contain;
+      overscroll-behavior-y: auto;
+    }
+  }
   
   /* Prevent zooming issues on small devices */
   @media (max-width: 400px) {

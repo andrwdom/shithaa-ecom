@@ -112,6 +112,13 @@ export default function MobilePerformanceOptimizer({ children }: MobileOptimizer
         }
         
         @media (max-width: 768px) {
+          /* Apply to ALL elements for global pull-to-refresh */
+          html, body, *, *:before, *:after {
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior-x: contain; /* Prevent horizontal overscroll only */
+            overscroll-behavior-y: auto; /* Allow vertical overscroll for pull-to-refresh */
+          }
+          
           .mobile-optimized {
             /* Reduce scroll bounce on iOS */
             -webkit-overflow-scrolling: touch;
