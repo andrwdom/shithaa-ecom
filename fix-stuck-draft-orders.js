@@ -15,7 +15,7 @@ dotenv.config();
 
 // Import models
 import orderModel from './backend/models/orderModel.js';
-import PaymentSession from './backend/models/PaymentSession.js';
+import paymentSessionModel from './backend/models/paymentSessionModel.js';
 
 // Colors for console output
 const colors = {

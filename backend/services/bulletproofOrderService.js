@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import orderModel from '../models/orderModel.js';
-import PaymentSession from '../models/PaymentSession.js';
+import paymentSessionModel from '../models/paymentSessionModel.js';
 import CheckoutSession from '../models/CheckoutSession.js';
 import EnhancedLogger from '../utils/enhancedLogger.js';
 
@@ -213,7 +213,7 @@ class BulletproofOrderService {
         }
 
         // Find payment session to get order data
-        const paymentSession = await PaymentSession.findOne({
+        const paymentSession = await paymentSessionModel.findOne({
           phonepeTransactionId: phonepeTransactionId
         }).session(session);
 
