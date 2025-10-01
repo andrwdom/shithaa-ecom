@@ -105,13 +105,10 @@ export const getHeroImages = async (req, res) => {
       }
     }
 
-    // If no images were processed successfully, try to return fallback images
+    // If no images were processed successfully, return empty array
+    // The frontend will handle the fallback with proper placeholder images
     if (validatedImages.length === 0) {
-      console.log(`No valid images found for category: ${categoryId}, returning fallback`)
-      const fallbackImages = await generateFallbackImages(categoryId, limitNum)
-      if (fallbackImages.length > 0) {
-        validatedImages.push(...fallbackImages)
-      }
+      console.log(`No valid images found for category: ${categoryId}, returning empty array (frontend will handle fallback)`)
     }
 
     // Set cache headers for CDN/SSR caching

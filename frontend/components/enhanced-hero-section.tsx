@@ -68,7 +68,7 @@ const EnhancedHeroSection = () => {
   }, [])
 
   return (
-    <section className="bg-white px-4 sm:px-6 lg:px-8 py-12 lg:py-20">
+    <section className="bg-white px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16">
       {/* Image Preloader - Hidden but functional */}
       <OptimizedImagePreloader
         images={allImages}
@@ -77,7 +77,7 @@ const EnhancedHeroSection = () => {
       />
 
       <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-12 lg:py-20">
+        <div className="text-center mb-8 lg:mb-16">
           <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold text-gray-900 leading-tight mb-4 lg:mb-6 font-serif max-w-4xl mx-auto">
             PREMIUM MATERNITY WEARS
           </h1>

@@ -46,10 +46,11 @@ export default function HeroCategoryCard({
   
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
   const isMobile = useRef(false)
-  const isIntersecting = useRef(true)
+  const isIntersecting = useRef(false) // Changed to false initially, will be set by observer
   const intersectionObserver = useRef<IntersectionObserver | null>(null)
   const cardRef = useRef<HTMLDivElement>(null)
   const imageRefs = useRef<Map<string, HTMLImageElement>>(new Map())
+  const [isVisible, setIsVisible] = useState(false) // Track visibility state
 
   // Detect mobile on mount
   useEffect(() => {
@@ -68,6 +69,7 @@ export default function HeroCategoryCard({
         (entries) => {
           entries.forEach((entry) => {
             isIntersecting.current = entry.isIntersecting
+            setIsVisible(entry.isIntersecting)
             if (!entry.isIntersecting) {
               // Pause animation when off-screen
               setIsPaused(true)
@@ -81,7 +83,10 @@ export default function HeroCategoryCard({
             }
           })
         },
-        { threshold: 0.1 }
+        { 
+          threshold: 0.01, // Lower threshold for earlier detection
+          rootMargin: '50px' // Start loading slightly before entering viewport
+        }
       )
       
       intersectionObserver.current.observe(cardRef.current)
@@ -279,6 +284,7 @@ export default function HeroCategoryCard({
       onClick={handleCardClick}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
+      style={{ minHeight: '320px' }} // Ensure minimum height to prevent layout shift
     >
       {/* Background Images with Optimized Transitions */}
       <div className="absolute inset-0">
