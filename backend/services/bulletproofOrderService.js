@@ -265,18 +265,37 @@ class BulletproofOrderService {
    */
   async verifyPaymentWithPhonePe(phonepeTransactionId) {
     try {
-      const { PhonePe } = await import('phonepe-pg');
-      const phonepe = new PhonePe({
+      // Use PhonePe API directly instead of SDK
+      const phonepeApiUrl = process.env.PHONEPE_ENVIRONMENT === 'PRODUCTION' 
+        ? 'https://api.phonepe.com/apis/hermes'
+        : 'https://api-preprod.phonepe.com/apis/hermes';
+
+      const payload = {
         merchantId: process.env.PHONEPE_MERCHANT_ID,
-        saltKey: process.env.PHONEPE_SALT_KEY,
-        saltIndex: process.env.PHONEPE_SALT_INDEX,
-        environment: process.env.PHONEPE_ENVIRONMENT || 'SANDBOX'
+        transactionId: phonepeTransactionId
+      };
+
+      // Create checksum
+      const crypto = await import('crypto');
+      const checksum = crypto.createHmac('sha256', process.env.PHONEPE_SALT_KEY)
+        .update(JSON.stringify(payload))
+        .digest('hex');
+
+      const response = await fetch(`${phonepeApiUrl}/v3/transaction/${phonepeTransactionId}/status`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-VERIFY': `${checksum}###${process.env.PHONEPE_SALT_INDEX}`,
+          'Accept': 'application/json'
+        }
       });
 
-      const paymentStatus = await phonepe.getTransactionStatus(phonepeTransactionId);
+      const paymentStatus = await response.json();
       
       return {
-        success: paymentStatus.code === 'PAYMENT_SUCCESS' || paymentStatus.code === 'SUCCESS',
+        success: paymentStatus.code === 'PAYMENT_SUCCESS' || 
+                paymentStatus.code === 'SUCCESS' || 
+                paymentStatus.success === true,
         data: paymentStatus
       };
     } catch (error) {

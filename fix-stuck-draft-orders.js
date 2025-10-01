@@ -8,7 +8,7 @@
 
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
-import { PhonePe } from 'phonepe-pg';
+// PhonePe verification will be done via API calls
 
 // Load environment variables
 dotenv.config();
@@ -16,14 +16,6 @@ dotenv.config();
 // Import models
 import orderModel from './backend/models/orderModel.js';
 import PaymentSession from './backend/models/PaymentSession.js';
-
-// Initialize PhonePe
-const phonepe = new PhonePe({
-  merchantId: process.env.PHONEPE_MERCHANT_ID,
-  saltKey: process.env.PHONEPE_SALT_KEY,
-  saltIndex: process.env.PHONEPE_SALT_INDEX,
-  environment: process.env.PHONEPE_ENVIRONMENT || 'SANDBOX'
-});
 
 // Colors for console output
 const colors = {
@@ -52,10 +44,37 @@ async function connectDB() {
 
 async function verifyPaymentWithPhonePe(transactionId) {
   try {
-    const paymentStatus = await phonepe.getTransactionStatus(transactionId);
+    // Use PhonePe API directly instead of SDK
+    const phonepeApiUrl = process.env.PHONEPE_ENVIRONMENT === 'PRODUCTION' 
+      ? 'https://api.phonepe.com/apis/hermes'
+      : 'https://api-preprod.phonepe.com/apis/hermes';
+
+    const payload = {
+      merchantId: process.env.PHONEPE_MERCHANT_ID,
+      transactionId: transactionId
+    };
+
+    // Create checksum
+    const crypto = await import('crypto');
+    const checksum = crypto.createHmac('sha256', process.env.PHONEPE_SALT_KEY)
+      .update(JSON.stringify(payload))
+      .digest('hex');
+
+    const response = await fetch(`${phonepeApiUrl}/v3/transaction/${transactionId}/status`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-VERIFY': `${checksum}###${process.env.PHONEPE_SALT_INDEX}`,
+        'Accept': 'application/json'
+      }
+    });
+
+    const paymentStatus = await response.json();
     
     return {
-      success: paymentStatus.code === 'PAYMENT_SUCCESS' || paymentStatus.code === 'SUCCESS',
+      success: paymentStatus.code === 'PAYMENT_SUCCESS' || 
+              paymentStatus.code === 'SUCCESS' || 
+              paymentStatus.success === true,
       data: paymentStatus
     };
   } catch (error) {

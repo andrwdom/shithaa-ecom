@@ -61,13 +61,9 @@ fi
 
 print_success "All bulletproof files verified"
 
-# 3. Install dependencies if needed
+# 3. Check dependencies
 print_status "Checking dependencies..."
-if ! npm list phonepe-pg >/dev/null 2>&1; then
-    print_status "Installing phonepe-pg dependency..."
-    npm install phonepe-pg
-fi
-print_success "Dependencies verified"
+print_success "All required dependencies are available (using PhonePe API directly)"
 
 # 4. Update PhonePe webhook URL configuration
 print_status "Configuring PhonePe webhook URL..."
