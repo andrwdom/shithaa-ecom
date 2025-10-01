@@ -206,7 +206,7 @@ export const createCheckoutSession = async (req, res) => {
     if (!validationResult.isValid) {
       console.warn(`[${correlationId}] ❌ Validation failed:`, validationResult.errors);
       return errorResponse(res, 400, 'Validation failed', {
-        errors: validationResult.errors
+          errors: validationResult.errors
       });
     }
     
@@ -240,46 +240,46 @@ export const createCheckoutSession = async (req, res) => {
     try {
       await mongoSession.withTransaction(async () => {
         // Create checkout session
-        const checkoutSession = new CheckoutSession({
-          sessionId,
-          shippingCost,
-          source,
-          userId,
-          userEmail,
-          guestToken: !userId ? randomUUID() : undefined,
-          items: validatedItems,
+    const checkoutSession = new CheckoutSession({
+      sessionId,
+      shippingCost,
+      source,
+      userId,
+      userEmail,
+      guestToken: !userId ? randomUUID() : undefined,
+      items: validatedItems,
           subtotal: rawSubtotal,
-          discount: {
-            type: 'fixed',
-            value: offerDiscount,
-            appliedCouponCode: null
-          },
-          offerDetails: {
+      discount: {
+        type: 'fixed',
+        value: offerDiscount,
+        appliedCouponCode: null
+      },
+      offerDetails: {
             offerApplied: offerDiscount > 0,
             offerType: offerDiscount > 0 ? 'loungewear_buy3_1299' : null,
             offerDiscount,
             offerDescription: offerDiscount > 0 ? 'Special Offer Applied' : null,
             offerCalculation: {
-              completeSets: 0,
-              remainingItems: 0,
+          completeSets: 0,
+          remainingItems: 0,
               originalPrice: rawSubtotal,
               offerPrice: total - shippingCost,
               savings: offerDiscount
-            }
-          },
-          total,
-          currency: 'INR',
-          status: 'pending',
+        }
+      },
+      total,
+      currency: 'INR',
+      status: 'pending',
           stockReserved: false, // Will be set to true after reservation
           expiresAt: new Date(Date.now() + 15 * 60 * 1000), // 15 minutes
-          metadata: {
-            userAgent: req.headers['user-agent'],
-            ipAddress: req.ip || req.connection.remoteAddress,
-            correlationId,
-            checkoutFlow: source
-          }
-        });
-        
+      metadata: {
+        userAgent: req.headers['user-agent'],
+        ipAddress: req.ip || req.connection.remoteAddress,
+        correlationId,
+        checkoutFlow: source
+      }
+    });
+    
         await checkoutSession.save({ session: mongoSession });
         console.log(`[${correlationId}] Session created: ${sessionId}`);
         
@@ -405,7 +405,13 @@ export const reserveStockForSession = async (req, res) => {
     }
     
     if (session.stockReserved) {
-      return successResponse(res, { message: 'Stock already reserved for this session' });
+      console.log(`[${correlationId}] ✅ Stock already reserved for session: ${sessionId}`);
+      return successResponse(res, { 
+        message: 'Stock already reserved for this session',
+        stockReserved: true,
+        expiresAt: session.expiresAt,
+        alreadyReserved: true
+      });
     }
     
     // Validate stock availability for all items
@@ -596,19 +602,19 @@ export const cancelCheckoutSession = async (req, res) => {
     const draftOrder = await orderModel.findOne({ 
       'metadata.checkoutSessionId': sessionId,
       status: { $in: ['DRAFT', 'PENDING', 'CONFIRMED', 'PENDING_REVIEW'] }
-    });
-    
-    if (draftOrder) {
-      console.log(`[${correlationId}] ⚠️ Draft order exists - NOT releasing stock`);
-      session.status = 'cancelled';
-      await session.save();
-      
-      return successResponse(res, {
-        message: 'Session cancelled (order exists)',
-        hasOrder: true,
-        orderId: draftOrder.orderId
       });
-    }
+      
+      if (draftOrder) {
+      console.log(`[${correlationId}] ⚠️ Draft order exists - NOT releasing stock`);
+        session.status = 'cancelled';
+        await session.save();
+        
+        return successResponse(res, {
+        message: 'Session cancelled (order exists)',
+          hasOrder: true,
+          orderId: draftOrder.orderId
+        });
+      }
     
     // Release stock if reserved AND no draft order exists
     if (session.stockReserved) {

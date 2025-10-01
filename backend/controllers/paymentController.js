@@ -410,7 +410,7 @@ export const createPhonePeSession = async (req, res) => {
       console.log(`[${correlationId}] ⚠️  Stock NOT reserved yet - this should not happen in the new flow!`);
       // Validate stock availability as fallback
       const { checkStockAvailability } = await import('../utils/stock.js');
-      
+          
       for (const item of checkoutSession.items) {
         const availability = await checkStockAvailability(item.productId, item.size, item.quantity);
         if (!availability.available) {
@@ -497,24 +497,24 @@ export const createPhonePeSession = async (req, res) => {
         // 🔑 Stock is ALREADY reserved in checkout session, just mark the order
         console.log(`[${correlationId}] ✅ Using pre-reserved stock from checkout session`);
         
-        await orderModel.findByIdAndUpdate(
-          createdDraftOrder._id,
-          { stockReserved: true },
-          { session }
-        );
+          await orderModel.findByIdAndUpdate(
+            createdDraftOrder._id,
+            { stockReserved: true },
+            { session }
+          );
         
         // Update checkout session status
-        checkoutSession.status = 'awaiting_payment';
-        await checkoutSession.save({ session });
-        
+          checkoutSession.status = 'awaiting_payment';
+          await checkoutSession.save({ session });
+
         console.log(`[${correlationId}] Draft order linked to reserved stock`);
         Logger.info('draft_order_created', {
-          correlationId,
-          checkoutSessionId,
-          orderId: createdDraftOrder.orderId,
+            correlationId,
+            checkoutSessionId,
+            orderId: createdDraftOrder.orderId,
           itemCount: checkoutSession.items.length,
           stockAlreadyReserved: true
-        });
+          });
       });
     } catch (error) {
       console.error(`[${correlationId}] Draft order creation failed:`, error);
