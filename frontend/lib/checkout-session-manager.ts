@@ -14,7 +14,9 @@ class CheckoutSessionManagerClass {
   private token: string | null = null;
   private isActive: boolean = false;
   private paymentInitiated: boolean = false; // 🔧 NEW: Track if payment was initiated
+  private sessionStartTime: number = 0; // 🔧 CRITICAL FIX: Track when session started
   private cleanupHandlers: (() => void)[] = [];
+  private readonly GRACE_PERIOD_MS = 8000; // 🔧 CRITICAL FIX: 8 second grace period to prevent false triggers
 
   /**
    * Start managing a checkout session
@@ -23,6 +25,8 @@ class CheckoutSessionManagerClass {
     this.sessionId = sessionId;
     this.token = token;
     this.isActive = true;
+    this.sessionStartTime = Date.now(); // 🔧 CRITICAL FIX: Record when we started managing
+    console.log('[CheckoutSession] ✅ Started managing session:', sessionId, '- Grace period: 8s');
     this.wireUpGuards();
   }
 
@@ -30,7 +34,9 @@ class CheckoutSessionManagerClass {
    * Stop managing the current session
    */
   stopSession() {
+    console.log('[CheckoutSession] 🛑 Stopped managing session');
     this.isActive = false;
+    this.sessionStartTime = 0;
     this.cleanupHandlers.forEach(cleanup => cleanup());
     this.cleanupHandlers = [];
   }
@@ -83,9 +89,18 @@ class CheckoutSessionManagerClass {
    */
   private wireUpGuards() {
     const handler = () => {
+      // 🔧 CRITICAL FIX: Check if we're within the grace period
+      const timeSinceStart = Date.now() - this.sessionStartTime;
+      const withinGracePeriod = timeSinceStart < this.GRACE_PERIOD_MS;
+      
+      if (withinGracePeriod) {
+        console.log(`[CheckoutSession] ⏰ Within grace period (${Math.round(timeSinceStart/1000)}s) - IGNORING cancel trigger`);
+        return; // 🔧 CRITICAL: Don't cancel during grace period (prevents false triggers from navigation)
+      }
+      
       // 🔧 CRITICAL FIX: Don't cancel if payment was initiated
       if (this.isActive && !this.paymentInitiated) {
-        console.log('[CheckoutSession] 🚨 User leaving checkout, cancelling session...');
+        console.log('[CheckoutSession] 🚨 User leaving checkout (after grace period), cancelling session...');
         this.cancelSession();
       } else if (this.paymentInitiated) {
         console.log('[CheckoutSession] ✅ Payment initiated - skipping cancel');
