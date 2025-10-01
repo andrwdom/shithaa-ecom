@@ -168,8 +168,11 @@ function OrderSuccessContent() {
     );
   }
 
-  const isPaid = displayOrder.paymentStatus === 'paid' || displayOrder.status === 'Paid' || displayOrder.status === 'Order Placed';
-  const isFailed = displayOrder.paymentStatus === 'failed' || displayOrder.status === 'Payment Failed';
+  const isPaid = displayOrder.paymentStatus === 'PAID' || displayOrder.paymentStatus === 'paid' || 
+                displayOrder.status === 'CONFIRMED' || displayOrder.status === 'Paid' || 
+                displayOrder.status === 'Order Placed' || displayOrder.orderStatus === 'CONFIRMED';
+  const isFailed = displayOrder.paymentStatus === 'failed' || displayOrder.paymentStatus === 'FAILED' ||
+                  displayOrder.status === 'Payment Failed' || displayOrder.status === 'FAILED';
 
   return (
     <div className="max-w-2xl mx-auto p-6 sm:p-10 text-center flex flex-col items-center justify-center min-h-[70vh] container-responsive">
