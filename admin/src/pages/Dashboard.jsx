@@ -356,11 +356,13 @@ const Dashboard = ({ token }) => {
                     </Badge>
                   </div>
                   <div className="space-y-1 text-sm">
-                    <div>Health: {status.healthScore}%</div>
-                    <div>Failures: {status.failureCount}/{status.failureThreshold}</div>
-                    <div className="text-xs text-gray-500">
-                      Requests: {status.metrics.totalRequests}
-                    </div>
+                    <div>Health: {status.healthScore || 0}%</div>
+                    <div>Failures: {status.failureCount || 0}/{status.failureThreshold || 5}</div>
+                    {status.metrics?.totalRequests && (
+                      <div className="text-xs text-gray-500">
+                        Requests: {status.metrics.totalRequests}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
