@@ -14,26 +14,28 @@ const EnhancedHeroSection = () => {
     window.location.href = `/collections/${slug}`
   }, [])
 
-  // Preload all hero images for better performance (now runs in background)
+  // Light preloading - only fetch first category images for mobile performance
   useEffect(() => {
-    const preloadAllHeroImages = async () => {
+    const lightPreload = async () => {
       try {
         setIsPreloading(true)
-        setPreloadProgress(0)
-
+        
         const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
-        const imagePromises = HERO_SECTION_CATEGORIES.map(async (category, index) => {
+        // Only preload first category for initial performance
+        const firstCategory = HERO_SECTION_CATEGORIES[0]
+        
+        if (firstCategory) {
           try {
             const url = new URL(`${baseUrl}/api/hero-images`)
-            url.searchParams.append('categoryId', category.slug)
-            url.searchParams.append('device', 'desktop')
-            url.searchParams.append('limit', '6')
+            url.searchParams.append('categoryId', firstCategory.slug)
+            url.searchParams.append('device', 'mobile')
+            url.searchParams.append('limit', '3') // Reduced for mobile
 
             const response = await fetch(url.toString(), {
               method: 'GET',
               headers: {
                 'Accept': 'application/json',
-                'Cache-Control': 'no-cache'
+                'Cache-Control': 'max-age=300'
               }
             })
 
@@ -41,37 +43,23 @@ const EnhancedHeroSection = () => {
               const data = await response.json()
               if (data.success && data.images) {
                 const imageUrls = data.images.map((img: any) => img.thumbUrl).filter(Boolean)
-                setPreloadProgress((index + 1) / HERO_SECTION_CATEGORIES.length)
-                return imageUrls
+                setAllImages(imageUrls.slice(0, 3)) // Only first 3 images
+                setPreloadProgress(1)
               }
             }
-            return []
           } catch (error) {
-            console.warn(`Failed to preload images for ${category.slug}:`, error)
-            return []
+            console.warn(`Failed to preload images for ${firstCategory.slug}:`, error)
           }
-        })
-
-        const allImageArrays = await Promise.allSettled(imagePromises)
-        const flatImages = allImageArrays
-          .filter((result): result is PromiseFulfilledResult<string[]> => result.status === 'fulfilled')
-          .flatMap(result => result.value)
-          .filter(Boolean)
-
-        setAllImages(flatImages)
-        setPreloadProgress(1)
+        }
       } catch (error) {
-        console.error('Error preloading hero images:', error)
+        console.error('Error in light preload:', error)
       } finally {
         setIsPreloading(false)
       }
     }
 
-    // Start preloading in background after a small delay to prioritize UI rendering
-    const timer = setTimeout(() => {
-      preloadAllHeroImages()
-    }, 100)
-
+    // Start light preload after UI is ready - prioritize rendering
+    const timer = setTimeout(lightPreload, 500)
     return () => clearTimeout(timer)
   }, [])
 

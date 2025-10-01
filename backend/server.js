@@ -18,6 +18,11 @@ dotenv.config({ path: envPath });
 // Initialize Sentry for error monitoring (non-intrusive)
 let Sentry = null;
 
+// Import new production-grade systems
+import { expressErrorHandler } from './utils/errorHandler.js';
+import { startPeriodicMonitoring } from './utils/monitoringSystem.js';
+import * as SentryNode from '@sentry/node';
+
 // Now import config (which also loads dotenv but won't conflict)
 import { config } from './config.js'
 import cors from 'cors';
@@ -48,6 +53,8 @@ import cachedRoutes from './routes/cachedRoutes.js'
 import monitoringRouter from './routes/monitoring.js'
 import maintenanceRouter from './routes/maintenance.js'
 import webhookManagementRouter from './routes/webhookManagement.js'
+import atomicPaymentRouter from './routes/atomicPaymentRoute.js'
+import systemMonitoringRouter from './routes/monitoringRoute.js'
 import bulletproofWebhookRouter from './controllers/bulletproofWebhookController.js'
 import { maintenanceMode } from './middleware/maintenanceMode.js'
 import { startReconciliationCron } from './utils/reconciliation.js'
@@ -138,8 +145,13 @@ app.use(rawWebhookRouter);
 // Mount bulletproof webhook routes (TEST MODE - different path to avoid conflicts)
 app.use('/api/webhooks-test', bulletproofWebhookRouter);
 
-// Add Sentry request handler (non-intrusive - only in production)
+// Initialize Sentry properly
 if (process.env.NODE_ENV === 'production' && process.env.SENTRY_DSN) {
+  SentryNode.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: process.env.NODE_ENV || 'production'
+  });
+  Sentry = SentryNode;
   app.use(Sentry.requestHandler());
 }
 
@@ -343,6 +355,9 @@ app.use('/api/payment', strictLimiter, paymentRouter)
 app.use('/api/checkout', strictLimiter, checkoutRouter)
 app.use('/api/orders', strictLimiter, orderRouter)
 
+// NEW: Atomic payment system (production-ready)
+app.use('/api/atomic-payment', strictLimiter, atomicPaymentRouter)
+
 // Apply browse rate limiting to product browsing (most common requests)
 app.use('/api/products', browseLimiter, productRouter)
 app.use('/api/categories', browseLimiter, categoryRouter)
@@ -366,11 +381,18 @@ app.use('/api/cached', cachedRoutes)
 // Monitoring routes (admin access)
 app.use('/api/monitoring', monitoringRouter)
 
+// NEW: System monitoring and health checks
+app.use('/api/system-monitoring', systemMonitoringRouter)
+
 // Maintenance routes (admin access)
 app.use('/api/maintenance', maintenanceRouter)
 
 // Webhook management routes (admin access)
 app.use('/api/webhook-management', webhookManagementRouter)
+
+// Webhook monitoring and admin routes
+import webhookMonitoringRouter from './routes/webhookMonitoring.js'
+app.use('/api/webhook-monitoring', webhookMonitoringRouter)
 
 // Legacy routes for backward compatibility
 app.use('/api/product', productRouter)
@@ -604,31 +626,8 @@ if (process.env.NODE_ENV === 'production' && process.env.SENTRY_DSN) {
   app.use(Sentry.errorHandler());
 }
 
-// General error handling middleware - PRODUCTION OPTIMIZED
-app.use((err, req, res, next) => {
-    // Log error with context for production monitoring
-    console.error('🚨 PRODUCTION ERROR:', {
-        message: err.message,
-        stack: err.stack,
-        url: req.url,
-        method: req.method,
-        ip: req.ip,
-        userAgent: req.headers['user-agent'],
-        timestamp: new Date().toISOString(),
-        environment: process.env.NODE_ENV
-    });
-    
-    // Don't expose internal errors to clients in production
-    const isDevelopment = process.env.NODE_ENV === 'development';
-    
-    res.status(500).json({
-        success: false,
-        message: isDevelopment ? 'Internal Server Error' : 'Something went wrong. Please try again later.',
-        error: isDevelopment ? err.message : undefined,
-        timestamp: new Date().toISOString(),
-        requestId: req.headers['x-request-id'] || 'unknown'
-    });
-});
+// NEW: Production-grade error handling middleware
+app.use(expressErrorHandler);
 
 // Initialize Firebase Admin SDK
 try {
@@ -697,6 +696,11 @@ async function startServer() {
       // Start reconciliation cron job for draft orders
       startReconciliationCron();
       console.log(`✅ Reconciliation cron job started`);
+      
+      // NEW: Start production-grade monitoring
+      console.log('🔍 Starting periodic monitoring system...');
+      startPeriodicMonitoring();
+      console.log(`✅ Production monitoring system active`);
   });
   
   return server;

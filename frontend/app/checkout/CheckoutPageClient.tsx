@@ -1,6 +1,6 @@
 'use client'
 
-import CheckoutPage from './CheckoutPage'
+import UnifiedCheckout from './UnifiedCheckout'
 import { useAuth } from '@/components/auth/useAuth'
 import LoginModal from '@/components/auth/LoginModal'
 import { useState } from 'react'
@@ -24,5 +24,5 @@ export default function CheckoutPageClient() {
       </>
     );
   }
-  return <CheckoutPage />
+  return <UnifiedCheckout />
 } 

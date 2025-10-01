@@ -7,6 +7,8 @@ import CartSidebar from "@/components/cart-sidebar"
 import LayoutClient from "@/components/layout-client"
 import ErrorBoundary from "@/components/error-boundary"
 import ServerErrorBoundary from "@/components/server-error-boundary"
+import MobilePerformanceOptimizer from "@/components/mobile-performance-optimizer"
+import InstagramOptimizations from "@/components/instagram-optimizations"
 import Script from "next/script";
 import PerformanceMonitor from "@/components/performance-monitor"
 import OfflineIndicator from "@/components/offline-indicator"
@@ -226,8 +228,11 @@ export default function RootLayout({
         <ServerErrorBoundary>
           <ErrorBoundary>
             <Providers>
-              <LayoutClient>{children}</LayoutClient>
-              <CartSidebar />
+              <MobilePerformanceOptimizer>
+                <InstagramOptimizations />
+                <LayoutClient>{children}</LayoutClient>
+                <CartSidebar />
+              </MobilePerformanceOptimizer>
             </Providers>
           </ErrorBoundary>
         </ServerErrorBoundary>

@@ -43,11 +43,12 @@ const nextConfig = {
     dangerouslyAllowSVG: true,
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
     // Cloudflare optimization settings
-    loader: 'default',
+    loader: 'custom',
     loaderFile: './lib/image-loader.js',
   },
+  serverExternalPackages: ['sharp', 'mongodb'], // Moved from experimental
   experimental: {
-    // optimizeCss: true, // Temporarily disabled to fix build error
+    optimizeCss: false, // Temporarily disable to fix critters dependency issue
     optimizePackageImports: [
       '@radix-ui/react-icons',
       '@radix-ui/react-dialog',
@@ -55,6 +56,9 @@ const nextConfig = {
       '@radix-ui/react-separator',
       '@radix-ui/react-label',
       '@radix-ui/react-radio-group',
+      '@radix-ui/react-accordion',
+      '@radix-ui/react-popover',
+      '@radix-ui/react-toast',
       'lucide-react',
       'framer-motion'
     ],
@@ -118,7 +122,16 @@ const nextConfig = {
       
       // Tree shaking for production
       config.optimization.usedExports = true;
-      config.optimization.sideEffects = true;
+      config.optimization.sideEffects = false; // Enable aggressive tree shaking
+      
+      // Mobile-specific optimizations
+      config.optimization.splitChunks.maxSize = 244000; // ~240KB max chunk size for mobile
+      config.optimization.splitChunks.minSize = 20000; // 20KB min chunk size
+      
+      // More aggressive compression
+      if (process.env.NODE_ENV === 'production') {
+        config.optimization.minimize = true;
+      }
     }
     return config;
   },

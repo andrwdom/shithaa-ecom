@@ -7,6 +7,7 @@ import PageLoading from "@/components/page-loading"
 import PerformanceMonitor from "@/components/performance-monitor"
 import { useCart } from "@/components/cart-context"
 import { detectDevice, getBundleStrategy } from "@/lib/mobile-detection"
+import { OptimizedImage } from "@/components/OptimizedImage"
 
 // Dynamic imports with loading components - Only load when needed
 const EnhancedHeroSection = dynamic(() => import("@/components/enhanced-hero-section"), {
@@ -29,6 +30,12 @@ const FAQAccordion = dynamic(() => import("@/components/faq-accordion"), {
   ssr: false // Below fold
 })
 
+// Conditional loading based on device for Instagram optimization
+const ProductSlider = dynamic(() => import("@/components/product-slider"), {
+  loading: () => <div className="h-80 bg-gray-100 animate-pulse" />,
+  ssr: false
+})
+
 interface Product {
   id: string
   _id: string
@@ -42,7 +49,7 @@ interface Product {
   isBestSeller?: boolean
   sizes: { stock?: number }[]
   stock: number
-  customId?: string // Added customId to the interface
+  customId?: string
 }
 
 export default function Home() {
@@ -101,20 +108,19 @@ export default function Home() {
       }
     }
 
-    // Prioritize hero section, then load products after a short delay
-    const timer = setTimeout(fetchProducts, 200)
+    // Prioritize hero section, then load products
+    const timer = setTimeout(fetchProducts, 100)
     return () => clearTimeout(timer)
   }, [])
 
   const handleAddToCart = async (product: Product) => {
     try {
-      // Find the first available size with stock
       const availableSize = product.sizes?.find(s => s.stock && s.stock > 0)
       const size = availableSize ? availableSize.size : "M"
       const stock = availableSize?.stock || 0
 
       await addToCart({
-        id: product.customId || product._id, // Use customId for routing
+        id: product.customId || product._id,
         _id: product._id,
         name: product.name,
         price: product.price,
@@ -152,12 +158,40 @@ export default function Home() {
             <EnhancedHeroSection />
           </Suspense>
           
-          {/* Below the fold - Load progressively based on device capabilities */}
+          {/* Below the fold - Load progressively */}
           {showBelowFold && (
             <>
               <Suspense fallback={<div className="h-20 bg-gray-100 animate-pulse" />}>
                 <CategoryStrip onCategoryClick={handleCategorySelect} currentCategory={undefined} />
               </Suspense>
+              
+              {/* Show product sections only if we have products and on good connections */}
+              {products.length > 0 && !deviceInfo.isInstagram && deviceInfo.connectionType !== 'slow' && (
+                <>
+                  {newArrivals.length > 0 && (
+                    <Suspense fallback={<div className="h-80 bg-gray-100 animate-pulse" />}>
+                      <ProductSlider
+                        title="✨ New Arrivals"
+                        products={newArrivals.slice(0, 8)} // Limit for performance
+                        onAddToCart={handleAddToCart}
+                        onBuyNow={(product) => console.log('Buy now:', product)}
+                      />
+                    </Suspense>
+                  )}
+                  
+                  {bestSellers.length > 0 && (
+                    <Suspense fallback={<div className="h-80 bg-gray-100 animate-pulse" />}>
+                      <ProductSlider
+                        title="🔥 Best Sellers"
+                        products={bestSellers.slice(0, 8)} // Limit for performance
+                        showBestsellerBadge={true}
+                        onAddToCart={handleAddToCart}
+                        onBuyNow={(product) => console.log('Buy now:', product)}
+                      />
+                    </Suspense>
+                  )}
+                </>
+              )}
               
               <Suspense fallback={<div className="h-64 bg-gray-50 animate-pulse" />}>
                 <TestimonialsSection />
@@ -169,9 +203,9 @@ export default function Home() {
             </>
           )}
           
-          {/* Mobile performance indicator for slow connections */}
+          {/* Mobile performance indicator */}
           {(deviceInfo.isInstagram || deviceInfo.connectionType === 'slow') && !showBelowFold && (
-            <div className="fixed bottom-4 right-4 bg-blue-500 text-white p-2 rounded-lg text-xs z-50 transition-opacity">
+            <div className="fixed bottom-4 right-4 bg-blue-500 text-white p-2 rounded-lg text-xs z-50">
               Optimizing for your connection...
             </div>
           )}
