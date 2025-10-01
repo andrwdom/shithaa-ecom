@@ -1,6 +1,9 @@
 // Sentry client-side configuration
 import * as Sentry from "@sentry/nextjs";
 
+// Required for Sentry navigation instrumentation
+export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
+
 export function init() {
   Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,

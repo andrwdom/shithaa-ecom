@@ -62,6 +62,10 @@ const nextConfig = {
       'lucide-react',
       'framer-motion'
     ],
+    // Build optimizations
+    buildWorker: true,
+    workerThreads: false,
+    cpus: Math.max(1, require('os').cpus().length - 1),
   },
   compress: true,
   poweredByHeader: false,
