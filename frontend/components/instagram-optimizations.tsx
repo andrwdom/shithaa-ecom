@@ -56,7 +56,8 @@ export default function InstagramOptimizations() {
         /* Optimize scrolling */
         body {
           -webkit-overflow-scrolling: touch;
-          overscroll-behavior: contain;
+          overscroll-behavior-x: contain; /* Prevent horizontal overscroll only */
+          overscroll-behavior-y: auto; /* Allow vertical overscroll for pull-to-refresh */
         }
         
         /* Reduce paint complexity */

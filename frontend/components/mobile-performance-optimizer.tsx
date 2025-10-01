@@ -115,7 +115,8 @@ export default function MobilePerformanceOptimizer({ children }: MobileOptimizer
           .mobile-optimized {
             /* Reduce scroll bounce on iOS */
             -webkit-overflow-scrolling: touch;
-            overscroll-behavior: contain;
+            overscroll-behavior-x: contain; /* Prevent horizontal overscroll only */
+            overscroll-behavior-y: auto; /* Allow vertical overscroll for pull-to-refresh */
           }
         }
       `}</style>

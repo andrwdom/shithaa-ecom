@@ -635,7 +635,8 @@ html, body {
   /* Optimize scrolling performance */
   .overflow-y-auto {
     -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;
+    overscroll-behavior-x: contain; /* Prevent horizontal overscroll only */
+    overscroll-behavior-y: auto; /* Allow vertical overscroll for pull-to-refresh */
   }
   
   /* Ensure smooth image transitions on mobile */
