@@ -12,7 +12,7 @@ import mongoose from 'mongoose';
 import crypto from 'crypto';
 import orderModel from '../models/orderModel.js';
 import PaymentSession from '../models/paymentSessionModel.js';
-import { userModel } from '../models/userModel.js';
+import userModel from '../models/userModel.js';
 import { atomicStockManager } from '../utils/atomicStockManager.js';
 import { paymentOperationBreaker, orderCreationBreaker } from '../utils/circuitBreaker.js';
 import { 
