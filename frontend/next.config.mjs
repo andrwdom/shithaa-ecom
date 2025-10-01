@@ -63,8 +63,11 @@ const nextConfig = {
       'framer-motion'
     ],
     // Build optimizations
-    buildWorker: true,
-    workerThreads: false,
+    swcMinify: true,
+    turbotrace: {
+      logLevel: "error",
+      logDetail: false
+    },
   },
   compress: true,
   poweredByHeader: false,
