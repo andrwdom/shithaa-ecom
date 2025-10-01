@@ -8,7 +8,8 @@ import {
     getOrderByPublicId,
     generateInvoice,
     getAllOrders,
-    updateOrderStatus
+    updateOrderStatus,
+    deleteOrder
 } from '../controllers/orderController.js';
 import { 
     verifyToken, 
@@ -46,5 +47,8 @@ orderRouter.get('/user/count', (req, res, next) => {
 
 // Admin route for updating order status
 orderRouter.post('/status', verifyToken, updateOrderStatus);
+
+// Admin route for deleting order (permanent deletion with stock restoration)
+orderRouter.delete('/:orderId', verifyToken, deleteOrder);
 
 export default orderRouter;

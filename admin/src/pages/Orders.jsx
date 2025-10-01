@@ -4,7 +4,7 @@ import { backendUrl, currency } from '../App'
 import { toast } from 'react-toastify'
 import { assets } from '../assets/assets'
 import { useNavigate } from 'react-router-dom'
-import { FaUser, FaEnvelope, FaTruck, FaPhone, FaMapMarkerAlt, FaMoneyBill, FaCalendarAlt, FaBox, FaTag, FaSearch, FaFilter, FaClock, FaCheckCircle, FaTimesCircle, FaShippingFast, FaDollarSign, FaSpinner, FaCog, FaBan, FaDownload } from 'react-icons/fa';
+import { FaUser, FaEnvelope, FaTruck, FaPhone, FaMapMarkerAlt, FaMoneyBill, FaCalendarAlt, FaBox, FaTag, FaSearch, FaFilter, FaClock, FaCheckCircle, FaTimesCircle, FaShippingFast, FaDollarSign, FaSpinner, FaCog, FaBan, FaDownload, FaExclamationTriangle as AlertTriangle } from 'react-icons/fa';
 
 // Updated status colors and icons
 const STATUS_CONFIG = {
@@ -282,7 +282,7 @@ const EnhancedSearchAndFilters = ({
 };
 
 // Modern Responsive Order Card with updated status handling
-const ModernOrderCard = ({ order, onView, onStatusChange }) => {
+const ModernOrderCard = ({ order, onView, onStatusChange, onDelete }) => {
   const userInfo = order.userInfo || { name: order.customerName, email: order.email };
   const shipping = order.shippingInfo || order.shippingAddress || order.address;
   const name = shipping?.fullName || shipping?.name || order.customerName;
@@ -292,6 +292,8 @@ const ModernOrderCard = ({ order, onView, onStatusChange }) => {
   const payment = order.paymentStatus || order.paymentMethod;
   const status = order.orderStatus || order.status || order.paymentStatus;
   const placedAt = order.createdAt || order.placedAt;
+  
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
   // Get shipping address lines for display
   const getShippingAddressLines = () => {
@@ -370,12 +372,20 @@ const ModernOrderCard = ({ order, onView, onStatusChange }) => {
         <p>📅 {formatDate(placedAt)}</p>
       </div>
       <div className="flex flex-wrap justify-between gap-2 mt-3">
-        <button
-          className="px-3 py-1.5 rounded border border-gray-300 text-xs font-semibold hover:bg-gray-50 transition"
-          onClick={() => onView(order)}
-        >
-          View Details
-        </button>
+        <div className="flex gap-2">
+          <button
+            className="px-3 py-1.5 rounded border border-gray-300 text-xs font-semibold hover:bg-gray-50 transition"
+            onClick={() => onView(order)}
+          >
+            View Details
+          </button>
+          <button
+            className="px-3 py-1.5 rounded border border-red-300 bg-red-50 text-red-700 text-xs font-semibold hover:bg-red-100 transition"
+            onClick={() => setShowDeleteConfirm(true)}
+          >
+            🗑️ Delete
+          </button>
+        </div>
         <div className="relative">
           <button
             className="px-3 py-1.5 rounded bg-[#4D1E64] text-white text-xs font-semibold hover:bg-[#3a164d] transition"
@@ -403,6 +413,52 @@ const ModernOrderCard = ({ order, onView, onStatusChange }) => {
           )}
         </div>
       </div>
+      
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+                <AlertTriangle className="h-6 w-6 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Delete Order?</h3>
+                <p className="text-sm text-gray-500">This action cannot be undone</p>
+              </div>
+            </div>
+            
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+              <p className="text-sm text-red-800 font-medium mb-2">⚠️ Warning: You are about to permanently delete:</p>
+              <ul className="text-xs text-red-700 space-y-1 ml-4">
+                <li>• Order #{order.orderId}</li>
+                <li>• Customer: {name} ({email})</li>
+                <li>• Amount: ₹{typeof total === 'number' ? total.toFixed(2) : '0.00'}</li>
+                <li>• This will restore stock to inventory</li>
+                <li>• This will remove order from customer's account</li>
+              </ul>
+            </div>
+            
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setShowDeleteConfirm(false);
+                  onDelete(order._id, order.orderId);
+                }}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition"
+              >
+                Yes, Delete Order
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Shipping Tracking Modal */}
       {showShippingModal && (
@@ -1162,6 +1218,33 @@ const Orders = ({ token, setToken }) => {
     }
   };
 
+  const handleDeleteOrder = async (orderId, orderNumber) => {
+    try {
+      console.log("Deleting order:", orderId, orderNumber);
+      
+      const response = await axios.delete(
+        `${backendUrl}/api/orders/${orderId}`,
+        {
+          headers: {
+            token: token
+          }
+        }
+      );
+      
+      console.log('Delete response:', response.data);
+      
+      if (response.data.success) {
+        toast.success(`Order #${orderNumber} deleted successfully! ${response.data.stockRestored ? 'Stock restored to inventory.' : ''}`);
+        fetchOrders(); // Refresh the orders list
+      } else {
+        toast.error('Failed to delete order: ' + response.data.message);
+      }
+    } catch (err) {
+      console.error('Delete order error:', err);
+      toast.error('Failed to delete order: ' + (err.response?.data?.message || err.message));
+    }
+  };
+
   const handlePrint = (order) => {
     setPrintOrder(order);
     setTimeout(() => {
@@ -1305,6 +1388,7 @@ const Orders = ({ token, setToken }) => {
               order={order}
               onView={setSelectedOrder}
               onStatusChange={updateStatus}
+              onDelete={handleDeleteOrder}
             />
           ))}
         </div>

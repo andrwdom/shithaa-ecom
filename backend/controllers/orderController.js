@@ -739,6 +739,54 @@ const cancelOrder = async (req, res) => {
     }
 };
 
+// Delete order (Admin only) - Permanent deletion with stock restoration
+const deleteOrder = async (req, res) => {
+    try {
+        const { orderId } = req.params;
+
+        if (!orderId) {
+            return res.json({ success: false, message: "Order ID is required" });
+        }
+
+        const order = await orderModel.findById(orderId);
+        if (!order) {
+            return res.json({ success: false, message: "Order not found" });
+        }
+
+        // Restore stock if order was confirmed/shipped (not cancelled/failed)
+        const shouldRestoreStock = ['CONFIRMED', 'Pending', 'Processing', 'Shipped'].includes(order.status || order.orderStatus);
+        
+        if (shouldRestoreStock && order.cartItems) {
+            const { releaseStockReservation } = await import('../utils/stock.js');
+            
+            for (const item of order.cartItems) {
+                try {
+                    await releaseStockReservation(item.productId, item.size, item.quantity);
+                    console.log(`Stock restored for ${item.name} (${item.size}): ${item.quantity} units`);
+                } catch (stockError) {
+                    console.error(`Failed to restore stock for item ${item.productId}:`, stockError);
+                    // Continue with deletion even if stock restoration fails
+                }
+            }
+        }
+
+        // Delete the order permanently
+        await orderModel.findByIdAndDelete(orderId);
+
+        console.log(`Order ${order.orderId} deleted permanently by admin`);
+
+        res.json({ 
+            success: true, 
+            message: "Order deleted successfully",
+            stockRestored: shouldRestoreStock
+        });
+
+    } catch (error) {
+        console.error('Delete order error:', error);
+        res.json({ success: false, message: error.message });
+    }
+};
+
 // Get all orders (Admin)
 const getAllOrders = async (req, res) => {
     try {
@@ -1194,7 +1242,8 @@ export {
     allOrders, 
     userOrders, 
     updateStatus, 
-    cancelOrder, 
+    cancelOrder,
+    deleteOrder, 
     getAllOrders, 
   updateOrderStatus,
     createStructuredOrder,
