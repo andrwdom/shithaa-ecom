@@ -300,7 +300,7 @@ export const createCheckoutSession = async (req, res) => {
         
         // Mark session as having reserved stock
         checkoutSession.stockReserved = true;
-        checkoutSession.status = 'stock_reserved';
+        checkoutSession.status = 'awaiting_payment';
         await checkoutSession.save({ session: mongoSession });
         
         console.log(`[${correlationId}] ✅ Stock reserved successfully`);
