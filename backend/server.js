@@ -322,10 +322,13 @@ app.use((req, res, next) => {
 app.use((req, res, next) => {
     // Add performance headers for API responses
     if (req.path.startsWith('/api/')) {
+        // 🔥 CRITICAL: Zero cache + version tracking for instant updates
         res.set({
             'Cache-Control': 'no-cache, no-store, must-revalidate',
             'Pragma': 'no-cache',
-            'Expires': '0'
+            'Expires': '0',
+            'X-API-Version': process.env.API_VERSION || '1.0.0',
+            'X-Build-Time': process.env.BUILD_TIME || new Date().toISOString()
         });
     }
     next();

@@ -162,10 +162,18 @@ const nextConfig = {
             key: 'Referrer-Policy',
             value: 'origin-when-cross-origin',
           },
-          // Add cache headers for HTML pages - SHORT CACHE for instant updates
+          // 🔥 CRITICAL: ZERO cache for HTML pages = INSTANT updates
           {
             key: 'Cache-Control',
-            value: 'public, max-age=60, must-revalidate', // 1 minute cache only
+            value: 'no-cache, no-store, must-revalidate',
+          },
+          {
+            key: 'Pragma',
+            value: 'no-cache',
+          },
+          {
+            key: 'Expires',
+            value: '0',
           },
         ],
       },
@@ -178,17 +186,31 @@ const nextConfig = {
           },
         ],
       },
-      // Fix static asset MIME type issues - SHORTER CACHE for CSS/JS updates
+      // 🚀 CRITICAL: Long cache for versioned static assets (build ID ensures freshness)
       {
         source: '/_next/static/(.*)',
         headers: [
           {
             key: 'Cache-Control',
-            value: 'public, max-age=300, must-revalidate', // 5 minutes cache for CSS/JS
+            value: 'public, max-age=31536000, immutable', // 1 year - safe because build ID changes
           },
           {
             key: 'X-Content-Type-Options',
             value: 'nosniff',
+          },
+        ],
+      },
+      // 🚀 API responses - never cache
+      {
+        source: '/api/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-cache, no-store, must-revalidate',
+          },
+          {
+            key: 'Pragma',
+            value: 'no-cache',
           },
         ],
       },
