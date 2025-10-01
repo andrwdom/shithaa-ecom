@@ -63,8 +63,6 @@ const nextConfig = {
       'framer-motion'
     ],
   },
-  // Build optimizations (moved outside experimental)
-  swcMinify: true, // SWC minification (default in Next.js 13+, but explicit is clearer)
   compress: true,
   poweredByHeader: false,
   generateEtags: true, // Enable ETags for better cache invalidation
