@@ -265,6 +265,12 @@ class BulletproofOrderService {
    */
   async verifyPaymentWithPhonePe(phonepeTransactionId) {
     try {
+      // Check if PhonePe credentials are available
+      if (!process.env.PHONEPE_SALT_KEY || !process.env.PHONEPE_MERCHANT_ID) {
+        console.warn('PhonePe credentials not configured, skipping API verification');
+        return { success: false, error: 'PhonePe credentials not configured' };
+      }
+
       // Use PhonePe API directly instead of SDK
       const phonepeApiUrl = process.env.PHONEPE_ENVIRONMENT === 'PRODUCTION' 
         ? 'https://api.phonepe.com/apis/hermes'
