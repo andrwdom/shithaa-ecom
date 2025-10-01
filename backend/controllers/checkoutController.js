@@ -28,22 +28,25 @@ const validateCartItems = async (cartItems) => {
 
     try {
         for (const item of cartItems) {
+            // Support both _id and productId field names for compatibility
+            const productId = item._id || item.productId;
+            
             // Validate required fields
-            if (!item._id || !item.size || !item.quantity || typeof item.price !== 'number') {
+            if (!productId || !item.size || !item.quantity || typeof item.price !== 'number') {
                 errors.push(`Invalid item data: ${JSON.stringify(item)}`);
                 continue;
             }
 
             // Validate MongoDB ObjectId format
-            if (!mongoose.Types.ObjectId.isValid(item._id)) {
-                errors.push(`Invalid product ID format: ${item._id}`);
+            if (!mongoose.Types.ObjectId.isValid(productId)) {
+                errors.push(`Invalid product ID format: ${productId}`);
                 continue;
             }
 
             // Fetch current product data from database
-            const product = await productModel.findById(item._id);
+            const product = await productModel.findById(productId);
             if (!product) {
-                errors.push(`Product not found: ${item._id}`);
+                errors.push(`Product not found: ${productId}`);
                 continue;
             }
 
@@ -76,14 +79,15 @@ const validateCartItems = async (cartItems) => {
 
             // Create validated item with server-verified data
             const validatedItem = {
-                _id: item._id,
-                productId: item._id, // For compatibility
+                _id: productId,
+                productId: productId, // For compatibility
                 name: product.name,
                 price: currentPrice, // Use server price
                 size: item.size,
                 quantity: item.quantity,
                 image: product.images?.[0] || '',
                 category: product.category,
+                categorySlug: product.categorySlug,
                 // Add server-side metadata
                 validatedAt: new Date(),
                 serverPrice: currentPrice,
