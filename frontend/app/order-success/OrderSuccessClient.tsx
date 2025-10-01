@@ -89,17 +89,19 @@ function OrderSuccessContent() {
           const responseData = await orderRes.json();
           
           if (orderRes.ok && responseData.success) {
-            const orderDetails = responseData.data;
+            const orderDetails = responseData.order || responseData.data;
             if (orderDetails) {
               // Check for a final, successful status
-              const isPaid = orderDetails.paymentStatus === 'paid' || orderDetails.status === 'Paid' || orderDetails.status === 'Order Placed';
+              const isPaid = orderDetails.paymentStatus === 'PAID' || orderDetails.paymentStatus === 'paid' || 
+                           orderDetails.status === 'CONFIRMED' || orderDetails.status === 'Paid' || 
+                           orderDetails.status === 'Order Placed';
               if (isPaid) {
                 setOrder(orderDetails);
                 setError(""); // Clear any previous errors
                 setLoading(false);
                 return; // Success! Exit the loop.
               }
-              console.log(`Order status is '${orderDetails.paymentStatus}', retrying...`);
+              console.log(`Order status is '${orderDetails.paymentStatus}' / '${orderDetails.status}', retrying...`);
             } else {
               // If the API returns success but no data, that's a hard failure.
               setError("Order data not found for this transaction.");
