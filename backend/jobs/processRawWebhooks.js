@@ -1,8 +1,23 @@
 import mongoose from 'mongoose';
 import RawWebhook from '../models/RawWebhook.js';
 import orderModel from '../models/orderModel.js';
+import dotenv from 'dotenv';
 
-const MONGO_URI = 'mongodb://shithaa:shithaamongopassword255506511ypyq2jvcl@localhost:27017/shitha_maternity_db';
+// Load environment variables
+dotenv.config();
+
+const MONGO_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/shitha_maternity_db';
+
+// Add error handling for uncaught exceptions
+process.on('uncaughtException', (error) => {
+  console.error('💥 Uncaught Exception:', error.message);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('💥 Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
+});
 
 async function processPhonePeWebhook(raw) {
   try {
@@ -204,14 +219,20 @@ async function processOne(raw) {
 }
 
 async function run() {
+  let connection = null;
+  
   try {
-    await mongoose.connect(MONGO_URI, { 
-      useNewUrlParser: true, 
-      useUnifiedTopology: true 
+    console.log('🚀 Starting webhook processor...');
+    
+    // Connect to MongoDB with timeout
+    connection = await mongoose.connect(MONGO_URI, {
+      serverSelectionTimeoutMS: 5000,
+      connectTimeoutMS: 10000
     });
     
     console.log('🔗 Connected to MongoDB');
     
+    // Find unprocessed webhook
     const raw = await RawWebhook.findOneAndUpdate(
       { processed: false, processing: false }, 
       { $set: { processing: true } }, 
@@ -223,18 +244,46 @@ async function run() {
       process.exit(0);
     }
     
+    console.log(`🔄 Processing webhook ${raw._id} from ${raw.provider}`);
+    
     try {
       const result = await processOne(raw);
-      console.log('✅ Processed webhook:', result);
+      console.log('✅ Processed webhook successfully:', result);
       process.exit(0);
     } catch (err) {
-      console.error('❌ Process failed', err);
-      await RawWebhook.findByIdAndUpdate(raw._id, { $set: { processing: false } });
+      console.error('❌ Webhook processing failed:', err.message);
+      
+      // Reset processing flag
+      try {
+        await RawWebhook.findByIdAndUpdate(raw._id, { 
+          $set: { 
+            processing: false,
+            error: err.message,
+            lastError: err.message,
+            lastErrorAt: new Date()
+          } 
+        });
+        console.log('🔄 Reset processing flag for failed webhook');
+      } catch (updateErr) {
+        console.error('❌ Failed to reset processing flag:', updateErr.message);
+      }
+      
       process.exit(1);
     }
+    
   } catch (err) {
-    console.error('❌ Database connection failed', err);
+    console.error('❌ Database connection failed:', err.message);
     process.exit(1);
+  } finally {
+    // Clean up connection
+    if (connection) {
+      try {
+        await mongoose.connection.close();
+        console.log('🔌 Database connection closed');
+      } catch (closeErr) {
+        console.error('❌ Error closing connection:', closeErr.message);
+      }
+    }
   }
 }
 
