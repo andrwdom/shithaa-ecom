@@ -1,10 +1,19 @@
-import BulletproofWebhookService from '../services/bulletproofWebhookService.js';
+import webhookServiceManager from '../services/webhookServiceManager.js';
 import RawWebhook from '../models/RawWebhook.js';
 import { successResponse, errorResponse } from '../utils/response.js';
 import crypto from 'crypto';
 import EnhancedLogger from '../utils/enhancedLogger.js';
 
-const webhookService = new BulletproofWebhookService();
+// Initialize webhook services (singleton pattern)
+let webhookServices = null;
+
+// Lazy initialization to prevent startup issues
+async function getWebhookServices() {
+  if (!webhookServices) {
+    webhookServices = await webhookServiceManager.initialize();
+  }
+  return webhookServices;
+}
 
 /**
  * Enhanced PhonePe webhook handler with bulletproof processing
@@ -51,16 +60,63 @@ export async function phonePeWebhookHandler(req, res) {
     // Save raw webhook for audit trail
     await saveRawWebhook(req, correlationId, webhookPayload);
 
-    // Process webhook asynchronously with bulletproof service
+    // Process webhook with bulletproof system
     setImmediate(async () => {
       try {
-        await webhookService.processWebhook(webhookPayload, correlationId);
-      } catch (error) {
-        EnhancedLogger.criticalAlert('WEBHOOK: Async processing failed completely', {
+        // Get webhook services (lazy initialization)
+        const services = await getWebhookServices();
+        
+        // Create webhook data for bulletproof processing
+        const webhookData = {
+          orderId: webhookPayload.orderId,
+          amount: webhookPayload.amount,
+          state: webhookPayload.state,
+          isSuccess: webhookPayload.isSuccess,
+          isFailure: webhookPayload.isFailure,
+          fullPayload: webhookPayload.fullPayload,
+          timestamp: Date.now()
+        };
+        
+        // Process webhook with bulletproof processor
+        const result = await services.processor.processWebhook(webhookData, correlationId);
+        
+        EnhancedLogger.webhookLog('SUCCESS', 'Webhook processed successfully', {
           correlationId,
           orderId: webhookPayload.orderId,
-          error: error.message
+          action: result.action,
+          orderId: result.orderId
         });
+        
+      } catch (error) {
+        // If processing fails, enqueue for retry
+        try {
+          const services = await getWebhookServices();
+          
+          const webhookData = {
+            orderId: webhookPayload.orderId,
+            amount: webhookPayload.amount,
+            state: webhookPayload.state,
+            isSuccess: webhookPayload.isSuccess,
+            isFailure: webhookPayload.isFailure,
+            fullPayload: webhookPayload.fullPayload,
+            timestamp: Date.now()
+          };
+          
+          await services.queueManager.enqueueWebhook(webhookData, correlationId, 'high');
+          
+          EnhancedLogger.webhookLog('INFO', 'Webhook enqueued for retry processing', {
+            correlationId,
+            orderId: webhookPayload.orderId,
+            error: error.message
+          });
+        } catch (queueError) {
+          EnhancedLogger.criticalAlert('WEBHOOK: Both processing and queuing failed', {
+            correlationId,
+            orderId: webhookPayload.orderId,
+            processingError: error.message,
+            queueError: queueError.message
+          });
+        }
       }
     });
 
