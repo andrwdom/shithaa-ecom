@@ -66,8 +66,13 @@ async function quickTest() {
       createdAt: new Date()
     };
 
+    console.log('📝 Creating order with data:', JSON.stringify(orderData, null, 2));
     const order = await orderModel.create([orderData]);
     console.log(`📋 Created test order: ${order[0].orderId}`);
+    console.log('📝 Order after creation:', JSON.stringify({
+      cartItems: order[0].cartItems,
+      items: order[0].items
+    }, null, 2));
 
     // Get initial stock
     const initialStock = size.stock;
