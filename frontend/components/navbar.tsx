@@ -137,13 +137,13 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
               <div className="hidden md:flex items-center space-x-8 ml-8">
                 <button
                   onClick={onCategoriesClick}
-                  className="navbar-link-effect text-gray-600 font-medium transition-all duration-200"
+                  className="navbar-link-effect text-[rgb(71,60,102)] font-medium transition-all duration-200 hover:text-[rgb(71,60,102)]/80"
                 >
                   categories
                 </button>
                 <a
                   href="/about"
-                  className="navbar-link-effect text-gray-600 font-medium transition-all duration-200"
+                  className="navbar-link-effect text-[rgb(71,60,102)] font-medium transition-all duration-200 hover:text-[rgb(71,60,102)]/80"
                 >
                   about us
                 </a>
@@ -224,14 +224,14 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
                     window.location.href = "/"
                     setIsMenuOpen(false)
                   }}
-                  className="text-left text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200 flex items-center gap-2"
+                  className="text-left text-[rgb(71,60,102)] hover:text-[rgb(71,60,102)]/80 transition-colors duration-200 flex items-center gap-2"
                 >
                   <Home className="h-4 w-4" />
                   home
                 </button>
                 <button
                   onClick={onCategoriesClick}
-                  className="text-left text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200 flex items-center gap-2"
+                  className="text-left text-[rgb(71,60,102)] hover:text-[rgb(71,60,102)]/80 transition-colors duration-200 flex items-center gap-2"
                 >
                   <List className="h-4 w-4" />
                   categories
@@ -242,7 +242,7 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
                     window.location.href = "/about"
                     setIsMenuOpen(false)
                   }}
-                  className="text-left text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200 flex items-center gap-2"
+                  className="text-left text-[rgb(71,60,102)] hover:text-[rgb(71,60,102)]/80 transition-colors duration-200 flex items-center gap-2"
                 >
                   <Info className="h-4 w-4" />
                   about us
@@ -252,7 +252,7 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
                     window.location.href = "/contact"
                     setIsMenuOpen(false)
                   }}
-                  className="text-left text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200 flex items-center gap-2"
+                  className="text-left text-[rgb(71,60,102)] hover:text-[rgb(71,60,102)]/80 transition-colors duration-200 flex items-center gap-2"
                 >
                   <Mail className="h-4 w-4" />
                   contact us
@@ -283,7 +283,7 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
                       setIsLoginModalOpen(true)
                       setIsMenuOpen(false)
                     }}
-                    className="text-left text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200 cursor-pointer relative z-10 flex items-center gap-2"
+                    className="text-left text-[rgb(71,60,102)] hover:text-[rgb(71,60,102)]/80 transition-colors duration-200 cursor-pointer relative z-10 flex items-center gap-2"
                     type="button"
                     style={{ pointerEvents: 'auto' }}
                   >

@@ -257,14 +257,14 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
             <div className="flex flex-col h-auto py-3">
               {/* Breadcrumb */}
               <div className="flex items-center space-x-2 text-sm text-gray-600 mb-2">
-                <Button variant="link" size="sm" className="p-0 h-auto" onClick={() => (window.location.href = "/")}>
+                <Button variant="link" size="sm" className="p-0 h-auto text-[rgb(71,60,102)] hover:text-[rgb(71,60,102)]/80" onClick={() => (window.location.href = "/")}>
                   Home
                 </Button>
                 <ChevronRight className="h-4 w-4" />
                 <Button 
                   variant="link" 
                   size="sm" 
-                  className="p-0 h-auto" 
+                  className="p-0 h-auto text-[rgb(71,60,102)] hover:text-[rgb(71,60,102)]/80" 
                   onClick={() => (window.location.href = `/collections/${product.category.toLowerCase().replace(/ /g, '-')}`)}
                 >
                   {product.category}
@@ -530,18 +530,6 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
                     <div className="text-sm text-red-500 font-medium mb-2">Size not available</div>
                   )}
                   
-                  {/* Refresh button for debugging */}
-                  <div className="mb-2">
-                    <button
-                      onClick={() => {
-                        console.log('🔄 Manual refresh triggered');
-                        setRefreshKey(prev => prev + 1);
-                      }}
-                      className="text-xs text-gray-500 hover:text-gray-700 underline"
-                    >
-                      🔄 Refresh Product Data
-                    </button>
-                  </div>
                   
                   {/* Size availability indicator */}
                   {sizeOptions.length > 0 && (

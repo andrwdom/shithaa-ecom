@@ -13,6 +13,7 @@ import { calculateShippingCost } from "@/lib/shipping-calculator";
 // Import existing components
 import ShippingForm from "./ShippingForm";
 import OrderSummary from "./OrderSummary";
+import ValidationErrorSummary from "@/components/ValidationErrorSummary";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -469,6 +470,12 @@ export default function UnifiedCheckout() {
           <div className="lg:col-span-1">
             {renderOrderSummary()}
             
+            {/* Validation Error Summary */}
+            <ValidationErrorSummary 
+              errors={shippingErrors} 
+              className="mb-4"
+            />
+            
             <Button 
               onClick={handleCreateSession}
               disabled={processing || isLoading}
@@ -542,6 +549,12 @@ export default function UnifiedCheckout() {
 
           <div>
             {renderOrderSummary()}
+            
+            {/* Validation Error Summary */}
+            <ValidationErrorSummary 
+              errors={shippingErrors} 
+              className="mb-4"
+            />
             
             <Button 
               onClick={handleProceedToPayment}

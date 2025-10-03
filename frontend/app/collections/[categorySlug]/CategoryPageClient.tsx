@@ -475,7 +475,7 @@ export default function CategoryPageClient({ categorySlug }: CategoryPageClientP
             {/* Breadcrumb */}
             <div className="px-4 sm:px-6 lg:px-8 py-6 w-full">
               <div className="flex items-center space-x-2 text-sm text-gray-600">
-                <Button variant="ghost" size="sm" onClick={() => (window.location.href = "/")}>
+                <Button variant="ghost" size="sm" className="text-[rgb(71,60,102)] hover:text-[rgb(71,60,102)]/80" onClick={() => (window.location.href = "/")}>
                   <Home className="h-4 w-4 mr-1" />
                   Home
                 </Button>
