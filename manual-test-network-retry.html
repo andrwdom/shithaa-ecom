@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Retry Logic Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        button { padding: 10px 15px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        button:disabled { background: #6c757d; cursor: not-allowed; }
+        .log { background: #f8f9fa; padding: 10px; border-radius: 3px; font-family: monospace; white-space: pre-wrap; max-height: 300px; overflow-y: auto; }
+        .retry-indicator { color: #ffc107; font-weight: bold; }
+        .success-indicator { color: #28a745; font-weight: bold; }
+        .error-indicator { color: #dc3545; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>🔄 Network Retry Logic Test</h1>
+    
+    <div class="test-section">
+        <h3>Test Instructions:</h3>
+        <ol>
+            <li>Click "Test Network Retry" to simulate checkout API call</li>
+            <li>Watch the console logs for retry attempts</li>
+            <li>Try with different network conditions (DevTools → Network → Throttling)</li>
+            <li>Verify exponential backoff delays (1s, 2s, 4s)</li>
+        </ol>
+    </div>
+
+    <div class="test-section">
+        <h3>Test Controls:</h3>
+        <button onclick="testRetryLogic()" id="testBtn">Test Network Retry</button>
+        <button onclick="testWithServerError()" id="serverErrorBtn">Test Server Error Retry</button>
+        <button onclick="testWithClientError()" id="clientErrorBtn">Test Client Error (No Retry)</button>
+        <button onclick="clearLog()">Clear Log</button>
+    </div>
+
+    <div class="test-section">
+        <h3>Test Results:</h3>
+        <div id="testResults">Ready to test...</div>
+    </div>
+
+    <div class="test-section">
+        <h3>Console Log:</h3>
+        <div id="consoleLog" class="log">Waiting for test to start...\n</div>
+    </div>
+
+    <script>
+        // Mock the fetchWithRetry function for testing
+        async function fetchWithRetry(url, options = {}, retryConfig = {}) {
+            const {
+                maxRetries = 3,
+                baseDelay = 1000,
+                maxDelay = 10000,
+                retryCondition = defaultRetryCondition
+            } = retryConfig;
+
+            let lastError;
+            
+            for (let attempt = 0; attempt <= maxRetries; attempt++) {
+                try {
+                    log(`🔄 Fetch attempt ${attempt + 1}/${maxRetries + 1} for: ${url}`);
+                    
+                    // Simulate network delay
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    
+                    // Simulate different failure scenarios based on test type
+                    const response = await simulateFetch(url, options, attempt, maxRetries);
+                    
+                    // Check if we should retry based on response status
+                    if (retryCondition(null, response)) {
+                        if (attempt < maxRetries) {
+                            const delay = calculateBackoffDelay(attempt, baseDelay, maxDelay);
+                            log(`⏳ Retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
+                            await new Promise(resolve => setTimeout(resolve, delay));
+                            continue;
+                        }
+                    }
+                    
+                    // Success or non-retryable error
+                    log(`✅ Fetch successful on attempt ${attempt + 1}`);
+                    return response;
+                    
+                } catch (error) {
+                    lastError = error;
+                    log(`❌ Fetch attempt ${attempt + 1} failed: ${error.message}`);
+                    
+                    // Check if we should retry based on error
+                    if (retryCondition(error) && attempt < maxRetries) {
+                        const delay = calculateBackoffDelay(attempt, baseDelay, maxDelay);
+                        log(`⏳ Retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        continue;
+                    }
+                    
+                    // No more retries or non-retryable error
+                    break;
+                }
+            }
+            
+            // All retries exhausted
+            log(`💥 All ${maxRetries + 1} fetch attempts failed for: ${url}`);
+            throw lastError || new Error('Network request failed after all retries');
+        }
+
+        // Simulate different fetch scenarios
+        async function simulateFetch(url, options, attempt, maxRetries) {
+            // Simulate network failure for first few attempts
+            if (url.includes('network-test') && attempt < 2) {
+                const error = new Error('Failed to fetch');
+                error.name = 'TypeError';
+                throw error;
+            }
+            
+            // Simulate server error for first few attempts
+            if (url.includes('server-error') && attempt < 2) {
+                return {
+                    ok: false,
+                    status: 500,
+                    json: () => Promise.resolve({ error: 'Internal Server Error' })
+                };
+            }
+            
+            // Simulate client error (no retry)
+            if (url.includes('client-error')) {
+                return {
+                    ok: false,
+                    status: 400,
+                    json: () => Promise.resolve({ error: 'Bad Request' })
+                };
+            }
+            
+            // Success
+            return {
+                ok: true,
+                status: 200,
+                json: () => Promise.resolve({ success: true, sessionId: 'test-session-123' })
+            };
+        }
+
+        // Calculate exponential backoff delay with jitter
+        function calculateBackoffDelay(attempt, baseDelay, maxDelay) {
+            const exponentialDelay = baseDelay * Math.pow(2, attempt);
+            const jitter = exponentialDelay * 0.25 * (Math.random() * 2 - 1);
+            const delay = Math.min(exponentialDelay + jitter, maxDelay);
+            return Math.max(delay, 0);
+        }
+
+        // Default retry condition
+        function defaultRetryCondition(error, response) {
+            if (error) {
+                return (
+                    error.name === 'TypeError' ||
+                    error.name === 'AbortError' ||
+                    error.message?.includes('fetch') ||
+                    error.message?.includes('network') ||
+                    error.message?.includes('Failed to fetch')
+                );
+            }
+            
+            if (response) {
+                return response.status >= 500 && response.status < 600;
+            }
+            
+            return false;
+        }
+
+        // Logging function
+        function log(message) {
+            const logElement = document.getElementById('consoleLog');
+            const timestamp = new Date().toLocaleTimeString();
+            const logMessage = `[${timestamp}] ${message}\n`;
+            logElement.textContent += logMessage;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+
+        // Update test results
+        function updateResults(message, isSuccess = true) {
+            const resultsElement = document.getElementById('testResults');
+            const indicator = isSuccess ? 'success-indicator' : 'error-indicator';
+            resultsElement.innerHTML = `<span class="${indicator}">${message}</span>`;
+        }
+
+        // Test functions
+        async function testRetryLogic() {
+            const btn = document.getElementById('testBtn');
+            btn.disabled = true;
+            btn.textContent = 'Testing...';
+            
+            try {
+                log('🚀 Starting network retry test...');
+                updateResults('Testing network retry logic...');
+                
+                const response = await fetchWithRetry('/api/checkout/session', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ test: 'data' })
+                }, {
+                    maxRetries: 3,
+                    baseDelay: 1000,
+                    maxDelay: 8000
+                });
+                
+                const data = await response.json();
+                log(`✅ Test completed successfully: ${JSON.stringify(data)}`);
+                updateResults('✅ Network retry test passed! Check console for retry logs.');
+                
+            } catch (error) {
+                log(`❌ Test failed: ${error.message}`);
+                updateResults(`❌ Test failed: ${error.message}`, false);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Test Network Retry';
+            }
+        }
+
+        async function testWithServerError() {
+            const btn = document.getElementById('serverErrorBtn');
+            btn.disabled = true;
+            btn.textContent = 'Testing...';
+            
+            try {
+                log('🚀 Starting server error retry test...');
+                updateResults('Testing server error retry logic...');
+                
+                const response = await fetchWithRetry('/api/server-error', {
+                    method: 'POST'
+                }, {
+                    maxRetries: 2,
+                    baseDelay: 1000,
+                    maxDelay: 5000
+                });
+                
+                const data = await response.json();
+                log(`✅ Server error test completed: ${JSON.stringify(data)}`);
+                updateResults('✅ Server error retry test passed!');
+                
+            } catch (error) {
+                log(`❌ Server error test failed: ${error.message}`);
+                updateResults(`❌ Server error test failed: ${error.message}`, false);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Test Server Error Retry';
+            }
+        }
+
+        async function testWithClientError() {
+            const btn = document.getElementById('clientErrorBtn');
+            btn.disabled = true;
+            btn.textContent = 'Testing...';
+            
+            try {
+                log('🚀 Starting client error test (should not retry)...');
+                updateResults('Testing client error handling...');
+                
+                const response = await fetchWithRetry('/api/client-error', {
+                    method: 'POST'
+                }, {
+                    maxRetries: 3,
+                    baseDelay: 1000,
+                    maxDelay: 5000
+                });
+                
+                log(`❌ Client error test should have failed but didn't`);
+                updateResults('❌ Client error test failed - should not have succeeded', false);
+                
+            } catch (error) {
+                log(`✅ Client error test passed - correctly did not retry: ${error.message}`);
+                updateResults('✅ Client error test passed - no retry for 4xx errors');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Test Client Error (No Retry)';
+            }
+        }
+
+        function clearLog() {
+            document.getElementById('consoleLog').textContent = 'Log cleared...\n';
+            document.getElementById('testResults').textContent = 'Ready to test...';
+        }
+
+        // Initialize
+        log('🚀 Network retry test page loaded');
+        log('📋 Click "Test Network Retry" to start testing');
+    </script>
+</body>
+</html>

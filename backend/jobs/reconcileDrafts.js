@@ -17,6 +17,7 @@ import mongoose from 'mongoose';
 import orderModel from '../models/orderModel.js';
 import { commitOrder } from '../services/orderCommit.js';
 import EnhancedLogger from '../utils/enhancedLogger.js';
+import { sendDraftRecoveryEmail } from '../utils/emailService.js';
 import dotenv from 'dotenv';
 
 dotenv.config({ path: './.env' });
@@ -73,6 +74,63 @@ class DraftReconciliationJob {
   }
 
   /**
+   * Send draft recovery emails for abandoned orders
+   */
+  async sendDraftRecoveryEmails(draftOrders, correlationId) {
+    const emailPromises = draftOrders.map(async (order) => {
+      try {
+        // Only send if not already sent in last 24 hours
+        const lastEmailSent = order.lastRecoveryEmailSent;
+        const now = new Date();
+        const hoursSinceLastEmail = lastEmailSent ? 
+          (now - lastEmailSent) / (1000 * 60 * 60) : 24;
+        
+        if (hoursSinceLastEmail < 24) {
+          EnhancedLogger.webhookLog('INFO', 'Skipping email - sent recently', {
+            correlationId,
+            orderId: order.orderId,
+            hoursSinceLastEmail: Math.round(hoursSinceLastEmail * 100) / 100
+          });
+          return;
+        }
+        
+        await sendDraftRecoveryEmail({
+          to: order.email,
+          orderId: order.orderId,
+          amount: order.totalAmount,
+          items: order.items.map(item => ({
+            name: item.name,
+            size: item.size,
+            quantity: item.quantity,
+            price: item.price
+          })),
+          checkoutUrl: `${process.env.FRONTEND_URL}/checkout?recovery=${order.idempotencyKey}`,
+          expiresAt: new Date(order.draftCreatedAt.getTime() + 24 * 60 * 60 * 1000) // 24 hours
+        });
+        
+        // Update last email sent timestamp
+        order.lastRecoveryEmailSent = now;
+        await order.save();
+        
+        EnhancedLogger.webhookLog('SUCCESS', 'Draft recovery email sent', {
+          correlationId,
+          orderId: order.orderId,
+          email: order.email
+        });
+        
+      } catch (error) {
+        EnhancedLogger.webhookLog('ERROR', 'Failed to send draft recovery email', {
+          correlationId,
+          orderId: order.orderId,
+          error: error.message
+        });
+      }
+    });
+    
+    await Promise.allSettled(emailPromises);
+  }
+
+  /**
    * Main reconciliation function
    */
   async performReconciliation() {
@@ -102,7 +160,10 @@ class DraftReconciliationJob {
         orderIds: draftOrders.map(o => o.orderId)
       });
 
-      // 2. Process each draft order
+      // 2. Send recovery emails for abandoned orders
+      await this.sendDraftRecoveryEmails(draftOrders, correlationId);
+
+      // 3. Process each draft order
       const results = {
         processed: 0,
         confirmed: 0,

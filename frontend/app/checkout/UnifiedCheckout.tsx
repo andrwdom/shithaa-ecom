@@ -7,7 +7,7 @@ import { useCart } from "@/components/cart-context";
 import { useBuyNow } from "@/components/buy-now-context";
 import { useCheckoutSession, CheckoutItem } from "@/hooks/useCheckoutSession";
 import { startCheckoutSession, stopCheckoutSession } from "@/lib/checkout-session-manager";
-import { authenticatedFetchJson } from "@/lib/api-utils";
+import { authenticatedFetchJson, fetchWithRetry } from "@/lib/api-utils";
 import { calculateShippingCost } from "@/lib/shipping-calculator";
 
 // Import existing components
@@ -281,23 +281,36 @@ export default function UnifiedCheckout() {
       setProcessing(true);
       const token = await getIdToken();
       
-      // Create PhonePe payment session
-      const response = await authenticatedFetchJson('/api/payment/phonepe/create-session', {
+      // Create PhonePe payment session with retry logic
+      const response = await fetchWithRetry('/api/payment/phonepe/create-session', {
         method: 'POST',
         headers: {
+          'Content-Type': 'application/json',
           'x-request-id': `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
         },
         body: JSON.stringify({
           checkoutSessionId: currentSession.sessionId,
           shipping
         })
+      }, {
+        maxRetries: 3,
+        baseDelay: 1000,
+        maxDelay: 8000,
+        retryCondition: (error, response) => {
+          // Retry on network errors or 5xx server errors
+          if (error) return true;
+          if (response) return response.status >= 500;
+          return false;
+        }
       });
 
-      if (response.success && response.redirectUrl) {
+      const data = await response.json();
+
+      if (data.success && data.redirectUrl) {
         // Redirect to PhonePe
-        window.location.href = response.redirectUrl;
+        window.location.href = data.redirectUrl;
       } else {
-        setCheckoutError(response.message || 'Failed to create payment session');
+        setCheckoutError(data.message || 'Failed to create payment session');
       }
     } catch (err) {
       setCheckoutError(err instanceof Error ? err.message : 'Payment processing failed. Please try again.');

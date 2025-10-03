@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { fetchWithRetry } from '@/lib/api-utils';
 
 // Multi-tab synchronization for checkout sessions
 const checkoutChannel = typeof window !== 'undefined' ? new BroadcastChannel('checkout-sync') : null;
@@ -91,7 +92,7 @@ export const useCheckoutSession = () => {
         ...(email && { email })
       };
       
-      const response = await fetch('/api/checkout/session', {
+      const response = await fetchWithRetry('/api/checkout/session', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -99,6 +100,16 @@ export const useCheckoutSession = () => {
           'x-request-id': `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
         },
         body: JSON.stringify(requestWithEmail)
+      }, {
+        maxRetries: 3,
+        baseDelay: 1000,
+        maxDelay: 8000,
+        retryCondition: (error, response) => {
+          // Retry on network errors or 5xx server errors
+          if (error) return true;
+          if (response) return response.status >= 500;
+          return false;
+        }
       });
 
       const data = await response.json();
@@ -166,9 +177,13 @@ export const useCheckoutSession = () => {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      const response = await fetch(`/api/checkout/session/${sessionId}`, {
+      const response = await fetchWithRetry(`/api/checkout/session/${sessionId}`, {
         method: 'GET',
         headers
+      }, {
+        maxRetries: 2,
+        baseDelay: 1000,
+        maxDelay: 5000
       });
 
       const data = await response.json();
@@ -211,12 +226,22 @@ export const useCheckoutSession = () => {
     setError(null);
     
     try {
-      const response = await fetch(`/api/checkout/session/${sessionId}/reserve-stock`, {
+      const response = await fetchWithRetry(`/api/checkout/session/${sessionId}/reserve-stock`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
           'x-request-id': `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+        }
+      }, {
+        maxRetries: 3,
+        baseDelay: 1000,
+        maxDelay: 8000,
+        retryCondition: (error, response) => {
+          // Retry on network errors or 5xx server errors
+          if (error) return true;
+          if (response) return response.status >= 500;
+          return false;
         }
       });
 
@@ -261,9 +286,13 @@ export const useCheckoutSession = () => {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      const response = await fetch(`/api/payment/status/${sessionId}`, {
+      const response = await fetchWithRetry(`/api/payment/status/${sessionId}`, {
         method: 'GET',
         headers
+      }, {
+        maxRetries: 2,
+        baseDelay: 1000,
+        maxDelay: 5000
       });
 
       const data = await response.json();
@@ -290,13 +319,17 @@ export const useCheckoutSession = () => {
     setError(null);
     
     try {
-      const response = await fetch(`/api/checkout/session/${sessionId}/cancel`, {
+      const response = await fetchWithRetry(`/api/checkout/session/${sessionId}/cancel`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
           'x-request-id': `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
         }
+      }, {
+        maxRetries: 2,
+        baseDelay: 1000,
+        maxDelay: 5000
       });
 
       const data = await response.json();

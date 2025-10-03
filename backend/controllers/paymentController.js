@@ -23,9 +23,81 @@ const getOrderUserEmail = (req, email) => {
     return req.user?.email || email || `guest@${process.env.BASE_URL?.replace('https://', '').replace('http://', '') || 'shithaa.in'}`;
 };
 
-// Helper function to release stock on payment failure
+// Enhanced UPI decline handling for Indian market
+const handleUPIDecline = (phonepeResponse, correlationId) => {
+  const { code, message } = phonepeResponse;
+  
+  // Map PhonePe error codes to user-friendly messages
+  const declineMessages = {
+    'INSUFFICIENT_FUNDS': {
+      title: 'Insufficient Balance',
+      message: 'Add money to your UPI account and try again',
+      action: 'Add Money & Retry',
+      retryable: true
+    },
+    'BANK_ERROR': {
+      title: 'Bank Server Error',
+      message: 'Your bank is temporarily unavailable. Please try again in 2-3 minutes',
+      action: 'Retry Payment',
+      retryable: true
+    },
+    'UPI_PIN_INCORRECT': {
+      title: 'Incorrect UPI PIN',
+      message: 'Please enter the correct UPI PIN',
+      action: 'Try Again',
+      retryable: true
+    },
+    'TRANSACTION_DECLINED': {
+      title: 'Transaction Declined',
+      message: 'Your bank declined this transaction. Contact your bank if this continues',
+      action: 'Contact Bank',
+      retryable: false
+    },
+    'NETWORK_ERROR': {
+      title: 'Network Issue',
+      message: 'Poor internet connection. Please check your network and try again',
+      action: 'Retry Payment',
+      retryable: true
+    },
+    'TIMEOUT': {
+      title: 'Payment Timeout',
+      message: 'Payment took too long. Please try again',
+      action: 'Retry Payment',
+      retryable: true
+    },
+    'INVALID_UPI_ID': {
+      title: 'Invalid UPI ID',
+      message: 'Please check your UPI ID and try again',
+      action: 'Check UPI ID',
+      retryable: true
+    }
+  };
+  
+  const declineInfo = declineMessages[code] || {
+    title: 'Payment Failed',
+    message: message || 'Something went wrong. Please try again',
+    action: 'Retry Payment',
+    retryable: true
+  };
+  
+  console.log(`[${correlationId}] UPI decline handled:`, {
+    code,
+    originalMessage: message,
+    userFriendlyMessage: declineInfo.message,
+    retryable: declineInfo.retryable
+  });
+  
+  return {
+    success: false,
+    error: 'PAYMENT_DECLINED',
+    declineInfo,
+    originalCode: code,
+    originalMessage: message
+  };
+};
+
+// Enhanced atomic rollback with transaction support
 const releaseStockOnPaymentFailure = async (paymentSession, correlationId) => {
-  // PaymentSession stores checkout session ID in sessionId field
   const checkoutSessionId = paymentSession.sessionId;
   
   if (!checkoutSessionId) {
@@ -33,56 +105,106 @@ const releaseStockOnPaymentFailure = async (paymentSession, correlationId) => {
     return;
   }
 
+  const session = await mongoose.startSession();
+  
   try {
-    console.log(`[${correlationId}] Releasing reserved stock for failed payment session: ${checkoutSessionId}`);
-    
-    // Find the checkout session
-    const checkoutSession = await CheckoutSession.findOne({ sessionId: checkoutSessionId });
-    
-    if (!checkoutSession) {
-      console.log(`[${correlationId}] Checkout session not found: ${checkoutSessionId}`);
-      return;
-    }
-    
-    if (!checkoutSession.stockReserved) {
-      console.log(`[${correlationId}] No stock reserved for session: ${checkoutSessionId}`);
-      return;
-    }
-    
-    // Release stock for all items in the session
-    const stockOperations = [];
-    for (const item of checkoutSession.items) {
-      try {
-        await releaseStockReservation(item.productId, item.size, item.quantity);
-        stockOperations.push({
-          productId: item.productId,
-          size: item.size,
-          quantity: item.quantity,
-          success: true
-        });
-        console.log(`[${correlationId}] Released stock for ${item.name} (${item.size}) x${item.quantity}`);
-      } catch (error) {
-        stockOperations.push({
-          productId: item.productId,
-          size: item.size,
-          quantity: item.quantity,
-          success: false,
-          error: error.message
-        });
-        console.error(`[${correlationId}] Failed to release stock for ${item.name}:`, error);
+    await session.withTransaction(async () => {
+      console.log(`[${correlationId}] Starting atomic rollback for failed payment: ${checkoutSessionId}`);
+      
+      // Find the checkout session
+      const checkoutSession = await CheckoutSession.findOne({ sessionId: checkoutSessionId }).session(session);
+      
+      if (!checkoutSession) {
+        console.log(`[${correlationId}] Checkout session not found: ${checkoutSessionId}`);
+        return;
       }
-    }
-    
-    // Mark session as no longer having reserved stock
-    checkoutSession.stockReserved = false;
-    checkoutSession.status = 'failed';
-    await checkoutSession.save();
-    
-    console.log(`[${correlationId}] ✅ Reserved stock released for failed payment. Success: ${stockOperations.filter(op => op.success).length}, Failed: ${stockOperations.filter(op => !op.success).length}`);
+      
+      if (!checkoutSession.stockReserved) {
+        console.log(`[${correlationId}] No stock reserved for session: ${checkoutSessionId}`);
+        return;
+      }
+      
+      // Atomic stock release for all items
+      const stockOperations = [];
+      for (const item of checkoutSession.items) {
+        try {
+          // Use atomic stock release with session
+          const result = await productModel.updateOne(
+            { 
+              _id: item.productId,
+              'sizes.size': item.size
+            },
+            { 
+              $inc: { 
+                'sizes.$.reserved': -item.quantity,
+                'sizes.$.available': item.quantity
+              }
+            },
+            { session }
+          );
+          
+          if (result.modifiedCount === 0) {
+            throw new Error(`Failed to release stock for ${item.name} (${item.size})`);
+          }
+          
+          stockOperations.push({
+            productId: item.productId,
+            size: item.size,
+            quantity: item.quantity,
+            success: true
+          });
+          
+          console.log(`[${correlationId}] ✅ Released stock for ${item.name} (${item.size}) x${item.quantity}`);
+        } catch (error) {
+          stockOperations.push({
+            productId: item.productId,
+            size: item.size,
+            quantity: item.quantity,
+            success: false,
+            error: error.message
+          });
+          console.error(`[${correlationId}] ❌ Failed to release stock for ${item.name}:`, error);
+        }
+      }
+      
+      // Mark session as failed and release stock flag
+      checkoutSession.stockReserved = false;
+      checkoutSession.status = 'failed';
+      checkoutSession.failedAt = new Date();
+      await checkoutSession.save({ session });
+      
+      // Log rollback results
+      const successCount = stockOperations.filter(op => op.success).length;
+      const failCount = stockOperations.filter(op => !op.success).length;
+      
+      console.log(`[${correlationId}] ✅ Atomic rollback completed. Success: ${successCount}, Failed: ${failCount}`);
+      
+      if (failCount > 0) {
+        console.error(`[${correlationId}] ❌ Some stock rollbacks failed:`, stockOperations.filter(op => !op.success));
+      }
+    });
     
   } catch (error) {
-    console.error(`[${correlationId}] ❌ Failed to release stock for failed payment:`, error);
-    // Don't throw - we don't want to fail the entire payment callback
+    console.error(`[${correlationId}] ❌ Atomic rollback failed:`, error);
+    
+    // If atomic rollback fails, try individual rollbacks as fallback
+    try {
+      const checkoutSession = await CheckoutSession.findOne({ sessionId: checkoutSessionId });
+      if (checkoutSession && checkoutSession.stockReserved) {
+        for (const item of checkoutSession.items) {
+          try {
+            await releaseStockReservation(item.productId, item.size, item.quantity);
+            console.log(`[${correlationId}] ✅ Fallback stock release for ${item.name}`);
+          } catch (fallbackError) {
+            console.error(`[${correlationId}] ❌ Fallback stock release failed for ${item.name}:`, fallbackError);
+          }
+        }
+      }
+    } catch (fallbackError) {
+      console.error(`[${correlationId}] ❌ Complete rollback failure:`, fallbackError);
+    }
+  } finally {
+    await session.endSession();
   }
 };
 
@@ -593,12 +715,19 @@ export const createPhonePeSession = async (req, res) => {
           message: 'Draft order created - proceed to pay'
         });
       } else {
-        // If PhonePe fails, cancel the draft order
-        await cancelDraftOrder(draftOrder._id, 'PhonePe response missing redirectUrl');
+        // Handle PhonePe failure with UPI decline logic
+        const declineResult = handleUPIDecline(response, correlationId);
+        
+        // Cancel draft order and release stock on failure
+        await cancelDraftOrder(draftOrder._id, `PhonePe failure: ${declineResult.originalMessage}`);
+        
         return res.status(400).json({
           success: false,
-          message: 'Failed to create payment session',
-          phonepeError: response
+          error: declineResult.error,
+          declineInfo: declineResult.declineInfo,
+          message: declineResult.declineInfo.message,
+          retryable: declineResult.declineInfo.retryable,
+          originalCode: declineResult.originalCode
         });
       }
     } catch (error) {

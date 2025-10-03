@@ -147,6 +147,119 @@ export function createDebouncedFetch(delay: number = 300) {
 }
 
 /**
+ * Enhanced fetch with exponential backoff retry for network failures
+ * Perfect for Indian network conditions (Reddit: UPI drops mid-checkout)
+ */
+export async function fetchWithRetry(
+  url: string,
+  options: RequestInit = {},
+  retryConfig: {
+    maxRetries?: number;
+    baseDelay?: number;
+    maxDelay?: number;
+    retryCondition?: (error: any, response?: Response) => boolean;
+  } = {}
+): Promise<Response> {
+  const {
+    maxRetries = 3,
+    baseDelay = 1000, // 1 second
+    maxDelay = 10000, // 10 seconds max
+    retryCondition = defaultRetryCondition
+  } = retryConfig;
+
+  let lastError: any;
+  
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`🔄 Fetch attempt ${attempt + 1}/${maxRetries + 1} for: ${url}`);
+      
+      // Add timeout to prevent hanging requests
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+      
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
+      // Check if we should retry based on response status
+      if (retryCondition(null, response)) {
+        if (attempt < maxRetries) {
+          const delay = calculateBackoffDelay(attempt, baseDelay, maxDelay);
+          console.log(`⏳ Retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+      }
+      
+      // Success or non-retryable error
+      console.log(`✅ Fetch successful on attempt ${attempt + 1}`);
+      return response;
+      
+    } catch (error) {
+      lastError = error;
+      console.log(`❌ Fetch attempt ${attempt + 1} failed:`, error.message);
+      
+      // Check if we should retry based on error
+      if (retryCondition(error) && attempt < maxRetries) {
+        const delay = calculateBackoffDelay(attempt, baseDelay, maxDelay);
+        console.log(`⏳ Retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+      
+      // No more retries or non-retryable error
+      break;
+    }
+  }
+  
+  // All retries exhausted
+  console.error(`💥 All ${maxRetries + 1} fetch attempts failed for: ${url}`);
+  throw lastError || new Error('Network request failed after all retries');
+}
+
+/**
+ * Calculate exponential backoff delay with jitter
+ */
+function calculateBackoffDelay(attempt: number, baseDelay: number, maxDelay: number): number {
+  // Exponential backoff: baseDelay * 2^attempt
+  const exponentialDelay = baseDelay * Math.pow(2, attempt);
+  
+  // Add jitter (±25% randomness) to prevent thundering herd
+  const jitter = exponentialDelay * 0.25 * (Math.random() * 2 - 1);
+  
+  // Cap at maxDelay
+  const delay = Math.min(exponentialDelay + jitter, maxDelay);
+  
+  return Math.max(delay, 0); // Ensure non-negative
+}
+
+/**
+ * Default retry condition for network failures
+ */
+function defaultRetryCondition(error: any, response?: Response): boolean {
+  // Retry on network errors
+  if (error) {
+    return (
+      error.name === 'TypeError' || // Network error
+      error.name === 'AbortError' || // Timeout
+      error.message?.includes('fetch') || // Fetch-related errors
+      error.message?.includes('network') || // Network-related errors
+      error.message?.includes('Failed to fetch') // Common fetch error
+    );
+  }
+  
+  // Retry on server errors (5xx)
+  if (response) {
+    return response.status >= 500 && response.status < 600;
+  }
+  
+  return false;
+}
+
+/**
  * Utility function for making authenticated API calls with automatic token refresh
  */
 export async function authenticatedFetch(

@@ -127,6 +127,7 @@ const orderSchema = new mongoose.Schema({
     idempotencyKey: { type: String }, // For safe retries
     draftCreatedAt: { type: Date, default: Date.now }, // When draft was created
     confirmedAt: { type: Date }, // When payment was confirmed
+    lastRecoveryEmailSent: { type: Date }, // When last recovery email was sent
     
     // Shipping tracking information
     shippingTracking: {
