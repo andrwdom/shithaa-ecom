@@ -47,6 +47,14 @@ async function quickTest() {
         name: product.name,
         price: 1000
       }],
+      // Also add items array with the correct productId
+      items: [{
+        productId: product._id,  // Use the actual product ID
+        size: size.size,
+        quantity: 1,
+        name: product.name,
+        price: 1000
+      }],
       userInfo: {
         email: 'test@example.com',
         name: 'Test User'
