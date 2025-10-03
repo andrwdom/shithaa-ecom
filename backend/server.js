@@ -73,14 +73,14 @@ const PORT = config.port
 
 // Environment variables validation (no secrets logged)
 if (process.env.NODE_ENV === 'development') {
-  console.log('🔧 Environment Variables Debug:');
-  console.log('NODE_ENV:', process.env.NODE_ENV);
-  console.log('PORT:', process.env.PORT);
-  console.log('MONGODB_URI:', process.env.MONGODB_URI ? 'SET' : 'NOT SET');
-  console.log('JWT_SECRET:', process.env.JWT_SECRET ? 'SET' : 'NOT SET');
-  console.log('PHONEPE_MERCHANT_ID:', process.env.PHONEPE_MERCHANT_ID ? 'SET' : 'NOT SET');
-  console.log('PHONEPE_API_KEY:', process.env.PHONEPE_API_KEY ? 'SET' : 'NOT SET');
-  console.log('---');
+  Logger.info('environment_debug', {
+    nodeEnv: process.env.NODE_ENV,
+    port: process.env.PORT,
+    mongodbConfigured: !!process.env.MONGODB_URI,
+    jwtConfigured: !!process.env.JWT_SECRET,
+    phonepeConfigured: !!process.env.PHONEPE_MERCHANT_ID,
+    phonepeApiConfigured: !!process.env.PHONEPE_API_KEY
+  });
 }
 
 // Log server startup
@@ -108,20 +108,22 @@ const allowedOrigins = [
 
 const corsOptions = {
     origin: (origin, callback) => {
-        // Enhanced logging for debugging (temporarily enabled)
-        console.log('CORS Check:', {
-            origin: origin || 'undefined',
+        // Security: Log CORS attempts without exposing sensitive data
+        Logger.debug('cors_check', {
+            origin: origin ? 'provided' : 'none',
             timestamp: new Date().toISOString()
         });
         
         // Allow requests with no origin (like mobile apps, curl requests, or server-to-server)
         // Also allow all origins in development
         if (!origin || allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
-            console.log('✅ CORS allowed for origin:', origin || 'no origin');
+            Logger.debug('cors_allowed', { origin: origin ? 'provided' : 'none' });
             callback(null, true);
         } else {
-            console.log('❌ CORS blocked origin:', origin);
-            console.log('Allowed origins:', allowedOrigins);
+            Logger.warn('cors_blocked', { 
+                origin: origin ? 'provided' : 'none',
+                allowedOriginsCount: allowedOrigins.length
+            });
             callback(new Error('Not allowed by CORS'));
         }
     },
@@ -603,20 +605,16 @@ app.get('/api/csrf-token', (req, res) => {
 // CORS error handler - simplified
 app.use((err, req, res, next) => {
     if (err.message === 'Not allowed by CORS') {
-        console.error('CORS Error Details:', {
-            origin: req.headers.origin,
+        Logger.warn('cors_error', {
             method: req.method,
             path: req.path,
-            headers: req.headers,
             ip: req.ip,
             timestamp: new Date().toISOString()
         });
         
         res.status(403).json({
             success: false,
-            message: 'CORS: Origin not allowed',
-            origin: req.headers.origin,
-            allowedOrigins: allowedOrigins
+            message: 'CORS: Origin not allowed'
         });
     } else {
         next(err);
@@ -689,20 +687,23 @@ async function startServer() {
   
   // Start the server
   const server = app.listen(PORT, '0.0.0.0', () => {
-      console.log(`✅ Server running on port ${PORT} (all interfaces)`);
-      console.log(`✅ Environment: ${process.env.NODE_ENV}`);
-      console.log(`✅ MongoDB: ${process.env.MONGODB_URI ? 'CONFIGURED' : 'NOT CONFIGURED'}`);
-      console.log(`✅ JWT: ${process.env.JWT_SECRET ? 'CONFIGURED' : 'NOT CONFIGURED'}`);
-      console.log(`✅ PhonePe: ${process.env.PHONEPE_MERCHANT_ID ? 'CONFIGURED' : 'NOT CONFIGURED'}`);
+      Logger.info('server_started', {
+        port: PORT,
+        nodeEnv: process.env.NODE_ENV,
+        mongodbConfigured: !!process.env.MONGODB_URI,
+        jwtConfigured: !!process.env.JWT_SECRET,
+        phonepeConfigured: !!process.env.PHONEPE_MERCHANT_ID,
+        timestamp: new Date().toISOString()
+      });
       
       // Start reconciliation cron job for draft orders
       startReconciliationCron();
-      console.log(`✅ Reconciliation cron job started`);
+      Logger.info('reconciliation_cron_started');
       
       // NEW: Start production-grade monitoring
-      console.log('🔍 Starting periodic monitoring system...');
+      Logger.info('starting_monitoring_system');
       startPeriodicMonitoring();
-      console.log(`✅ Production monitoring system active`);
+      Logger.info('monitoring_system_active');
   });
   
   return server;
