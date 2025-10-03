@@ -74,6 +74,11 @@ async function quickTest() {
       items: order[0].items
     }, null, 2));
 
+    // CRITICAL: Ensure the order has cartItems and not items
+    if (!order[0].cartItems || order[0].cartItems.length === 0) {
+      throw new Error('Order was created without cartItems - this is the root cause of the test failure');
+    }
+
     // Get initial stock
     const initialStock = size.stock;
     console.log(`📊 Initial stock: ${initialStock}`);

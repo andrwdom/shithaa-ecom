@@ -85,6 +85,28 @@ export async function commitOrder(orderId, paymentInfo, options = {}) {
       itemsLength: order.items?.length
     });
 
+    // CRITICAL FIX: Handle both cartItems and items arrays
+    // Some order models create items array instead of cartItems
+    if (!order.cartItems || order.cartItems.length === 0) {
+      if (order.items && order.items.length > 0) {
+        // Convert items array to cartItems format for processing
+        itemsToProcess = order.items.map(item => ({
+          productId: item.productId || item._id, // Use _id as fallback
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          size: item.size
+        }));
+        EnhancedLogger.webhookLog('WARN', 'Using items array instead of cartItems', {
+          correlationId,
+          orderId,
+          itemsCount: itemsToProcess.length
+        });
+      } else {
+        throw new Error('Order has no cartItems or items to process.');
+      }
+    }
+
     EnhancedLogger.webhookLog('INFO', 'Processing order items for stock deduction', {
       correlationId,
       orderId,
