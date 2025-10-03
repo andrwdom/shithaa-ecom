@@ -1,5 +1,6 @@
 import webhookServiceManager from '../services/webhookServiceManager.js';
 import RawWebhook from '../models/RawWebhook.js';
+import WebhookEvent from '../models/WebhookEvent.js';
 import { successResponse, errorResponse } from '../utils/response.js';
 import crypto from 'crypto';
 import EnhancedLogger from '../utils/enhancedLogger.js';
@@ -16,7 +17,7 @@ async function getWebhookServices() {
 }
 
 /**
- * Enhanced PhonePe webhook handler with bulletproof processing
+ * Enhanced PhonePe webhook handler with idempotency and bulletproof processing
  */
 export async function phonePeWebhookHandler(req, res) {
   const correlationId = req.headers['x-request-id'] || `webhook_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -57,6 +58,58 @@ export async function phonePeWebhookHandler(req, res) {
       return; // Already sent 200, but don't process
     }
 
+    // IDEMPOTENCY CHECK - Critical for preventing duplicate processing
+    const eventId = webhookPayload.orderId || webhookPayload.fullPayload?.transactionId || webhookPayload.fullPayload?.merchantTransactionId;
+    if (!eventId) {
+      EnhancedLogger.webhookLog('ERROR', 'No event ID found for idempotency check', {
+        correlationId,
+        payload: webhookPayload
+      });
+      return;
+    }
+
+    // Atomic upsert for idempotency - returns existing if already processed
+    const webhookEvent = await WebhookEvent.findOneAndUpdate(
+      { eventId },
+      { 
+        $setOnInsert: { 
+          payload: req.body, 
+          status: 'processing', 
+          receivedAt: new Date(),
+          source: 'phonepe',
+          ip: req.ip,
+          userAgent: req.headers['user-agent']
+        }
+      },
+      { upsert: true, new: true }
+    );
+
+    // If already processed, skip processing
+    if (webhookEvent.status === 'processed') {
+      EnhancedLogger.webhookLog('INFO', 'Webhook already processed - skipping duplicate', {
+        correlationId,
+        eventId,
+        processedAt: webhookEvent.processedAt
+      });
+      return;
+    }
+
+    // If currently processing, skip to prevent race conditions
+    if (webhookEvent.status === 'processing' && webhookEvent.receivedAt < new Date(Date.now() - 30000)) {
+      // If processing for more than 30 seconds, mark as failed and retry
+      await WebhookEvent.markAsFailed(eventId, 'Processing timeout');
+      EnhancedLogger.webhookLog('WARN', 'Webhook processing timeout - marking as failed for retry', {
+        correlationId,
+        eventId
+      });
+    } else if (webhookEvent.status === 'processing') {
+      EnhancedLogger.webhookLog('INFO', 'Webhook currently processing - skipping duplicate', {
+        correlationId,
+        eventId
+      });
+      return;
+    }
+
     // Save raw webhook for audit trail
     await saveRawWebhook(req, correlationId, webhookPayload);
 
@@ -80,14 +133,21 @@ export async function phonePeWebhookHandler(req, res) {
         // Process webhook with bulletproof processor
         const result = await services.processor.processWebhook(webhookData, correlationId);
         
+        // Mark webhook as processed
+        await WebhookEvent.markAsProcessed(eventId);
+        
         EnhancedLogger.webhookLog('SUCCESS', 'Webhook processed successfully', {
           correlationId,
+          eventId,
           orderId: webhookPayload.orderId,
           action: result.action,
           orderId: result.orderId
         });
         
       } catch (error) {
+        // Mark webhook as failed
+        await WebhookEvent.markAsFailed(eventId, error.message);
+        
         // If processing fails, enqueue for retry
         try {
           const services = await getWebhookServices();
@@ -106,12 +166,14 @@ export async function phonePeWebhookHandler(req, res) {
           
           EnhancedLogger.webhookLog('INFO', 'Webhook enqueued for retry processing', {
             correlationId,
+            eventId,
             orderId: webhookPayload.orderId,
             error: error.message
           });
         } catch (queueError) {
           EnhancedLogger.criticalAlert('WEBHOOK: Both processing and queuing failed', {
             correlationId,
+            eventId,
             orderId: webhookPayload.orderId,
             processingError: error.message,
             queueError: queueError.message
@@ -429,5 +491,156 @@ export async function retryFailedWebhooks(req, res) {
       error: error.message
     });
     errorResponse(res, 500, 'Retry operation failed', error.message);
+  }
+}
+
+/**
+ * Webhook idempotency management endpoints
+ */
+export async function getWebhookEvents(req, res) {
+  try {
+    const { status, limit = 50, offset = 0 } = req.query;
+    
+    let query = {};
+    if (status) {
+      query.status = status;
+    }
+    
+    const events = await WebhookEvent.find(query)
+      .sort({ receivedAt: -1 })
+      .limit(parseInt(limit))
+      .skip(parseInt(offset));
+    
+    const total = await WebhookEvent.countDocuments(query);
+    
+    successResponse(res, {
+      events,
+      total,
+      limit: parseInt(limit),
+      offset: parseInt(offset)
+    });
+    
+  } catch (error) {
+    EnhancedLogger.webhookLog('ERROR', 'Failed to get webhook events', {
+      error: error.message
+    });
+    errorResponse(res, 500, 'Failed to get webhook events', error.message);
+  }
+}
+
+/**
+ * Get webhook event by ID
+ */
+export async function getWebhookEventById(req, res) {
+  try {
+    const { eventId } = req.params;
+    
+    const event = await WebhookEvent.findByEventId(eventId);
+    if (!event) {
+      return errorResponse(res, 404, 'Webhook event not found');
+    }
+    
+    successResponse(res, { event });
+    
+  } catch (error) {
+    EnhancedLogger.webhookLog('ERROR', 'Failed to get webhook event', {
+      eventId: req.params.eventId,
+      error: error.message
+    });
+    errorResponse(res, 500, 'Failed to get webhook event', error.message);
+  }
+}
+
+/**
+ * Retry failed webhook events
+ */
+export async function retryFailedWebhookEvents(req, res) {
+  try {
+    const { hoursAgo = 24 } = req.body;
+    
+    const failedEvents = await WebhookEvent.getFailedWebhooks(parseInt(hoursAgo));
+    
+    const retryResults = [];
+    
+    for (const event of failedEvents) {
+      try {
+        if (event.canRetry()) {
+          // Reset status to processing for retry
+          event.status = 'processing';
+          event.errorMessage = null;
+          await event.save();
+          
+          // Parse and process the webhook
+          const webhookPayload = parseWebhookPayload(event.payload, event.eventId);
+          if (webhookPayload.isValid) {
+            const services = await getWebhookServices();
+            const result = await services.processor.processWebhook(webhookPayload, event.eventId);
+            
+            await WebhookEvent.markAsProcessed(event.eventId);
+            retryResults.push({ eventId: event.eventId, success: true, result });
+          }
+        } else {
+          retryResults.push({ 
+            eventId: event.eventId, 
+            success: false, 
+            error: 'Max retries exceeded' 
+          });
+        }
+      } catch (error) {
+        await WebhookEvent.markAsFailed(event.eventId, error.message);
+        retryResults.push({ 
+          eventId: event.eventId, 
+          success: false, 
+          error: error.message 
+        });
+      }
+    }
+
+    EnhancedLogger.webhookLog('INFO', 'Webhook event retry completed', {
+      totalFound: failedEvents.length,
+      retryResults: retryResults.length,
+      successful: retryResults.filter(r => r.success).length
+    });
+
+    successResponse(res, {
+      message: 'Webhook event retry completed',
+      processed: retryResults.length,
+      successful: retryResults.filter(r => r.success).length,
+      results: retryResults
+    });
+    
+  } catch (error) {
+    EnhancedLogger.webhookLog('ERROR', 'Webhook event retry failed', {
+      error: error.message
+    });
+    errorResponse(res, 500, 'Retry operation failed', error.message);
+  }
+}
+
+/**
+ * Cleanup old webhook events
+ */
+export async function cleanupWebhookEvents(req, res) {
+  try {
+    const { daysOld = 30 } = req.body;
+    
+    const result = await WebhookEvent.cleanupOldEvents(parseInt(daysOld));
+    
+    EnhancedLogger.webhookLog('INFO', 'Webhook events cleanup completed', {
+      deletedCount: result.deletedCount,
+      daysOld: parseInt(daysOld)
+    });
+
+    successResponse(res, {
+      message: 'Webhook events cleanup completed',
+      deletedCount: result.deletedCount,
+      daysOld: parseInt(daysOld)
+    });
+    
+  } catch (error) {
+    EnhancedLogger.webhookLog('ERROR', 'Webhook events cleanup failed', {
+      error: error.message
+    });
+    errorResponse(res, 500, 'Cleanup operation failed', error.message);
   }
 }
