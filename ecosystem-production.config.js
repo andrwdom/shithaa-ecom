@@ -145,7 +145,7 @@ module.exports = {
     },
     {
       name: 'shithaa-webhook-processor',
-      script: 'backend/jobs/processRawWebhooks.js',
+      script: 'backend/jobs/webhookProcessorWorker.js',
       cwd: '/var/www/shithaa-ecom',
       instances: 1,
       exec_mode: 'fork',
@@ -161,11 +161,11 @@ module.exports = {
       log_file: './backend/logs/webhook-processor-combined.log',
       time: true,
       // Process management
-      min_uptime: '10s',
-      max_restarts: 5,
-      restart_delay: 5000,
-      // Cron restart for webhook processing
-      cron_restart: '*/1 * * * *'
+      min_uptime: '30s',
+      max_restarts: 10,
+      restart_delay: 10000,
+      // No cron restart - this is a persistent worker
+      kill_timeout: 5000
     },
     {
       name: 'shithaa-reconciliation-worker',
