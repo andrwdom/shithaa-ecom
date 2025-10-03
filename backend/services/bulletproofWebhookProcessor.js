@@ -4,6 +4,7 @@ import PaymentSession from '../models/paymentSessionModel.js';
 import CheckoutSession from '../models/CheckoutSession.js';
 import RawWebhook from '../models/RawWebhook.js';
 import { confirmStockReservation, releaseStockReservation } from '../utils/stock.js';
+import { commitOrder } from './orderCommit.js';
 import EnhancedLogger from '../utils/enhancedLogger.js';
 import crypto from 'crypto';
 
@@ -229,71 +230,50 @@ class BulletproofWebhookProcessor {
   }
 
   /**
-   * Confirm draft order and stock reservations
+   * Confirm draft order and stock reservations using atomic commitOrder
    */
   async confirmDraftOrder(order, webhookData, correlationId, session) {
-    // Confirm all stock reservations atomically
-    const stockResults = [];
-    for (const item of order.cartItems || order.items || []) {
-      const stockConfirmed = await confirmStockReservation(
-        item.productId,
-        item.size,
-        item.quantity,
-        { session }
+    try {
+      // Use the atomic commitOrder service for stock deduction
+      const paymentInfo = {
+        phonepeTransactionId: webhookData.orderId,
+        transactionId: webhookData.orderId,
+        amount: webhookData.amount,
+        status: webhookData.state,
+        rawPayload: webhookData.fullPayload || webhookData
+      };
+
+      const commitResult = await commitOrder(
+        order._id,
+        paymentInfo,
+        { session, correlationId }
       );
-      
-      stockResults.push({
-        productId: item.productId,
-        size: item.size,
-        quantity: item.quantity,
-        confirmed: stockConfirmed
+
+      EnhancedLogger.webhookLog('SUCCESS', 'Draft order confirmed with atomic commit', {
+        correlationId,
+        orderId: order._id,
+        phonepeTransactionId: order.phonepeTransactionId,
+        userEmail: order.userInfo?.email,
+        commitResult
       });
-      
-      if (!stockConfirmed) {
-        EnhancedLogger.criticalAlert('WEBHOOK: Stock confirmation failed', {
-          correlationId,
-          orderId: order._id,
-          productId: item.productId,
-          size: item.size,
-          quantity: item.quantity
-        });
-        throw new Error(`Stock confirmation failed for ${item.name} (${item.size})`);
-      }
+
+      return { 
+        action: 'order_confirmed', 
+        orderId: order._id,
+        phonepeTransactionId: order.phonepeTransactionId,
+        stockConfirmed: commitResult.stockDeducted,
+        stockResults: commitResult.stockResults
+      };
+
+    } catch (error) {
+      EnhancedLogger.criticalAlert('WEBHOOK: Order commit failed', {
+        correlationId,
+        orderId: order._id,
+        phonepeTransactionId: order.phonepeTransactionId,
+        error: error.message
+      });
+      throw error;
     }
-
-    // Update order status
-    await orderModel.findByIdAndUpdate(
-      order._id,
-      {
-        status: 'CONFIRMED',
-        orderStatus: 'CONFIRMED',
-        paymentStatus: 'PAID',
-        confirmedAt: new Date(),
-        paidAt: new Date(),
-        stockConfirmed: true,
-        stockConfirmedAt: new Date(),
-        webhookProcessedAt: new Date(),
-        phonepeResponse: webhookData.fullPayload || webhookData,
-        stockConfirmationResults: stockResults,
-        updatedAt: new Date()
-      },
-      { session }
-    );
-
-    EnhancedLogger.webhookLog('SUCCESS', 'Draft order confirmed successfully', {
-      correlationId,
-      orderId: order._id,
-      phonepeTransactionId: order.phonepeTransactionId,
-      userEmail: order.userInfo?.email,
-      stockResults
-    });
-
-    return { 
-      action: 'order_confirmed', 
-      orderId: order._id,
-      phonepeTransactionId: order.phonepeTransactionId,
-      stockConfirmed: stockResults.every(r => r.confirmed)
-    };
   }
 
   /**
@@ -332,25 +312,35 @@ class BulletproofWebhookProcessor {
 
     const order = await orderModel.create([orderData], { session });
     
-    // Confirm stock for recovered order
-    if (checkoutSession.items) {
-      for (const item of checkoutSession.items) {
-        await confirmStockReservation(item.productId, item.size, item.quantity, { session });
-      }
-    }
+    // Use atomic commitOrder for stock deduction
+    const paymentInfo = {
+      phonepeTransactionId: webhookData.orderId,
+      transactionId: webhookData.orderId,
+      amount: webhookData.amount,
+      status: webhookData.state,
+      rawPayload: webhookData.fullPayload || webhookData
+    };
 
-    EnhancedLogger.webhookLog('SUCCESS', 'Order created from payment session', {
+    const commitResult = await commitOrder(
+      order[0]._id,
+      paymentInfo,
+      { session, correlationId }
+    );
+
+    EnhancedLogger.webhookLog('SUCCESS', 'Order created from payment session with atomic commit', {
       correlationId,
       orderId: order[0]._id,
       phonepeTransactionId: webhookData.orderId,
-      paymentSessionId: paymentSession._id
+      paymentSessionId: paymentSession._id,
+      commitResult
     });
 
     return { 
       action: 'order_recovered_from_payment_session', 
       orderId: order[0]._id,
       phonepeTransactionId: webhookData.orderId,
-      recoveryMethod: 'payment_session'
+      recoveryMethod: 'payment_session',
+      stockConfirmed: commitResult.stockDeducted
     };
   }
 
@@ -383,25 +373,35 @@ class BulletproofWebhookProcessor {
 
     const order = await orderModel.create([orderData], { session });
     
-    // Confirm stock for recovered order
-    if (checkoutSession.items) {
-      for (const item of checkoutSession.items) {
-        await confirmStockReservation(item.productId, item.size, item.quantity, { session });
-      }
-    }
+    // Use atomic commitOrder for stock deduction
+    const paymentInfo = {
+      phonepeTransactionId: webhookData.orderId,
+      transactionId: webhookData.orderId,
+      amount: webhookData.amount,
+      status: webhookData.state,
+      rawPayload: webhookData.fullPayload || webhookData
+    };
 
-    EnhancedLogger.webhookLog('SUCCESS', 'Order created from checkout session', {
+    const commitResult = await commitOrder(
+      order[0]._id,
+      paymentInfo,
+      { session, correlationId }
+    );
+
+    EnhancedLogger.webhookLog('SUCCESS', 'Order created from checkout session with atomic commit', {
       correlationId,
       orderId: order[0]._id,
       phonepeTransactionId: webhookData.orderId,
-      checkoutSessionId: checkoutSession._id
+      checkoutSessionId: checkoutSession._id,
+      commitResult
     });
 
     return { 
       action: 'order_recovered_from_checkout_session', 
       orderId: order[0]._id,
       phonepeTransactionId: webhookData.orderId,
-      recoveryMethod: 'checkout_session'
+      recoveryMethod: 'checkout_session',
+      stockConfirmed: commitResult.stockDeducted
     };
   }
 
