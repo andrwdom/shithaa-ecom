@@ -96,6 +96,19 @@ export async function commitOrder(orderId, paymentInfo, options = {}) {
       const size = item.size;
       const quantity = item.quantity;
 
+      // Debug logging to see what's happening
+      EnhancedLogger.webhookLog('DEBUG', 'Processing item for stock deduction', {
+        correlationId,
+        orderId,
+        item: {
+          productId: productId,
+          productIdType: typeof productId,
+          size: size,
+          quantity: quantity,
+          name: item.name || item.productName
+        }
+      });
+
       if (!productId || !size || !quantity || quantity <= 0) {
         throw new Error(`Invalid item data: ${JSON.stringify(item)}`);
       }
