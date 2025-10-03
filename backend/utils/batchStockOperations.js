@@ -40,16 +40,21 @@ export async function reserveBatchStockAtomic(cartItems, options = {}) {
       const { productId, size, quantity } = item;
       
       try {
+        // First check if stock is available
+        const product = await productModel.findById(productId).session(mongoSession);
+        const sizeObj = product?.sizes?.find(s => s.size === size);
+        const availableStock = sizeObj ? Math.max(0, sizeObj.stock - (sizeObj.reserved || 0)) : 0;
+        
+        if (availableStock < quantity) {
+          throw new StockError(`Insufficient stock for ${item.name || 'product'} (${size}). Available: ${availableStock}, Requested: ${quantity}`, {
+            productId, size, quantity, availableStock, correlationId
+          });
+        }
+        
         const result = await productModel.updateOne(
           {
             _id: productId,
-            'sizes.size': size,
-            $expr: {
-              $gte: [
-                { $subtract: ['$sizes.stock', { $ifNull: ['$sizes.reserved', 0] }] },
-                quantity
-              ]
-            }
+            'sizes.size': size
           },
           { $inc: { 'sizes.$.reserved': quantity } },
           { session: mongoSession }
