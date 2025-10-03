@@ -168,7 +168,7 @@ router.post('/webhook/:id/process', async (req, res) => {
       return errorResponse(res, 400, 'Webhook already processed');
     }
 
-    const { BulletproofWebhookService } = await import('../services/bulletproofWebhookService.js');
+    const BulletproofWebhookService = (await import('../services/bulletproofWebhookService.js')).default;
     const webhookService = new BulletproofWebhookService();
 
     // Parse webhook payload

@@ -1,6 +1,16 @@
 /**
- * Webhook Processor Worker - Persistent Worker Version
- * This version runs continuously and processes webhooks every 2 minutes
+ * LEGACY WEBHOOK PROCESSOR - DISABLED FOR SECURITY
+ * 
+ * ⚠️  CRITICAL SECURITY WARNING ⚠️
+ * This legacy processor has been DISABLED due to security vulnerabilities:
+ * - No signature verification
+ * - No proper idempotency
+ * - No stock validation
+ * - Creates orders without proper validation
+ * 
+ * The new bulletproof webhook system should be used instead.
+ * 
+ * TO RE-ENABLE: Remove this warning block and ensure proper security measures are in place.
  */
 
 import mongoose from 'mongoose';
@@ -12,6 +22,11 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const MONGO_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/shitha_maternity_db';
+
+// DISABLE LEGACY PROCESSOR FOR SECURITY
+console.log('🚫 LEGACY WEBHOOK PROCESSOR DISABLED FOR SECURITY REASONS');
+console.log('🚫 Use the bulletproof webhook system instead');
+process.exit(0);
 
 // Add error handling for uncaught exceptions
 process.on('uncaughtException', (error) => {

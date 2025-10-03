@@ -30,10 +30,29 @@ router.post('/webhook/razorpay', express.raw({ type: '*/*', limit: '1mb' }), asy
   }
 });
 
-// Generic webhook endpoint for any provider
+// Generic webhook endpoint for any provider - SECURITY RESTRICTED
 router.post('/webhook/:provider', express.raw({ type: '*/*', limit: '1mb' }), async (req, res) => {
   try {
     const { provider } = req.params;
+    
+    // SECURITY: Only allow known providers
+    const allowedProviders = ['phonepe', 'razorpay'];
+    if (!allowedProviders.includes(provider.toLowerCase())) {
+      console.log(`❌ Rejected webhook from unknown provider: ${provider}`);
+      return res.status(400).json({ error: 'Unknown webhook provider' });
+    }
+    
+    // SECURITY: Basic signature check for known providers
+    if (provider.toLowerCase() === 'phonepe' && !req.headers['x-verify']) {
+      console.log(`❌ PhonePe webhook missing X-VERIFY header`);
+      return res.status(401).json({ error: 'Missing signature header' });
+    }
+    
+    if (provider.toLowerCase() === 'razorpay' && !req.headers['x-razorpay-signature']) {
+      console.log(`❌ Razorpay webhook missing signature header`);
+      return res.status(401).json({ error: 'Missing signature header' });
+    }
+    
     const rawStr = req.body && req.body.toString ? req.body.toString() : JSON.stringify(req.body || {});
     
     // Save raw webhook immediately

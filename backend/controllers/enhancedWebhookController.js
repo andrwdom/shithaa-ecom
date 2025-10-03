@@ -4,6 +4,7 @@ import WebhookEvent from '../models/WebhookEvent.js';
 import { successResponse, errorResponse } from '../utils/response.js';
 import crypto from 'crypto';
 import EnhancedLogger from '../utils/enhancedLogger.js';
+import { withWebhookLock, withIdempotencyLock, isRedisHealthy } from '../utils/locks.js';
 
 // Initialize webhook services (singleton pattern)
 let webhookServices = null;
@@ -59,14 +60,27 @@ export async function phonePeWebhookHandler(req, res) {
     }
 
     // IDEMPOTENCY CHECK - Critical for preventing duplicate processing
-    const eventId = webhookPayload.orderId || webhookPayload.fullPayload?.transactionId || webhookPayload.fullPayload?.merchantTransactionId;
-    if (!eventId) {
-      EnhancedLogger.webhookLog('ERROR', 'No event ID found for idempotency check', {
+    // Use transactionId + orderId + amount + state for true idempotency
+    const transactionId = webhookPayload.fullPayload?.transactionId || webhookPayload.fullPayload?.merchantTransactionId;
+    const orderId = webhookPayload.orderId;
+    const amount = webhookPayload.amount;
+    const state = webhookPayload.state;
+    
+    if (!transactionId || !orderId) {
+      EnhancedLogger.webhookLog('ERROR', 'Missing transactionId or orderId for idempotency check', {
         correlationId,
+        transactionId: !!transactionId,
+        orderId: !!orderId,
         payload: webhookPayload
       });
       return;
     }
+
+    // Generate idempotent event ID based on transaction data (no timestamps)
+    // Format: sha256(transactionId + '|' + orderId + '|' + amount + '|' + state)
+    const eventId = crypto.createHash('sha256')
+      .update(`${transactionId}|${orderId}|${amount}|${state}`)
+      .digest('hex');
 
     // Atomic upsert for idempotency - returns existing if already processed
     const webhookEvent = await WebhookEvent.findOneAndUpdate(
@@ -95,8 +109,8 @@ export async function phonePeWebhookHandler(req, res) {
     }
 
     // If currently processing, skip to prevent race conditions
-    if (webhookEvent.status === 'processing' && webhookEvent.receivedAt < new Date(Date.now() - 30000)) {
-      // If processing for more than 30 seconds, mark as failed and retry
+    if (webhookEvent.status === 'processing' && webhookEvent.receivedAt < new Date(Date.now() - 10000)) {
+      // If processing for more than 10 seconds, mark as failed and retry
       await WebhookEvent.markAsFailed(eventId, 'Processing timeout');
       EnhancedLogger.webhookLog('WARN', 'Webhook processing timeout - marking as failed for retry', {
         correlationId,
@@ -113,36 +127,55 @@ export async function phonePeWebhookHandler(req, res) {
     // Save raw webhook for audit trail
     await saveRawWebhook(req, correlationId, webhookPayload);
 
-    // Process webhook with bulletproof system
+    // Process webhook with bulletproof system and distributed locking
     setImmediate(async () => {
       try {
-        // Get webhook services (lazy initialization)
-        const services = await getWebhookServices();
-        
-        // Create webhook data for bulletproof processing
-        const webhookData = {
-          orderId: webhookPayload.orderId,
-          amount: webhookPayload.amount,
-          state: webhookPayload.state,
-          isSuccess: webhookPayload.isSuccess,
-          isFailure: webhookPayload.isFailure,
-          fullPayload: webhookPayload.fullPayload,
-          timestamp: Date.now()
+        // Check Redis health before processing
+        const redisHealthy = await isRedisHealthy();
+        if (!redisHealthy) {
+          EnhancedLogger.webhookLog('WARN', 'Redis not available - processing without distributed lock', {
+            correlationId,
+            eventId
+          });
+        }
+
+        // Use distributed lock for critical webhook processing
+        const processWithLock = async () => {
+          // Get webhook services (lazy initialization)
+          const services = await getWebhookServices();
+          
+          // Create webhook data for bulletproof processing
+          const webhookData = {
+            orderId: webhookPayload.orderId,
+            amount: webhookPayload.amount,
+            state: webhookPayload.state,
+            isSuccess: webhookPayload.isSuccess,
+            isFailure: webhookPayload.isFailure,
+            fullPayload: webhookPayload.fullPayload,
+            timestamp: Date.now()
+          };
+          
+          // Process webhook with bulletproof processor
+          const result = await services.processor.processWebhook(webhookData, correlationId);
+          
+          // Mark webhook as processed
+          await WebhookEvent.markAsProcessed(eventId);
+          
+          EnhancedLogger.webhookLog('SUCCESS', 'Webhook processed successfully', {
+            correlationId,
+            eventId,
+            orderId: webhookPayload.orderId,
+            action: result.action,
+            orderId: result.orderId
+          });
+          
+          return result;
         };
-        
-        // Process webhook with bulletproof processor
-        const result = await services.processor.processWebhook(webhookData, correlationId);
-        
-        // Mark webhook as processed
-        await WebhookEvent.markAsProcessed(eventId);
-        
-        EnhancedLogger.webhookLog('SUCCESS', 'Webhook processed successfully', {
-          correlationId,
-          eventId,
-          orderId: webhookPayload.orderId,
-          action: result.action,
-          orderId: result.orderId
-        });
+
+        // Process with distributed lock if Redis is available
+        const result = redisHealthy 
+          ? await withWebhookLock(transactionId, processWithLock, { ttl: 15000 })
+          : await processWithLock();
         
       } catch (error) {
         // Mark webhook as failed
@@ -201,60 +234,66 @@ export async function phonePeWebhookHandler(req, res) {
 }
 
 /**
- * Verify PhonePe webhook signature
+ * Verify PhonePe webhook signature using proper X-VERIFY header
+ * PhonePe signature format: SHA256(payload + saltKey + saltIndex)
  */
 async function verifyPhonePeSignature(req, correlationId) {
   try {
-    const authHeader = req.headers['authorization'];
-    const xSignature = req.headers['x-phonepe-signature'];
-    const providedSignature = authHeader || xSignature;
-
-    if (!providedSignature) {
-      EnhancedLogger.webhookLog('ERROR', 'No webhook signature provided', {
-        correlationId,
-        availableHeaders: Object.keys(req.headers).filter(h => h.includes('auth') || h.includes('signature'))
-      });
-      return false;
-    }
-
-    const username = process.env.PHONEPE_CALLBACK_USERNAME || '';
-    const password = process.env.PHONEPE_CALLBACK_PASSWORD || '';
+    const xVerify = req.headers['x-verify'];
+    const rawBody = req.body;
     
-    if (!username || !password) {
-      EnhancedLogger.criticalAlert('WEBHOOK: PhonePe credentials not configured', {
+    if (!xVerify) {
+      EnhancedLogger.webhookLog('ERROR', 'Missing X-VERIFY header for PhonePe webhook', {
         correlationId,
-        hasUsername: !!username,
-        hasPassword: !!password
+        availableHeaders: Object.keys(req.headers).filter(h => h.toLowerCase().includes('verify'))
       });
       return false;
     }
 
+    const saltKey = process.env.PHONEPE_SALT_KEY || '';
+    const saltIndex = process.env.PHONEPE_SALT_INDEX || '1';
+    
+    if (!saltKey) {
+      EnhancedLogger.criticalAlert('WEBHOOK: PhonePe salt key not configured', {
+        correlationId,
+        hasSaltKey: !!saltKey
+      });
+      return false;
+    }
+
+    // PhonePe signature verification: SHA256(payload + saltKey + saltIndex)
+    const payloadString = typeof rawBody === 'string' ? rawBody : JSON.stringify(rawBody);
+    const dataToSign = payloadString + saltKey + saltIndex;
     const expectedSignature = crypto
       .createHash('sha256')
-      .update(`${username}:${password}`)
+      .update(dataToSign)
       .digest('hex');
 
-    const isValid = providedSignature === expectedSignature;
+    // Use timing-safe comparison to prevent timing attacks
+    const isValid = crypto.timingSafeEqual(
+      Buffer.from(xVerify, 'hex'),
+      Buffer.from(expectedSignature, 'hex')
+    );
     
     if (isValid) {
-      EnhancedLogger.webhookLog('SUCCESS', 'Webhook signature verified', {
+      EnhancedLogger.webhookLog('SUCCESS', 'PhonePe webhook signature verified', {
         correlationId,
-        ip: req.ip
+        ip: req.ip,
+        payloadLength: payloadString.length
       });
     } else {
-      EnhancedLogger.webhookLog('ERROR', 'Invalid webhook signature', {
+      EnhancedLogger.webhookLog('ERROR', 'Invalid PhonePe webhook signature', {
         correlationId,
-        expectedPrefix: expectedSignature.substring(0, 10) + '...',
-        receivedPrefix: providedSignature.substring(0, 10) + '...',
         ip: req.ip,
-        userAgent: req.headers['user-agent']
+        userAgent: req.headers['user-agent'],
+        payloadLength: payloadString.length
       });
     }
 
     return isValid;
     
   } catch (error) {
-    EnhancedLogger.webhookLog('ERROR', 'Signature verification failed', {
+    EnhancedLogger.webhookLog('ERROR', 'PhonePe signature verification failed', {
       correlationId,
       error: error.message
     });
@@ -459,7 +498,9 @@ export async function retryFailedWebhooks(req, res) {
       try {
         const webhookPayload = parseWebhookPayload(JSON.parse(webhook.raw), webhook.correlationId);
         if (webhookPayload.isValid) {
-          const result = await webhookService.processWebhook(webhookPayload, webhook.correlationId);
+          // Get webhook services and process with bulletproof processor
+          const services = await getWebhookServices();
+          const result = await services.processor.processWebhook(webhookPayload, webhook.correlationId);
           retryResults.push({ webhookId: webhook._id, success: true, result });
           
           // Mark as processed
