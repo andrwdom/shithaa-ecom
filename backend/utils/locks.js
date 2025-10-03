@@ -56,6 +56,10 @@ export const lockTTL = {
 
 /**
  * Acquire a distributed lock with automatic retry and error handling
+ * @param {string} key - Lock key
+ * @param {number} ttl - Time to live in milliseconds
+ * @param {Object} options - Lock options
+ * @returns {Promise<Object>} - Lock object with release method
  */
 export async function acquireLock(key, ttl = lockTTL.webhook, options = {}) {
   try {

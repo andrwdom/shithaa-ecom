@@ -55,6 +55,11 @@ REDIS_CART_TTL=3600
 REDIS_USER_TTL=86400
 REDIS_SESSIONS_TTL=86400
 REDIS_STATIC_TTL=7200
+
+# Emergency Features Configuration
+# 🚨 CRITICAL: Emergency deduction is DISABLED by default for safety
+# Only enable in extreme cases where payment succeeded but stock confirmation failed
+# ENABLE_EMERGENCY_DEDUCTION=false
 EOF
     echo -e "${GREEN}.env file created successfully!${NC}"
 else

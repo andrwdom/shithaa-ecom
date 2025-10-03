@@ -12,6 +12,7 @@
 import mongoose from 'mongoose';
 import productModel from '../models/productModel.js';
 import { StockError, ValidationError } from './errorHandler.js';
+import EnhancedLogger from './enhancedLogger.js';
 
 /**
  * ATOMIC: Reserve stock for a single product/size
@@ -34,34 +35,56 @@ export async function reserveStockAtomic(productId, size, quantity, options = {}
 
   try {
     // 🚨 CRITICAL FIX: Atomic operation - check availability AND reserve in one operation
+    // Uses $expr with $arrayElemAt to find the specific size and check available stock
     const query = {
       _id: productId,
       'sizes.size': size,
-      // Check that available stock (stock - reserved) >= quantity
       $expr: {
         $gte: [
           {
-            $let: {
-              vars: {
-                sizeObj: {
-                  $arrayElemAt: [
-                    {
-                      $filter: {
-                        input: '$sizes',
-                        cond: { $eq: ['$$this.size', size] }
+            $subtract: [
+              {
+                $arrayElemAt: [
+                  {
+                    $map: {
+                      input: { $range: [0, { $size: '$sizes' }] },
+                      as: 'i',
+                      in: {
+                        $cond: [
+                          { $eq: [{ $arrayElemAt: ['$sizes.size', '$$i'] }, size] },
+                          { $arrayElemAt: ['$sizes.stock', '$$i'] },
+                          null
+                        ]
                       }
-                    },
-                    0
-                  ]
-                }
+                    }
+                  },
+                  0
+                ]
               },
-              in: {
-                $subtract: [
-                  '$$sizeObj.stock',
-                  { $ifNull: ['$$sizeObj.reserved', 0] }
+              {
+                $add: [
+                  {
+                    $arrayElemAt: [
+                      {
+                        $map: {
+                          input: { $range: [0, { $size: '$sizes' }] },
+                          as: 'i',
+                          in: {
+                            $cond: [
+                              { $eq: [{ $arrayElemAt: ['$sizes.size', '$$i'] }, size] },
+                              { $ifNull: [{ $arrayElemAt: ['$sizes.reserved', '$$i'] }, 0] },
+                              0
+                            ]
+                          }
+                        }
+                      },
+                      0
+                    ]
+                  },
+                  quantity
                 ]
               }
-            }
+            ]
           },
           quantity
         ]
@@ -370,8 +393,14 @@ export async function batchStockOperationsAtomic(operations, options = {}) {
             await reserveStockAtomic(productId, size, quantity, { session, correlationId });
             success = true;
             break;
+          case 'reserve_simple':
+            success = await reserveSingleSizeAtomic({ productId, size, qty: quantity, session });
+            break;
           case 'confirm':
             success = await confirmStockReservationAtomic(productId, size, quantity, { session, correlationId });
+            break;
+          case 'confirm_simple':
+            success = await confirmSingleSizeAtomic({ productId, size, qty: quantity, session });
             break;
           case 'release':
             success = await releaseStockReservationAtomic(productId, size, quantity, { session, correlationId });
@@ -415,11 +444,72 @@ export async function batchStockOperationsAtomic(operations, options = {}) {
   }
 }
 
+/**
+ * SIMPLIFIED ATOMIC: Reserve stock for a single product/size (Template Version)
+ * Uses simple updateOne with arrayFilters for easier understanding
+ * 
+ * @param {Object} params - { productId, size, qty, session }
+ * @returns {Promise<boolean>} - Success status
+ */
+export async function reserveSingleSizeAtomic({ productId, size, qty, session = null }) {
+  if (!productId || !size || !qty) throw new Error('Invalid args');
+
+  const filter = {
+    _id: mongoose.Types.ObjectId(productId),
+    'sizes': {
+      $elemMatch: { size: size, stock: { $gte: qty } }
+    }
+  };
+
+  const update = {
+    $inc: { 'sizes.$.stock': -qty, 'sizes.$.reserved': qty },
+  };
+
+  const options = { session };
+
+  const res = await productModel.updateOne(filter, update, options);
+  if (res.modifiedCount === 0) {
+    // nothing modified -> insufficient stock or product missing
+    EnhancedLogger.info('STOCK:RESERVE:FAILED', { productId, size, qty, result: res });
+    return false;
+  }
+  EnhancedLogger.info('STOCK:RESERVE:SUCCESS', { productId, size, qty });
+  return true;
+}
+
+/**
+ * SIMPLIFIED ATOMIC: Confirm stock reservation for a single product/size (Template Version)
+ * Moves reserved stock to sold (reduces reserved field)
+ * 
+ * @param {Object} params - { productId, size, qty, session }
+ * @returns {Promise<boolean>} - Success status
+ */
+export async function confirmSingleSizeAtomic({ productId, size, qty, session = null }) {
+  // Confirm moves reserved -> sold (or simply reduces reserved if already deducted from stock)
+  const filter = { 
+    _id: mongoose.Types.ObjectId(productId), 
+    'sizes': { 
+      $elemMatch: { size: size, reserved: { $gte: qty } } 
+    } 
+  };
+  const update = { $inc: { 'sizes.$.reserved': -qty } };
+  const res = await productModel.updateOne(filter, update, { session });
+  if (res.modifiedCount === 0) {
+    EnhancedLogger.error('STOCK:CONFIRM:FAILED', { productId, size, qty, res });
+    throw new Error('Stock confirm failed');
+  }
+  EnhancedLogger.info('STOCK:CONFIRM:SUCCESS', { productId, size, qty });
+  return true;
+}
+
 export default {
   reserveStockAtomic,
   confirmStockReservationAtomic,
   releaseStockReservationAtomic,
   deductStockAtomic,
   restoreStockAtomic,
-  batchStockOperationsAtomic
+  batchStockOperationsAtomic,
+  // Simplified template functions
+  reserveSingleSizeAtomic,
+  confirmSingleSizeAtomic
 };

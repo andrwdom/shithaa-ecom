@@ -3,6 +3,55 @@ import productModel from '../models/productModel.js';
 import { StockError, ValidationError } from './errorHandler.js';
 
 /**
+ * ATOMIC: Reserve stock for a single product/size (simplified version)
+ * Uses atomic updateOne with $expr to prevent race conditions
+ * 
+ * @param {string} productId - Product ID
+ * @param {string} size - Size to reserve
+ * @param {number} quantity - Quantity to reserve
+ * @param {Object} session - MongoDB session
+ * @returns {Promise<Object>} - Result of the reservation
+ */
+export async function reserveSingleStockAtomic(productId, size, quantity, session) {
+  try {
+    // Atomic update: Check stock and reserve in one operation
+    const result = await productModel.updateOne(
+      {
+        _id: productId,
+        'sizes.size': size,
+        $expr: { 
+          $gte: [
+            { $subtract: ['$sizes.stock', '$sizes.reserved'] }, 
+            quantity
+          ] 
+        }
+      },
+      { $inc: { 'sizes.$.reserved': quantity } },
+      { session }
+    );
+
+    if (result.modifiedCount === 0) {
+      // Get current stock info for error message
+      const product = await productModel.findById(productId).session(session);
+      const sizeObj = product?.sizes?.find(s => s.size === size);
+      const availableStock = sizeObj ? Math.max(0, sizeObj.stock - (sizeObj.reserved || 0)) : 0;
+      
+      throw new StockError(`Insufficient stock for product ${productId}, size ${size}, requested ${quantity}. Available: ${availableStock}`);
+    }
+
+    return {
+      success: true,
+      productId,
+      size,
+      quantity,
+      modifiedCount: result.modifiedCount
+    };
+  } catch (error) {
+    throw new StockError(`Failed to reserve stock: ${error.message}`);
+  }
+}
+
+/**
  * BATCH ATOMIC: Reserve stock for multiple items in a single transaction
  * Either ALL items are reserved successfully, or NONE are reserved
  * Uses MongoDB transactions to ensure atomicity across multiple documents
@@ -40,24 +89,68 @@ export async function reserveBatchStockAtomic(cartItems, options = {}) {
       const { productId, size, quantity } = item;
       
       try {
-        // First check if stock is available
-        const product = await productModel.findById(productId).session(mongoSession);
-        const sizeObj = product?.sizes?.find(s => s.size === size);
-        const availableStock = sizeObj ? Math.max(0, sizeObj.stock - (sizeObj.reserved || 0)) : 0;
-        
-        if (availableStock < quantity) {
-          throw new StockError(`Insufficient stock for ${item.name || 'product'} (${size}). Available: ${availableStock}, Requested: ${quantity}`, {
-            productId, size, quantity, availableStock, correlationId
-          });
-        }
-        
+        // 🚨 CRITICAL FIX: Atomic operation - check availability AND reserve in one operation
+        // Uses $expr with $arrayElemAt to find the specific size and check available stock
         const result = await productModel.updateOne(
           {
             _id: productId,
-            'sizes.size': size
+            'sizes.size': size,
+            $expr: {
+              $gte: [
+                {
+                  $subtract: [
+                    {
+                      $arrayElemAt: [
+                        {
+                          $map: {
+                            input: { $range: [0, { $size: '$sizes' }] },
+                            as: 'i',
+                            in: {
+                              $cond: [
+                                { $eq: [{ $arrayElemAt: ['$sizes.size', '$$i'] }, size] },
+                                { $arrayElemAt: ['$sizes.stock', '$$i'] },
+                                null
+                              ]
+                            }
+                          }
+                        },
+                        0
+                      ]
+                    },
+                    {
+                      $add: [
+                        {
+                          $arrayElemAt: [
+                            {
+                              $map: {
+                                input: { $range: [0, { $size: '$sizes' }] },
+                                as: 'i',
+                                in: {
+                                  $cond: [
+                                    { $eq: [{ $arrayElemAt: ['$sizes.size', '$$i'] }, size] },
+                                    { $ifNull: [{ $arrayElemAt: ['$sizes.reserved', '$$i'] }, 0] },
+                                    0
+                                  ]
+                                }
+                              }
+                            },
+                            0
+                          ]
+                        },
+                        quantity
+                      ]
+                    }
+                  ]
+                },
+                quantity
+              ]
+            }
           },
-          { $inc: { 'sizes.$.reserved': quantity } },
-          { session: mongoSession }
+          { $inc: { 'sizes.$[elem].reserved': quantity } },
+          { 
+            session: mongoSession,
+            arrayFilters: [{ 'elem.size': size }]
+          }
         );
 
         if (result.modifiedCount === 0) {

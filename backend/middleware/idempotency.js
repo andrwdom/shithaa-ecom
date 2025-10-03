@@ -16,9 +16,27 @@ const IdempotencyKey = mongoose.models.IdempotencyKey || mongoose.model('Idempot
 
 /**
  * Generate idempotency key from request
+ * 🚨 CRITICAL FIX: Use deterministic key generation for webhooks
  */
 export const generateIdempotencyKey = (req) => {
   const crypto = require('crypto');
+  
+  // For webhook requests, use transaction-specific data for true idempotency
+  if (req.url.includes('/webhook') || req.url.includes('/payment')) {
+    const { transactionId, orderId, amount, status } = req.body;
+    
+    if (transactionId && orderId && amount !== undefined && status) {
+      // 🚨 CRITICAL FIX: Use deterministic key without timestamps
+      // Format: sha256(transactionId|orderId|amount|status) - no timestamps for true idempotency
+      const keyData = `${transactionId}|${orderId}|${amount}|${status}`;
+      
+      return crypto.createHash('sha256')
+        .update(keyData)
+        .digest('hex');
+    }
+  }
+  
+  // For other requests, use the original method
   const keyData = {
     method: req.method,
     url: req.url,

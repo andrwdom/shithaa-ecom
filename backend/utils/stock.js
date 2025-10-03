@@ -157,11 +157,11 @@ export async function confirmStockReservation(productId, size, quantity, options
  * @returns {Promise<boolean>} - Result of the deduction
  */
 export async function emergencyStockDeduction(productId, size, quantity, options = {}) {
-    // 🚨 CRITICAL MITIGATION: Disable emergency deduction in production
+    // 🚨 CRITICAL MITIGATION: Check feature flag before allowing emergency deduction
     if (process.env.ENABLE_EMERGENCY_DEDUCTION !== 'true') {
-        console.log(`🚨 EMERGENCY DEDUCTION DISABLED: Feature flag ENABLE_EMERGENCY_DEDUCTION is not set to 'true'`);
-        console.log(`🚨 This prevents bypassing reservation system and double deduction risks`);
-        return false;
+        console.log(`🚨 EMERGENCY DEDUCTION DISABLED: This feature is disabled to prevent race conditions`);
+        console.log(`🚨 Use proper atomic stock operations instead of emergency deduction`);
+        throw new Error('Emergency stock deduction is disabled. Use atomic stock operations instead.');
     }
     
     if (quantity <= 0) {
@@ -352,8 +352,7 @@ export async function batchStockOperations(operations, options = {}) {
  * @deprecated Use reserveStock instead
  */
 export async function reserveStockLegacy(productId, size, quantity, options = {}) {
-    console.warn('reserveStockLegacy is deprecated. Use reserveStock from the new reservation system.');
-    return await reserveStock(productId, size, quantity, options);
+    throw new Error('reserveStockLegacy is deprecated and disabled. Use reserveStock from the new atomic reservation system.');
 }
 
 /**
@@ -361,16 +360,15 @@ export async function reserveStockLegacy(productId, size, quantity, options = {}
  * @deprecated Use releaseStockReservation instead
  */
 export async function releaseStock(productId, size, quantity, options = {}) {
-    console.warn('releaseStock is deprecated. Use releaseStockReservation from the new reservation system.');
-    return await releaseStockReservation(productId, size, quantity, options);
+    throw new Error('releaseStock is deprecated and disabled. Use releaseStockReservation from the new atomic reservation system.');
 }
 
 /**
  * Legacy function for backward compatibility
- * @deprecated Use changeStock with proper operation type instead
+ * @deprecated Use atomic stock operations instead
  */
 export async function changeStock(productId, size, quantityChange, options = {}) {
-    console.warn('changeStock is deprecated. Use the new reservation-aware functions instead.');
+    throw new Error('changeStock is deprecated and disabled. Use atomic stock operations from the new reservation system.');
     
     if (quantityChange > 0) {
         // Increment stock

@@ -287,6 +287,11 @@ MONGODB_URI=mongodb://localhost:27017/shitha
 JWT_SECRET=your_jwt_secret
 RAZORPAY_KEY_ID=your_razorpay_key
 RAZORPAY_KEY_SECRET=your_razorpay_secret
+
+# Emergency Features Configuration
+# 🚨 CRITICAL: Emergency deduction is DISABLED by default for safety
+# Only enable in extreme cases where payment succeeded but stock confirmation failed
+# ENABLE_EMERGENCY_DEDUCTION=false
 ```
 
 ## 🚀 Deployment Commands

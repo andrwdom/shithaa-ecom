@@ -16,6 +16,7 @@ import { releaseStockReservation, reserveStock, confirmStockReservation } from '
 import { config } from '../config.js';
 import mongoose from 'mongoose';
 import Logger from '../utils/logger.js';
+import EnhancedLogger from '../utils/enhancedLogger.js';
 
 // Helper function to get user email for orders
 const getOrderUserEmail = (req, email) => {
@@ -1096,11 +1097,25 @@ export const verifyPhonePePayment = async (req, res) => {
               if (!stockConfirmed) {
                 // 🚨 CRITICAL MITIGATION: Check feature flag before emergency deduction
                 if (process.env.ENABLE_EMERGENCY_DEDUCTION !== 'true') {
-                  console.log(`🚨 EMERGENCY DEDUCTION DISABLED: Stock confirmation failed but emergency deduction is disabled via feature flag`);
+                  EnhancedLogger.webhookLog('ERROR', 'Stock confirmation failed and emergency deduction is DISABLED', {
+                    correlationId,
+                    productId,
+                    size: item.size,
+                    quantity: item.quantity,
+                    orderId: order._id,
+                    reason: 'Emergency deduction disabled via feature flag'
+                  });
                   throw new Error(`Stock confirmation failed and emergency deduction is disabled for ${item.name} (${item.size})`);
                 }
 
-                console.log(`⚠️ Stock confirmation failed for ${item.name} (${item.size}), attempting emergency deduction...`);
+                EnhancedLogger.webhookLog('WARN', 'Stock confirmation failed, attempting emergency deduction', {
+                  correlationId,
+                  productId,
+                  size: item.size,
+                  quantity: item.quantity,
+                  orderId: order._id
+                });
+                
                 const { emergencyStockDeduction } = await import('../utils/stock.js');
                 stockConfirmed = await emergencyStockDeduction(
                   productId,
@@ -1113,9 +1128,13 @@ export const verifyPhonePePayment = async (req, res) => {
                   throw new Error(`Stock confirmation AND emergency deduction failed for ${item.name} (${item.size})`);
                 }
                 
-                console.log(`✅ EMERGENCY: Successfully recovered from stock confirmation failure using direct deduction`);
-                // 🚨 CRITICAL MITIGATION: Add structured logging for stock operations
-                console.log(`STOCK:PAYMENT:EMERGENCY:SUCCESS: productId=${productId}, size=${item.size}, quantity=${item.quantity}, correlationId=${correlationId}, timestamp=${new Date().toISOString()}`);
+                EnhancedLogger.webhookLog('SUCCESS', 'Emergency stock deduction successful', {
+                  correlationId,
+                  productId,
+                  size: item.size,
+                  quantity: item.quantity,
+                  orderId: order._id
+                });
               }
             }
 

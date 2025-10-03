@@ -639,4 +639,9 @@ JWT_SECRET=your-jwt-secret
 ADMIN_EMAIL=admin@example.com
 ADMIN_PASSWORD=admin-password
 NODE_ENV=development
+
+# Emergency Features Configuration
+# 🚨 CRITICAL: Emergency deduction is DISABLED by default for safety
+# Only enable in extreme cases where payment succeeded but stock confirmation failed
+# ENABLE_EMERGENCY_DEDUCTION=false
 ```

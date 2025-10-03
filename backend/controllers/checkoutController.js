@@ -284,9 +284,10 @@ export const createCheckoutSession = async (req, res) => {
         await checkoutSession.save({ session: mongoSession });
         console.log(`[${correlationId}] Session created: ${sessionId}`);
         
-        // 🔑 CRITICAL: Reserve stock ATOMICALLY for all items
+        // 🔑 CRITICAL: Reserve stock ATOMICALLY for all items using transactions
         console.log(`[${correlationId}] Reserving stock for ${validatedItems.length} items atomically...`);
-        const batchReservationResult = await reserveBatchStockAtomic(
+        const { batchReserveStock } = await import('../utils/transactionManager.js');
+        const batchReservationResult = await batchReserveStock(
           validatedItems,
           { session: mongoSession, correlationId }
         );
