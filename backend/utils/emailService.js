@@ -172,6 +172,82 @@ const generateRecoveryEmailHTML = (emailData) => {
 };
 
 /**
+ * Send order status update email
+ */
+export const sendOrderStatusUpdate = async (emailData) => {
+  const correlationId = `ORDER-UPDATE-${Date.now()}`;
+  
+  try {
+    const transporter = createTransporter();
+    
+    const mailOptions = {
+      from: process.env.EMAIL_FROM || 'noreply@shithaa.in',
+      to: emailData.to,
+      subject: `Order ${emailData.status} - ${emailData.orderId}`,
+      html: generateOrderStatusHTML(emailData)
+    };
+    
+    await transporter.sendMail(mailOptions);
+    
+    EnhancedLogger.webhookLog('SUCCESS', 'Order status update email sent', {
+      correlationId,
+      orderId: emailData.orderId,
+      email: emailData.to,
+      status: emailData.status
+    });
+    
+    return { success: true, correlationId };
+    
+  } catch (error) {
+    EnhancedLogger.webhookLog('ERROR', 'Failed to send order status update email', {
+      correlationId,
+      orderId: emailData.orderId,
+      error: error.message
+    });
+    
+    return { success: false, error: error.message, correlationId };
+  }
+};
+
+/**
+ * Send shipping notification email
+ */
+export const sendShippingNotification = async (emailData) => {
+  const correlationId = `SHIPPING-${Date.now()}`;
+  
+  try {
+    const transporter = createTransporter();
+    
+    const mailOptions = {
+      from: process.env.EMAIL_FROM || 'noreply@shithaa.in',
+      to: emailData.to,
+      subject: `Your Order Has Shipped - ${emailData.orderId}`,
+      html: generateShippingNotificationHTML(emailData)
+    };
+    
+    await transporter.sendMail(mailOptions);
+    
+    EnhancedLogger.webhookLog('SUCCESS', 'Shipping notification email sent', {
+      correlationId,
+      orderId: emailData.orderId,
+      email: emailData.to,
+      trackingNumber: emailData.trackingNumber
+    });
+    
+    return { success: true, correlationId };
+    
+  } catch (error) {
+    EnhancedLogger.webhookLog('ERROR', 'Failed to send shipping notification email', {
+      correlationId,
+      orderId: emailData.orderId,
+      error: error.message
+    });
+    
+    return { success: false, error: error.message, correlationId };
+  }
+};
+
+/**
  * Send payment failure notification email
  */
 export const sendPaymentFailureEmail = async (emailData) => {
@@ -207,6 +283,190 @@ export const sendPaymentFailureEmail = async (emailData) => {
     
     return { success: false, error: error.message, correlationId };
   }
+};
+
+/**
+ * Generate HTML for order status update email
+ */
+const generateOrderStatusHTML = (emailData) => {
+  const { orderId, status, amount, items, trackingNumber, estimatedDelivery } = emailData;
+  
+  const statusMessages = {
+    'CONFIRMED': {
+      title: 'Order Confirmed',
+      message: 'Your order has been confirmed and is being prepared for shipment.',
+      color: '#28a745'
+    },
+    'PROCESSING': {
+      title: 'Order Processing',
+      message: 'Your order is being processed and will be shipped soon.',
+      color: '#007bff'
+    },
+    'SHIPPED': {
+      title: 'Order Shipped',
+      message: 'Your order has been shipped and is on its way to you.',
+      color: '#17a2b8'
+    },
+    'DELIVERED': {
+      title: 'Order Delivered',
+      message: 'Your order has been successfully delivered.',
+      color: '#28a745'
+    },
+    'CANCELLED': {
+      title: 'Order Cancelled',
+      message: 'Your order has been cancelled as requested.',
+      color: '#dc3545'
+    }
+  };
+  
+  const statusInfo = statusMessages[status] || {
+    title: 'Order Update',
+    message: 'Your order status has been updated.',
+    color: '#6c757d'
+  };
+  
+  const itemsHTML = items.map(item => 
+    `<tr>
+      <td style="padding: 12px; border-bottom: 1px solid #eee;">${item.name}</td>
+      <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: center;">${item.size}</td>
+      <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
+      <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: right;">₹${item.price}</td>
+    </tr>`
+  ).join('');
+  
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Order ${status} - ${orderId}</title>
+    </head>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+      
+      <div style="background: ${statusInfo.color}; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
+        <h1 style="margin: 0; font-size: 24px;">${statusInfo.title}</h1>
+        <p style="margin: 10px 0 0 0; opacity: 0.9;">Order #${orderId}</p>
+      </div>
+      
+      <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 8px 8px;">
+        <p style="font-size: 16px; margin-bottom: 20px;">Hi there!</p>
+        
+        <p style="font-size: 16px; margin-bottom: 20px;">${statusInfo.message}</p>
+        
+        ${trackingNumber ? `
+          <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="margin-top: 0; color: #007bff;">Tracking Information</h3>
+            <p><strong>Tracking Number:</strong> ${trackingNumber}</p>
+            ${estimatedDelivery ? `<p><strong>Estimated Delivery:</strong> ${estimatedDelivery}</p>` : ''}
+          </div>
+        ` : ''}
+        
+        <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="margin-top: 0; color: #007bff;">Order Summary</h3>
+          
+          <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
+            <thead>
+              <tr style="background: #f8f9fa;">
+                <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6;">Item</th>
+                <th style="padding: 12px; text-align: center; border-bottom: 2px solid #dee2e6;">Size</th>
+                <th style="padding: 12px; text-align: center; border-bottom: 2px solid #dee2e6;">Qty</th>
+                <th style="padding: 12px; text-align: right; border-bottom: 2px solid #dee2e6;">Price</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsHTML}
+            </tbody>
+          </table>
+          
+          <div style="text-align: right; margin-top: 15px; padding-top: 15px; border-top: 2px solid #dee2e6;">
+            <h3 style="margin: 0; color: #007bff;">Total: ₹${amount}</h3>
+          </div>
+        </div>
+        
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #dee2e6;">
+          <p style="font-size: 14px; color: #6c757d;">
+            Need help? Contact us at support@shithaa.in or WhatsApp +91 9876543210
+          </p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+};
+
+/**
+ * Generate HTML for shipping notification email
+ */
+const generateShippingNotificationHTML = (emailData) => {
+  const { orderId, trackingNumber, carrier, estimatedDelivery, items, amount } = emailData;
+  
+  const itemsHTML = items.map(item => 
+    `<tr>
+      <td style="padding: 12px; border-bottom: 1px solid #eee;">${item.name}</td>
+      <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: center;">${item.size}</td>
+      <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
+    </tr>`
+  ).join('');
+  
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Your Order Has Shipped - ${orderId}</title>
+    </head>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+      
+      <div style="background: #17a2b8; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
+        <h1 style="margin: 0; font-size: 24px;">🚚 Your Order Has Shipped!</h1>
+        <p style="margin: 10px 0 0 0; opacity: 0.9;">Order #${orderId}</p>
+      </div>
+      
+      <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 8px 8px;">
+        <p style="font-size: 16px; margin-bottom: 20px;">Great news! Your order is on its way to you.</p>
+        
+        <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="margin-top: 0; color: #17a2b8;">📦 Shipping Details</h3>
+          <p><strong>Tracking Number:</strong> ${trackingNumber}</p>
+          <p><strong>Carrier:</strong> ${carrier || 'Standard Shipping'}</p>
+          ${estimatedDelivery ? `<p><strong>Estimated Delivery:</strong> ${estimatedDelivery}</p>` : ''}
+        </div>
+        
+        <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="margin-top: 0; color: #17a2b8;">Order Items</h3>
+          
+          <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
+            <thead>
+              <tr style="background: #f8f9fa;">
+                <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6;">Item</th>
+                <th style="padding: 12px; text-align: center; border-bottom: 2px solid #dee2e6;">Size</th>
+                <th style="padding: 12px; text-align: center; border-bottom: 2px solid #dee2e6;">Qty</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsHTML}
+            </tbody>
+          </table>
+        </div>
+        
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="https://shithaa.in/track/${trackingNumber}" 
+             style="background: #17a2b8; color: white; padding: 15px 30px; text-decoration: none; border-radius: 6px; font-size: 18px; font-weight: bold; display: inline-block;">
+            Track Your Package
+          </a>
+        </div>
+        
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #dee2e6;">
+          <p style="font-size: 14px; color: #6c757d;">
+            Questions about your shipment? Contact us at support@shithaa.in
+          </p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
 };
 
 /**
