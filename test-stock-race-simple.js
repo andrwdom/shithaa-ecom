@@ -54,7 +54,8 @@ function makeCheckoutRequest(requestId) {
         'Content-Type': 'application/json',
         'Content-Length': Buffer.byteLength(postData),
         'x-request-id': correlationId
-      }
+      },
+      timeout: 5000
     };
 
     const req = http.request(options, (res) => {
