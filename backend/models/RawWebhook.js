@@ -11,7 +11,7 @@ const RawWebhookSchema = new mongoose.Schema({
   processing: { type: Boolean, default: false, index: true },
   
   // New bulletproof webhook fields
-  idempotencyKey: { type: String, sparse: true, index: true },
+  idempotencyKey: { type: String, sparse: true },
   correlationId: String,
   orderId: String,
   priority: { type: String, enum: ['low', 'normal', 'high', 'critical'], default: 'normal' },
