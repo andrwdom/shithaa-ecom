@@ -6,6 +6,7 @@ import productModel from '../models/productModel.js';
 import orderModel from '../models/orderModel.js';
 import { successResponse, errorResponse } from '../utils/response.js';
 import { checkStockAvailability, reserveStock, releaseStockReservation } from '../utils/stock.js';
+import { reserveBatchStockAtomic } from '../utils/batchStockOperations.js';
 import mongoose from 'mongoose';
 
 /**
@@ -283,20 +284,18 @@ export const createCheckoutSession = async (req, res) => {
         await checkoutSession.save({ session: mongoSession });
         console.log(`[${correlationId}] Session created: ${sessionId}`);
         
-        // 🔑 CRITICAL: Reserve stock IMMEDIATELY
-        console.log(`[${correlationId}] Reserving stock for ${validatedItems.length} items...`);
-        for (const item of validatedItems) {
-          const reserved = await reserveStock(
-            item.productId, 
-            item.size, 
-            item.quantity, 
-            { session: mongoSession }
-          );
-          
-          if (!reserved) {
-            throw new Error(`Stock reservation failed for ${item.name} (${item.size})`);
-          }
+        // 🔑 CRITICAL: Reserve stock ATOMICALLY for all items
+        console.log(`[${correlationId}] Reserving stock for ${validatedItems.length} items atomically...`);
+        const batchReservationResult = await reserveBatchStockAtomic(
+          validatedItems,
+          { session: mongoSession, correlationId }
+        );
+        
+        if (!batchReservationResult.success) {
+          throw new Error(`Batch stock reservation failed for ${validatedItems.length} items`);
         }
+        
+        console.log(`[${correlationId}] ✅ Batch reservation successful for ${batchReservationResult.reservedItems.length} items`);
         
         // Mark session as having reserved stock
         checkoutSession.stockReserved = true;
