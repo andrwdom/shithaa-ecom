@@ -1,4 +1,7 @@
-import { useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
+
+// Multi-tab synchronization for checkout sessions
+const checkoutChannel = typeof window !== 'undefined' ? new BroadcastChannel('checkout-sync') : null;
 
 export interface CheckoutItem {
   productId: string;
@@ -68,6 +71,11 @@ export const useCheckoutSession = () => {
   const [error, setError] = useState<string | null>(null);
   const [currentSession, setCurrentSession] = useState<CheckoutSession | null>(null);
 
+  // Generate unique session ID for this tab
+  const getUniqueSessionId = useCallback(() => {
+    return `checkout_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }, []);
+
   const createCheckoutSession = useCallback(async (
     request: CreateCheckoutSessionRequest,
     token: string,
@@ -112,6 +120,19 @@ export const useCheckoutSession = () => {
         };
         
         setCurrentSession(session);
+        
+        // Broadcast checkout session creation to other tabs
+        if (checkoutChannel) {
+          checkoutChannel.postMessage({
+            type: 'checkout-started',
+            sessionId: data.data.sessionId,
+            source: data.data.source,
+            tabId: getUniqueSessionId(),
+            timestamp: Date.now()
+          });
+          console.log('[CheckoutSession] 📡 Broadcasted checkout session creation to other tabs');
+        }
+        
         return data;
       } else {
         throw new Error(data.message || 'Invalid response from server');
@@ -301,6 +322,22 @@ export const useCheckoutSession = () => {
     setCurrentSession(null);
     setError(null);
   }, []);
+
+  // Listen for checkout events from other tabs
+  React.useEffect(() => {
+    if (checkoutChannel) {
+      const handleCheckoutMessage = (event: MessageEvent) => {
+        if (event.data.type === 'checkout-started' && event.data.tabId !== getUniqueSessionId()) {
+          console.log('[CheckoutSession] 🔄 Received checkout event from other tab:', event.data);
+          // Optionally show a notification or update UI
+          // For now, just log the event
+        }
+      };
+      
+      checkoutChannel.addEventListener('message', handleCheckoutMessage);
+      return () => checkoutChannel.removeEventListener('message', handleCheckoutMessage);
+    }
+  }, [getUniqueSessionId]);
 
   return {
     isLoading,

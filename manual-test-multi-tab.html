@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Tab Cart Sync Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        button { padding: 10px 15px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .log { background: #f8f9fa; padding: 10px; border-radius: 3px; font-family: monospace; white-space: pre-wrap; max-height: 200px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Multi-Tab Cart Synchronization Test</h1>
+    
+    <div class="test-section">
+        <h3>Test Instructions:</h3>
+        <ol>
+            <li>Open this page in <strong>two separate browser tabs</strong></li>
+            <li>Click "Add Test Item" in Tab 1</li>
+            <li>Check if Tab 2 automatically receives the cart update</li>
+            <li>Click "Start Checkout" in Tab 1</li>
+            <li>Check if Tab 2 receives the checkout notification</li>
+        </ol>
+    </div>
+
+    <div class="test-section">
+        <h3>Test Controls:</h3>
+        <button onclick="addTestItem()">Add Test Item</button>
+        <button onclick="startCheckout()">Start Checkout</button>
+        <button onclick="clearCart()">Clear Cart</button>
+        <button onclick="clearLog()">Clear Log</button>
+    </div>
+
+    <div class="test-section">
+        <h3>Cart Items:</h3>
+        <div id="cartItems">No items in cart</div>
+    </div>
+
+    <div class="test-section">
+        <h3>Checkout Status:</h3>
+        <div id="checkoutStatus">No checkout session</div>
+    </div>
+
+    <div class="test-section">
+        <h3>Event Log:</h3>
+        <div id="eventLog" class="log">Waiting for events...\n</div>
+    </div>
+
+    <script>
+        // Mock BroadcastChannel implementation
+        class MockBroadcastChannel {
+            constructor(name) {
+                this.name = name;
+                this.listeners = [];
+                this.log(`Created channel: ${name}`);
+            }
+
+            addEventListener(type, listener) {
+                this.listeners.push({ type, listener });
+                this.log(`Added listener for ${type} on ${this.name}`);
+            }
+
+            removeEventListener(type, listener) {
+                this.listeners = this.listeners.filter(l => l.listener !== listener);
+            }
+
+            postMessage(data) {
+                this.log(`📡 Broadcasting on ${this.name}:`, data);
+                this.listeners.forEach(({ listener }) => {
+                    setTimeout(() => listener({ data }), 0);
+                });
+            }
+
+            close() {
+                this.listeners = [];
+            }
+        }
+
+        // Initialize channels
+        const cartChannel = new MockBroadcastChannel('cart-sync');
+        const checkoutChannel = new MockBroadcastChannel('checkout-sync');
+        
+        // State
+        let cartItems = [];
+        let checkoutSession = null;
+        let tabId = `tab_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+        // Logging function
+        function log(message, data = null) {
+            const logElement = document.getElementById('eventLog');
+            const timestamp = new Date().toLocaleTimeString();
+            const logMessage = `[${timestamp}] ${message}${data ? '\n' + JSON.stringify(data, null, 2) : ''}\n`;
+            logElement.textContent += logMessage;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+
+        // Update UI
+        function updateCartDisplay() {
+            const cartElement = document.getElementById('cartItems');
+            if (cartItems.length === 0) {
+                cartElement.textContent = 'No items in cart';
+            } else {
+                cartElement.innerHTML = cartItems.map(item => 
+                    `<div>${item.name} - $${item.price} x${item.quantity} (${item.size})</div>`
+                ).join('');
+            }
+        }
+
+        function updateCheckoutDisplay() {
+            const checkoutElement = document.getElementById('checkoutStatus');
+            if (!checkoutSession) {
+                checkoutElement.textContent = 'No checkout session';
+            } else {
+                checkoutElement.innerHTML = `
+                    <div><strong>Session ID:</strong> ${checkoutSession.sessionId}</div>
+                    <div><strong>Source:</strong> ${checkoutSession.source}</div>
+                    <div><strong>Items:</strong> ${checkoutSession.items.length}</div>
+                `;
+            }
+        }
+
+        // Cart event listeners
+        cartChannel.addEventListener('message', (event) => {
+            if (event.data.type === 'cart-updated' && event.data.sessionId !== tabId) {
+                log('🔄 Received cart update from other tab', event.data);
+                cartItems = event.data.items;
+                updateCartDisplay();
+            }
+        });
+
+        // Checkout event listeners
+        checkoutChannel.addEventListener('message', (event) => {
+            if (event.data.type === 'checkout-started' && event.data.tabId !== tabId) {
+                log('🛒 Received checkout event from other tab', event.data);
+                checkoutSession = {
+                    sessionId: event.data.sessionId,
+                    source: event.data.source,
+                    items: cartItems
+                };
+                updateCheckoutDisplay();
+            }
+        });
+
+        // Test functions
+        function addTestItem() {
+            const newItem = {
+                id: Date.now().toString(),
+                _id: '507f1f77bcf86cd799439011',
+                name: `Test Product ${cartItems.length + 1}`,
+                price: Math.floor(Math.random() * 100) + 10,
+                quantity: 1,
+                size: ['S', 'M', 'L'][Math.floor(Math.random() * 3)]
+            };
+            
+            cartItems.push(newItem);
+            updateCartDisplay();
+            
+            // Broadcast to other tabs
+            cartChannel.postMessage({
+                type: 'cart-updated',
+                items: cartItems,
+                sessionId: tabId,
+                timestamp: Date.now()
+            });
+            
+            log('✅ Added item to cart and broadcasted to other tabs', newItem);
+        }
+
+        function startCheckout() {
+            if (cartItems.length === 0) {
+                alert('Please add items to cart first');
+                return;
+            }
+
+            const sessionId = `checkout_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            checkoutSession = {
+                sessionId: sessionId,
+                source: 'cart',
+                items: cartItems
+            };
+            updateCheckoutDisplay();
+
+            // Broadcast to other tabs
+            checkoutChannel.postMessage({
+                type: 'checkout-started',
+                sessionId: sessionId,
+                source: 'cart',
+                tabId: tabId,
+                timestamp: Date.now()
+            });
+
+            log('🚀 Started checkout and broadcasted to other tabs', checkoutSession);
+        }
+
+        function clearCart() {
+            cartItems = [];
+            checkoutSession = null;
+            updateCartDisplay();
+            updateCheckoutDisplay();
+            
+            // Broadcast to other tabs
+            cartChannel.postMessage({
+                type: 'cart-updated',
+                items: cartItems,
+                sessionId: tabId,
+                timestamp: Date.now()
+            });
+            
+            log('🗑️ Cleared cart and broadcasted to other tabs');
+        }
+
+        function clearLog() {
+            document.getElementById('eventLog').textContent = 'Log cleared...\n';
+        }
+
+        // Initialize
+        log(`🚀 Test page loaded. Tab ID: ${tabId}`);
+        log('📋 Open this page in another tab to test synchronization');
+        updateCartDisplay();
+        updateCheckoutDisplay();
+    </script>
+</body>
+</html>

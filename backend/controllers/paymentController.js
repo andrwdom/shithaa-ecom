@@ -1092,49 +1092,18 @@ export const verifyPhonePePayment = async (req, res) => {
                 { session }
               );
               
-              // 🚨 EMERGENCY FALLBACK: If confirmation failed (reserved = 0 due to race condition),
-              // try direct stock deduction since payment was already successful
+              // 🚨 CRITICAL FIX: With atomic operations, emergency fallback is no longer needed
+              // If stock confirmation fails, it means there's a real stock issue that needs investigation
               if (!stockConfirmed) {
-                // 🚨 CRITICAL MITIGATION: Check feature flag before emergency deduction
-                if (process.env.ENABLE_EMERGENCY_DEDUCTION !== 'true') {
-                  EnhancedLogger.webhookLog('ERROR', 'Stock confirmation failed and emergency deduction is DISABLED', {
-                    correlationId,
-                    productId,
-                    size: item.size,
-                    quantity: item.quantity,
-                    orderId: order._id,
-                    reason: 'Emergency deduction disabled via feature flag'
-                  });
-                  throw new Error(`Stock confirmation failed and emergency deduction is disabled for ${item.name} (${item.size})`);
-                }
-
-                EnhancedLogger.webhookLog('WARN', 'Stock confirmation failed, attempting emergency deduction', {
+                EnhancedLogger.webhookLog('ERROR', 'Stock confirmation failed - no emergency fallback available', {
                   correlationId,
                   productId,
                   size: item.size,
                   quantity: item.quantity,
-                  orderId: order._id
+                  orderId: order._id,
+                  reason: 'Emergency deduction removed for safety - investigate stock issue'
                 });
-                
-                const { emergencyStockDeduction } = await import('../utils/stock.js');
-                stockConfirmed = await emergencyStockDeduction(
-                  productId,
-                  item.size,
-                  item.quantity,
-                  { session }
-                );
-                
-                if (!stockConfirmed) {
-                  throw new Error(`Stock confirmation AND emergency deduction failed for ${item.name} (${item.size})`);
-                }
-                
-                EnhancedLogger.webhookLog('SUCCESS', 'Emergency stock deduction successful', {
-                  correlationId,
-                  productId,
-                  size: item.size,
-                  quantity: item.quantity,
-                  orderId: order._id
-                });
+                throw new Error(`Stock confirmation failed for ${item.name} (${item.size}) - investigate stock availability`);
               }
             }
 

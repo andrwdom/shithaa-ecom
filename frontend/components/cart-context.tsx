@@ -2,6 +2,9 @@
 
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from "react"
 
+// Multi-tab synchronization using BroadcastChannel
+const cartChannel = typeof window !== 'undefined' ? new BroadcastChannel('cart-sync') : null;
+
 export interface CartItem {
   id: string; // for frontend logic
   _id: string; // MongoDB ObjectId as string, for backend
@@ -58,6 +61,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const calculationTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const lastCartHashRef = useRef<string>('')
 
+  // Unique session ID per tab for multi-tab coordination
+  const getUniqueSessionId = useMemo(() => {
+    return `tab_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }, []);
+
   // 🔧 RELIABLE CART PERSISTENCE: Load cart from localStorage on mount
   useEffect(() => {
     if (wasCartIntentionallyCleared) {
@@ -95,12 +103,38 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, [wasCartIntentionallyCleared])
 
+  // Multi-tab synchronization: Listen for cart updates from other tabs
+  useEffect(() => {
+    if (cartChannel) {
+      const handleMessage = (event: MessageEvent) => {
+        if (event.data.type === 'cart-updated' && event.data.sessionId !== getUniqueSessionId) {
+          console.log("[CartContext] 🔄 Received cart update from other tab:", event.data.items);
+          setCartItems(event.data.items); // Sync from other tab
+        }
+      };
+      
+      cartChannel.addEventListener('message', handleMessage);
+      return () => cartChannel.removeEventListener('message', handleMessage);
+    }
+  }, [getUniqueSessionId]);
+
   // 🔧 RELIABLE CART PERSISTENCE: Save cart to localStorage whenever it changes
   useEffect(() => {
     if (cartItems.length > 0) {
       const cartData = JSON.stringify(cartItems);
       localStorage.setItem("cartItems", cartData);
       console.log("[CartContext] 💾 Saved cart items to localStorage");
+      
+      // Broadcast to other tabs for multi-tab synchronization
+      if (cartChannel) {
+        cartChannel.postMessage({ 
+          type: 'cart-updated', 
+          items: cartItems, 
+          sessionId: getUniqueSessionId,
+          timestamp: Date.now()
+        });
+        console.log("[CartContext] 📡 Broadcasted cart update to other tabs");
+      }
       
       // Store in checkout flow specific storage with unique key
       const cartCheckoutData = {
@@ -109,7 +143,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           items: cartItems,
           source: 'cart',
           timestamp: Date.now(),
-          sessionId: `cart_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+          sessionId: getUniqueSessionId // Use consistent session ID
         },
         items: cartItems,
         timestamp: Date.now()
@@ -123,7 +157,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         items: cartItems,
         source: 'cart',
         timestamp: Date.now(),
-        sessionId: `cart_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+        sessionId: getUniqueSessionId // Use consistent session ID
       };
       sessionStorage.setItem("cartCheckoutFlow", JSON.stringify(flow));
       sessionStorage.setItem("cartCheckoutItems", JSON.stringify(cartItems));
@@ -342,7 +376,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         checkOutOfStockItems().then(items => {
           setOutOfStockItems(items);
           if (items.length > 0) {
-            console.log('[CartContext] ⚠️ Out of stock items detected:', items.map(item => `${item.name} (${item.size})`));
+            console.log('[CartContext] ⚠️ Out of stock items detected:', items.map((item: CartItem) => `${item.name} (${item.size})`));
           }
         });
       }, 50)
