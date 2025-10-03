@@ -5,12 +5,12 @@
  */
 
 import mongoose from 'mongoose';
-import { commitOrder } from './backend/services/orderCommit.js';
-import orderModel from './backend/models/orderModel.js';
-import productModel from './backend/models/productModel.js';
+import { commitOrder } from './services/orderCommit.js';
+import orderModel from './models/orderModel.js';
+import productModel from './models/productModel.js';
 import dotenv from 'dotenv';
 
-dotenv.config({ path: './backend/.env' });
+dotenv.config({ path: './.env' });
 
 async function quickTest() {
   console.log('🧪 Quick Atomic Stock Commit Test');
