@@ -39,8 +39,8 @@ export async function commitOrder(orderId, paymentInfo, options = {}) {
       }
     });
 
-    // 1. Find and validate order
-    const order = await orderModel.findById(orderId).session(session);
+    // 1. Find and validate order (use mock order if provided for testing)
+    const order = options.mockOrder || await orderModel.findById(orderId).session(session);
     if (!order) {
       throw new Error(`Order not found: ${orderId}`);
     }
