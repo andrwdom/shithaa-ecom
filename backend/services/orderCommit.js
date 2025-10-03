@@ -74,12 +74,25 @@ export async function commitOrder(orderId, paymentInfo, options = {}) {
       throw new Error('Order has no items to process');
     }
 
+    // Debug: Log the raw order data
+    EnhancedLogger.webhookLog('DEBUG', 'Raw order data', {
+      correlationId,
+      orderId,
+      orderStatus: order.status,
+      paymentStatus: order.paymentStatus,
+      cartItems: order.cartItems,
+      items: order.items,
+      cartItemsLength: order.cartItems?.length,
+      itemsLength: order.items?.length
+    });
+
     EnhancedLogger.webhookLog('INFO', 'Processing order items for stock deduction', {
       correlationId,
       orderId,
       itemCount: itemsToProcess.length,
       items: itemsToProcess.map(item => ({
         productId: item.productId || item._id,
+        productIdType: typeof (item.productId || item._id),
         size: item.size,
         quantity: item.quantity,
         name: item.name || item.productName
