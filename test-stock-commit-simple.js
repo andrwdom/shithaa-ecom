@@ -40,7 +40,7 @@ async function quickTest() {
       orderId: `QUICK_TEST_${Date.now()}`,
       status: 'DRAFT',
       paymentStatus: 'PENDING',
-      items: [{
+      cartItems: [{
         productId: product._id,
         size: size.size,
         quantity: 1,

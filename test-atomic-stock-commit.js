@@ -19,10 +19,10 @@ dotenv.config({ path: './.env' });
 const API_BASE_URL = 'http://localhost:4000/api';
 const WEBHOOK_URL = `${API_BASE_URL}/payment/phonepe/webhook`;
 
-// Test configuration
-const TEST_CONFIG = {
-  productId: '6894d2963e40a06c3ab2b75d', // Use a real product ID from your DB
-  size: 'XL',
+// Test configuration - will be set dynamically
+let TEST_CONFIG = {
+  productId: null, // Will be set from database
+  size: null, // Will be set from database
   initialStock: 10,
   testQuantity: 2,
   concurrentUsers: 5
@@ -40,6 +40,20 @@ async function setupTestEnvironment() {
     useUnifiedTopology: true,
   });
   console.log('✅ Connected to MongoDB');
+
+  // Find a product with stock to test with
+  const product = await productModel.findOne({ 'sizes.stock': { $gt: 0 } });
+  if (!product) {
+    throw new Error('No products with stock found for testing');
+  }
+
+  const size = product.sizes.find(s => s.stock > 0);
+  TEST_CONFIG.productId = product._id;
+  TEST_CONFIG.size = size.size;
+  TEST_CONFIG.initialStock = size.stock;
+
+  console.log(`📦 Using product: ${product.name} (${product._id})`);
+  console.log(`📏 Size: ${size.size}, Stock: ${size.stock}`);
 
   // Reset product stock to known state
   await productModel.updateOne(
@@ -68,7 +82,7 @@ async function createTestOrder(orderId, items) {
     orderId: `TEST_${orderId}`,
     status: 'DRAFT',
     paymentStatus: 'PENDING',
-    items: items,
+    cartItems: items,
     userInfo: {
       email: `test${orderId}@example.com`,
       name: `Test User ${orderId}`
