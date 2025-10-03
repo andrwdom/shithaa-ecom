@@ -75,9 +75,8 @@ export async function commitOrder(orderId, paymentInfo, options = {}) {
     }
 
     // Debug: Log the raw order data
-    EnhancedLogger.webhookLog('DEBUG', 'Raw order data', {
-      correlationId,
-      orderId,
+    console.log('🔍 DEBUG: Raw order data:', {
+      orderId: order._id,
       orderStatus: order.status,
       paymentStatus: order.paymentStatus,
       cartItems: order.cartItems,
