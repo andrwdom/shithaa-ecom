@@ -94,17 +94,26 @@ Logger.info('server_starting', {
 app.set('trust proxy', 1)
 
 // SECURITY: Configure CORS for Production
-const allowedOrigins = [
-    'https://shithaa.in',
-    'https://www.shithaa.in',
-    'http://shithaa.in',         // HTTP version for compatibility (temporary)
-    'http://www.shithaa.in',     // HTTP www version (temporary)
-    'https://admin.shithaa.in',  // Admin panel
-    'http://localhost:3000',     // Frontend dev
-    'http://localhost:5173',     // Admin dev
-    'http://localhost:5174',     // Additional dev port
-    'http://localhost:4173'      // Admin production preview
-];
+const allowedOrigins = process.env.NODE_ENV === 'production'
+  ? [
+      'https://shithaa.in',
+      'https://www.shithaa.in',
+      'https://admin.shithaa.in',  // Admin panel
+      // Instagram in-app browser specific origins
+      'https://www.instagram.com',
+      'https://instagram.com',
+      'https://m.instagram.com',
+      'https://www.facebook.com',
+      'https://facebook.com',
+      'https://m.facebook.com'
+    ]
+  : [
+      'http://localhost:3000',     // Frontend dev
+      'http://localhost:5173',     // Admin dev
+      'http://localhost:5174',     // Additional dev port
+      'http://localhost:4173',     // Admin production preview
+      'http://localhost:3001'      // Additional dev port
+    ];
 
 const corsOptions = {
     origin: (origin, callback) => {
@@ -120,11 +129,23 @@ const corsOptions = {
             Logger.debug('cors_allowed', { origin: origin ? 'provided' : 'none' });
             callback(null, true);
         } else {
-            Logger.warn('cors_blocked', { 
-                origin: origin ? 'provided' : 'none',
-                allowedOriginsCount: allowedOrigins.length
-            });
-            callback(new Error('Not allowed by CORS'));
+            // Special handling for Instagram in-app browser
+            // Instagram in-app browser sometimes sends different origin headers
+            if (origin && (
+                origin.includes('instagram.com') || 
+                origin.includes('facebook.com') ||
+                origin.includes('fbcdn.net') ||
+                origin.includes('cdninstagram.com')
+            )) {
+                Logger.debug('cors_allowed_instagram', { origin });
+                callback(null, true);
+            } else {
+                Logger.warn('cors_blocked', { 
+                    origin: origin ? 'provided' : 'none',
+                    allowedOriginsCount: allowedOrigins.length
+                });
+                callback(new Error('Not allowed by CORS'));
+            }
         }
     },
     credentials: true,
@@ -574,19 +595,18 @@ app.get('/api/debug/checkout-flow', (req, res) => {
 });
 
 // SECURITY: CSRF token endpoint for state-changing operations
-app.get('/api/csrf-token', (req, res) => {
+app.get('/api/csrf-token', async (req, res) => {
   try {
     // SECURITY: Generate CSRF token for form protection
     const csrfToken = randomBytes(32).toString('hex');
     
-    // SECURITY: Set CSRF token in HttpOnly cookie
-    res.cookie('csrf-token', csrfToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 1000, // 1 hour
-      path: '/'
-    });
+    // Import Instagram browser utils
+    const { getCookieOptions } = await import('./utils/instagramBrowserUtils.js');
+    
+    // SECURITY: Set CSRF token in HttpOnly cookie with Instagram browser support
+    res.cookie('csrf-token', csrfToken, getCookieOptions(req, {
+      maxAge: 60 * 60 * 1000 // 1 hour
+    }));
     
     res.json({ 
       success: true, 

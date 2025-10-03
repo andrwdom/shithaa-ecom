@@ -5,6 +5,7 @@ import userModel from "../models/userModel.js";
 import { successResponse, errorResponse } from '../utils/response.js'
 import admin from 'firebase-admin';
 import { config } from '../config.js'; // Import the centralized config
+import { getCookieOptions } from '../utils/instagramBrowserUtils.js';
 
 const JWT_SECRET = config.jwt_secret;
 
@@ -101,22 +102,14 @@ export const loginUser = async (req, res) => {
                 type: 'refresh'
             }, '7d');
             
-            // SECURITY: Set HttpOnly cookies for secure token storage
-            res.cookie('token', accessToken, {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: 'lax',
-                maxAge: 24 * 60 * 60 * 1000, // 24 hours
-                path: '/'
-            });
+            // SECURITY: Set HttpOnly cookies for secure token storage with Instagram browser support
+            res.cookie('token', accessToken, getCookieOptions(req, {
+                maxAge: 24 * 60 * 60 * 1000 // 24 hours
+            }));
             
-            res.cookie('refresh_token', refreshToken, {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: 'lax',
-                maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-                path: '/'
-            });
+            res.cookie('refresh_token', refreshToken, getCookieOptions(req, {
+                maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+            }));
             
             // Return user data without token (now stored in HttpOnly cookies)
             const userData = { ...user.toObject() };
@@ -260,15 +253,10 @@ export const adminLogin = async (req, res) => {
             type: 'refresh'
         }, '7d');
 
-        // SECURITY: Set HttpOnly cookies for secure token storage, making it available for all requests from the admin origin.
-        res.cookie('token', accessToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax', // Use 'lax' or 'none' with secure flag if on different domains
-            domain: process.env.NODE_ENV === 'production' ? '.shithaa.in' : undefined, // Allow subdomains
-            maxAge: 24 * 60 * 60 * 1000, // 24 hours
-            path: '/'
-        });
+        // SECURITY: Set HttpOnly cookies for secure token storage with Instagram browser support
+        res.cookie('token', accessToken, getCookieOptions(req, {
+            maxAge: 24 * 60 * 60 * 1000 // 24 hours
+        }));
 
         // For admin panel, we'll also return the token in the body for immediate use
         const userData = { ...adminUser.toObject() };
@@ -382,22 +370,14 @@ export const firebaseLogin = async (req, res) => {
         type: 'refresh' 
     }, '7d');
     
-    // SECURITY: Set HttpOnly cookies for secure token storage
-    res.cookie('token', accessToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 24 * 60 * 60 * 1000, // 24 hours
-        path: '/'
-    });
+    // SECURITY: Set HttpOnly cookies for secure token storage with Instagram browser support
+    res.cookie('token', accessToken, getCookieOptions(req, {
+        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    }));
     
-    res.cookie('refresh_token', refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-        path: '/'
-    });
+    res.cookie('refresh_token', refreshToken, getCookieOptions(req, {
+        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    }));
     
     // Return user data with token for backward compatibility
     res.json({ success: true, data: { user, token: accessToken }, message: 'Login successful' });
@@ -445,14 +425,10 @@ export const refreshToken = async (req, res) => {
             role: user.role
         }, '24h');
 
-        // Set new access token in HttpOnly cookie
-        res.cookie('token', newAccessToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            maxAge: 24 * 60 * 60 * 1000, // 24 hours
-            path: '/'
-        });
+        // Set new access token in HttpOnly cookie with Instagram browser support
+        res.cookie('token', newAccessToken, getCookieOptions(req, {
+            maxAge: 24 * 60 * 60 * 1000 // 24 hours
+        }));
 
         res.json({
             success: true,

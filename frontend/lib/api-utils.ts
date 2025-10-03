@@ -159,12 +159,23 @@ export async function authenticatedFetch(
   try {
     console.log(`🔐 Making authenticated request to: ${url}`);
     
+    // Detect Instagram browser for special handling
+    const isInstagramBrowser = typeof window !== 'undefined' && 
+      (navigator.userAgent.toLowerCase().includes('instagram') || 
+       navigator.userAgent.toLowerCase().includes('fban') ||
+       navigator.userAgent.toLowerCase().includes('fbav'));
+    
     // Make the request with credentials
     const response = await fetch(url, {
       ...options,
       credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
+        // Add Instagram-specific headers if needed
+        ...(isInstagramBrowser && {
+          'X-Requested-With': 'XMLHttpRequest',
+          'Cache-Control': 'no-cache'
+        }),
         ...options.headers,
       },
     });

@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import { config } from '../config.js';
 import redisService from '../services/redisService.js';
 import admin from 'firebase-admin';
+import { getCookieOptions } from '../utils/instagramBrowserUtils.js';
 
 /**
  * Enhanced User Controller with Redis Caching
@@ -496,13 +497,10 @@ export const refreshToken = async (req, res) => {
         const sessionKey = generateSessionKey(user._id);
         await redisService.set(sessionKey, sessionData, config.redis.ttl.sessions);
 
-        // Set HTTP-only cookie
-        res.cookie('token', token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
+        // Set HTTP-only cookie with Instagram browser support
+        res.cookie('token', token, getCookieOptions(req, {
             maxAge: 24 * 60 * 60 * 1000 // 24 hours
-        });
+        }));
 
         res.json({
             success: true,
