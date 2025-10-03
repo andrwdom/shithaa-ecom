@@ -90,13 +90,14 @@ export async function commitOrder(orderId, paymentInfo, options = {}) {
     if (!order.cartItems || order.cartItems.length === 0) {
       if (order.items && order.items.length > 0) {
         // Convert items array to cartItems format for processing
-        itemsToProcess = order.items.map(item => ({
+        const convertedItems = order.items.map(item => ({
           productId: item.productId || item._id, // Use _id as fallback
           name: item.name,
           price: item.price,
           quantity: item.quantity,
           size: item.size
         }));
+        itemsToProcess = convertedItems;
         EnhancedLogger.webhookLog('WARN', 'Using items array instead of cartItems', {
           correlationId,
           orderId,
