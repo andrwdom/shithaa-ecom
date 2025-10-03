@@ -11,7 +11,7 @@ const RawWebhookSchema = new mongoose.Schema({
   processing: { type: Boolean, default: false, index: true },
   
   // New bulletproof webhook fields
-  idempotencyKey: { type: String, sparse: true },
+  idempotencyKey: { type: String, sparse: true, index: true },
   correlationId: String,
   orderId: String,
   priority: { type: String, enum: ['low', 'normal', 'high', 'critical'], default: 'normal' },
@@ -31,7 +31,6 @@ RawWebhookSchema.index({ receivedAt: 1 }, { expireAfterSeconds: 172800 });
 
 // Compound indexes for efficient querying
 RawWebhookSchema.index({ processed: 1, processing: 1, receivedAt: 1 });
-RawWebhookSchema.index({ idempotencyKey: 1 });
 RawWebhookSchema.index({ orderId: 1 });
 RawWebhookSchema.index({ correlationId: 1 });
 RawWebhookSchema.index({ priority: 1, receivedAt: 1 });

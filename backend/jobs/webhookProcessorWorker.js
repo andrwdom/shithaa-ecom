@@ -90,10 +90,26 @@ async function processOne(raw) {
   try {
     console.log(`🔄 Processing webhook: ${raw._id}`);
     
-    if (raw.source === 'phonepe') {
+    // Auto-detect webhook source if not set
+    let source = raw.source;
+    if (!source) {
+      try {
+        const event = JSON.parse(raw.raw);
+        if (event?.transactionId || event?.data?.transactionId || event?.data?.merchantTransactionId) {
+          source = 'phonepe';
+          raw.source = 'phonepe';
+          await raw.save();
+          console.log(`🔍 Auto-detected webhook source: ${source}`);
+        }
+      } catch (parseError) {
+        console.log(`⚠️ Could not parse webhook data for source detection: ${parseError.message}`);
+      }
+    }
+    
+    if (source === 'phonepe') {
       return await processPhonePeWebhook(raw);
     } else {
-      console.log(`⚠️ Unknown webhook source: ${raw.source}`);
+      console.log(`⚠️ Unknown webhook source: ${source || 'undefined'}`);
       raw.processed = true;
       raw.error = 'unknown_source';
       await raw.save();
