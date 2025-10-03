@@ -296,7 +296,7 @@ export const createCheckoutSession = async (req, res) => {
           throw new Error(`Batch stock reservation failed for ${validatedItems.length} items`);
         }
         
-        console.log(`[${correlationId}] ✅ Batch reservation successful for ${batchReservationResult.reservedItems.length} items`);
+        console.log(`[${correlationId}] ✅ Batch reservation successful for ${batchReservationResult.results.length} items`);
         
         // Mark session as having reserved stock
         checkoutSession.stockReserved = true;
