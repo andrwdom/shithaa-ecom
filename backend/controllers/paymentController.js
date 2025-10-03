@@ -775,6 +775,8 @@ export const phonePeCallback = async (req, res) => {
             }
 
             console.log(`[${correlationId}] Confirming stock for:`, item.name, 'Product:', productId, 'Size:', item.size, 'Qty:', item.quantity);
+            // 🚨 CRITICAL MITIGATION: Add structured logging for stock operations
+            console.log(`STOCK:PAYMENT:CONFIRM:START: productId=${productId}, size=${item.size}, quantity=${item.quantity}, correlationId=${correlationId}, timestamp=${new Date().toISOString()}`);
             
             const stockConfirmed = await confirmStockReservation(
               productId, 
@@ -1092,6 +1094,12 @@ export const verifyPhonePePayment = async (req, res) => {
               // 🚨 EMERGENCY FALLBACK: If confirmation failed (reserved = 0 due to race condition),
               // try direct stock deduction since payment was already successful
               if (!stockConfirmed) {
+                // 🚨 CRITICAL MITIGATION: Check feature flag before emergency deduction
+                if (process.env.ENABLE_EMERGENCY_DEDUCTION !== 'true') {
+                  console.log(`🚨 EMERGENCY DEDUCTION DISABLED: Stock confirmation failed but emergency deduction is disabled via feature flag`);
+                  throw new Error(`Stock confirmation failed and emergency deduction is disabled for ${item.name} (${item.size})`);
+                }
+
                 console.log(`⚠️ Stock confirmation failed for ${item.name} (${item.size}), attempting emergency deduction...`);
                 const { emergencyStockDeduction } = await import('../utils/stock.js');
                 stockConfirmed = await emergencyStockDeduction(
@@ -1106,6 +1114,8 @@ export const verifyPhonePePayment = async (req, res) => {
                 }
                 
                 console.log(`✅ EMERGENCY: Successfully recovered from stock confirmation failure using direct deduction`);
+                // 🚨 CRITICAL MITIGATION: Add structured logging for stock operations
+                console.log(`STOCK:PAYMENT:EMERGENCY:SUCCESS: productId=${productId}, size=${item.size}, quantity=${item.quantity}, correlationId=${correlationId}, timestamp=${new Date().toISOString()}`);
               }
             }
 

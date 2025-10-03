@@ -3,6 +3,13 @@ import productModel from '../models/productModel.js';
 import Reservation from '../models/Reservation.js';
 import CheckoutSession from '../models/CheckoutSession.js';
 import { trackStockReservation } from './monitoring.js';
+import { 
+  reserveStockAtomic, 
+  confirmStockReservationAtomic, 
+  releaseStockReservationAtomic,
+  deductStockAtomic,
+  restoreStockAtomic
+} from './atomicStockOperations.js';
 
 /**
  * Check stock availability considering reservations
@@ -123,94 +130,8 @@ export async function checkStockAvailability(productId, size, quantity, excludeS
  * @returns {Promise<Object>} - Result of the reservation
  */
 export async function reserveStock(productId, size, quantity, options = {}) {
-    if (quantity <= 0) {
-        throw new Error('Quantity must be positive for reservation');
-    }
-    
-    const { session } = options;
-    
-    try {
-        // 🔑 CRITICAL FIX: Atomic reservation with availability check in the same query
-        // This prevents race conditions by checking availability AND reserving in one operation    
-        const result = await productModel.updateOne(
-            {
-                _id: productId,
-                'sizes.size': size,
-                // 🔑 CRITICAL: Check that available stock (stock - reserved) >= quantity
-                $expr: {
-                    $gte: [
-                        {
-                            $let: {
-                                vars: {
-                                    sizeObj: {
-                                        $arrayElemAt: [
-                                            {
-                                                $filter: {
-                                                    input: '$sizes',
-                                                    cond: { $eq: ['$$this.size', size] }
-                                                }
-                                            },
-                                            0
-                                        ]
-                                    }
-                                },
-                                in: {
-                                    $subtract: [
-                                        '$$sizeObj.stock',
-                                        { $ifNull: ['$$sizeObj.reserved', 0] }
-                                    ]
-                                }
-                            }
-                        },
-                        quantity
-                    ]
-                }
-            },
-            {
-                $inc: { 'sizes.$[elem].reserved': quantity }
-            },
-            { 
-                session,
-                arrayFilters: [
-                    { 'elem.size': size }
-                ]
-            }
-        );
-        
-        if (result.modifiedCount === 0) {
-            // Get current stock info for better error message
-            const product = await productModel.findById(productId);
-            const sizeObj = product?.sizes?.find(s => s.size === size);
-            const availableStock = sizeObj ? Math.max(0, sizeObj.stock - (sizeObj.reserved || 0)) : 0;
-            
-            console.error(`❌ Stock reservation failed for product ${productId} size ${size}:`, {
-                requestedQuantity: quantity,
-                availableStock: availableStock,
-                currentStock: sizeObj?.stock || 0,
-                currentReserved: sizeObj?.reserved || 0,
-                modifiedCount: result.modifiedCount
-            });
-            
-            throw new Error(`Stock reservation failed: Insufficient available stock. Available: ${availableStock}, Requested: ${quantity}`);
-        }
-        
-        console.log(`✅ Stock reserved successfully: ${quantity} units for product ${productId} size ${size} (modifiedCount: ${result.modifiedCount})`);
-        
-        // Track successful stock reservation
-        trackStockReservation(true);
-        
-        return {
-            success: true,
-            productId,
-            size,
-            quantity,
-            reserved: quantity,
-            modifiedCount: result.modifiedCount
-        };
-    } catch (error) {
-        console.error('❌ Stock reservation failed:', error);
-        throw error;
-    }
+    // 🚨 CRITICAL FIX: Use atomic operation to prevent race conditions
+    return await reserveStockAtomic(productId, size, quantity, options);
 }
 
 /**
@@ -222,71 +143,8 @@ export async function reserveStock(productId, size, quantity, options = {}) {
  * @returns {Promise<boolean>} - Result of the confirmation
  */
 export async function confirmStockReservation(productId, size, quantity, options = {}) {
-    if (quantity <= 0) {
-        throw new Error('Quantity must be positive for confirmation');
-    }
-    
-    const { session } = options;
-    
-    try {
-        // 🔍 DEBUG: First check if product and size exist
-        const product = await productModel.findById(productId).session(session);
-        if (!product) {
-            console.error(`Stock confirmation failed - Product not found: ${productId}`);
-            return false;
-        }
-        
-        const sizeData = product.sizes.find(s => s.size === size);
-        if (!sizeData) {
-            console.error(`Stock confirmation failed - Size '${size}' not found in product ${productId}. Available sizes:`, product.sizes.map(s => s.size));
-            return false;
-        }
-        
-        console.log(`🔍 Stock confirmation debug for product ${product.name} (${productId}) size ${size}:`, {
-            currentStock: sizeData.stock,
-            currentReserved: sizeData.reserved,
-            requiredQuantity: quantity,
-            stockSufficient: sizeData.stock >= quantity,
-            reservedSufficient: sizeData.reserved >= quantity
-        });
-        
-        // 🔑 CRITICAL: Use atomic update with both stock and reserved validation
-        const result = await productModel.updateOne(
-            {
-                _id: productId,
-                'sizes.size': size,
-                'sizes.stock': { $gte: quantity },
-                'sizes.reserved': { $gte: quantity }
-            },
-            {
-                $inc: { 
-                    'sizes.$[elem].stock': -quantity,
-                    'sizes.$[elem].reserved': -quantity
-                }
-            },
-            { 
-                session,
-                arrayFilters: [
-                    { 'elem.size': size, 'elem.stock': { $gte: quantity }, 'elem.reserved': { $gte: quantity } }
-                ]
-            }
-        );
-        
-        // 🔑 CRITICAL: Return boolean success indicator for idempotency
-        const success = !!(result && (result.modifiedCount > 0 || result.nModified > 0));
-        
-        if (success) {
-            console.log(`✅ Stock reservation confirmed atomically: ${quantity} units for product ${productId} size ${size}`);
-        } else {
-            console.warn(`❌ Stock confirmation failed - no matching document: product ${productId} size ${size}`);
-            console.warn(`   This usually means stock (${sizeData.stock}) or reserved (${sizeData.reserved}) is insufficient for quantity ${quantity}`);
-        }
-        
-        return success;
-    } catch (error) {
-        console.error('❌ Stock confirmation failed:', error);
-        return false; // 🔑 CRITICAL: Return false instead of throwing for idempotency
-    }
+    // 🚨 CRITICAL FIX: Use atomic operation to prevent race conditions
+    return await confirmStockReservationAtomic(productId, size, quantity, options);
 }
 
 /**
@@ -299,6 +157,13 @@ export async function confirmStockReservation(productId, size, quantity, options
  * @returns {Promise<boolean>} - Result of the deduction
  */
 export async function emergencyStockDeduction(productId, size, quantity, options = {}) {
+    // 🚨 CRITICAL MITIGATION: Disable emergency deduction in production
+    if (process.env.ENABLE_EMERGENCY_DEDUCTION !== 'true') {
+        console.log(`🚨 EMERGENCY DEDUCTION DISABLED: Feature flag ENABLE_EMERGENCY_DEDUCTION is not set to 'true'`);
+        console.log(`🚨 This prevents bypassing reservation system and double deduction risks`);
+        return false;
+    }
+    
     if (quantity <= 0) {
         throw new Error('Quantity must be positive for deduction');
     }
@@ -347,8 +212,12 @@ export async function emergencyStockDeduction(productId, size, quantity, options
         
         if (success) {
             console.log(`✅ EMERGENCY: Stock deducted successfully: ${quantity} units for product ${productId} size ${size}`);
+            // 🚨 CRITICAL MITIGATION: Add structured logging for stock operations
+            console.log(`STOCK:EMERGENCY:SUCCESS: productId=${productId}, size=${size}, quantity=${quantity}, timestamp=${new Date().toISOString()}`);
         } else {
             console.error(`❌ EMERGENCY: Stock deduction failed - insufficient stock for product ${productId} size ${size}`);
+            // 🚨 CRITICAL MITIGATION: Add structured logging for stock operations
+            console.log(`STOCK:EMERGENCY:FAILED: productId=${productId}, size=${size}, quantity=${quantity}, timestamp=${new Date().toISOString()}`);
         }
         
         return success;
@@ -367,45 +236,8 @@ export async function emergencyStockDeduction(productId, size, quantity, options
  * @returns {Promise<Object>} - Result of the release
  */
 export async function releaseStockReservation(productId, size, quantity, options = {}) {
-    if (quantity <= 0) {
-        throw new Error('Quantity must be positive for release');
-    }
-    
-    const { session } = options;
-    
-    try {
-        // 🔑 CRITICAL: Decrement only the reserved field atomically
-        const result = await productModel.updateOne(
-            {
-                _id: productId,
-                'sizes.size': size,
-                'sizes.reserved': { $gte: quantity }
-            },
-            {
-                $inc: { 'sizes.$[elem].reserved': -quantity }
-            },
-            { 
-                session,
-                arrayFilters: [
-                    { 'elem.size': size, 'elem.reserved': { $gte: quantity } }
-                ]
-            }
-        );
-        
-        // 🔑 CRITICAL: Return boolean success indicator for idempotency
-        const success = !!(result && (result.modifiedCount > 0 || result.nModified > 0));
-        
-        if (success) {
-            console.log(`Stock reservation released: ${quantity} units for product ${productId} size ${size}`);
-        } else {
-            console.warn(`Stock release failed - no matching document: product ${productId} size ${size}`);
-        }
-        
-        return success;
-    } catch (error) {
-        console.error('Stock release failed:', error);
-        return false; // 🔑 CRITICAL: Return false instead of throwing for idempotency
-    }
+    // 🚨 CRITICAL FIX: Use atomic operation to prevent race conditions
+    return await releaseStockReservationAtomic(productId, size, quantity, options);
 }
 
 /**
@@ -658,7 +490,7 @@ export async function cleanupExpiredReservations() {
         console.log('🧹 Starting expired reservation cleanup...');
         
         const now = new Date();
-        const timeoutMinutes = 30; // Reservations older than 30 minutes are considered expired
+        const timeoutMinutes = 5; // 🚨 CRITICAL MITIGATION: Reduced from 30 to 5 minutes for faster cleanup
         const timeoutDate = new Date(now.getTime() - (timeoutMinutes * 60 * 1000));
         
         // Find expired reservations
@@ -808,7 +640,7 @@ export async function getStockHealthReport() {
         
         // Check for expired reservations
         const now = new Date();
-        const timeoutDate = new Date(now.getTime() - (30 * 60 * 1000)); // 30 minutes ago
+        const timeoutDate = new Date(now.getTime() - (5 * 60 * 1000)); // 🚨 CRITICAL MITIGATION: Reduced from 30 to 5 minutes ago
         const expiredReservations = await Reservation.countDocuments({
             status: 'active',
             createdAt: { $lt: timeoutDate }

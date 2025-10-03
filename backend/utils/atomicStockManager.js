@@ -12,6 +12,10 @@ import mongoose from 'mongoose';
 import productModel from '../models/productModel.js';
 import { stockOperationBreaker } from './circuitBreaker.js';
 import { StockError, SystemError, ValidationError, globalErrorHandler } from './errorHandler.js';
+import { 
+  deductStockAtomic, 
+  restoreStockAtomic 
+} from './atomicStockOperations.js';
 
 /**
  * Atomic Stock Manager - Handles all stock operations with circuit breaker protection
@@ -167,20 +171,10 @@ export class AtomicStockManager {
               });
             }
 
-            // ATOMIC: Check stock availability AND deduct in one operation
-            const result = await productModel.updateOne(
-              {
-                _id: productId,
-                'sizes.size': size,
-                'sizes.stock': { $gte: quantity }
-              },
-              {
-                $inc: { 'sizes.$.stock': -quantity }
-              },
-              { session }
-            );
+            // 🚨 CRITICAL FIX: Use atomic stock deduction to prevent race conditions
+            const success = await deductStockAtomic(productId, size, quantity, { session, correlationId });
 
-            if (result.modifiedCount === 0) {
+            if (!success) {
               // Get current stock for better error message
               const product = await productModel.findById(productId).session(session);
               const sizeObj = product?.sizes?.find(s => s.size === size);
@@ -204,6 +198,8 @@ export class AtomicStockManager {
             });
 
             console.log(`✅ [${correlationId}] Stock deducted atomically: ${quantity} units for product ${productId} size ${size}`);
+            // 🚨 CRITICAL MITIGATION: Add structured logging for stock operations
+            console.log(`STOCK:DEDUCT:SUCCESS: productId=${productId}, size=${size}, quantity=${quantity}, correlationId=${correlationId}, timestamp=${new Date().toISOString()}`);
 
           } catch (error) {
             failures.push({
@@ -276,19 +272,10 @@ export class AtomicStockManager {
               continue;
             }
 
-            // ATOMIC: Add stock back
-            const result = await productModel.updateOne(
-              {
-                _id: productId,
-                'sizes.size': size
-              },
-              {
-                $inc: { 'sizes.$.stock': quantity }
-              },
-              { session }
-            );
+            // 🚨 CRITICAL FIX: Use atomic stock restoration to prevent race conditions
+            const success = await restoreStockAtomic(productId, size, quantity, { session, correlationId });
 
-            if (result.modifiedCount > 0) {
+            if (success) {
               restorationResults.push({
                 productId,
                 size,

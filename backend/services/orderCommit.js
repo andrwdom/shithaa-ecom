@@ -14,6 +14,7 @@ import mongoose from 'mongoose';
 import productModel from '../models/productModel.js';
 import orderModel from '../models/orderModel.js';
 import { confirmStockReservation, emergencyStockDeduction } from '../utils/stock.js';
+import { deductStockAtomic } from '../utils/atomicStockOperations.js';
 import EnhancedLogger from '../utils/enhancedLogger.js';
 
 /**
@@ -149,16 +150,29 @@ export async function commitOrder(orderId, paymentInfo, options = {}) {
       }
 
       try {
-        // ATOMIC: Try stock confirmation first (preferred method)
-        let stockDeducted = await confirmStockReservation(
+        // 🚨 CRITICAL FIX: Use atomic stock deduction directly (no reservation system)
+        let stockDeducted = await deductStockAtomic(
           productId,
           size,
           quantity,
-          { session }
+          { session, correlationId }
         );
 
         // EMERGENCY FALLBACK: If confirmation failed, try direct deduction
         if (!stockDeducted) {
+          // 🚨 CRITICAL MITIGATION: Check feature flag before emergency deduction
+          if (process.env.ENABLE_EMERGENCY_DEDUCTION !== 'true') {
+            EnhancedLogger.webhookLog('ERROR', 'Stock confirmation failed and emergency deduction is DISABLED', {
+              correlationId,
+              orderId,
+              productId,
+              size,
+              quantity,
+              reason: 'Emergency deduction disabled via feature flag'
+            });
+            throw new Error(`Stock confirmation failed and emergency deduction is disabled for product ${productId}`);
+          }
+
           EnhancedLogger.webhookLog('WARN', 'Stock confirmation failed, attempting emergency deduction', {
             correlationId,
             orderId,

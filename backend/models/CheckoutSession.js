@@ -101,7 +101,7 @@ const checkoutSessionSchema = new mongoose.Schema({
     required: true,
     // 🔧 CRITICAL FIX: This is when we'll force-release stock if no response
     default: function() {
-      return new Date(Date.now() + 15 * 60 * 1000); // 15 minutes total timeout
+      return new Date(Date.now() + 5 * 60 * 1000); // 🚨 CRITICAL MITIGATION: Reduced from 15 to 5 minutes total timeout
     }
   },
   createdAt: { 

@@ -271,7 +271,7 @@ export const createCheckoutSession = async (req, res) => {
       currency: 'INR',
       status: 'pending',
           stockReserved: false, // Will be set to true after reservation
-          expiresAt: new Date(Date.now() + 15 * 60 * 1000), // 15 minutes
+          expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 🚨 CRITICAL MITIGATION: Reduced from 15 to 5 minutes
       metadata: {
         userAgent: req.headers['user-agent'],
         ipAddress: req.ip || req.connection.remoteAddress,
@@ -324,7 +324,7 @@ export const createCheckoutSession = async (req, res) => {
       total,
       currency: 'INR',
       stockReserved: true,
-      expiresAt: new Date(Date.now() + 15 * 60 * 1000),
+      expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 🚨 CRITICAL MITIGATION: Reduced from 15 to 5 minutes
       message: 'Ready for payment'
     });
     
