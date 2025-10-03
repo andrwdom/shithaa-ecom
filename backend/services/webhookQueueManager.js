@@ -326,7 +326,17 @@ class WebhookQueueManager {
           // Use emergency processing
           const result = await this.processor.processWebhook(webhookData, correlationId);
           
-          if (result.success) {
+          // Check for successful processing with multiple success indicators
+          const successDetected = (result && (
+            result.success === true || 
+            result.action === 'order_confirmed' ||
+            result.action === 'order_recovered_from_payment_session' ||
+            result.action === 'order_recovered_from_checkout_session' ||
+            result.action === 'emergency_order_created' ||
+            result.status === 'ok'
+          ));
+          
+          if (successDetected) {
             await RawWebhook.findByIdAndUpdate(webhook._id, {
               processed: true,
               processedAt: new Date(),
@@ -338,7 +348,14 @@ class WebhookQueueManager {
             EnhancedLogger.webhookLog('SUCCESS', 'Dead letter webhook recovered', {
               correlationId,
               webhookId: webhook._id,
-              orderId: result.orderId
+              orderId: result.orderId,
+              action: result.action
+            });
+          } else {
+            EnhancedLogger.webhookLog('WARN', 'Dead letter webhook not recovered', {
+              correlationId,
+              webhookId: webhook._id,
+              result: result
             });
           }
         } catch (error) {

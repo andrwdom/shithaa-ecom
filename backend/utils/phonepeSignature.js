@@ -1,24 +1,24 @@
 import crypto from 'crypto';
 
 /**
- * Verify PhonePe webhook signature
- * @param {string} payload - Raw webhook payload
- * @param {string} signature - X-VERIFY header value
- * @param {string} saltKey - PhonePe salt key
- * @param {number} saltIndex - PhonePe salt index
+ * Verify PhonePe webhook signature according to official documentation
+ * PhonePe uses Authorization header with SHA256(username:password)
+ * @param {string} username - PhonePe webhook username
+ * @param {string} password - PhonePe webhook password
+ * @param {string} authorizationHeader - Authorization header value from request
  * @returns {boolean} - True if signature is valid
  */
-export function verifyPhonePeSignature(payload, signature, saltKey, saltIndex) {
+export function verifyPhonePeSignature(username, password, authorizationHeader) {
   try {
-    // PhonePe signature format: SHA256(payload + saltKey + saltIndex)
-    const dataToSign = payload + saltKey + saltIndex;
+    // PhonePe signature format: SHA256(username:password)
+    const credentials = `${username}:${password}`;
     const expectedSignature = crypto
       .createHash('sha256')
-      .update(dataToSign)
+      .update(credentials)
       .digest('hex');
     
     return crypto.timingSafeEqual(
-      Buffer.from(signature, 'hex'),
+      Buffer.from(authorizationHeader, 'hex'),
       Buffer.from(expectedSignature, 'hex')
     );
   } catch (error) {

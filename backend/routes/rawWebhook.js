@@ -1,76 +1,128 @@
 import express from 'express';
 import RawWebhook from '../models/RawWebhook.js';
+import { verifyPhonePeSignature } from '../utils/phonepeSignature.js';
+import EnhancedLogger from '../utils/enhancedLogger.js';
 
 const router = express.Router();
 
-// Note: PhonePe webhook is now handled at /api/payment/phonepe/webhook
-// This matches the PhonePe dashboard configuration
-
-// Razorpay webhook - receives raw body and saves immediately
-router.post('/webhook/razorpay', express.raw({ type: '*/*', limit: '1mb' }), async (req, res) => {
+// Helper function to verify PhonePe signature from request according to official documentation
+function verifyPhonePeRequest(req) {
   try {
+    const authorizationHeader = req.headers['authorization'];
+    if (!authorizationHeader) {
+      return false;
+    }
+    
+    const username = process.env.PHONEPE_WEBHOOK_USERNAME;
+    const password = process.env.PHONEPE_WEBHOOK_PASSWORD;
+    
+    if (!username || !password) {
+      EnhancedLogger.warn('PhonePe signature verification missing credentials', { 
+        hasUsername: !!username, 
+        hasPassword: !!password 
+      });
+      return false;
+    }
+    
+    return verifyPhonePeSignature(username, password, authorizationHeader);
+  } catch (error) {
+    EnhancedLogger.error('PhonePe signature verification error', { error: error.message });
+    return false;
+  }
+}
+
+// PhonePe webhook - with proper signature verification
+router.post('/webhook/phonepe', express.raw({ type: '*/*', limit: '1mb' }), async (req, res) => {
+  try {
+    // Verify PhonePe signature before processing
+    if (!verifyPhonePeRequest(req)) {
+      EnhancedLogger.warn('PhonePe webhook invalid signature', { 
+        ip: req.ip,
+        userAgent: req.get('User-Agent'),
+        hasAuthorization: !!req.headers['authorization']
+      });
+      return res.status(401).json({ success: false, error: 'Invalid signature' });
+    }
+    
     const rawStr = req.body && req.body.toString ? req.body.toString() : JSON.stringify(req.body || {});
     
     // Save raw webhook immediately
     await RawWebhook.create({
-      provider: 'razorpay',
+      provider: 'phonepe',
       headers: req.headers,
       raw: rawStr,
       receivedAt: new Date()
     });
     
-    console.log('✅ Raw Razorpay webhook saved successfully');
+    EnhancedLogger.info('PhonePe raw webhook saved successfully', { 
+      ip: req.ip,
+      payloadSize: rawStr.length 
+    });
     
     // Fast ACK so gateway stops retries
-    res.status(200).send('ok');
+    res.status(200).json({ success: true });
   } catch (err) {
-    console.error('❌ RAW WEBHOOK SAVE FAILED', err);
+    EnhancedLogger.error('PhonePe raw webhook save failed', { 
+      error: err.message,
+      ip: req.ip 
+    });
     // If raw save fails, return 500 so provider retries
-    res.status(500).send('error');
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
-// Generic webhook endpoint for any provider - SECURITY RESTRICTED
+// Note: Razorpay removed - not used in this codebase
+
+// Generic webhook endpoint for any provider - WITH PROPER SIGNATURE VERIFICATION
 router.post('/webhook/:provider', express.raw({ type: '*/*', limit: '1mb' }), async (req, res) => {
   try {
     const { provider } = req.params;
+    const providerLower = provider.toLowerCase();
     
-    // SECURITY: Only allow known providers
-    const allowedProviders = ['phonepe', 'razorpay'];
-    if (!allowedProviders.includes(provider.toLowerCase())) {
-      console.log(`❌ Rejected webhook from unknown provider: ${provider}`);
+    // SECURITY: Only allow PhonePe provider
+    if (providerLower !== 'phonepe') {
+      EnhancedLogger.warn('Rejected webhook from unknown provider', { 
+        provider,
+        ip: req.ip 
+      });
       return res.status(400).json({ error: 'Unknown webhook provider' });
     }
     
-    // SECURITY: Basic signature check for known providers
-    if (provider.toLowerCase() === 'phonepe' && !req.headers['x-verify']) {
-      console.log(`❌ PhonePe webhook missing X-VERIFY header`);
-      return res.status(401).json({ error: 'Missing signature header' });
-    }
-    
-    if (provider.toLowerCase() === 'razorpay' && !req.headers['x-razorpay-signature']) {
-      console.log(`❌ Razorpay webhook missing signature header`);
-      return res.status(401).json({ error: 'Missing signature header' });
+    // SECURITY: Perform proper PhonePe signature verification
+    const signatureValid = verifyPhonePeRequest(req);
+    if (!signatureValid) {
+      EnhancedLogger.warn('PhonePe webhook signature verification failed', { 
+        ip: req.ip,
+        hasAuthorization: !!req.headers['authorization']
+      });
+      return res.status(401).json({ error: 'Invalid PhonePe signature' });
     }
     
     const rawStr = req.body && req.body.toString ? req.body.toString() : JSON.stringify(req.body || {});
     
     // Save raw webhook immediately
     await RawWebhook.create({
-      provider: provider,
+      provider: providerLower,
       headers: req.headers,
       raw: rawStr,
       receivedAt: new Date()
     });
     
-    console.log(`✅ Raw ${provider} webhook saved successfully`);
+    EnhancedLogger.info(`Raw ${providerLower} webhook saved successfully`, { 
+      ip: req.ip,
+      payloadSize: rawStr.length 
+    });
     
     // Fast ACK so gateway stops retries
-    res.status(200).send('ok');
+    res.status(200).json({ success: true });
   } catch (err) {
-    console.error('❌ RAW WEBHOOK SAVE FAILED', err);
+    EnhancedLogger.error('Raw webhook save failed', { 
+      error: err.message,
+      provider: req.params.provider,
+      ip: req.ip 
+    });
     // If raw save fails, return 500 so provider retries
-    res.status(500).send('error');
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 

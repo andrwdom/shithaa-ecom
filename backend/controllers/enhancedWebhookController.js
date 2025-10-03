@@ -234,44 +234,43 @@ export async function phonePeWebhookHandler(req, res) {
 }
 
 /**
- * Verify PhonePe webhook signature using proper X-VERIFY header
- * PhonePe signature format: SHA256(payload + saltKey + saltIndex)
+ * Verify PhonePe webhook signature according to official documentation
+ * PhonePe uses Authorization header with SHA256(username:password)
  */
 async function verifyPhonePeSignature(req, correlationId) {
   try {
-    const xVerify = req.headers['x-verify'];
-    const rawBody = req.body;
+    const authorizationHeader = req.headers['authorization'];
     
-    if (!xVerify) {
-      EnhancedLogger.webhookLog('ERROR', 'Missing X-VERIFY header for PhonePe webhook', {
+    if (!authorizationHeader) {
+      EnhancedLogger.webhookLog('ERROR', 'Missing Authorization header for PhonePe webhook', {
         correlationId,
-        availableHeaders: Object.keys(req.headers).filter(h => h.toLowerCase().includes('verify'))
+        availableHeaders: Object.keys(req.headers).filter(h => h.toLowerCase().includes('auth'))
       });
       return false;
     }
 
-    const saltKey = process.env.PHONEPE_SALT_KEY || '';
-    const saltIndex = process.env.PHONEPE_SALT_INDEX || '1';
+    const username = process.env.PHONEPE_WEBHOOK_USERNAME;
+    const password = process.env.PHONEPE_WEBHOOK_PASSWORD;
     
-    if (!saltKey) {
-      EnhancedLogger.criticalAlert('WEBHOOK: PhonePe salt key not configured', {
+    if (!username || !password) {
+      EnhancedLogger.criticalAlert('WEBHOOK: PhonePe webhook credentials not configured', {
         correlationId,
-        hasSaltKey: !!saltKey
+        hasUsername: !!username,
+        hasPassword: !!password
       });
       return false;
     }
 
-    // PhonePe signature verification: SHA256(payload + saltKey + saltIndex)
-    const payloadString = typeof rawBody === 'string' ? rawBody : JSON.stringify(rawBody);
-    const dataToSign = payloadString + saltKey + saltIndex;
+    // PhonePe signature verification: SHA256(username:password)
+    const credentials = `${username}:${password}`;
     const expectedSignature = crypto
       .createHash('sha256')
-      .update(dataToSign)
+      .update(credentials)
       .digest('hex');
 
     // Use timing-safe comparison to prevent timing attacks
     const isValid = crypto.timingSafeEqual(
-      Buffer.from(xVerify, 'hex'),
+      Buffer.from(authorizationHeader, 'hex'),
       Buffer.from(expectedSignature, 'hex')
     );
     
@@ -279,14 +278,13 @@ async function verifyPhonePeSignature(req, correlationId) {
       EnhancedLogger.webhookLog('SUCCESS', 'PhonePe webhook signature verified', {
         correlationId,
         ip: req.ip,
-        payloadLength: payloadString.length
+        payloadLength: typeof req.body === 'string' ? req.body.length : JSON.stringify(req.body || {}).length
       });
     } else {
       EnhancedLogger.webhookLog('ERROR', 'Invalid PhonePe webhook signature', {
         correlationId,
         ip: req.ip,
-        userAgent: req.headers['user-agent'],
-        payloadLength: payloadString.length
+        userAgent: req.headers['user-agent']
       });
     }
 
