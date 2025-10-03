@@ -66,7 +66,7 @@ export async function commitOrder(orderId, paymentInfo, options = {}) {
     }
 
     // 3. Get items to process
-    const itemsToProcess = order.cartItems && order.cartItems.length > 0 
+    let itemsToProcess = order.cartItems && order.cartItems.length > 0 
       ? order.cartItems 
       : order.items;
 
