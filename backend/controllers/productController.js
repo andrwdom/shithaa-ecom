@@ -185,7 +185,8 @@ export const listProducts = async (req, res) => {
             minPrice,
             maxPrice,
             sortBy = 'displayOrder',
-            sortOrder = 'asc'
+            sortOrder = 'asc',
+            stockFilter // Add stock filter support
         } = req.query;
 
         let query = {};
@@ -197,11 +198,9 @@ export const listProducts = async (req, res) => {
             ];
         }
 
+        // Fix category filtering - use categorySlug field directly
         if (categorySlug) {
-            const category = await Category.findOne({ slug: categorySlug });
-            if (category) {
-                query.category = category.name;
-            }
+            query.categorySlug = categorySlug;
         }
 
         if (size) {
@@ -216,6 +215,22 @@ export const listProducts = async (req, res) => {
             if (maxPrice) {
                 query.price.$lte = parseInt(maxPrice);
             }
+        }
+
+        // Add stock filtering at database level
+        if (stockFilter === 'low') {
+            // Products with total stock between 1-3
+            query.$expr = {
+                $and: [
+                    { $gt: [{ $sum: '$sizes.stock' }, 0] },
+                    { $lte: [{ $sum: '$sizes.stock' }, 3] }
+                ]
+            };
+        } else if (stockFilter === 'out') {
+            // Products with zero total stock
+            query.$expr = {
+                $eq: [{ $sum: '$sizes.stock' }, 0]
+            };
         }
         
         const sortOptions = {};

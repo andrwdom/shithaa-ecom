@@ -773,11 +773,10 @@ const List = ({ token }) => {
         params.append('search', debouncedSearchTerm.trim())
       }
       
-      // Use selectedCategory for filtering if not 'all'
-      const categoryToFilter = selectedCategory !== 'all' ? selectedCategory : categoryFilter
-      if (categoryToFilter) {
-        console.log('Filtering by category slug:', categoryToFilter)
-        params.append('categorySlug', categoryToFilter)
+      // Use categoryFilter for filtering (simplified logic)
+      if (categoryFilter) {
+        console.log('Filtering by category slug:', categoryFilter)
+        params.append('categorySlug', categoryFilter)
       }
       if (sizeFilter) {
         params.append('size', sizeFilter)
@@ -789,31 +788,19 @@ const List = ({ token }) => {
         params.append('maxPrice', priceRange.max)
       }
       
+      // Add stock filter to backend request
+      if (stockFilter) {
+        params.append('stockFilter', stockFilter)
+      }
+      
       const response = await axios.get(`${backendUrl}/api/products?${params}`, {
         headers: { token }
       })
       
       const { products: fetchedProducts, total, pages } = response.data
       
-      // Apply stock filter locally (since backend might not support it)
-      let filteredProducts = fetchedProducts
-      if (stockFilter === 'low') {
-        filteredProducts = fetchedProducts.filter(product => {
-          const totalStock = product.sizes?.reduce((sum, sizeObj) => {
-            return sum + (typeof sizeObj === 'object' ? sizeObj.stock || 0 : 0)
-          }, 0) || 0
-          return totalStock > 0 && totalStock <= 3
-        })
-      } else if (stockFilter === 'out') {
-        filteredProducts = fetchedProducts.filter(product => {
-          const totalStock = product.sizes?.reduce((sum, sizeObj) => {
-            return sum + (typeof sizeObj === 'object' ? sizeObj.stock || 0 : 0)
-          }, 0) || 0
-          return totalStock === 0
-        })
-      }
-      
-      setProducts(filteredProducts)
+      // No local filtering needed - backend handles all filtering
+      setProducts(fetchedProducts)
       setTotalPages(pages)
       setTotalProducts(total)
       
@@ -826,7 +813,7 @@ const List = ({ token }) => {
     } finally {
       setLoading(false)
     }
-  }, [token, currentPage, debouncedSearchTerm, categoryFilter, selectedCategory, sizeFilter, priceRange, stockFilter, sortBy, sortOrder])
+  }, [token, currentPage, debouncedSearchTerm, categoryFilter, sizeFilter, priceRange, stockFilter, sortBy, sortOrder])
 
   // Fetch products when dependencies change
   useEffect(() => {
@@ -836,7 +823,7 @@ const List = ({ token }) => {
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1)
-  }, [debouncedSearchTerm, categoryFilter, selectedCategory, sizeFilter, priceRange, stockFilter, sortBy, sortOrder])
+  }, [debouncedSearchTerm, categoryFilter, sizeFilter, priceRange, stockFilter, sortBy, sortOrder])
 
   // Handle product deletion
   const handleDeleteProduct = async (productId) => {
