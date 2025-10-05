@@ -114,9 +114,9 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
       {/* Main Navbar */}
       <nav className="bg-white border-b border-gray-200 sticky top-0 z-[9999] shadow-sm">
         <div className="container-responsive">
-          <div className="navbar-container flex items-center justify-between navbar-responsive py-2">
+          <div className="navbar-container flex items-center navbar-responsive py-2">
             
-            {/* Left Section - Logo + Menu */}
+            {/* Left Section - Mobile Menu + Desktop Links */}
             <div className="navbar-left flex items-center space-x-4">
               {/* Mobile menu button */}
               <Button
@@ -133,16 +133,8 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
                 {isMenuOpen ? <X className="navbar-icon" /> : <Menu className="navbar-icon" />}
               </Button>
 
-              {/* Logo - Now on the left */}
-              <button
-                onClick={() => (window.location.href = "/")}
-                className="navbar-logo-responsive font-bold text-[rgb(71,60,102)] tracking-wider font-serif hover:text-[rgb(71,60,102)]/80 transition-colors duration-300 cursor-pointer text-xl md:text-2xl"
-              >
-                SHITHAA
-              </button>
-
               {/* Desktop Navigation Links - Left */}
-              <div className="hidden md:flex items-center space-x-8 ml-8">
+              <div className="hidden md:flex items-center space-x-8">
                 <button
                   onClick={onCategoriesClick}
                   className="navbar-link-effect text-[rgb(71,60,102)] font-medium transition-all duration-200 hover:text-[rgb(71,60,102)]/80"
@@ -156,6 +148,16 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
                   about us
                 </a>
               </div>
+            </div>
+
+            {/* Center - Logo (Desktop) / Logo (Mobile) */}
+            <div className="navbar-center flex items-center">
+              <button
+                onClick={() => (window.location.href = "/")}
+                className="navbar-logo-responsive font-bold text-[rgb(71,60,102)] tracking-wider font-serif hover:text-[rgb(71,60,102)]/80 transition-colors duration-300 cursor-pointer text-xl md:text-2xl"
+              >
+                SHITHAA
+              </button>
             </div>
 
             {/* Right Section */}
