@@ -75,6 +75,54 @@ export default function UnifiedCheckout() {
 
   const [shippingErrors, setShippingErrors] = useState<any>({});
 
+  // Coupon state
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<{code: string, discountPercentage: number} | null>(null);
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponError, setCouponError] = useState('');
+  const [couponSuccess, setCouponSuccess] = useState('');
+
+  // Coupon validation function
+  const handleApplyCoupon = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCouponError('');
+    setCouponSuccess('');
+    setCouponLoading(true);
+    
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/coupons/validate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: couponCode })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok && data.valid) {
+        setAppliedCoupon({ code: couponCode.toUpperCase(), discountPercentage: data.discountPercentage });
+        setCouponSuccess('Coupon applied successfully!');
+        setCouponError('');
+      } else {
+        setCouponError(data.message || 'Invalid or expired coupon');
+        setCouponSuccess('');
+        setAppliedCoupon(null);
+      }
+    } catch (error) {
+      setCouponError('Network error. Please try again.');
+      setCouponSuccess('');
+      setAppliedCoupon(null);
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode('');
+    setCouponError('');
+    setCouponSuccess('');
+  };
+
   // Get items for checkout based on mode
   const getCheckoutItems = (): CheckoutItem[] => {
     if (isBuyNow && buyNowItem) {
@@ -110,6 +158,12 @@ export default function UnifiedCheckout() {
     // Apply offers for cart mode only
     const offerDiscount = isCart && offerDetails?.offerApplied ? (offerDetails.offerDiscount || 0) : 0;
     
+    // Apply coupon discount if available
+    let couponDiscount = 0;
+    if (appliedCoupon) {
+      couponDiscount = Math.round((subtotal * appliedCoupon.discountPercentage) / 100);
+    }
+    
     // Calculate shipping cost (items first, then shipping info)
     // Convert CheckoutItems to CartItems for shipping calculation
     const cartItemsForShipping = items.map(item => ({
@@ -130,11 +184,12 @@ export default function UnifiedCheckout() {
       pincode: shipping.postalCode
     });
     
-    const total = subtotal - offerDiscount + shippingCalculation.shippingCost;
+    const total = subtotal - offerDiscount - couponDiscount + shippingCalculation.shippingCost;
 
     return {
       subtotal,
       offerDiscount,
+      couponDiscount,
       shipping: shippingCalculation.shippingCost,
       shippingMessage: shippingCalculation.shippingMessage,
       isFreeShipping: shippingCalculation.isFreeShipping,
@@ -224,7 +279,8 @@ export default function UnifiedCheckout() {
       // Create checkout session
       const response = await createCheckoutSession({
         source: isBuyNow ? 'buynow' : 'cart',
-        items
+        items,
+        couponCode: appliedCoupon?.code || undefined
       }, token, shipping.email);
 
       if (response.success && response.data) {
@@ -356,6 +412,7 @@ export default function UnifiedCheckout() {
       <OrderSummary 
         summary={summary}
         cartItems={items}
+        coupon={appliedCoupon}
         offerDetails={isCart ? offerDetails : null}
         mode={isBuyNow ? 'buy-now' : 'cart'}
         shippingInfo={shipping}
@@ -475,6 +532,61 @@ export default function UnifiedCheckout() {
                   onChange={setShipping}
                   errors={shippingErrors}
                 />
+                
+                {/* Coupon Code Section */}
+                <div className="mt-6 pt-6 border-t border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Coupon Code</h3>
+                  
+                  {!appliedCoupon ? (
+                    <form onSubmit={handleApplyCoupon} className="flex gap-2">
+                      <input
+                        type="text"
+                        value={couponCode}
+                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                        placeholder="Enter coupon code"
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                      <Button
+                        type="submit"
+                        disabled={couponLoading || !couponCode.trim()}
+                        className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                      >
+                        {couponLoading ? 'Applying...' : 'Apply'}
+                      </Button>
+                    </form>
+                  ) : (
+                    <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-md">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="h-5 w-5 text-green-600" />
+                        <span className="text-green-800 font-medium">
+                          Coupon "{appliedCoupon.code}" applied ({appliedCoupon.discountPercentage}% off)
+                        </span>
+                      </div>
+                      <Button
+                        onClick={handleRemoveCoupon}
+                        variant="ghost"
+                        size="sm"
+                        className="text-green-600 hover:text-green-700"
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  )}
+                  
+                  {couponError && (
+                    <div className="mt-2 text-sm text-red-600 flex items-center gap-1">
+                      <XCircle className="h-4 w-4" />
+                      {couponError}
+                    </div>
+                  )}
+                  
+                  {couponSuccess && (
+                    <div className="mt-2 text-sm text-green-600 flex items-center gap-1">
+                      <CheckCircle className="h-4 w-4" />
+                      {couponSuccess}
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </div>
