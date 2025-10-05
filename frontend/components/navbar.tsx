@@ -114,7 +114,7 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
       {/* Main Navbar */}
       <nav className="bg-white border-b border-gray-200 sticky top-0 z-[9999] shadow-sm">
         <div className="container-responsive">
-          <div className="navbar-container flex items-center navbar-responsive py-2">
+          <div className="navbar-container flex items-center navbar-responsive py-2 px-4">
             
             {/* Left Section - Mobile Menu + Desktop Links */}
             <div className="navbar-left flex items-center space-x-4">
@@ -122,7 +122,7 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
               <Button
                 variant="ghost"
                 size="sm"
-                className="md:hidden text-gray-600 hover:text-[rgb(71,60,102)] p-2 hover:bg-gray-100 rounded-lg transition-all duration-200"
+                className="md:hidden text-gray-600 hover:text-[rgb(71,60,102)] p-3 hover:bg-gray-100 rounded-lg transition-all duration-200 min-w-[44px] min-h-[44px]"
                 onClick={(e) => {
                   e.preventDefault()
                   e.stopPropagation()
@@ -173,7 +173,7 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
               </div>
 
               {/* Icons Section */}
-              <div className="flex items-center space-x-3 sm:space-x-4">
+              <div className="flex items-center space-x-2 sm:space-x-4">
                 {/* Cart Icon */}
                 {/* Wishlist Button */}
                 <button
@@ -183,7 +183,7 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
                     console.log("Wishlist button clicked")
                     window.location.href = '/wishlist'
                   }}
-                  className="relative p-2 text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200 cursor-pointer z-10"
+                  className="relative p-2.5 text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200 cursor-pointer z-10 min-w-[44px] min-h-[44px] flex items-center justify-center"
                   aria-label="Wishlist"
                   type="button"
                   style={{ pointerEvents: 'auto' }}
@@ -204,7 +204,7 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
                     console.log("Cart button clicked")
                     openCartSidebar()
                   }}
-                  className="relative p-2 text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200 cursor-pointer z-10"
+                  className="relative p-2.5 text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200 cursor-pointer z-10 min-w-[44px] min-h-[44px] flex items-center justify-center"
                   aria-label="Shopping cart"
                   type="button"
                   style={{ pointerEvents: 'auto' }}
@@ -225,7 +225,7 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
                     console.log("Account button clicked")
                     handleAccountClick()
                   }}
-                  className="p-2 text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200 cursor-pointer relative z-10"
+                  className="p-2.5 text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200 cursor-pointer relative z-10 min-w-[44px] min-h-[44px] flex items-center justify-center"
                   aria-label="Account"
                   type="button"
                   style={{ pointerEvents: 'auto' }}
