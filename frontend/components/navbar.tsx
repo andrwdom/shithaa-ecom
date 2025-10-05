@@ -17,7 +17,7 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
   const [bannerPosition, setBannerPosition] = useState(0)
-  const { cartItems, openCartSidebar, restoreCartFromStorage } = useCart()
+  const { cartItems, openCartSidebar } = useCart()
   const { wishlistItems } = useWishlist()
   const { user, logout } = useAuth()
 
@@ -114,15 +114,15 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
       {/* Main Navbar */}
       <nav className="bg-white border-b border-gray-200 sticky top-0 z-[9999] shadow-sm">
         <div className="container-responsive">
-          <div className="navbar-container flex items-center justify-between navbar-responsive">
+          <div className="navbar-container flex items-center justify-between navbar-responsive py-2">
             
-            {/* Left Section */}
-            <div className="navbar-left">
+            {/* Left Section - Logo + Menu */}
+            <div className="navbar-left flex items-center space-x-4">
               {/* Mobile menu button */}
               <Button
                 variant="ghost"
                 size="sm"
-                className="md:hidden text-gray-600 hover:text-[rgb(71,60,102)] p-2"
+                className="md:hidden text-gray-600 hover:text-[rgb(71,60,102)] p-2 hover:bg-gray-100 rounded-lg transition-all duration-200"
                 onClick={(e) => {
                   e.preventDefault()
                   e.stopPropagation()
@@ -132,6 +132,14 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
               >
                 {isMenuOpen ? <X className="navbar-icon" /> : <Menu className="navbar-icon" />}
               </Button>
+
+              {/* Logo - Now on the left */}
+              <button
+                onClick={() => (window.location.href = "/")}
+                className="navbar-logo-responsive font-bold text-[rgb(71,60,102)] tracking-wider font-serif hover:text-[rgb(71,60,102)]/80 transition-colors duration-300 cursor-pointer text-xl md:text-2xl"
+              >
+                SHITHAA
+              </button>
 
               {/* Desktop Navigation Links - Left */}
               <div className="hidden md:flex items-center space-x-8 ml-8">
@@ -150,18 +158,8 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
               </div>
             </div>
 
-            {/* Center - Logo */}
-            <div className="navbar-logo">
-              <button
-                onClick={() => (window.location.href = "/")}
-                className="navbar-logo-responsive font-bold text-[rgb(71,60,102)] tracking-wider font-serif hover:text-[rgb(71,60,102)]/80 transition-colors duration-300 cursor-pointer"
-              >
-                SHITHAA
-              </button>
-            </div>
-
             {/* Right Section */}
-            <div className="navbar-right">
+            <div className="navbar-right flex items-center">
               {/* Desktop Navigation Links - Right */}
               <div className="hidden md:flex items-center space-x-8 mr-6">
                 <button
@@ -173,7 +171,7 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
               </div>
 
               {/* Icons Section */}
-              <div className="flex items-center space-x-2 sm:space-x-4">
+              <div className="flex items-center space-x-3 sm:space-x-4">
                 {/* Cart Icon */}
                 {/* Wishlist Button */}
                 <button
@@ -238,25 +236,25 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
 
           {/* Mobile Menu */}
           {isMenuOpen && (
-            <div className="md:hidden border-t border-gray-200 py-4">
-              <div className="flex flex-col space-y-4">
+            <div className="md:hidden border-t border-gray-200 py-6 bg-gray-50">
+              <div className="flex flex-col space-y-6">
                 {/* Home Button - Mobile Only */}
                 <button
                   onClick={() => {
                     window.location.href = "/"
                     setIsMenuOpen(false)
                   }}
-                  className="text-left text-[rgb(71,60,102)] hover:text-[rgb(71,60,102)]/80 transition-colors duration-200 flex items-center gap-2"
+                  className="text-left text-[rgb(71,60,102)] hover:text-[rgb(71,60,102)]/80 transition-colors duration-200 flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-white"
                 >
-                  <Home className="h-4 w-4" />
-                  home
+                  <Home className="h-5 w-5" />
+                  <span className="font-medium">Home</span>
                 </button>
                 <button
                   onClick={onCategoriesClick}
-                  className="text-left text-[rgb(71,60,102)] hover:text-[rgb(71,60,102)]/80 transition-colors duration-200 flex items-center gap-2"
+                  className="text-left text-[rgb(71,60,102)] hover:text-[rgb(71,60,102)]/80 transition-colors duration-200 flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-white"
                 >
-                  <List className="h-4 w-4" />
-                  categories
+                  <List className="h-5 w-5" />
+                  <span className="font-medium">Categories</span>
                 </button>
                 
                 <button
@@ -264,10 +262,10 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
                     window.location.href = "/wishlist"
                     setIsMenuOpen(false)
                   }}
-                  className="text-left text-[rgb(71,60,102)] hover:text-[rgb(71,60,102)]/80 transition-colors duration-200 flex items-center gap-2"
+                  className="text-left text-[rgb(71,60,102)] hover:text-[rgb(71,60,102)]/80 transition-colors duration-200 flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-white"
                 >
-                  <Heart className="h-4 w-4" />
-                  wishlist {wishlistCount > 0 && `(${wishlistCount})`}
+                  <Heart className="h-5 w-5" />
+                  <span className="font-medium">Wishlist {wishlistCount > 0 && `(${wishlistCount})`}</span>
                 </button>
                 
                 <button
@@ -275,20 +273,20 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
                     window.location.href = "/about"
                     setIsMenuOpen(false)
                   }}
-                  className="text-left text-[rgb(71,60,102)] hover:text-[rgb(71,60,102)]/80 transition-colors duration-200 flex items-center gap-2"
+                  className="text-left text-[rgb(71,60,102)] hover:text-[rgb(71,60,102)]/80 transition-colors duration-200 flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-white"
                 >
-                  <Info className="h-4 w-4" />
-                  about us
+                  <Info className="h-5 w-5" />
+                  <span className="font-medium">About Us</span>
                 </button>
                 <button
                   onClick={() => {
                     window.location.href = "/contact"
                     setIsMenuOpen(false)
                   }}
-                  className="text-left text-[rgb(71,60,102)] hover:text-[rgb(71,60,102)]/80 transition-colors duration-200 flex items-center gap-2"
+                  className="text-left text-[rgb(71,60,102)] hover:text-[rgb(71,60,102)]/80 transition-colors duration-200 flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-white"
                 >
-                  <Mail className="h-4 w-4" />
-                  contact us
+                  <Mail className="h-5 w-5" />
+                  <span className="font-medium">Contact Us</span>
                 </button>
                 {user ? (
                   <div className="border-t border-gray-200 pt-4">
