@@ -9,7 +9,7 @@ import { useCart } from "@/components/cart-context"
 import { detectDevice, getBundleStrategy } from "@/lib/mobile-detection"
 
 // Dynamic imports with loading components - Only load when needed
-const EnhancedHeroSection = dynamic(() => import("@/components/enhanced-hero-section"), {
+const InstantHeroSection = dynamic(() => import("@/components/instant-hero-section"), {
   loading: () => <div className="h-96 bg-gradient-to-r from-pink-50 to-purple-50 animate-pulse" />,
   ssr: true
 })
@@ -139,7 +139,7 @@ export default function Home() {
   const bestSellers = products.filter((p: Product) => p.isBestSeller)
 
   return (
-    <PageLoading loadingMessage="Welcome to Shithaa" minLoadingTime={800}>
+    <PageLoading loadingMessage="Welcome to Shithaa" minLoadingTime={300}>
       <main>
         <PerformanceMonitor />
         <div className="min-h-screen bg-white">
@@ -149,7 +149,7 @@ export default function Home() {
               <div className="text-gray-500">Loading...</div>
             </div>
           }>
-            <EnhancedHeroSection />
+            <InstantHeroSection />
           </Suspense>
           
           {/* Below the fold - Load progressively based on device capabilities */}

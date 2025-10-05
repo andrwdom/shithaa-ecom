@@ -36,7 +36,7 @@ export default function HeroCategoryCard({
 }: HeroCategoryCardProps) {
   const [images, setImages] = useState<HeroImage[]>([])
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
-  const [isLoading, setIsLoading] = useState(false) // Changed to false to immediately show placeholder
+  const [isLoading, setIsLoading] = useState(false) // Start as false to show content immediately
   const [error, setError] = useState<string | null>(null)
   const [isTransitioning, setIsTransitioning] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
@@ -153,8 +153,9 @@ export default function HeroCategoryCard({
     }
   }, [categorySlug, maxImages, isMobile])
 
-  // Fetch images on mount
+  // Fetch images on mount - start immediately
   useEffect(() => {
+    // Start fetching immediately without delay
     fetchHeroImages()
   }, [fetchHeroImages])
 
@@ -173,12 +174,12 @@ export default function HeroCategoryCard({
         // Wait for the new image to be set, then fade in
         setTimeout(() => {
           setIsTransitioning(false)
-        }, 50) // Small delay to ensure state update
-      }, 500) // Half of the transition duration
+        }, 30) // Smaller delay for faster transitions
+      }, 300) // Faster transition duration
     }
 
-    // Stagger transitions between 4-6 seconds for a calmer feel
-    const delay = 4000 + Math.random() * 2000
+    // Stagger transitions between 3-5 seconds for better performance
+    const delay = 3000 + Math.random() * 2000
     intervalRef.current = setInterval(startTransition, delay)
 
     return () => {
@@ -204,13 +205,13 @@ export default function HeroCategoryCard({
     img.src = src
   }, [preloadedImages])
 
-  // Get current image - prioritize VPS images over placeholders
+  // Get current image - show placeholder immediately, then real images when available
   const currentImage = useMemo(() => {
     // If we have VPS images, use them
     if (images.length > 0 && hasVpsImages) {
       return images[currentImageIndex]
     }
-    // Always return placeholder image as fallback (even while loading)
+    // Always return placeholder image as fallback (shows immediately)
     return {
       src: getPlaceholderImage(categorySlug),
       alt: `${title} - ${categorySlug}`,
@@ -301,7 +302,7 @@ export default function HeroCategoryCard({
           }
         >
           <div 
-            className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
+            className={`absolute inset-0 transition-opacity duration-600 ease-in-out ${
               isTransitioning ? 'opacity-0' : 'opacity-100'
             }`}
             style={{ willChange: 'opacity' }}

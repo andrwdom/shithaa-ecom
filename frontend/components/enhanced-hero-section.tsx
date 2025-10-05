@@ -15,22 +15,24 @@ const EnhancedHeroSection = () => {
     window.location.href = `/collections/${slug}`
   }, [])
 
-  // Light preloading - only fetch first category images for mobile performance
+  // Immediate preloading - start as soon as component mounts
   useEffect(() => {
-    const lightPreload = async () => {
+    const immediatePreload = async () => {
       try {
         setIsPreloading(true)
         
         const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
-        // Only preload first category for initial performance
-        const firstCategory = HERO_SECTION_CATEGORIES[0]
+        // Preload all categories for better UX
+        const categories = HERO_SECTION_CATEGORIES.slice(0, 2) // First 2 categories
         
-        if (firstCategory) {
+        const allImageUrls: string[] = []
+        
+        for (const category of categories) {
           try {
             const url = new URL(`${baseUrl}/api/hero-images`)
-            url.searchParams.append('categoryId', firstCategory.slug)
+            url.searchParams.append('categoryId', category.slug)
             url.searchParams.append('device', 'mobile')
-            url.searchParams.append('limit', '3') // Reduced for mobile
+            url.searchParams.append('limit', '2') // 2 images per category
 
             const response = await fetch(url.toString(), {
               method: 'GET',
@@ -44,24 +46,25 @@ const EnhancedHeroSection = () => {
               const data = await response.json()
               if (data.success && data.images) {
                 const imageUrls = data.images.map((img: any) => img.thumbUrl).filter(Boolean)
-                setAllImages(imageUrls.slice(0, 3)) // Only first 3 images
-                setPreloadProgress(1)
+                allImageUrls.push(...imageUrls.slice(0, 2))
               }
             }
           } catch (error) {
-            console.warn(`Failed to preload images for ${firstCategory.slug}:`, error)
+            console.warn(`Failed to preload images for ${category.slug}:`, error)
           }
         }
+        
+        setAllImages(allImageUrls)
+        setPreloadProgress(1)
       } catch (error) {
-        console.error('Error in light preload:', error)
+        console.error('Error in immediate preload:', error)
       } finally {
         setIsPreloading(false)
       }
     }
 
-    // Start light preload after UI is ready - prioritize rendering
-    const timer = setTimeout(lightPreload, 500)
-    return () => clearTimeout(timer)
+    // Start preload immediately - no delay
+    immediatePreload()
   }, [])
 
   const handleImagesLoaded = useCallback((loadedImages: Set<string>) => {

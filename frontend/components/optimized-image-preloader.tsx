@@ -55,9 +55,9 @@ export default function OptimizedImagePreloader({
           img.src = src
         })
 
-        // Add timeout for image loading
+        // Add timeout for image loading - reduced for faster feedback
         const timeoutPromise = new Promise<void>((_, reject) => {
-          setTimeout(() => reject(new Error('Image load timeout')), 10000)
+          setTimeout(() => reject(new Error('Image load timeout')), 5000)
         })
 
         await Promise.race([imageLoadPromise, timeoutPromise])
