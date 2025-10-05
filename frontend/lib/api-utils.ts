@@ -300,12 +300,15 @@ export async function authenticatedFetch(
       console.log('🔐 Access token expired, attempting to refresh...');
       
       try {
-        // Try to refresh the token
+        // Try to refresh the token using the refresh token endpoint
         const refreshResponse = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/user/refresh-token`,
           {
             method: 'POST',
             credentials: 'include',
+            headers: {
+              'Content-Type': 'application/json',
+            },
           }
         );
 
@@ -318,6 +321,17 @@ export async function authenticatedFetch(
         } else {
           console.log('❌ Token refresh failed, user needs to log in again');
           const refreshData = await refreshResponse.json().catch(() => ({}));
+          
+          // If refresh token is also expired, clear local storage and redirect to login
+          if (refreshResponse.status === 401) {
+            // Clear any stored tokens
+            localStorage.removeItem('token');
+            localStorage.removeItem('refreshToken');
+            
+            // Show user-friendly message
+            throw new Error('Your session has expired. Please log in again to continue.');
+          }
+          
           throw new Error(refreshData.message || 'Your session has expired. Please log in again.');
         }
       } catch (refreshError) {

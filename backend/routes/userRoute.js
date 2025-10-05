@@ -15,7 +15,7 @@ const userRouter = express.Router();
 
 // Firebase auth routes
 userRouter.post('/firebase-login', firebaseLogin); // POST /api/user/firebase-login
-userRouter.post('/refresh-token', refreshToken); // POST /api/user/refresh-token
+userRouter.post('/refresh-token', refreshToken); // POST /api/user/refresh-token (no auth required)
 userRouter.post('/logout', logout); // POST /api/user/logout
 
 // Admin routes

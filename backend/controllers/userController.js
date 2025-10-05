@@ -438,9 +438,15 @@ export const refreshToken = async (req, res) => {
 
     } catch (error) {
         console.error('Token refresh error:', error);
+        
+        // Clear invalid refresh token
+        res.clearCookie('refresh_token', { path: '/' });
+        res.clearCookie('token', { path: '/' });
+        
         return res.status(401).json({
             success: false,
-            message: 'Invalid refresh token'
+            message: 'Invalid or expired refresh token. Please log in again.',
+            errorType: 'REFRESH_TOKEN_EXPIRED'
         });
     }
 };

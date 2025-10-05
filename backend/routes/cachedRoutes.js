@@ -69,7 +69,7 @@ router.post('/user/firebase-login', firebaseLogin);
 router.get('/user/profile', verifyToken, getUserProfile);
 router.put('/user/profile', verifyToken, updateUserProfile);
 router.post('/user/logout', verifyToken, logoutUser);
-router.post('/user/refresh-token', verifyToken, refreshToken);
+router.post('/user/refresh-token', refreshToken); // No auth required for refresh token
 router.get('/user/session', verifyToken, getUserSession);
 router.get('/user/stats', verifyToken, getUserStats);
 router.post('/user/clear-cache', verifyToken, clearAllUserCaches);

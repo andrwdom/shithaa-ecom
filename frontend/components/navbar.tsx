@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
-import { Menu, ShoppingBag, X, User, Mail, Info, Home, LogOut, List } from "lucide-react"
+import { Menu, ShoppingBag, X, User, Mail, Info, Home, LogOut, List, Heart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useCart } from "@/components/cart-context"
 import { useWishlist } from "@/components/wishlist-context"
@@ -175,6 +175,28 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
               {/* Icons Section */}
               <div className="flex items-center space-x-2 sm:space-x-4">
                 {/* Cart Icon */}
+                {/* Wishlist Button */}
+                <button
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    console.log("Wishlist button clicked")
+                    window.location.href = '/wishlist'
+                  }}
+                  className="relative p-2 text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200 cursor-pointer z-10"
+                  aria-label="Wishlist"
+                  type="button"
+                  style={{ pointerEvents: 'auto' }}
+                >
+                  <Heart className="navbar-icon" />
+                  {wishlistCount > 0 && (
+                    <span className="navbar-badge bg-red-500 text-white">
+                      {wishlistCount > 9 ? '9+' : wishlistCount}
+                    </span>
+                  )}
+                </button>
+
+                {/* Cart Button */}
                 <button
                   onClick={(e) => {
                     e.preventDefault()
@@ -235,6 +257,17 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
                 >
                   <List className="h-4 w-4" />
                   categories
+                </button>
+                
+                <button
+                  onClick={() => {
+                    window.location.href = "/wishlist"
+                    setIsMenuOpen(false)
+                  }}
+                  className="text-left text-[rgb(71,60,102)] hover:text-[rgb(71,60,102)]/80 transition-colors duration-200 flex items-center gap-2"
+                >
+                  <Heart className="h-4 w-4" />
+                  wishlist {wishlistCount > 0 && `(${wishlistCount})`}
                 </button>
                 
                 <button

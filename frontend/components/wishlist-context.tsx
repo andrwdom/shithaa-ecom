@@ -99,14 +99,39 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
       console.log('Add to wishlist response data:', data)
 
       if (response.ok) {
-        toast.success(data.message || "Added to wishlist 💖")
+        // Enhanced success message with wishlist navigation
+        toast.success(data.message || "Added to wishlist 💖", {
+          description: "View your wishlist to see all saved items",
+          action: {
+            label: "View Wishlist",
+            onClick: () => window.location.href = '/wishlist'
+          },
+          duration: 5000,
+          position: 'top-center'
+        })
         await fetchWishlist() // Refresh wishlist
       } else {
-        toast.error(data.message || "Failed to add to wishlist")
+        // Handle specific error cases
+        if (response.status === 401) {
+          toast.error("Your session has expired. Please log in again.")
+          // Optionally redirect to login or refresh the page
+          setTimeout(() => {
+            window.location.reload()
+          }, 2000)
+        } else {
+          toast.error(data.message || "Failed to add to wishlist")
+        }
       }
     } catch (error) {
       console.error('Error adding to wishlist:', error)
-      toast.error("Failed to add to wishlist")
+      if (error instanceof Error && error.message.includes('session has expired')) {
+        toast.error("Your session has expired. Please log in again.")
+        setTimeout(() => {
+          window.location.reload()
+        }, 2000)
+      } else {
+        toast.error("Failed to add to wishlist")
+      }
     }
   }
 
