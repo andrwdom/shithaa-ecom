@@ -6,7 +6,8 @@ const api = axios.create({
   baseURL: backendUrl,
   headers: {
     'Content-Type': 'application/json'
-  }
+  },
+  withCredentials: true
 });
 
 // Add request interceptor to add token
@@ -14,7 +15,7 @@ api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
     if (token) {
-      config.headers.token = token;
+      config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
