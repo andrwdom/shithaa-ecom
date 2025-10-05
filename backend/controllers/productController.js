@@ -198,9 +198,20 @@ export const listProducts = async (req, res) => {
             ];
         }
 
-        // Fix category filtering - use categorySlug field directly
+        // Enhanced category filtering - handle both categorySlug and category fields
         if (categorySlug) {
-            query.categorySlug = categorySlug;
+            // First try to find by categorySlug
+            const categoryBySlug = await Category.findOne({ slug: categorySlug });
+            if (categoryBySlug) {
+                // Use both categorySlug and category name for comprehensive filtering
+                query.$or = [
+                    { categorySlug: categorySlug },
+                    { category: categoryBySlug.name }
+                ];
+            } else {
+                // Fallback to direct categorySlug match
+                query.categorySlug = categorySlug;
+            }
         }
 
         if (size) {
@@ -217,7 +228,7 @@ export const listProducts = async (req, res) => {
             }
         }
 
-        // Add stock filtering at database level
+        // Enhanced stock filtering at database level
         if (stockFilter === 'low') {
             // Products with total stock between 1-3
             query.$expr = {
@@ -233,18 +244,45 @@ export const listProducts = async (req, res) => {
             };
         }
         
+        // Enhanced sorting with fallbacks
         const sortOptions = {};
-        sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
+        if (sortBy === 'displayOrder') {
+            // Primary sort by displayOrder, secondary by createdAt
+            sortOptions.displayOrder = sortOrder === 'desc' ? -1 : 1;
+            sortOptions.createdAt = sortOrder === 'desc' ? -1 : 1;
+        } else {
+            sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
+            // Add displayOrder as secondary sort for consistency
+            if (sortBy !== 'displayOrder') {
+                sortOptions.displayOrder = 1;
+            }
+        }
 
-        const products = await productModel.find(query)
-            .sort(sortOptions)
-            .skip(skip)
-            .limit(limit);
+        // Use aggregation pipeline for better performance and consistency
+        const pipeline = [
+            { $match: query },
+            { $sort: sortOptions },
+            { $skip: skip },
+            { $limit: limit }
+        ];
 
+        const products = await productModel.aggregate(pipeline);
         const total = await productModel.countDocuments(query);
         const pages = Math.ceil(total / limit);
 
-        res.json({ success: true, products, total, pages });
+        // Add debugging info for admin panel
+        console.log(`API Query - Page: ${page}, Limit: ${limit}, Category: ${categorySlug}, Total: ${total}, Pages: ${pages}`);
+
+        res.json({ 
+            success: true, 
+            products, 
+            total, 
+            pages,
+            currentPage: page,
+            limit: limit,
+            hasNextPage: page < pages,
+            hasPrevPage: page > 1
+        });
     } catch (error) {
         console.error("Error in listProducts:", error);
         res.status(500).json({ success: false, message: 'Error fetching products' });
