@@ -508,38 +508,6 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
                     </div>
                   )}
 
-                  {/* Care Instructions & Additional Info */}
-                  <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Care Instructions */}
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <h4 className="text-md font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                        <Shield className="h-4 w-4 text-pink-500" />
-                        Care Instructions
-                      </h4>
-                      <ul className="space-y-1 text-sm text-gray-700">
-                        <li>• Machine wash cold</li>
-                        <li>• Gentle cycle recommended</li>
-                        <li>• Do not bleach</li>
-                        <li>• Air dry or tumble dry low</li>
-                        <li>• Iron on low heat if needed</li>
-                      </ul>
-                    </div>
-
-                    {/* Size & Fit */}
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <h4 className="text-md font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                        <Truck className="h-4 w-4 text-pink-500" />
-                        Size & Fit
-                      </h4>
-                      <ul className="space-y-1 text-sm text-gray-700">
-                        <li>• True to size</li>
-                        <li>• Comfortable fit</li>
-                        <li>• Premium quality fabric</li>
-                        <li>• Designed for all-day comfort</li>
-                        <li>• Easy care and maintenance</li>
-                      </ul>
-                    </div>
-                  </div>
                 </div>
 
                 {/* Loungewear Offer Banner (only for eligible categories) */}
