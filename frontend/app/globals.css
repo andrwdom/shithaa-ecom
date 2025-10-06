@@ -319,13 +319,6 @@
   align-items: center;
 }
 
-.navbar-center {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
 .navbar-left {
   justify-content: flex-start;
 }
@@ -362,37 +355,21 @@
 
 /* Responsive navbar improvements */
 @media (max-width: 640px) {
-  .navbar-container {
-    justify-content: space-between;
-    padding: 0.75rem 1rem; /* Better mobile padding */
-    gap: 1rem; /* Add gap between sections */
+  .navbar-logo {
+    position: relative;
+    left: auto;
+    transform: none;
+    flex: 1;
+    display: flex;
+    justify-content: center;
   }
   
   .navbar-left {
     flex: 0 0 auto;
-    min-width: 44px; /* Touch-friendly minimum size */
-  }
-  
-  .navbar-center {
-    flex: 1;
-    display: flex;
-    justify-content: center;
-    padding: 0 1rem; /* Add horizontal padding */
   }
   
   .navbar-right {
     flex: 0 0 auto;
-    min-width: 120px; /* Ensure enough space for icons */
-  }
-  
-  .navbar-logo {
-    font-size: 1.25rem; /* Slightly smaller on mobile */
-    white-space: nowrap;
-  }
-  
-  /* Better spacing for mobile icons */
-  .navbar-right .flex {
-    gap: 0.5rem; /* Reduce gap between icons on mobile */
   }
 }
 

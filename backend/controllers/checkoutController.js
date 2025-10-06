@@ -200,40 +200,6 @@ export const createCheckoutSession = async (req, res) => {
       return errorResponse(res, 400, 'Buy-now allows only one item');
     }
     
-    // 🔑 COUPON VALIDATION: Validate coupon if provided
-    let couponDiscount = 0;
-    let appliedCouponCode = null;
-    
-    if (couponCode && couponCode.trim()) {
-      try {
-        console.log(`[${correlationId}] Validating coupon: ${couponCode}`);
-        const { Coupon } = await import('../models/Coupon.js');
-        const normalizedCode = couponCode.toUpperCase().trim();
-        const coupon = await Coupon.findOne({ code: normalizedCode });
-        
-        if (!coupon) {
-          return errorResponse(res, 400, 'Invalid coupon code');
-        }
-        
-        // Check if coupon is expired
-        const now = new Date();
-        if (now < new Date(coupon.validFrom) || now > new Date(coupon.validUntil)) {
-          return errorResponse(res, 400, 'Coupon has expired');
-        }
-        
-        // Check usage limit
-        if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit) {
-          return errorResponse(res, 400, 'Coupon usage limit reached');
-        }
-        
-        appliedCouponCode = normalizedCode;
-        console.log(`[${correlationId}] ✅ Coupon validated: ${appliedCouponCode}`);
-      } catch (error) {
-        console.error(`[${correlationId}] ❌ Coupon validation error:`, error.message);
-        return errorResponse(res, 400, 'Invalid coupon code');
-      }
-    }
-    
     // 🔑 OPTIMIZED: Single-pass validation with stock check
     console.log(`[${correlationId}] Validating ${items.length} items...`);
     const validationResult = await validateCartItems(items);
@@ -263,26 +229,7 @@ export const createCheckoutSession = async (req, res) => {
       // Quick backend calculation
       rawSubtotal = validationResult.totalPrice;
       offerDiscount = 0;
-      
-      // 🔑 COUPON DISCOUNT: Apply coupon discount if valid
-      if (appliedCouponCode) {
-        try {
-          const { Coupon } = await import('../models/Coupon.js');
-          const coupon = await Coupon.findOne({ code: appliedCouponCode });
-          if (coupon) {
-            if (coupon.discountPercentage) {
-              couponDiscount = Math.round((rawSubtotal * coupon.discountPercentage) / 100);
-            } else if (coupon.discountAmount) {
-              couponDiscount = coupon.discountAmount;
-            }
-            console.log(`[${correlationId}] Applied coupon discount: ₹${couponDiscount}`);
-          }
-        } catch (error) {
-          console.error(`[${correlationId}] Error applying coupon discount:`, error.message);
-        }
-      }
-      
-      total = rawSubtotal + shippingCost - couponDiscount;
+      total = rawSubtotal + shippingCost;
     }
     
     // Generate session ID
@@ -304,9 +251,9 @@ export const createCheckoutSession = async (req, res) => {
       items: validatedItems,
           subtotal: rawSubtotal,
       discount: {
-        type: appliedCouponCode ? 'percentage' : 'fixed',
-        value: appliedCouponCode ? couponDiscount : offerDiscount,
-        appliedCouponCode: appliedCouponCode
+        type: 'fixed',
+        value: offerDiscount,
+        appliedCouponCode: null
       },
       offerDetails: {
             offerApplied: offerDiscount > 0,
@@ -339,57 +286,14 @@ export const createCheckoutSession = async (req, res) => {
         
         // 🔑 CRITICAL: Reserve stock ATOMICALLY for all items using transactions
         console.log(`[${correlationId}] Reserving stock for ${validatedItems.length} items atomically...`);
-        
-        // 🔧 DEBUG: Log item details before reservation
-        for (const item of validatedItems) {
-          console.log(`[${correlationId}] 🔍 DEBUG: Item details - Product: ${item.productId}, Size: ${item.size}, Quantity: ${item.quantity}`);
-        }
-        
-        // 🔧 REMOVED: Pre-reservation check was causing race conditions
-        // The atomic reservation already handles stock validation
-        
         const { batchReserveStock } = await import('../utils/transactionManager.js');
-        
-        // 🔧 RETRY MECHANISM: Try stock reservation with retries for race conditions
-        let batchReservationResult;
-        let retryCount = 0;
-        const maxRetries = 3;
-        
-        while (retryCount < maxRetries) {
-          try {
-            console.log(`[${correlationId}] 🔄 Transaction attempt ${retryCount + 1}/${maxRetries} (${correlationId})`);
-            batchReservationResult = await batchReserveStock(
-              validatedItems,
-              { session: mongoSession, correlationId }
-            );
-            
-            if (batchReservationResult.success) {
-              break; // Success, exit retry loop
-            }
-            
-            console.warn(`[${correlationId}] ⚠️ Reservation attempt ${retryCount + 1} failed, retrying...`);
-            retryCount++;
-            
-            // Small delay before retry
-            if (retryCount < maxRetries) {
-              await new Promise(resolve => setTimeout(resolve, 100 * retryCount));
-            }
-          } catch (error) {
-            console.error(`[${correlationId}] ❌ Reservation attempt ${retryCount + 1} error:`, error.message);
-            retryCount++;
-            
-            if (retryCount >= maxRetries) {
-              throw error;
-            }
-            
-            // Small delay before retry
-            await new Promise(resolve => setTimeout(resolve, 100 * retryCount));
-          }
-        }
+        const batchReservationResult = await batchReserveStock(
+          validatedItems,
+          { session: mongoSession, correlationId }
+        );
         
         if (!batchReservationResult.success) {
-          console.error(`[${correlationId}] ❌ Batch reservation failed after ${maxRetries} attempts:`, batchReservationResult);
-          throw new Error(`Batch stock reservation failed: ${batchReservationResult.failures?.length || 0} items could not be reserved. First error: ${batchReservationResult.failures?.[0]?.error || 'Unknown error'}`);
+          throw new Error(`Batch stock reservation failed for ${validatedItems.length} items`);
         }
         
         console.log(`[${correlationId}] ✅ Batch reservation successful for ${batchReservationResult.results.length} items`);

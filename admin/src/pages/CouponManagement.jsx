@@ -22,10 +22,8 @@ const CouponManagement = ({ token }) => {
     try {
       const response = await axios.get(`${backendUrl}/api/coupons`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        withCredentials: true
+          token: token
+        }
       });
       setCoupons(response.data);
     } catch (error) {
@@ -40,10 +38,8 @@ const CouponManagement = ({ token }) => {
     try {
       await axios.post(`${backendUrl}/api/coupons`, formData, {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        withCredentials: true
+          token: token
+        }
       });
       toast.success('Coupon created successfully');
       setFormData({
@@ -67,10 +63,8 @@ const CouponManagement = ({ token }) => {
       try {
         await axios.delete(`${backendUrl}/api/coupons/${id}`, {
           headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          withCredentials: true
+            token: token
+          }
         });
         toast.success('Coupon deleted successfully');
         fetchCoupons();

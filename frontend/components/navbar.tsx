@@ -114,15 +114,15 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
       {/* Main Navbar */}
       <nav className="bg-white border-b border-gray-200 sticky top-0 z-[9999] shadow-sm">
         <div className="container-responsive">
-          <div className="navbar-container flex items-center navbar-responsive py-2 px-4">
+          <div className="navbar-container flex items-center justify-between navbar-responsive py-2">
             
-            {/* Left Section - Mobile Menu + Desktop Links */}
+            {/* Left Section - Logo + Menu */}
             <div className="navbar-left flex items-center space-x-4">
               {/* Mobile menu button */}
               <Button
                 variant="ghost"
                 size="sm"
-                className="md:hidden text-gray-600 hover:text-[rgb(71,60,102)] p-3 hover:bg-gray-100 rounded-lg transition-all duration-200 min-w-[44px] min-h-[44px]"
+                className="md:hidden text-gray-600 hover:text-[rgb(71,60,102)] p-2 hover:bg-gray-100 rounded-lg transition-all duration-200"
                 onClick={(e) => {
                   e.preventDefault()
                   e.stopPropagation()
@@ -133,8 +133,16 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
                 {isMenuOpen ? <X className="navbar-icon" /> : <Menu className="navbar-icon" />}
               </Button>
 
+              {/* Logo - Now on the left */}
+              <button
+                onClick={() => (window.location.href = "/")}
+                className="navbar-logo-responsive font-bold text-[rgb(71,60,102)] tracking-wider font-serif hover:text-[rgb(71,60,102)]/80 transition-colors duration-300 cursor-pointer text-xl md:text-2xl"
+              >
+                SHITHAA
+              </button>
+
               {/* Desktop Navigation Links - Left */}
-              <div className="hidden md:flex items-center space-x-8">
+              <div className="hidden md:flex items-center space-x-8 ml-8">
                 <button
                   onClick={onCategoriesClick}
                   className="navbar-link-effect text-[rgb(71,60,102)] font-medium transition-all duration-200 hover:text-[rgb(71,60,102)]/80"
@@ -150,16 +158,6 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
               </div>
             </div>
 
-            {/* Center - Logo (Desktop) / Logo (Mobile) */}
-            <div className="navbar-center flex items-center">
-              <button
-                onClick={() => (window.location.href = "/")}
-                className="navbar-logo-responsive font-bold text-[rgb(71,60,102)] tracking-wider font-serif hover:text-[rgb(71,60,102)]/80 transition-colors duration-300 cursor-pointer text-xl md:text-2xl"
-              >
-                SHITHAA
-              </button>
-            </div>
-
             {/* Right Section */}
             <div className="navbar-right flex items-center">
               {/* Desktop Navigation Links - Right */}
@@ -173,7 +171,7 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
               </div>
 
               {/* Icons Section */}
-              <div className="flex items-center space-x-2 sm:space-x-4">
+              <div className="flex items-center space-x-3 sm:space-x-4">
                 {/* Cart Icon */}
                 {/* Wishlist Button */}
                 <button
@@ -183,7 +181,7 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
                     console.log("Wishlist button clicked")
                     window.location.href = '/wishlist'
                   }}
-                  className="relative p-2.5 text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200 cursor-pointer z-10 min-w-[44px] min-h-[44px] flex items-center justify-center"
+                  className="relative p-2 text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200 cursor-pointer z-10"
                   aria-label="Wishlist"
                   type="button"
                   style={{ pointerEvents: 'auto' }}
@@ -204,7 +202,7 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
                     console.log("Cart button clicked")
                     openCartSidebar()
                   }}
-                  className="relative p-2.5 text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200 cursor-pointer z-10 min-w-[44px] min-h-[44px] flex items-center justify-center"
+                  className="relative p-2 text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200 cursor-pointer z-10"
                   aria-label="Shopping cart"
                   type="button"
                   style={{ pointerEvents: 'auto' }}
@@ -225,7 +223,7 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
                     console.log("Account button clicked")
                     handleAccountClick()
                   }}
-                  className="p-2.5 text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200 cursor-pointer relative z-10 min-w-[44px] min-h-[44px] flex items-center justify-center"
+                  className="p-2 text-gray-600 hover:text-[rgb(71,60,102)] transition-colors duration-200 cursor-pointer relative z-10"
                   aria-label="Account"
                   type="button"
                   style={{ pointerEvents: 'auto' }}

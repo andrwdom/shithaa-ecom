@@ -48,7 +48,6 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
   const [quantity, setQuantity] = useState(1)
   const [isWishlisted, setIsWishlisted] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
-  const [showFullDescription, setShowFullDescription] = useState(false)
   const { addToCart, openCartSidebar, clearCart } = useCart()
   const { setBuyNowItem } = useBuyNow()
   const { setCheckoutFlow } = useCheckoutFlow();
@@ -456,59 +455,7 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
                   )}
                 </div>
 
-                {/* Product Description Section */}
-                <div className="mb-8">
-                  <div className="border-b border-gray-200 pb-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Product Description</h3>
-                    <div className="prose prose-sm max-w-none">
-                      <div className="text-gray-700 leading-relaxed text-base">
-                        {product.description.length > 200 && !showFullDescription ? (
-                          <>
-                            <p className="mb-4">
-                              {product.description.substring(0, 200)}...
-                            </p>
-                            <button
-                              onClick={() => setShowFullDescription(true)}
-                              className="text-pink-600 hover:text-pink-700 font-medium text-sm transition-colors duration-200 flex items-center gap-1"
-                            >
-                              Read More
-                              <ChevronRight className="h-4 w-4" />
-                            </button>
-                          </>
-                        ) : (
-                          <>
-                            <p className="mb-4">{product.description}</p>
-                            {product.description.length > 200 && (
-                              <button
-                                onClick={() => setShowFullDescription(false)}
-                                className="text-pink-600 hover:text-pink-700 font-medium text-sm transition-colors duration-200 flex items-center gap-1"
-                              >
-                                Show Less
-                                <ChevronRight className="h-4 w-4 rotate-180" />
-                              </button>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Product Features */}
-                  {product.features && product.features.length > 0 && (
-                    <div className="mt-6">
-                      <h4 className="text-md font-semibold text-gray-900 mb-3">Key Features</h4>
-                      <ul className="space-y-2">
-                        {product.features.map((feature, index) => (
-                          <li key={index} className="flex items-start gap-3">
-                            <div className="flex-shrink-0 w-1.5 h-1.5 bg-pink-500 rounded-full mt-2"></div>
-                            <span className="text-gray-700 text-sm leading-relaxed">{feature}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                </div>
+                <p className="text-gray-600 leading-relaxed mb-6">{product.description}</p>
 
                 {/* Loungewear Offer Banner (only for eligible categories) */}
                 {(product.category === "Zipless Feeding Lounge Wear" || 
