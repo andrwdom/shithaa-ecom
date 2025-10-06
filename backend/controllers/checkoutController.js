@@ -345,22 +345,8 @@ export const createCheckoutSession = async (req, res) => {
           console.log(`[${correlationId}] 🔍 DEBUG: Item details - Product: ${item.productId}, Size: ${item.size}, Quantity: ${item.quantity}`);
         }
         
-        // 🔧 PRE-RESERVATION CHECK: Double-check stock availability before reservation
-        console.log(`[${correlationId}] 🔍 Pre-reservation stock check...`);
-        const productModel = (await import('../models/productModel.js')).default;
-        for (const item of validatedItems) {
-          const product = await productModel.findById(item.productId);
-          if (product) {
-            const sizeObj = product.sizes.find(s => s.size === item.size);
-            if (sizeObj) {
-              const availableStock = Math.max(0, sizeObj.stock - (sizeObj.reserved || 0));
-              console.log(`[${correlationId}] 🔍 Stock check - Product: ${item.productId}, Size: ${item.size}, Available: ${availableStock}, Requested: ${item.quantity}`);
-              if (availableStock < item.quantity) {
-                throw new Error(`Insufficient stock for ${item.name || 'product'} (${item.size}): Available ${availableStock}, Requested ${item.quantity}`);
-              }
-            }
-          }
-        }
+        // 🔧 REMOVED: Pre-reservation check was causing race conditions
+        // The atomic reservation already handles stock validation
         
         const { batchReserveStock } = await import('../utils/transactionManager.js');
         
