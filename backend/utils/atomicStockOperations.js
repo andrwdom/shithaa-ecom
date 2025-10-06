@@ -34,45 +34,43 @@ export async function reserveStockAtomic(productId, size, quantity, options = {}
   }
 
   try {
-    // 🚨 SIMPLIFIED ATOMIC: Use updateOne with arrayFilters for reliable atomic operation
-    const query = {
-      _id: productId,
-      'sizes.size': size
-    };
+    // Read sizes to compute the exact index and availability under the same session
+    const product = await productModel
+      .findById(productId, { sizes: 1 })
+      .session(session);
 
-    const update = {
-      $inc: { 'sizes.$[elem].reserved': quantity }
-    };
+    if (!product || !Array.isArray(product.sizes)) {
+      throw new StockError('Product or sizes not found', { productId, correlationId });
+    }
 
-    const updateOptions = {
-      session,
-      arrayFilters: [
-        { 
-          'elem.size': size,
-          $expr: {
-            $gte: [
-              { $subtract: ['$$elem.stock', { $ifNull: ['$$elem.reserved', 0] }] },
-              quantity
-            ]
-          }
-        }
-      ]
-    };
+    const idx = product.sizes.findIndex(s => s.size === size);
+    if (idx === -1) {
+      throw new StockError('Requested size not found', { productId, size, correlationId });
+    }
 
-    const result = await productModel.updateOne(query, update, updateOptions);
+    const sizeEntry = product.sizes[idx] || {};
+    const reserved = typeof sizeEntry.reserved === 'number' ? sizeEntry.reserved : 0;
+    const stock = typeof sizeEntry.stock === 'number' ? sizeEntry.stock : 0;
+    const available = Math.max(0, stock - reserved);
 
-    if (result.modifiedCount === 0) {
-      // Get current stock info for better error message
-      const product = await productModel.findById(productId).session(session);
-      const sizeObj = product?.sizes?.find(s => s.size === size);
-      const availableStock = sizeObj ? Math.max(0, sizeObj.stock - (sizeObj.reserved || 0)) : 0;
-      
-      throw new StockError(`Insufficient stock for reservation`, {
-        productId, size, quantity, availableStock, correlationId
+    if (available < quantity) {
+      throw new StockError('Insufficient stock for reservation', {
+        productId, size, quantity, availableStock: available, correlationId
       });
     }
 
-    // 🚨 CRITICAL MITIGATION: Add structured logging
+    // Atomic $inc using exact positional index path (no arrayFilters / $expr)
+    const incPath = `sizes.${idx}.reserved`;
+    const result = await productModel.updateOne(
+      { _id: productId },
+      { $inc: { [incPath]: quantity } },
+      { session }
+    );
+
+    if (result.modifiedCount === 0) {
+      throw new StockError('Reservation update failed', { productId, size, correlationId });
+    }
+
     console.log(`STOCK:RESERVE:ATOMIC:SUCCESS: productId=${productId}, size=${size}, quantity=${quantity}, correlationId=${correlationId}, timestamp=${new Date().toISOString()}`);
 
     return {
@@ -81,7 +79,7 @@ export async function reserveStockAtomic(productId, size, quantity, options = {}
       size,
       quantity,
       reserved: quantity,
-      availableStock: quantity // Simplified for now
+      availableStock: available - quantity
     };
 
   } catch (error) {
