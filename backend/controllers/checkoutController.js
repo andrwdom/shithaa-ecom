@@ -347,7 +347,7 @@ export const createCheckoutSession = async (req, res) => {
         
         // 🔧 PRE-RESERVATION CHECK: Double-check stock availability before reservation
         console.log(`[${correlationId}] 🔍 Pre-reservation stock check...`);
-        const { productModel } = await import('../models/productModel.js');
+        const productModel = (await import('../models/productModel.js')).default;
         for (const item of validatedItems) {
           const product = await productModel.findById(item.productId);
           if (product) {
