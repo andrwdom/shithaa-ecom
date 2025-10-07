@@ -389,7 +389,7 @@ export default function UnifiedCheckout() {
             Try Again
           </Button>
           <br />
-          <Link href={isBuyNow ? '/' : '/cart'}>
+          <Link href={isBuyNow ? '/' : '/cart'} prefetch={false}>
             <Button variant="outline">
               {isBuyNow ? 'Back to Shopping' : 'Back to Cart'}
             </Button>
@@ -419,7 +419,7 @@ export default function UnifiedCheckout() {
           <p className="text-gray-600 mb-8">
             {isBuyNow ? 'No buy-now item found. Please try again.' : 'Your cart is empty.'}
           </p>
-          <Link href={isBuyNow ? '/' : '/cart'}>
+          <Link href={isBuyNow ? '/' : '/cart'} prefetch={false}>
             <Button>
               {isBuyNow ? 'Continue Shopping' : 'View Cart'}
             </Button>
@@ -531,7 +531,7 @@ export default function UnifiedCheckout() {
 
             {/* Back Links */}
             <div className="mt-4">
-              <Link href={isBuyNow ? '/' : '/cart'}>
+              <Link href={isBuyNow ? '/' : '/cart'} prefetch={false}>
                 <Button variant="outline" className="w-full">
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   {isBuyNow ? 'Back to Product' : 'Back to Cart'}
