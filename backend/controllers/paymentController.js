@@ -697,30 +697,49 @@ export const createPhonePeSession = async (req, res) => {
       .redirectUrl(redirectUrl)
       .build();
 
-    // Get PhonePe client instance
-    const phonepeClient = initializePhonePeClient();
-    if (!phonepeClient) {
+    // 🔧 CRITICAL FIX: Use PhonePe SDK wrapper instead of direct client
+    const { PhonePeSDK } = await import('../sdk/phonepe.js');
+    const phonePeSDK = new PhonePeSDK(phonepe.env);
+    
+    if (!phonePeSDK.initialized) {
       // If PhonePe fails, cancel the draft order and release stock
-      await cancelDraftOrder(draftOrder._id, 'PhonePe client initialization failed');
+      await cancelDraftOrder(draftOrder._id, 'PhonePe SDK initialization failed');
       return res.status(500).json({
         success: false,
         message: 'Payment service not available',
-        error: 'PhonePe client initialization failed'
+        error: 'PhonePe SDK initialization failed'
       });
     }
 
     try {
-      const response = await phonepeClient.pay(request);
+      // Build payment request for SDK
+      const paymentRequest = {
+        merchantTransactionId: phonepeTransactionId,
+        amount: amountInPaise,
+        callbackUrl: redirectUrl,
+        merchantUserId: userId || email || `guest_${Date.now()}`,
+        redirectUrl: redirectUrl,
+        paymentInstrument: {
+          type: 'PAY_PAGE'
+        }
+      };
       
-      if (response && response.redirectUrl) {
+      console.log(`[${correlationId}] Creating PhonePe payment with SDK:`, paymentRequest);
+      const response = await phonePeSDK.pay(paymentRequest);
+      
+      console.log(`[${correlationId}] PhonePe SDK response:`, response);
+      
+      if (response && response.success && response.data && response.data.redirectUrl) {
+        const redirectUrl = response.data.redirectUrl;
+        
         // Update draft order with PhonePe response
         await orderModel.findByIdAndUpdate(draftOrder._id, {
-          'metadata.phonepeRedirectUrl': response.redirectUrl,
+          'metadata.phonepeRedirectUrl': redirectUrl,
           'metadata.phonepeResponse': {
-            redirectUrl: response.redirectUrl,
+            redirectUrl: redirectUrl,
             merchantOrderId: phonepeTransactionId,
-            responseCode: response.code || 'SUCCESS',
-            responseMessage: response.message || 'Payment session created'
+            responseCode: response.data.code || 'SUCCESS',
+            responseMessage: response.data.message || 'Payment session created'
           }
         });
 
@@ -730,7 +749,7 @@ export const createPhonePeSession = async (req, res) => {
           success: true,
           orderId: draftOrder._id, // Customer gets this immediately
           phonepeTransactionId: phonepeTransactionId,
-          redirectUrl: response.redirectUrl,
+          redirectUrl: redirectUrl,
           message: 'Draft order created - proceed to pay'
         });
       } else {
