@@ -62,9 +62,13 @@ export const calculateShipping = async (req, res) => {
         console.log(`[Shipping] Received raw state: "${rawState}"`);
         console.log(`[Shipping] State character codes: ${Array.from(rawState).map(char => char.charCodeAt(0)).join(', ')}`);
 
-        // Aggressive normalization
-        const normalizedState = rawState.toLowerCase().replace(/[^a-z]/g, '');
-        const isTamilNadu = normalizedState.startsWith('tamilnadu') || normalizedState === 'tamil';
+        // 🔑 CRITICAL FIX: Consistent state normalization with frontend
+        const normalizedState = rawState
+            .trim()
+            .toLowerCase()
+            .replace(/\s+/g, ''); // Remove all whitespace
+        
+        const isTamilNadu = ['tamilnadu', 'tamilnaadu', 'tamil'].includes(normalizedState);
 
         console.log('🔍 DEBUG - Shipping calculation:', {
             originalState: rawState,
@@ -154,19 +158,47 @@ export const calculateShipping = async (req, res) => {
                         shippingMessage += `, ${totalFreeShippingItems} lounge wear item${totalFreeShippingItems > 1 ? 's' : ''} free`;
                     }
                 } else {
-                    // Fallback to old logic if no rule found
-                    if (totalDressesForShipping === 1) {
-                        shippingCost = 39;
-                        shippingMessage = "₹39 shipping for 1 maternity feeding item";
-                    } else if (totalDressesForShipping === 2) {
-                        shippingCost = 49;
-                        shippingMessage = "₹49 shipping for 2 maternity feeding items";
-                    } else if (totalDressesForShipping === 3) {
-                        shippingCost = 59;
-                        shippingMessage = "₹59 shipping for 3 maternity feeding items";
-                    } else if (totalDressesForShipping > 3) {
-                        shippingCost = 69;
-                        shippingMessage = "₹69 shipping for 4+ maternity feeding items";
+                    console.warn('[Shipping] No shipping rule found for maternity-feeding-wear, using hardcoded fallback');
+                    // 🔑 CRITICAL FIX: Use correct fallback logic that matches the actual rules
+                    if (isTamilNadu) {
+                        // Tamil Nadu fallback rules
+                        if (totalDressesForShipping === 1) {
+                            shippingCost = 39;
+                            shippingMessage = "₹39 shipping for 1 maternity feeding item";
+                        } else if (totalDressesForShipping === 2) {
+                            shippingCost = 49;
+                            shippingMessage = "₹49 shipping for 2 maternity feeding items";
+                        } else if (totalDressesForShipping === 3) {
+                            shippingCost = 59;
+                            shippingMessage = "₹59 shipping for 3 maternity feeding items";
+                        } else if (totalDressesForShipping === 4) {
+                            shippingCost = 69;
+                            shippingMessage = "₹69 shipping for 4 maternity feeding items";
+                        } else if (totalDressesForShipping === 5) {
+                            shippingCost = 79;
+                            shippingMessage = "₹79 shipping for 5 maternity feeding items";
+                        } else if (totalDressesForShipping === 6) {
+                            shippingCost = 89;
+                            shippingMessage = "₹89 shipping for 6 maternity feeding items";
+                        } else {
+                            shippingCost = 99;
+                            shippingMessage = "₹99 shipping for 7+ maternity feeding items";
+                        }
+                    } else {
+                        // Other states fallback rules
+                        if (totalDressesForShipping === 1) {
+                            shippingCost = 49;
+                            shippingMessage = "₹49 shipping for 1 maternity feeding item";
+                        } else if (totalDressesForShipping === 2) {
+                            shippingCost = 69;
+                            shippingMessage = "₹69 shipping for 2 maternity feeding items";
+                        } else if (totalDressesForShipping === 3) {
+                            shippingCost = 89;
+                            shippingMessage = "₹89 shipping for 3 maternity feeding items";
+                        } else {
+                            shippingCost = 109;
+                            shippingMessage = "₹109 shipping for 4+ maternity feeding items";
+                        }
                     }
                     
                     // Add free shipping message if there are free shipping items in Tamil Nadu
@@ -176,19 +208,46 @@ export const calculateShipping = async (req, res) => {
                 }
             } catch (error) {
                 console.error('Error calculating shipping with rules:', error);
-                // Fallback to old logic
-                if (totalDressesForShipping === 1) {
-                    shippingCost = 39;
-                    shippingMessage = "₹39 shipping for 1 maternity feeding item";
-                } else if (totalDressesForShipping === 2) {
-                    shippingCost = 49;
-                    shippingMessage = "₹49 shipping for 2 maternity feeding items";
-                } else if (totalDressesForShipping === 3) {
-                    shippingCost = 59;
-                    shippingMessage = "₹59 shipping for 3 maternity feeding items";
-                } else if (totalDressesForShipping > 3) {
-                    shippingCost = 69;
-                    shippingMessage = "₹69 shipping for 4+ maternity feeding items";
+                // 🔑 CRITICAL FIX: Use correct error fallback logic that matches the actual rules
+                if (isTamilNadu) {
+                    // Tamil Nadu error fallback rules
+                    if (totalDressesForShipping === 1) {
+                        shippingCost = 39;
+                        shippingMessage = "₹39 shipping for 1 maternity feeding item";
+                    } else if (totalDressesForShipping === 2) {
+                        shippingCost = 49;
+                        shippingMessage = "₹49 shipping for 2 maternity feeding items";
+                    } else if (totalDressesForShipping === 3) {
+                        shippingCost = 59;
+                        shippingMessage = "₹59 shipping for 3 maternity feeding items";
+                    } else if (totalDressesForShipping === 4) {
+                        shippingCost = 69;
+                        shippingMessage = "₹69 shipping for 4 maternity feeding items";
+                    } else if (totalDressesForShipping === 5) {
+                        shippingCost = 79;
+                        shippingMessage = "₹79 shipping for 5 maternity feeding items";
+                    } else if (totalDressesForShipping === 6) {
+                        shippingCost = 89;
+                        shippingMessage = "₹89 shipping for 6 maternity feeding items";
+                    } else {
+                        shippingCost = 99;
+                        shippingMessage = "₹99 shipping for 7+ maternity feeding items";
+                    }
+                } else {
+                    // Other states error fallback rules
+                    if (totalDressesForShipping === 1) {
+                        shippingCost = 49;
+                        shippingMessage = "₹49 shipping for 1 maternity feeding item";
+                    } else if (totalDressesForShipping === 2) {
+                        shippingCost = 69;
+                        shippingMessage = "₹69 shipping for 2 maternity feeding items";
+                    } else if (totalDressesForShipping === 3) {
+                        shippingCost = 89;
+                        shippingMessage = "₹89 shipping for 3 maternity feeding items";
+                    } else {
+                        shippingCost = 109;
+                        shippingMessage = "₹109 shipping for 4+ maternity feeding items";
+                    }
                 }
                 
                 // Add free shipping message if there are free shipping items in Tamil Nadu

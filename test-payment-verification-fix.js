@@ -7,13 +7,32 @@
 import mongoose from 'mongoose';
 import orderModel from './backend/models/orderModel.js';
 import PaymentSession from './backend/models/paymentSessionModel.js';
+import fs from 'fs';
+import path from 'path';
 
-// Load environment variables
-import { config } from './backend/config.js';
+// Load environment variables from backend/.env
+function loadEnv() {
+  const envPath = path.join(process.cwd(), 'backend', '.env');
+  if (fs.existsSync(envPath)) {
+    const envContent = fs.readFileSync(envPath, 'utf8');
+    envContent.split('\n').forEach(line => {
+      const [key, value] = line.split('=');
+      if (key && value && !process.env[key]) {
+        process.env[key] = value.trim();
+      }
+    });
+  }
+}
+
+loadEnv();
 
 async function connectDB() {
   try {
-    await mongoose.connect(config.mongodb.uri);
+    const mongoUri = process.env.MONGODB_URI;
+    if (!mongoUri) {
+      throw new Error('MONGODB_URI not found in environment variables');
+    }
+    await mongoose.connect(mongoUri);
     console.log('✅ Connected to MongoDB');
   } catch (error) {
     console.error('❌ MongoDB connection failed:', error);

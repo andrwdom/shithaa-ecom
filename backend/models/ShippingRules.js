@@ -68,7 +68,13 @@ shippingRuleSchema.statics.calculateShipping = function(category, quantity, stat
         return null; // No rule found for this category
       }
 
-      const isTamilNadu = state.trim().toLowerCase() === 'tamil nadu';
+      // 🔑 CRITICAL FIX: Consistent state normalization
+      const normalizedState = state
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, ''); // Remove all whitespace
+      
+      const isTamilNadu = ['tamilnadu', 'tamilnaadu', 'tamil'].includes(normalizedState);
       const rules = isTamilNadu ? rule.rules.tamilNadu : rule.rules.otherStates;
       
       // Find the appropriate rule based on quantity
