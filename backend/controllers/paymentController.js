@@ -699,7 +699,7 @@ export const createPhonePeSession = async (req, res) => {
 
     // 🔧 CRITICAL FIX: Use PhonePe SDK wrapper instead of direct client
     const { PhonePeSDK } = await import('../sdk/phonepe.js');
-    const phonePeSDK = new PhonePeSDK(phonepe.env);
+    const phonePeSDK = new PhonePeSDK(config.phonepe.env);
     
     if (!phonePeSDK.initialized) {
       // If PhonePe fails, cancel the draft order and release stock
