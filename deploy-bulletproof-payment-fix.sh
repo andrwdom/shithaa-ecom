@@ -137,19 +137,41 @@ pm2 list
 
 # Check for stuck draft orders
 echo "🔍 Checking for stuck draft orders..."
-node -e "
-const mongoose = require('mongoose');
-const orderModel = require('./backend/models/orderModel.js');
+node --input-type=module -e "
+import mongoose from 'mongoose';
+import fs from 'fs';
+import path from 'path';
+
+// Load env
+const envPath = path.join(process.cwd(), 'backend', '.env');
+if (fs.existsSync(envPath)) {
+  const envContent = fs.readFileSync(envPath, 'utf8');
+  envContent.split('\\n').forEach(line => {
+    const [key, value] = line.split('=');
+    if (key && value && !process.env[key]) {
+      process.env[key] = value.trim();
+    }
+  });
+}
 
 async function checkStuckOrders() {
   try {
-    await mongoose.connect(process.env.MONGODB_URI);
+    const mongoUri = process.env.MONGODB_URI;
+    if (!mongoUri) {
+      console.log('⚠️  MONGODB_URI not found in environment');
+      return;
+    }
+    
+    await mongoose.connect(mongoUri);
+    const orderModel = (await import('./backend/models/orderModel.js')).default;
+    
     const stuckOrders = await orderModel.find({
       status: 'DRAFT',
       paymentStatus: 'PENDING',
-      phonepeTransactionId: { \$exists: true, \$ne: null }
+      phonepeTransactionId: { \\\$exists: true, \\\$ne: null }
     });
-    console.log(\`Found \${stuckOrders.length} stuck draft orders\`);
+    
+    console.log(\\\`Found \\\${stuckOrders.length} stuck draft orders\\\`);
     if (stuckOrders.length > 0) {
       console.log('Stuck orders:', stuckOrders.map(o => o.orderId));
     }
@@ -164,7 +186,13 @@ checkStuckOrders();
 
 # Check recent payment logs
 echo "📝 Recent payment logs:"
-tail -n 20 logs/backend.log | grep -i "payment\|verify\|phonepe" || echo "No recent payment logs found"
+if [ -d "$HOME/.pm2/logs" ]; then
+  tail -n 20 "$HOME/.pm2/logs/shithaa-backend-out.log" 2>/dev/null | grep -i "payment\|verify\|phonepe" || echo "No recent payment logs found"
+elif [ -f "logs/backend.log" ]; then
+  tail -n 20 logs/backend.log | grep -i "payment\|verify\|phonepe" || echo "No recent payment logs found"
+else
+  echo "⚠️  Log files not found"
+fi
 
 echo "✅ Monitoring complete"
 EOF

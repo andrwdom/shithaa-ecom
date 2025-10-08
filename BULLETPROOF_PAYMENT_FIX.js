@@ -39,10 +39,8 @@ async function connectDB() {
   }
 }
 
-// Import models
-import orderModel from './backend/models/orderModel.js';
-import PaymentSession from './backend/models/paymentSessionModel.js';
-import CheckoutSession from './backend/models/checkoutSessionModel.js';
+// Import models - will be loaded dynamically
+let orderModel, PaymentSession, CheckoutSession;
 
 /**
  * BULLETPROOF PAYMENT VERIFICATION SYSTEM
@@ -339,6 +337,16 @@ async function main() {
   console.log('==========================================');
   
   await connectDB();
+  
+  // Load models after DB connection
+  try {
+    orderModel = (await import('./backend/models/orderModel.js')).default;
+    PaymentSession = (await import('./backend/models/paymentSessionModel.js')).default;
+    console.log('✅ Models loaded successfully');
+  } catch (error) {
+    console.error('❌ Failed to load models:', error.message);
+    process.exit(1);
+  }
   
   try {
     // Find all stuck draft orders
