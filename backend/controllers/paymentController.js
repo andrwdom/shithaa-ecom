@@ -232,7 +232,7 @@ const processPaymentWithoutTransaction = async (paymentSession, merchantTransact
     // 3. Prepare order data
     orderPayload.paymentStatus = 'PAID';
     orderPayload.orderStatus = 'PENDING';
-    orderPayload.status = 'Pending';
+    orderPayload.status = 'PENDING';
     orderPayload.paidAt = new Date();
     orderPayload.phonepeResponse = phonepeResponse;
     orderPayload.stockConfirmed = false;
@@ -311,7 +311,7 @@ const processPaymentWithoutTransaction = async (paymentSession, merchantTransact
 };
 
 // Helper function to initialize PhonePe client
-const initializePhonePeClient = () => {
+const initializePhonePeClient = async () => {
     const { phonepe } = config;
 
     if (!phonepe.merchant_id || !phonepe.api_key) {
@@ -360,6 +360,25 @@ const initializePhonePeClient = () => {
                 clientKeys: client ? Object.keys(client) : 'NO_CLIENT'
             });
             return null;
+        }
+        
+        // 🔧 CRITICAL FIX: Test the client with a simple call to ensure it's working
+        try {
+            // Try a simple status check to validate the client is working
+            const testTransactionId = 'test_' + Date.now();
+            if (hasGetOrderStatus) {
+                await client.getOrderStatus(testTransactionId);
+            } else if (hasGetStatus) {
+                await client.getStatus(testTransactionId);
+            }
+            console.log('PhonePe client test call completed (expected to fail with invalid transaction)');
+        } catch (testError) {
+            // Expected to fail with invalid transaction, but if it's an auth error, that's a problem
+            if (testError.message && testError.message.includes('auth')) {
+                console.error('PhonePe client authentication failed:', testError.message);
+                return null;
+            }
+            console.log('PhonePe client test call failed as expected (invalid transaction)');
         }
         
         console.log('PhonePe client initialized successfully with required methods');
@@ -874,9 +893,9 @@ export const phonePeCallback = async (req, res) => {
         }
         
           // 3. Prepare order data
-        orderPayload.paymentStatus = 'paid';
-        orderPayload.orderStatus = 'Pending';
-        orderPayload.status = 'Pending';
+        orderPayload.paymentStatus = 'PAID';
+        orderPayload.orderStatus = 'PENDING';
+        orderPayload.status = 'PENDING';
         orderPayload.paidAt = new Date();
         orderPayload.phonepeResponse = req.body;
           orderPayload.stockConfirmed = false; // Will be set to true after stock confirmation
@@ -1123,12 +1142,62 @@ export const verifyPhonePePayment = async (req, res) => {
     const phonePeClient = await initializePhonePeClient();
     
     if (!phonePeClient) {
-      console.error('PhonePe client initialization failed - cannot verify payment');
+      console.error('PhonePe client initialization failed - checking if payment was successful via webhook data');
+      
+      // 🔑 CRITICAL FIX: If PhonePe client fails, check if payment was successful via existing order data
+      // This handles the case where payment succeeded but verification fails
+      if (order.status === 'DRAFT' && order.paymentStatus === 'PENDING') {
+        console.log(`[${correlationId}] PhonePe client unavailable, but order exists as DRAFT - checking webhook data`);
+        
+        // Check if we have any webhook data that indicates success
+        const paymentSession = await PaymentSession.findOne({ phonepeTransactionId: merchantTransactionId });
+        if (paymentSession && paymentSession.status === 'success') {
+          console.log(`[${correlationId}] Found successful payment session, confirming DRAFT order`);
+          
+          // Confirm the DRAFT order since payment was successful
+          const session = await mongoose.startSession();
+          try {
+            await session.withTransaction(async () => {
+              await orderModel.findByIdAndUpdate(order._id, {
+                status: 'CONFIRMED',
+                orderStatus: 'CONFIRMED',
+                paymentStatus: 'PAID',
+                paidAt: new Date(),
+                confirmedAt: new Date(),
+                phonepeResponse: paymentSession.phonepeResponse || { verified: true, method: 'webhook_fallback' }
+              }, { session });
+            });
+            
+            return res.json({
+              success: true,
+              message: 'Payment verified successfully via webhook data',
+              data: {
+                orderId: order.orderId,
+                status: 'CONFIRMED',
+                paymentStatus: 'PAID',
+                verified: true,
+                verificationMethod: 'webhook_fallback'
+              }
+            });
+          } catch (transactionError) {
+            console.error(`[${correlationId}] Failed to confirm order via webhook data:`, transactionError);
+          } finally {
+            await session.endSession();
+          }
+        }
+      }
+      
+      // If we can't verify via webhook data, return a more helpful error
       return res.status(500).json({
         success: false,
-        message: 'Payment verification service unavailable',
+        message: 'Payment verification service temporarily unavailable. Your payment may still be processing.',
         error: 'PhonePe client not initialized',
-        data: null
+        data: {
+          orderId: order.orderId,
+          status: order.status,
+          paymentStatus: order.paymentStatus,
+          suggestion: 'Please check your order status in a few minutes or contact support'
+        }
       });
     }
     
@@ -1162,11 +1231,58 @@ export const verifyPhonePePayment = async (req, res) => {
         }
     } catch (statusError) {
         console.error('PhonePe getOrderStatus/getStatus failed:', statusError);
+        
+        // 🔑 CRITICAL FIX: If PhonePe API fails, check webhook data as fallback
+        console.log(`[${correlationId}] PhonePe API failed, checking webhook data as fallback`);
+        
+        const paymentSession = await PaymentSession.findOne({ phonepeTransactionId: merchantTransactionId });
+        if (paymentSession && paymentSession.status === 'success') {
+          console.log(`[${correlationId}] Found successful payment session via webhook fallback`);
+          
+          // If payment was successful according to webhook, confirm the order
+          if (order.status === 'DRAFT') {
+            const session = await mongoose.startSession();
+            try {
+              await session.withTransaction(async () => {
+                await orderModel.findByIdAndUpdate(order._id, {
+                  status: 'CONFIRMED',
+                  orderStatus: 'CONFIRMED',
+                  paymentStatus: 'PAID',
+                  paidAt: new Date(),
+                  confirmedAt: new Date(),
+                  phonepeResponse: paymentSession.phonepeResponse || { verified: true, method: 'webhook_fallback_api_error' }
+                }, { session });
+              });
+              
+              return res.json({
+                success: true,
+                message: 'Payment verified successfully via webhook fallback',
+                data: {
+                  orderId: order.orderId,
+                  status: 'CONFIRMED',
+                  paymentStatus: 'PAID',
+                  verified: true,
+                  verificationMethod: 'webhook_fallback_api_error'
+                }
+              });
+            } catch (transactionError) {
+              console.error(`[${correlationId}] Failed to confirm order via webhook fallback:`, transactionError);
+            } finally {
+              await session.endSession();
+            }
+          }
+        }
+        
         return res.status(500).json({
             success: false,
-            message: 'Payment verification failed - PhonePe API error',
+            message: 'Payment verification failed - PhonePe API error. Your payment may still be processing.',
             error: statusError.message,
-            data: null
+            data: {
+              orderId: order.orderId,
+              status: order.status,
+              paymentStatus: order.paymentStatus,
+              suggestion: 'Please check your order status in a few minutes or contact support'
+            }
         });
     }
 

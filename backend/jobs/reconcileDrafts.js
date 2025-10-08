@@ -220,8 +220,8 @@ class DraftReconciliationJob {
     const lookbackTime = new Date(Date.now() - this.lookbackMinutes * 60 * 1000);
     
     const draftOrders = await orderModel.find({
-      status: 'DRAFT',
-      paymentStatus: 'PENDING',
+      status: { $in: ['DRAFT', 'draft', 'Pending', 'PENDING'] },
+      paymentStatus: { $in: ['PENDING', 'pending'] },
       createdAt: { $lt: lookbackTime },
       phonepeTransactionId: { $exists: true, $ne: null }
     })
@@ -255,9 +255,9 @@ class DraftReconciliationJob {
     }
 
     // 2. Process based on payment status
-    if (paymentStatus.status === 'PAID' || paymentStatus.status === 'COMPLETED') {
+    if (['PAID','COMPLETED','SUCCESS'].includes(String(paymentStatus.status).toUpperCase())) {
       return await this.confirmDraftOrder(order, paymentStatus, correlationId);
-    } else if (paymentStatus.status === 'FAILED' || paymentStatus.status === 'CANCELLED') {
+    } else if (['FAILED','CANCELLED','TIMEOUT','EXPIRED'].includes(String(paymentStatus.status).toUpperCase())) {
       return await this.cancelDraftOrder(order, paymentStatus, correlationId);
     } else {
       // Still pending - check if it's too old
@@ -306,14 +306,13 @@ class DraftReconciliationJob {
       };
 
       // Create checksum
-      const crypto = await import('crypto');
-      const checksum = crypto
-        .createHash('sha256')
+      const { createHash } = await import('crypto');
+      const checksum = createHash('sha256')
         .update(JSON.stringify(payload) + saltKey)
         .digest('hex');
 
       // Make API request
-      const apiUrl = process.env.NODE_ENV === 'production' 
+      const apiUrl = (process.env.PHONEPE_ENV === 'PRODUCTION' || process.env.NODE_ENV === 'production')
         ? 'https://api.phonepe.com/apis/hermes/pg/v1/status'
         : 'https://api-preprod.phonepe.com/apis/hermes/pg/v1/status';
 
@@ -336,7 +335,7 @@ class DraftReconciliationJob {
       if (data.success) {
         return {
           success: true,
-          status: data.data?.state || 'UNKNOWN',
+          status: (data.data?.state || 'UNKNOWN').toUpperCase(),
           amount: data.data?.amount,
           response: data
         };

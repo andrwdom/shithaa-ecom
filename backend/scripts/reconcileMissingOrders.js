@@ -23,7 +23,7 @@ export async function reconcileMissingOrders(startDate, endDate) {
     
     // Find draft orders that might be missing confirmations
     const draftOrders = await orderModel.find({
-      status: 'DRAFT',
+      status: { $in: ['DRAFT', 'draft', 'Pending', 'PENDING'] },
       createdAt: {
         $gte: new Date(startDate),
         $lte: new Date(endDate)
@@ -51,7 +51,7 @@ export async function reconcileMissingOrders(startDate, endDate) {
         // Check if payment was successful via PhonePe API
         const paymentStatus = await checkPhonePePaymentStatus(draftOrder.phonepeTransactionId);
         
-        if (paymentStatus.success && paymentStatus.status === 'COMPLETED') {
+        if (paymentStatus.success && ['COMPLETED','PAID','SUCCESS'].includes(String(paymentStatus.status).toUpperCase())) {
           // Payment was successful - confirm the order
           await confirmDraftOrder(draftOrder, paymentStatus);
           results.confirmed++;
@@ -62,7 +62,7 @@ export async function reconcileMissingOrders(startDate, endDate) {
             phonepeTransactionId: draftOrder.phonepeTransactionId,
             amount: draftOrder.totalAmount
           });
-        } else if (paymentStatus.success && paymentStatus.status === 'FAILED') {
+        } else if (paymentStatus.success && ['FAILED','CANCELLED','TIMEOUT','EXPIRED'].includes(String(paymentStatus.status).toUpperCase())) {
           // Payment failed - cancel the order
           await cancelDraftOrder(draftOrder, 'Payment failed during reconciliation');
           results.cancelled++;
@@ -144,14 +144,16 @@ async function checkPhonePePaymentStatus(transactionId) {
     };
     
     // Create checksum
-    const crypto = require('crypto');
-    const checksum = crypto
-      .createHash('sha256')
+    const { createHash } = await import('crypto');
+    const checksum = createHash('sha256')
       .update(JSON.stringify(payload) + saltKey)
       .digest('hex');
     
     // Make API request
-    const response = await fetch('https://api.phonepe.com/apis/hermes/pg/v1/status', {
+    const apiUrl = (process.env.PHONEPE_ENV === 'PRODUCTION' || process.env.NODE_ENV === 'production')
+      ? 'https://api.phonepe.com/apis/hermes/pg/v1/status'
+      : 'https://api-preprod.phonepe.com/apis/hermes/pg/v1/status';
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -166,7 +168,7 @@ async function checkPhonePePaymentStatus(transactionId) {
     if (data.success) {
       return {
         success: true,
-        status: data.data?.state || 'UNKNOWN',
+        status: (data.data?.state || 'UNKNOWN').toUpperCase(),
         amount: data.data?.amount,
         response: data
       };

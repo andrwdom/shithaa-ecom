@@ -26,10 +26,22 @@ export interface CheckoutSession {
   status: string;
 }
 
+export interface OrderSummary {
+  subtotal: number;
+  offerDiscount: number;
+  couponDiscount: number;
+  shipping: number;
+  shippingMessage: string;
+  isFreeShipping: boolean;
+  total: number;
+  itemCount: number;
+}
+
 export interface CreateCheckoutSessionRequest {
   source: 'cart' | 'buynow';
   items: CheckoutItem[];
   couponCode?: string;
+  orderSummary?: OrderSummary;
 }
 
 export interface CreateCheckoutSessionResponse {

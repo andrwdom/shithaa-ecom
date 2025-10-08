@@ -232,10 +232,14 @@ export default function UnifiedCheckout() {
         return;
       }
 
+      // Calculate order summary with offers
+      const orderSummary = calculateOrderSummary();
+      
       // Create checkout session
       const response = await createCheckoutSession({
         source: isBuyNow ? 'buynow' : 'cart',
-        items
+        items,
+        orderSummary
       }, token, shipping.email);
 
       if (response.success && response.data) {

@@ -16,7 +16,7 @@ export async function finalizeOrder(paymentId, paymentData) {
       // 1. Find the draft order
       const order = await Order.findOne({ 
         'payment.paymentId': paymentId,
-        status: 'draft'
+        status: { $in: ['DRAFT', 'draft', 'Pending', 'PENDING'] }
       }).session(session);
       
       if (!order) {
@@ -42,8 +42,8 @@ export async function finalizeOrder(paymentId, paymentData) {
       
       // 3. Finalize the order
       await Order.findByIdAndUpdate(order._id, {
-        status: 'confirmed',
-        paymentStatus: 'completed',
+        status: 'CONFIRMED',
+        paymentStatus: 'PAID',
         payment: {
           ...order.payment,
           transactionId: paymentData.transactionId,

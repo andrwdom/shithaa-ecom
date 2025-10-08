@@ -127,7 +127,7 @@ class BulletproofWebhookService {
     // Strategy 1: Find and confirm draft order (primary path)
     let order = await orderModel.findOne({ 
       phonepeTransactionId: orderId,
-      status: 'DRAFT'
+      status: { $in: ['DRAFT', 'draft', 'Pending', 'PENDING'] }
     }).session(session);
 
     if (order) {
@@ -417,7 +417,7 @@ class BulletproofWebhookService {
   async handlePaymentFailure(orderId, webhookData, correlationId, session) {
     const order = await orderModel.findOne({ 
       phonepeTransactionId: orderId,
-      status: 'DRAFT'
+      status: { $in: ['DRAFT', 'draft', 'Pending', 'PENDING'] }
     }).session(session);
 
     if (order) {

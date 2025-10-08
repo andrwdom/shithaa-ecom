@@ -77,38 +77,41 @@ export default function CartSidebar() {
         
         // Only fetch stocks for items we don't already have
         const itemsToFetch = cartItems.filter(item => !productStocks[item._id]);
-        
-        for (const item of itemsToFetch) {
-          if (!stocks[item._id]) {
-            try {
-              const response = await safeFetch(
-                `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/products/${item._id}`,
-                {},
-                `product-stock-${item._id}`,
-                5 * 60 * 1000 // 5 minutes cache for stock info
-              )
-              
-              if (response.ok) {
-                const data = await response.json()
-                if (data.product && Array.isArray(data.product.sizes)) {
-                  stocks[item._id] = {};
-                  for (const s of data.product.sizes) {
-                    // Calculate available stock (stock - reserved)
-                    stocks[item._id][s.size] = Math.max(0, (s.stock || 0) - (s.reserved || 0));
-                  }
-                } else if (data.data && Array.isArray(data.data.sizes)) {
-                  stocks[item._id] = {};
-                  for (const s of data.data.sizes) {
-                    // Calculate available stock (stock - reserved)
-                    stocks[item._id][s.size] = Math.max(0, (s.stock || 0) - (s.reserved || 0));
-                  }
-                }
-              }
-            } catch (error) {
-              console.error('Error fetching stock for item:', item._id, error);
+
+        // Fetch all missing product stocks in parallel to reduce latency
+        const fetchPromises = itemsToFetch.map(async (item) => {
+          if (stocks[item._id]) return; // already prepared in this batch
+          try {
+            const response = await safeFetch(
+              `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/products/${item._id}`,
+              {},
+              `product-stock-${item._id}`,
+              5 * 60 * 1000 // 5 minutes cache for stock info
+            )
+
+            if (!response.ok) return;
+            const data = await response.json();
+
+            const sizes = Array.isArray(data?.product?.sizes)
+              ? data.product.sizes
+              : Array.isArray(data?.data?.sizes)
+                ? data.data.sizes
+                : null;
+
+            if (!sizes) return;
+
+            const sizeToAvailable: Record<string, number> = {};
+            for (const s of sizes) {
+              // available = stock - reserved (never negative)
+              sizeToAvailable[s.size] = Math.max(0, (s.stock || 0) - (s.reserved || 0));
             }
+            stocks[item._id] = sizeToAvailable;
+          } catch (error) {
+            console.error('Error fetching stock for item:', item._id, error);
           }
-        }
+        });
+
+        await Promise.all(fetchPromises);
         
         // Merge new stocks with existing ones
         setProductStocks(prev => ({ ...prev, ...stocks }));
