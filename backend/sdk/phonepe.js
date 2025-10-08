@@ -52,12 +52,23 @@ export class PhonePeSDK {
     try {
       console.log('Creating PhonePe payment with request:', paymentRequest);
       
-      const response = await this.client.pay(paymentRequest);
+      // 🔧 CRITICAL FIX: Use StandardCheckoutPayRequest.builder() pattern
+      const { StandardCheckoutPayRequest } = await import('pg-sdk-node');
+      
+      const request = StandardCheckoutPayRequest.builder()
+        .merchantOrderId(paymentRequest.merchantTransactionId)
+        .amount(paymentRequest.amount)
+        .redirectUrl(paymentRequest.redirectUrl || paymentRequest.callbackUrl)
+        .build();
+      
+      console.log('Built StandardCheckoutPayRequest:', request);
+      
+      const response = await this.client.pay(request);
       
       console.log('PhonePe payment response:', response);
       
       return {
-        success: response && response.success,
+        success: response && response.redirectUrl,
         data: response
       };
     } catch (error) {
