@@ -6,15 +6,15 @@
  */
 
 import mongoose from 'mongoose';
-import dotenv from 'dotenv';
 import orderModel from './backend/models/orderModel.js';
 import PaymentSession from './backend/models/paymentSessionModel.js';
 
-dotenv.config();
+// Load environment variables
+import { config } from './backend/config.js';
 
 async function connectDB() {
   try {
-    await mongoose.connect(process.env.MONGODB_URI);
+    await mongoose.connect(config.mongodb.uri);
     console.log('✅ Connected to MongoDB');
   } catch (error) {
     console.error('❌ MongoDB connection failed:', error);
