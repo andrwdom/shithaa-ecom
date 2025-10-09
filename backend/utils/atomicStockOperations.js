@@ -132,10 +132,14 @@ export async function confirmStockReservationAtomic(productId, size, quantity, o
       arrayFilters: [
         { 
           'elem.size': size, 
-          'elem.stock': { $gte: quantity },
-          $or: [
-            { 'elem.reserved': { $gte: quantity } },
-            { 'elem.reserved': 0 }
+          $and: [
+            { 'elem.stock': { $gte: quantity } },
+            {
+              $or: [
+                { 'elem.reserved': { $gte: quantity } },
+                { 'elem.reserved': 0 }
+              ]
+            }
           ]
         }
       ]
