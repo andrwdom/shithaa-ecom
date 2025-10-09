@@ -12,8 +12,6 @@ import { useCart } from "@/components/cart-context";
 import { useBuyNow } from "@/components/buy-now-context";
 import { useCheckoutFlow } from "@/components/checkout-flow-manager";
 import WishlistButton from "@/components/WishlistButton"
-import Navbar from "@/components/navbar"
-import Footer from "@/components/footer"
 import { toast } from "sonner"
 
 interface Product {
@@ -249,7 +247,6 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
 
   return (
     <>
-      <Navbar />
       <div className="min-h-screen bg-gray-50">
         {/* Header */}
         <div className="sticky top-20 z-40 bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-sm">
@@ -663,7 +660,6 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
           </div>
         </div>
       </div>
-      <Footer />
     </>
   )
 }
