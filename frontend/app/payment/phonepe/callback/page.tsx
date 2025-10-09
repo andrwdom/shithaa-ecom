@@ -35,11 +35,20 @@ function PhonePeCallbackInner() {
           await new Promise(resolve => setTimeout(resolve, 2000)) // Wait 2 seconds for webhook
         }
         
+        // 🔧 HOTFIX #3: Add timeout and proper headers for Instagram browser
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 30000) // 30s timeout
+        
         const verifyRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/payment/phonepe/verify/${transactionId}`, {
           method: 'GET',
-          headers: { 'Content-Type': 'application/json' }
+          headers: { 
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          signal: controller.signal
         })
         
+        clearTimeout(timeoutId)
         console.log('PhonePe verification response status:', verifyRes.status)
         
         if (verifyRes.ok) {
@@ -133,9 +142,27 @@ function PhonePeCallbackInner() {
         }
       } catch (error) {
         console.error('Payment verification error:', error)
-        // Payment verification error - redirect to PaymentFailed page
-        console.log('Payment verification error, redirecting to PaymentFailed page')
-        redirectToPaymentFailed(transactionId, 'Payment processing error occurred', null, storedOrderData)
+        setTries(prev => prev + 1)
+        
+        // 🔧 HOTFIX #3: Retry with backoff before giving up
+        // Increased retries for slow networks (Instagram browser)
+        if (tries >= 10) {
+          // After 10 retries, show error but don't claim success
+          console.log('Max retries reached, showing error page')
+          setStatus('error')
+          setMessage(
+            'Unable to verify payment status. Your payment may have been processed. ' +
+            'Please check your email or contact support with transaction ID: ' + transactionId
+          )
+          // DO NOT redirect to PaymentFailed immediately
+          // Give user clear message about checking email/support
+          return
+        }
+        
+        // Retry after delay (exponential backoff)
+        const delay = Math.min(1000 * Math.pow(2, tries), 5000)
+        console.log(`Retry ${tries + 1}/10 in ${delay}ms...`)
+        setTimeout(() => checkPaymentStatusForTransaction(transactionId, storedOrderData), delay)
         return
       }
     }

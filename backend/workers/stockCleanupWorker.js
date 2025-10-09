@@ -26,12 +26,13 @@ const cleanupAbandonedOrders = async () => {
     await session.startTransaction();
     
     try {
-      // 1. Clean up reservations older than 14 minutes (PhonePe session timeout)
+      // 1. Clean up reservations older than 20 minutes (PhonePe session timeout)
+      // 🔧 HOTFIX #2: Increased from 14min to 20min (PhonePe processing time)
       const oldReservations = await Reservation.find({
         status: 'active',
         $or: [
-          // Older than 14 minutes
-          { createdAt: { $lt: new Date(Date.now() - 14 * 60 * 1000) } },
+          // Older than 20 minutes
+          { createdAt: { $lt: new Date(Date.now() - 20 * 60 * 1000) } },
           // Failed payments
           { status: 'failed' },
           // Corrupted reservations

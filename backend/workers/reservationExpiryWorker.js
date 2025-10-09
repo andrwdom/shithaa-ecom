@@ -81,13 +81,14 @@ export const expireOldReservations = async () => {
     console.log(`[${correlationId}] Cleaning up expired checkout sessions...`);
     const checkoutCleanupResult = await CheckoutSession.cleanExpired();
     
-    // Additional cleanup: Force release stock for sessions older than 10 minutes
-    console.log(`[${correlationId}] Cleaning up very old sessions (>10min)...`);
-    const veryOldSessions = await CheckoutSession.find({
-      createdAt: { $lt: new Date(Date.now() - 10 * 60 * 1000) },
-      stockReserved: true,
-      status: { $in: ['pending', 'awaiting_payment'] }
-    });
+  // Additional cleanup: Force release stock for sessions older than 20 minutes
+  // 🔧 HOTFIX #2: Increased from 10min to 20min (PhonePe processing time)
+  console.log(`[${correlationId}] Cleaning up very old sessions (>20min)...`);
+  const veryOldSessions = await CheckoutSession.find({
+    createdAt: { $lt: new Date(Date.now() - 20 * 60 * 1000) },
+    stockReserved: true,
+    status: { $in: ['pending', 'awaiting_payment'] }
+  });
     
     if (veryOldSessions.length > 0) {
       console.log(`[${correlationId}] Found ${veryOldSessions.length} very old sessions, checking for draft orders...`);

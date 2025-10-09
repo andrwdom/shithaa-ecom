@@ -1,0 +1,92 @@
+--- a/frontend/app/payment/phonepe/callback/page.tsx
++++ b/frontend/app/payment/phonepe/callback/page.tsx
+@@ -24,6 +24,11 @@ function PhonePeCallbackInner() {
+     async function checkPaymentStatusForTransaction(transactionId: string, storedOrderData: any) {
+       try {
+         console.log('Checking payment status for:', transactionId)
++        
++        // 🔧 HOTFIX #3: Force server verification with extended timeout
++        const controller = new AbortController();
++        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+         
+         const verifyRes = await fetch(`/api/payment/verify-phonepe/${transactionId}`, {
+           credentials: 'include',
++          signal: controller.signal,
++          headers: {
++            'Content-Type': 'application/json',
++            'X-Requested-With': 'XMLHttpRequest'
++          }
+         })
+         
++        clearTimeout(timeoutId);
++        
+         console.log('PhonePe verification response status:', verifyRes.status)
+         
+         if (verifyRes.ok) {
+@@ -123,10 +138,16 @@ function PhonePeCallbackInner() {
+       } catch (error) {
+         console.error('Payment verification error:', error)
+         setTries(prev => prev + 1)
+         
+-        // If max retries reached, show error
+-        if (tries >= 10) {
+-          redirectToPaymentFailed(transactionId, 'Unable to verify payment. Please contact support.', null, storedOrderData)
++        // 🔧 HOTFIX #3: NEVER show success without server confirmation
++        if (tries >= 15) { // Increased for slow networks
++          setStatus('error')
++          setMessage(
++            'Unable to verify payment status. Your payment may have been processed. ' +
++            'Please check your email or contact support with transaction ID: ' + transactionId
++          )
++          // DO NOT redirect to success
++          // DO NOT trust localStorage or URL params
++          return
+         }
+       }
+     }
+
+--- a/backend/controllers/paymentController.js
++++ b/backend/controllers/paymentController.js
+@@ -1143,6 +1143,7 @@ export const phonePeCallback = async (req, res) => {
+ export const verifyPhonePePayment = async (req, res) => {
+   const correlationId = req.headers['x-request-id'] || `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+   
++  // 🔧 HOTFIX #3: Enhanced verification with retry logic
+   try {
+     const { merchantTransactionId } = req.params;
+     
+@@ -1168,7 +1169,35 @@ export const verifyPhonePePayment = async (req, res) => {
+     }
+ 
+     // Initialize PhonePe client
++    let retryCount = 0;
++    const maxRetries = 3;
++    let paymentStatus = null;
++    
++    // 🔧 Retry logic for PhonePe API calls
++    while (retryCount < maxRetries && !paymentStatus) {
++      try {
+     const phonePeClient = await initializePhonePeClient();
+     
++        if (phonePeClient && typeof phonePeClient.getOrderStatus === 'function') {
++          paymentStatus = await phonePeClient.getOrderStatus(merchantTransactionId);
++          break;
++        } else if (phonePeClient && typeof phonePeClient.getStatus === 'function') {
++          paymentStatus = await phonePeClient.getStatus(merchantTransactionId);
++          break;
++        }
++      } catch (apiError) {
++        retryCount++;
++        console.error(`[${correlationId}] PhonePe API attempt ${retryCount} failed:`, apiError.message);
++        
++        if (retryCount < maxRetries) {
++          // Exponential backoff: 1s, 2s, 4s
++          await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
++        }
++      }
++    }
++    
++    // If all retries failed, check webhook data as fallback
+     if (!phonePeClient) {
+       console.error(`[${correlationId}] PhonePe client unavailable, checking webhook data...`);
+

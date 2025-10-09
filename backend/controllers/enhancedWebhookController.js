@@ -24,30 +24,35 @@ export async function phonePeWebhookHandler(req, res) {
   const correlationId = req.headers['x-request-id'] || `webhook_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   
   try {
-    // IMMEDIATE ACKNOWLEDGMENT - Critical for preventing payment provider retries
-    res.status(200).json({ 
-      success: true, 
-      message: 'Webhook received and queued for processing',
-      correlationId,
-      timestamp: new Date().toISOString()
-    });
-
-    // Log webhook receipt
-    EnhancedLogger.webhookLog('INFO', 'PhonePe webhook received', {
+    // 🔧 HOTFIX #1: Log receipt BEFORE verification
+    EnhancedLogger.webhookLog('INFO', 'PhonePe webhook received (pre-verification)', {
       correlationId,
       ip: req.ip,
       userAgent: req.headers['user-agent'],
       contentType: req.headers['content-type']
     });
 
-    // Verify signature first
+    // 🔧 CRITICAL: Verify signature BEFORE sending 200 OK
     const signatureValid = await verifyPhonePeSignature(req, correlationId);
     if (!signatureValid) {
-      EnhancedLogger.webhookLog('ERROR', 'Invalid webhook signature - processing stopped', {
+      EnhancedLogger.webhookLog('ERROR', 'Invalid webhook signature - rejecting', {
         correlationId
       });
-      return; // Already sent 200, but don't process
+      // 🔧 Return 401 to trigger PhonePe retry (don't return 200 for invalid signatures)
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid signature',
+        correlationId
+      });
     }
+
+    // ✅ NOW send 200 OK after signature verification passed
+    res.status(200).json({ 
+      success: true, 
+      message: 'Webhook received and queued for processing',
+      correlationId,
+      timestamp: new Date().toISOString()
+    });
 
     // Parse webhook payload
     const webhookPayload = parseWebhookPayload(req.body, correlationId);

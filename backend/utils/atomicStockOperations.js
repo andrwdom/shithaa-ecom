@@ -109,11 +109,15 @@ export async function confirmStockReservationAtomic(productId, size, quantity, o
 
   try {
     // 🚨 CRITICAL FIX: Atomic operation - check stock AND reserved, then deduct both
+    // BUT: If reserved is 0, we can still confirm if stock exists
     const query = {
       _id: productId,
       'sizes.size': size,
       'sizes.stock': { $gte: quantity },
-      'sizes.reserved': { $gte: quantity }
+      $or: [
+        { 'sizes.reserved': { $gte: quantity } },
+        { 'sizes.reserved': 0 } // Allow confirmation if no reservation exists
+      ]
     };
 
     const update = {
@@ -128,8 +132,11 @@ export async function confirmStockReservationAtomic(productId, size, quantity, o
       arrayFilters: [
         { 
           'elem.size': size, 
-          'elem.stock': { $gte: quantity }, 
-          'elem.reserved': { $gte: quantity } 
+          'elem.stock': { $gte: quantity },
+          $or: [
+            { 'elem.reserved': { $gte: quantity } },
+            { 'elem.reserved': 0 }
+          ]
         }
       ]
     };

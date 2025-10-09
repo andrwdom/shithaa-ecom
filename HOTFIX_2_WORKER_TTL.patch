@@ -1,0 +1,59 @@
+--- a/backend/workers/reservationExpiryWorker.js
++++ b/backend/workers/reservationExpiryWorker.js
+@@ -84,7 +84,7 @@ export const expireOldReservations = async () => {
+   // Additional cleanup: Force release stock for sessions older than 10 minutes
+   console.log(`[${correlationId}] Cleaning up very old sessions (>10min)...`);
+   const veryOldSessions = await CheckoutSession.find({
+-    createdAt: { $lt: new Date(Date.now() - 10 * 60 * 1000) },
++    createdAt: { $lt: new Date(Date.now() - 20 * 60 * 1000) }, // 🔧 HOTFIX: 20min (PhonePe processing time)
+     stockReserved: true,
+     status: { $in: ['pending', 'awaiting_payment'] }
+   });
+@@ -154,6 +154,19 @@ export const expireOldReservations = async () => {
+         try {
+           // 🔧 CRITICAL FIX: Check if there's a draft order with this session
+           // If there is, DON'T release stock because the order owns it now
++          
++          // 🔧 HOTFIX #2: Also check for pending webhooks/payments
++          const RawWebhook = (await import('../models/RawWebhook.js')).default;
++          const pendingWebhook = await RawWebhook.findOne({
++            'parsedData.orderId': session.sessionId,
++            createdAt: { $gte: new Date(Date.now() - 30 * 60 * 1000) }, // Last 30 min
++            processed: false
++          });
++          
++          if (pendingWebhook) {
++            console.log(`[${correlationId}] ⚠️ Pending webhook exists for session ${session.sessionId} - NOT releasing stock`);
++            continue;
++          }
++          
+           const draftOrder = await orderModel.findOne({ 
+             checkoutSessionId: session.sessionId,
+             status: { $in: ['DRAFT', 'PENDING', 'CONFIRMED'] }
+
+--- a/backend/workers/stockCleanupWorker.js
++++ b/backend/workers/stockCleanupWorker.js
+@@ -30,7 +30,7 @@ const cleanupAbandonedOrders = async () => {
+       const oldReservations = await Reservation.find({
+         status: 'active',
+         $or: [
+-          // Older than 14 minutes
+-          { createdAt: { $lt: new Date(Date.now() - 14 * 60 * 1000) } },
++          // Older than 20 minutes (PhonePe max processing time)
++          { createdAt: { $lt: new Date(Date.now() - 20 * 60 * 1000) } },
+           // Failed payments
+           { status: 'failed' },
+
+--- a/backend/controllers/checkoutController.js
++++ b/backend/controllers/checkoutController.js
+@@ -272,7 +272,7 @@ export const createCheckoutSession = async (req, res) => {
+       total,
+       currency: 'INR',
+       status: 'pending',
+-          stockReserved: false, // Will be set to true after reservation
+-          expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 🚨 CRITICAL MITIGATION: Reduced from 15 to 5 minutes
++      stockReserved: false,
++      expiresAt: new Date(Date.now() + 20 * 60 * 1000), // 🔧 HOTFIX: 20min (PhonePe processing time)
+       metadata: {
+         userAgent: req.headers['user-agent'],
+
