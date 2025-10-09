@@ -50,13 +50,22 @@ function PhonePeCallbackInner() {
             const paymentData = verifyData.data
             console.log('Payment data from PhonePe:', paymentData)
             
-            // Check payment status - ENHANCED LOGIC
+            // Check payment status - ENHANCED LOGIC based on PhonePe docs
             const isSuccess = (
               paymentData.code === 'PAYMENT_SUCCESS' ||
               paymentData.code === 'SUCCESS' ||
               paymentData.status === 'SUCCESS' ||
+              paymentData.status === 'COMPLETED' ||
+              paymentData.status === 'PAID' ||
               paymentData.paymentState === 'COMPLETED' ||
-              paymentData.state === 'COMPLETED'
+              paymentData.paymentState === 'SUCCESS' ||
+              paymentData.state === 'COMPLETED' ||
+              paymentData.state === 'SUCCESS' ||
+              paymentData.state === 'PAID' ||
+              paymentData.state === 'SUCCESSFUL' ||
+              paymentData.state === 'CAPTURED' ||
+              (paymentData.responseCode && paymentData.responseCode.toString().startsWith('00')) ||
+              (paymentData.code && paymentData.code.toString().startsWith('00'))
             )
             
             const isPending = (

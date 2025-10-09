@@ -864,12 +864,18 @@ export const phonePeCallback = async (req, res) => {
 
     console.log('Found payment session:', paymentSession._id, 'Status:', paymentSession.status);
 
-    // 🔧 CRITICAL FIX: Check for both success and explicit failure states
+    // 🔧 CRITICAL FIX: Enhanced success detection based on PhonePe official docs
     const isSuccess = (
       state === 'PAID' ||
       state === 'COMPLETED' ||
+      state === 'SUCCESS' ||
+      state === 'SUCCESSFUL' ||
+      state === 'CAPTURED' ||
       responseCode === 'SUCCESS' ||
-      responseCode === '000'
+      responseCode === '000' ||
+      responseCode === 'PAYMENT_SUCCESS' ||
+      responseCode === 'SUCCESS' ||
+      (responseCode && responseCode.toString().startsWith('00')) // PhonePe success codes start with 00
     );
     
     // Check for explicit failure or timeout
@@ -911,13 +917,13 @@ export const phonePeCallback = async (req, res) => {
           throw new Error('Order payload is missing from payment session');
         }
         
-          // 3. Prepare order data
+          // 3. Prepare order data - FIXED ORDER STATUS
         orderPayload.paymentStatus = 'PAID';
-        orderPayload.orderStatus = 'PENDING';
-        orderPayload.status = 'PENDING';
+        orderPayload.orderStatus = 'CONFIRMED';
+        orderPayload.status = 'CONFIRMED';
         orderPayload.paidAt = new Date();
         orderPayload.phonepeResponse = req.body;
-          orderPayload.stockConfirmed = false; // Will be set to true after stock confirmation
+        orderPayload.stockConfirmed = false; // Will be set to true after stock confirmation
 
           // 4. Create order atomically
           const order = await orderModel.create([orderPayload], { session });
@@ -958,12 +964,16 @@ export const phonePeCallback = async (req, res) => {
             }
           }
 
-          // 6. Mark order as stock confirmed
+          // 6. Mark order as stock confirmed AND CONFIRMED STATUS
           await orderModel.findByIdAndUpdate(
             createdOrder._id, 
             { 
               stockConfirmed: true,
               stockConfirmedAt: new Date(),
+              status: 'CONFIRMED',
+              orderStatus: 'CONFIRMED',
+              paymentStatus: 'PAID',
+              confirmedAt: new Date(),
               updatedAt: new Date()
             },
             { session }

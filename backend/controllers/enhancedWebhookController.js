@@ -155,19 +155,33 @@ export async function phonePeWebhookHandler(req, res) {
             timestamp: Date.now()
           };
           
-          // Process webhook with bulletproof processor
-          const result = await services.processor.processWebhook(webhookData, correlationId);
-          
-          // Mark webhook as processed
-          await WebhookEvent.markAsProcessed(eventId);
-          
-          EnhancedLogger.webhookLog('SUCCESS', 'Webhook processed successfully', {
-            correlationId,
-            eventId,
-            orderId: webhookPayload.orderId,
-            action: result.action,
-            orderId: result.orderId
-          });
+          // CRITICAL FIX: Enhanced webhook processing with better error handling
+          let result;
+          try {
+            result = await services.processor.processWebhook(webhookData, correlationId);
+            
+            // Mark webhook as processed
+            await WebhookEvent.markAsProcessed(eventId);
+            
+            EnhancedLogger.webhookLog('SUCCESS', 'Webhook processed successfully', {
+              correlationId,
+              eventId,
+              orderId: webhookPayload.orderId,
+              action: result.action,
+              orderId: result.orderId
+            });
+          } catch (processingError) {
+            EnhancedLogger.webhookLog('ERROR', 'Webhook processing failed', {
+              correlationId,
+              eventId,
+              orderId: webhookPayload.orderId,
+              error: processingError.message
+            });
+            
+            // Mark as failed
+            await WebhookEvent.markAsFailed(eventId, processingError.message);
+            throw processingError;
+          }
           
           return result;
         };
@@ -343,9 +357,9 @@ function parseWebhookPayload(body, correlationId) {
       return { isValid: false, error: 'Missing payment state' };
     }
 
-    // Categorize payment states
-    const successStates = ['COMPLETED', 'SUCCESS', 'PAID', 'CAPTURED', 'OK', 'SUCCESSFUL'];
-    const failureStates = ['FAILED', 'CANCELLED', 'TIMEOUT', 'ERROR', 'REJECTED', 'ABORTED'];
+    // Categorize payment states - ENHANCED based on PhonePe docs
+    const successStates = ['COMPLETED', 'SUCCESS', 'PAID', 'CAPTURED', 'OK', 'SUCCESSFUL', 'SUCCESSFUL'];
+    const failureStates = ['FAILED', 'CANCELLED', 'TIMEOUT', 'ERROR', 'REJECTED', 'ABORTED', 'DECLINED'];
     
     const isSuccess = successStates.includes(state);
     const isFailure = failureStates.includes(state);
