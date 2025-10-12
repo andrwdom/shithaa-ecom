@@ -30,6 +30,31 @@ export default function ProductPage({ product, onBack }: ProductPageProps) {
   const [selectedSize, setSelectedSize] = useState("")
   const [quantity, setQuantity] = useState(1)
 
+  // WhatsApp-style formatting function
+  const formatWhatsAppStyle = (text: string) => {
+    if (!text) return text;
+    
+    // Split by formatting patterns and rebuild with React elements
+    const parts = text.split(/(\*[^*]+\*|_[^_]+_|\/[^/]+\/)/g);
+    
+    return parts.map((part, index) => {
+      // Bold: *text*
+      if (part.startsWith('*') && part.endsWith('*') && part.length > 2) {
+        return <strong key={index} className="font-bold text-gray-900">{part.slice(1, -1)}</strong>;
+      }
+      // Underline: _text_
+      if (part.startsWith('_') && part.endsWith('_') && part.length > 2) {
+        return <span key={index} className="underline">{part.slice(1, -1)}</span>;
+      }
+      // Italic: /text/
+      if (part.startsWith('/') && part.endsWith('/') && part.length > 2) {
+        return <em key={index} className="italic">{part.slice(1, -1)}</em>;
+      }
+      // Regular text
+      return part;
+    });
+  };
+
   // Stock status logic
   // (removed all stock status display)
 
@@ -120,42 +145,6 @@ export default function ProductPage({ product, onBack }: ProductPageProps) {
                 <span className={`ml-4 text-base font-semibold ${stock === 0 ? 'text-red-500' : stock <= 5 ? 'text-yellow-600' : 'text-green-600'}`}></span>
               </div>
 
-              <div className="bg-gradient-to-r from-gray-50 to-pink-50 rounded-lg p-6 border border-gray-100">
-                <div className="text-gray-700 leading-relaxed space-y-4">
-                  {product.description.split('\n').map((line, index) => {
-                    // Handle empty lines
-                    if (line.trim() === '') {
-                      return <div key={index} className="h-3"></div>;
-                    }
-                    
-                    // Handle bullet points (lines starting with *)
-                    if (line.trim().startsWith('*')) {
-                      return (
-                        <div key={index} className="flex items-start ml-6">
-                          <span className="text-pink-500 mr-3 mt-1 text-lg font-bold">•</span>
-                          <span className="text-gray-700 leading-relaxed">{line.trim().substring(1).trim()}</span>
-                        </div>
-                      );
-                    }
-                    
-                    // Handle bold text (lines starting with **)
-                    if (line.trim().startsWith('**') && line.trim().endsWith('**')) {
-                      return (
-                        <h3 key={index} className="font-bold text-gray-900 text-xl mt-6 mb-3 first:mt-0 border-b border-pink-200 pb-2">
-                          {line.trim().substring(2, line.trim().length - 2)}
-                        </h3>
-                      );
-                    }
-                    
-                    // Handle regular text
-                    return (
-                      <p key={index} className="text-gray-700 leading-relaxed text-base">
-                        {line.trim()}
-                      </p>
-                    );
-                  })}
-                </div>
-              </div>
             </div>
 
             {/* Size Selection */}
@@ -213,6 +202,49 @@ export default function ProductPage({ product, onBack }: ProductPageProps) {
                   <Heart className="h-4 w-4 mr-2" />
                   Wishlist
                 </Button>
+              </div>
+            </div>
+
+            {/* Product Description - Moved below BUY IT NOW */}
+            <div className="mt-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Product Description</h3>
+              <div className="bg-gradient-to-r from-gray-50 to-pink-50 rounded-lg p-6 border border-gray-100">
+                <div className="text-gray-700 leading-relaxed space-y-3">
+                  {product.description.split('\n').map((line, index) => {
+                    // Handle empty lines - reduce spacing
+                    if (line.trim() === '') {
+                      return <div key={index} className="h-1"></div>;
+                    }
+                    
+                    // Handle bullet points (lines starting with *)
+                    if (line.trim().startsWith('*') && !line.trim().startsWith('**')) {
+                      return (
+                        <div key={index} className="flex items-start ml-4">
+                          <span className="text-pink-500 mr-2 mt-1 font-bold">•</span>
+                          <span className="text-gray-700 leading-relaxed">
+                            {formatWhatsAppStyle(line.trim().substring(1).trim())}
+                          </span>
+                        </div>
+                      );
+                    }
+                    
+                    // Handle bold text (lines starting with **)
+                    if (line.trim().startsWith('**') && line.trim().endsWith('**')) {
+                      return (
+                        <h3 key={index} className="font-bold text-gray-900 text-lg mt-4 mb-2 first:mt-0 border-b border-pink-200 pb-2">
+                          {line.trim().substring(2, line.trim().length - 2)}
+                        </h3>
+                      );
+                    }
+                    
+                    // Handle regular text
+                    return (
+                      <p key={index} className="text-gray-700 leading-relaxed">
+                        {formatWhatsAppStyle(line.trim())}
+                      </p>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
