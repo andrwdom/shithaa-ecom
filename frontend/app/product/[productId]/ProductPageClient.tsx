@@ -452,7 +452,42 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
                   )}
                 </div>
 
-                <p className="text-gray-600 leading-relaxed mb-6">{product.description}</p>
+                <div className="bg-gradient-to-r from-gray-50 to-pink-50 rounded-lg p-6 mb-6 border border-gray-100">
+                  <div className="text-gray-700 leading-relaxed space-y-4">
+                    {product.description.split('\n').map((line, index) => {
+                      // Handle empty lines
+                      if (line.trim() === '') {
+                        return <div key={index} className="h-3"></div>;
+                      }
+                      
+                      // Handle bullet points (lines starting with *)
+                      if (line.trim().startsWith('*')) {
+                        return (
+                          <div key={index} className="flex items-start ml-6">
+                            <span className="text-pink-500 mr-3 mt-1 text-lg font-bold">•</span>
+                            <span className="text-gray-700 leading-relaxed">{line.trim().substring(1).trim()}</span>
+                          </div>
+                        );
+                      }
+                      
+                      // Handle bold text (lines starting with **)
+                      if (line.trim().startsWith('**') && line.trim().endsWith('**')) {
+                        return (
+                          <h3 key={index} className="font-bold text-gray-900 text-xl mt-6 mb-3 first:mt-0 border-b border-pink-200 pb-2">
+                            {line.trim().substring(2, line.trim().length - 2)}
+                          </h3>
+                        );
+                      }
+                      
+                      // Handle regular text
+                      return (
+                        <p key={index} className="text-gray-700 leading-relaxed text-base">
+                          {line.trim()}
+                        </p>
+                      );
+                    })}
+                  </div>
+                </div>
 
                 {/* Loungewear Offer Banner (only for eligible categories) */}
                 {(product.category === "Zipless Feeding Lounge Wear" || 
