@@ -3,10 +3,14 @@ import React, { useState, useRef, useEffect } from 'react';
 const RichTextEditor = ({ value, onChange, placeholder = 'Enter description...', required = false }) => {
   const editorRef = useRef(null);
   const [isFocused, setIsFocused] = useState(false);
+  const [displayValue, setDisplayValue] = useState('');
 
   useEffect(() => {
-    if (editorRef.current && value !== editorRef.current.innerHTML) {
-      editorRef.current.innerHTML = value;
+    // Convert the stored value to HTML for display
+    const html = convertCustomFormatToHtml(value || '');
+    setDisplayValue(html);
+    if (editorRef.current) {
+      editorRef.current.innerHTML = html;
     }
   }, [value]);
 
@@ -34,7 +38,9 @@ const RichTextEditor = ({ value, onChange, placeholder = 'Enter description...',
       .replace(/&nbsp;/gi, ' ')
       .replace(/&lt;/gi, '<')
       .replace(/&gt;/gi, '>')
-      .replace(/&amp;/gi, '&');
+      .replace(/&amp;/gi, '&')
+      .replace(/<span[^>]*class="[^"]*text-pink-500[^"]*"[^>]*>•<\/span>/gi, '•')
+      .replace(/<span[^>]*class="[^"]*text-gray-600[^"]*"[^>]*>\d+\.<\/span>/gi, '');
     
     return text.trim();
   };
@@ -42,14 +48,15 @@ const RichTextEditor = ({ value, onChange, placeholder = 'Enter description...',
   const convertCustomFormatToHtml = (text) => {
     if (!text) return '';
     
-    // Convert our custom format to HTML for display
+    // Convert our custom format to HTML for display in editor
     let html = text
-      .replace(/\*\*([^*]+)\*\*/g, '<h3 class="font-bold text-gray-900 text-lg mt-4 mb-2 border-b border-pink-200 pb-2">$1</h3>')
+      .replace(/\*\*([^*]+)\*\*/g, '<strong class="font-bold text-gray-900 text-lg">$1</strong>')
       .replace(/\*([^*]+)\*/g, '<strong class="font-bold text-gray-900">$1</strong>')
       .replace(/_([^_]+)_/g, '<span class="underline">$1</span>')
       .replace(/\/([^/]+)\//g, '<em class="italic">$1</em>')
       .replace(/\n/g, '<br>')
-      .replace(/\*   /g, '<li class="flex items-start ml-4 mb-1"><span class="text-pink-500 mr-2 mt-1 font-bold">•</span><span>$1</span></li>');
+      .replace(/\*   /g, '<div style="margin-left: 16px; margin-bottom: 4px;"><span style="color: #ec4899;">•</span> ')
+      .replace(/• /g, '<div style="margin-left: 16px; margin-bottom: 4px;"><span style="color: #ec4899;">•</span> ');
     
     return html;
   };
@@ -64,18 +71,18 @@ const RichTextEditor = ({ value, onChange, placeholder = 'Enter description...',
     const selection = window.getSelection();
     if (selection.rangeCount > 0) {
       const range = selection.getRangeAt(0);
-      const li = document.createElement('div');
-      li.innerHTML = '<span class="text-pink-500 mr-2">•</span>';
-      li.style.marginLeft = '16px';
-      li.style.marginBottom = '4px';
-      li.contentEditable = true;
+      const div = document.createElement('div');
+      div.innerHTML = '<span style="color: #ec4899; margin-right: 8px;">•</span>';
+      div.style.marginLeft = '16px';
+      div.style.marginBottom = '4px';
+      div.contentEditable = true;
       
       range.deleteContents();
-      range.insertNode(li);
+      range.insertNode(div);
       
       // Move cursor after the bullet point
       const newRange = document.createRange();
-      newRange.setStartAfter(li);
+      newRange.setStartAfter(div);
       newRange.collapse(true);
       selection.removeAllRanges();
       selection.addRange(newRange);
@@ -88,7 +95,7 @@ const RichTextEditor = ({ value, onChange, placeholder = 'Enter description...',
     if (selection.rangeCount > 0) {
       const range = selection.getRangeAt(0);
       const div = document.createElement('div');
-      div.innerHTML = '<span class="text-gray-600 mr-2">1.</span>';
+      div.innerHTML = '<span style="color: #6b7280; margin-right: 8px;">1.</span>';
       div.style.marginLeft = '16px';
       div.style.marginBottom = '4px';
       div.contentEditable = true;
@@ -164,39 +171,39 @@ const RichTextEditor = ({ value, onChange, placeholder = 'Enter description...',
       </div>
 
       {/* Editor */}
-      <div
-        ref={editorRef}
-        contentEditable
-        className={`w-full px-3 py-2 border border-gray-300 rounded-b-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[120px] ${
-          isFocused ? 'border-blue-500' : ''
-        }`}
-        style={{ outline: 'none' }}
-        onInput={handleInput}
-        onFocus={() => setIsFocused(true)}
-        onBlur={() => setIsFocused(false)}
-        dangerouslySetInnerHTML={{ __html: convertCustomFormatToHtml(value) }}
-        data-placeholder={placeholder}
-        suppressContentEditableWarning={true}
-      />
+      <div className="relative">
+        <div
+          ref={editorRef}
+          contentEditable
+          className={`w-full px-3 py-2 border border-gray-300 rounded-b-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[120px] ${
+            isFocused ? 'border-blue-500' : ''
+          }`}
+          style={{ outline: 'none' }}
+          onInput={handleInput}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          suppressContentEditableWarning={true}
+        />
 
-      {/* Placeholder */}
-      {!value && (
-        <div 
-          className="absolute top-16 left-3 text-gray-400 pointer-events-none"
-          style={{ top: '88px' }}
-        >
-          {placeholder}
-        </div>
-      )}
+        {/* Placeholder */}
+        {!value && (
+          <div 
+            className="absolute top-3 left-3 text-gray-400 pointer-events-none"
+          >
+            {placeholder}
+          </div>
+        )}
+      </div>
 
       {/* Help Text */}
       <div className="mt-2 text-xs text-gray-500">
         <p><strong>Tips:</strong></p>
         <ul className="list-disc list-inside mt-1 space-y-1">
           <li>Select text and use toolbar buttons to format</li>
-          <li>Use <strong>**Text**</strong> for section headers (like "Key Features:")</li>
+          <li>Use <strong>Bold</strong> for section headers (like "Key Features:")</li>
           <li>Bullet points will appear as pink dots on the frontend</li>
           <li>Line breaks are preserved automatically</li>
+          <li>Formatting is applied instantly and saved automatically</li>
         </ul>
       </div>
     </div>
