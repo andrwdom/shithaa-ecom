@@ -3,6 +3,7 @@ import {assets} from '../assets/assets'
 import axios from 'axios'
 import { backendUrl } from '../App'
 import { toast } from 'react-toastify'
+import RichTextEditor from '../components/RichTextEditor'
 
 /**
  * Add Product Component with Image Optimization
@@ -415,8 +416,13 @@ const Add = ({token}) => {
         </div>
 
         <div className='w-full'>
-          <p className='mb-2'>Product description</p>
-          <textarea onChange={(e)=>setDescription(e.target.value)} value={description} className='w-full max-w-[500px] px-3 py-2' type="text" placeholder='Write content here' required/>
+          <p className='mb-2'>Product description <span className="text-red-500">*</span></p>
+          <RichTextEditor
+            value={description}
+            onChange={setDescription}
+            placeholder="Write your product description here..."
+            required
+          />
         </div>
 
         <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full'>

@@ -44,25 +44,24 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
   const formatWhatsAppStyle = (text: string) => {
     if (!text) return text;
     
-    // Split by formatting patterns and rebuild with React elements
-    const parts = text.split(/(\*[^*]+\*|_[^_]+_|\/[^/]+\/)/g);
+    // More robust regex patterns that handle edge cases
+    const boldPattern = /\*([^*]+)\*/g;
+    const underlinePattern = /_([^_]+)_/g;
+    const italicPattern = /\/([^/]+)\//g;
     
-    return parts.map((part, index) => {
-      // Bold: *text*
-      if (part.startsWith('*') && part.endsWith('*') && part.length > 2) {
-        return <strong key={index} className="font-bold text-gray-900">{part.slice(1, -1)}</strong>;
-      }
-      // Underline: _text_
-      if (part.startsWith('_') && part.endsWith('_') && part.length > 2) {
-        return <span key={index} className="underline">{part.slice(1, -1)}</span>;
-      }
-      // Italic: /text/
-      if (part.startsWith('/') && part.endsWith('/') && part.length > 2) {
-        return <em key={index} className="italic">{part.slice(1, -1)}</em>;
-      }
-      // Regular text
-      return part;
-    });
+    let formattedText = text;
+    
+    // Apply bold formatting
+    formattedText = formattedText.replace(boldPattern, '<strong class="font-bold text-gray-900">$1</strong>');
+    
+    // Apply underline formatting
+    formattedText = formattedText.replace(underlinePattern, '<span class="underline">$1</span>');
+    
+    // Apply italic formatting
+    formattedText = formattedText.replace(italicPattern, '<em class="italic">$1</em>');
+    
+    // Return as JSX with dangerouslySetInnerHTML for proper HTML rendering
+    return <span dangerouslySetInnerHTML={{ __html: formattedText }} />;
   };
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -652,7 +651,35 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
                   </button>
                 </div>
 
-                {/* Product Description - Moved below BUY IT NOW */}
+                {/* Delivery Info - Moved above Product Description */}
+                <Card className="border-0 bg-gray-100 rounded-2xl mt-6">
+                  <CardContent className="p-6">
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3">
+                        <Truck className="h-5 w-5 text-gray-600" />
+                        <span className="text-sm font-medium">Delivery in 3-5 Days</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Shield className="h-5 w-5 text-gray-600" />
+                        <span className="text-sm font-medium">Secure Checkout</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <RotateCcw className="h-5 w-5 text-gray-600" />
+                        <span className="text-sm font-medium">
+                          please refer to the{' '}
+                          <a 
+                            href="/return-policy" 
+                            className="text-[#473C66] hover:text-[#3a3054] underline font-medium transition-colors"
+                          >
+                            refund policy
+                          </a>
+                        </span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Product Description - Below Delivery Info */}
                 <div className="mt-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Product Description</h3>
                   <div className="bg-gradient-to-r from-gray-50 to-pink-50 rounded-lg p-6 border border-gray-100">
@@ -695,34 +722,6 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
                   </div>
                 </div>
               </div>
-
-              {/* Delivery Info */}
-              <Card className="border-0 bg-gray-100 rounded-2xl">
-                <CardContent className="p-6">
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-3">
-                      <Truck className="h-5 w-5 text-gray-600" />
-                      <span className="text-sm font-medium">Delivery in 3-5 Days</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <Shield className="h-5 w-5 text-gray-600" />
-                      <span className="text-sm font-medium">Secure Checkout</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <RotateCcw className="h-5 w-5 text-gray-600" />
-                      <span className="text-sm font-medium">
-                        please refer to the{' '}
-                        <a 
-                          href="/return-policy" 
-                          className="text-[#473C66] hover:text-[#3a3054] underline font-medium transition-colors"
-                        >
-                          refund policy
-                        </a>
-                      </span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
             </div>
           </div>
         </div>

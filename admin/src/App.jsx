@@ -64,14 +64,15 @@ const App = () => {
                 <Sidebar />
                 <div className='w-[70%] mx-auto ml-[max(5vw,25px)] my-8 text-gray-600 text-base'>
                   <Routes>
-                    <Route path="/" element={
-                      <ProtectedRoute token={token}>
-                        <Dashboard token={token} />
-                      </ProtectedRoute>
-                    } />
+                    <Route path="/" element={<Navigate to="/orders" replace />} />
                     <Route path="/orders" element={
                       <ProtectedRoute token={token}>
                         <Orders token={token} setToken={setToken} />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/dashboard" element={
+                      <ProtectedRoute token={token}>
+                        <Dashboard token={token} />
                       </ProtectedRoute>
                     } />
                     <Route path="/add" element={
@@ -99,7 +100,7 @@ const App = () => {
                         <ShippingRules token={token} />
                       </ProtectedRoute>
                     } />
-                    <Route path="*" element={<Navigate to="/" replace />} />
+                    <Route path="*" element={<Navigate to="/orders" replace />} />
                   </Routes>
                 </div>
               </div>
