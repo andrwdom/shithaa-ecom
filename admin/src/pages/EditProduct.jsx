@@ -3,7 +3,6 @@ import { assets } from '../assets/assets'
 import axios from 'axios'
 import { backendUrl } from '../App'
 import { toast } from 'react-toastify'
-import RichTextEditor from '../components/RichTextEditor'
 
 const EditProduct = ({ product, token, onClose, onUpdate }) => {
   const [image1, setImage1] = useState(null)
@@ -319,10 +318,12 @@ const EditProduct = ({ product, token, onClose, onUpdate }) => {
 
             <div className='space-y-2'>
               <label className='block text-sm font-medium text-gray-700'>Product Description <span className="text-red-500">*</span></label>
-              <RichTextEditor
+              <textarea
+                onChange={(e) => setDescription(e.target.value)}
                 value={description}
-                onChange={setDescription}
-                placeholder="Enter detailed product description..."
+                className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                rows="6"
+                placeholder='Enter detailed product description...'
                 required
               />
             </div>

@@ -683,11 +683,11 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
                 <div className="mt-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Product Description</h3>
                   <div className="bg-gradient-to-r from-gray-50 to-pink-50 rounded-lg p-6 border border-gray-100">
-                    <div className="text-gray-700 leading-relaxed space-y-3">
+                    <div className="text-gray-700 leading-relaxed space-y-2">
                       {product.description.split('\n').map((line, index) => {
-                        // Handle empty lines - reduce spacing
+                        // Handle empty lines - minimal spacing
                         if (line.trim() === '') {
-                          return <div key={index} className="h-1"></div>;
+                          return <div key={index} className="h-0.5"></div>;
                         }
                         
                         // Handle bullet points (lines starting with *)
