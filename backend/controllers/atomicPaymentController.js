@@ -310,35 +310,6 @@ export const handleAtomicPaymentCallback = asyncHandler(async (req, res) => {
 
             console.log(`[${correlationId}] Order ${order.orderId} confirmed successfully`);
 
-          } catch (stockError) {
-            console.error(`[${correlationId}] Stock deduction failed:`, stockError);
-
-            // Stock deduction failed - mark order as failed
-            await orderModel.findByIdAndUpdate(
-              order._id,
-              {
-                status: 'FAILED',
-                paymentStatus: 'PAID_BUT_FAILED',
-                failureReason: `Stock deduction failed: ${stockError.message}`,
-                failedAt: new Date(),
-                phonepeResponse: phonepeResponse,
-                updatedAt: new Date()
-              },
-              { session }
-            );
-
-            // This will be handled manually - payment succeeded but stock failed
-            console.error(`[${correlationId}] ⚠️ MANUAL INTERVENTION REQUIRED: Payment successful but stock deduction failed for order ${order.orderId}`);
-            
-            throw new SystemError('Payment successful but order processing failed. Manual review required.', {
-              orderId: order._id,
-              orderNumber: order.orderId,
-              correlationId,
-              phonepeTransactionId: merchantTransactionId,
-              stockError: stockError.message
-            });
-          }
-
         } else {
           console.log(`[${correlationId}] Payment failed for order: ${order.orderId}`);
 
