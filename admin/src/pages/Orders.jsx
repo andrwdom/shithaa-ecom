@@ -86,18 +86,54 @@ function formatDate(date) {
 }
 
 function StatusBadge({ status }) {
-  // Normalize status to handle both backend (uppercase) and frontend (title case) statuses
-  const normalizedStatus = status && typeof status === 'string' ? status.toUpperCase() : status;
-  const config = STATUS_CONFIG[status] || STATUS_CONFIG[normalizedStatus] || STATUS_CONFIG.PENDING;
-  const IconComponent = config.icon;
+  // Handle null/undefined status
+  if (!status) {
+    return (
+      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold border bg-gray-100 text-gray-800 border-gray-200">
+        <FaClock className="w-3 h-3 text-gray-500" />
+        Unknown
+      </span>
+    );
+  }
   
-  // Display the original status but use the normalized config
-  const displayStatus = status || 'Unknown';
+  // Convert to string and handle case variations
+  const statusStr = String(status).trim();
+  const upperStatus = statusStr.toUpperCase();
+  
+  // Direct mapping for common cases
+  let config;
+  
+  if (upperStatus === 'CONFIRMED') {
+    config = STATUS_CONFIG.CONFIRMED;
+  } else if (upperStatus === 'DRAFT') {
+    config = STATUS_CONFIG.DRAFT;
+  } else if (upperStatus === 'PENDING') {
+    config = STATUS_CONFIG.PENDING;
+  } else if (upperStatus === 'SHIPPED') {
+    config = STATUS_CONFIG.SHIPPED;
+  } else if (upperStatus === 'DELIVERED') {
+    config = STATUS_CONFIG.DELIVERED;
+  } else if (upperStatus === 'CANCELLED') {
+    config = STATUS_CONFIG.CANCELLED;
+  } else if (statusStr === 'Processing') {
+    config = STATUS_CONFIG.Processing;
+  } else if (statusStr === 'Shipped') {
+    config = STATUS_CONFIG.Shipped;
+  } else if (statusStr === 'Delivered') {
+    config = STATUS_CONFIG.Delivered;
+  } else if (statusStr === 'Cancelled') {
+    config = STATUS_CONFIG.Cancelled;
+  } else {
+    // Fallback for unknown statuses
+    config = STATUS_CONFIG.PENDING;
+  }
+  
+  const IconComponent = config.icon;
   
   return (
     <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold border ${config.color}`}>
       <IconComponent className={`w-3 h-3 ${config.iconColor}`} />
-      {displayStatus}
+      {statusStr}
     </span>
   );
 }
