@@ -6,8 +6,46 @@ import { assets } from '../assets/assets'
 import { useNavigate } from 'react-router-dom'
 import { FaUser, FaEnvelope, FaTruck, FaPhone, FaMapMarkerAlt, FaMoneyBill, FaCalendarAlt, FaBox, FaTag, FaSearch, FaFilter, FaClock, FaCheckCircle, FaTimesCircle, FaShippingFast, FaDollarSign, FaSpinner, FaCog, FaBan, FaDownload, FaExclamationTriangle as AlertTriangle } from 'react-icons/fa';
 
-// Updated status colors and icons
+// Updated status colors and icons - Fixed to handle backend statuses
 const STATUS_CONFIG = {
+  // Backend statuses (uppercase)
+  DRAFT: {
+    color: 'bg-orange-100 text-orange-800 border-orange-200',
+    icon: FaClock,
+    iconColor: 'text-orange-500',
+    description: 'Order created, awaiting payment confirmation'
+  },
+  PENDING: {
+    color: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+    icon: FaClock,
+    iconColor: 'text-yellow-500',
+    description: 'Order received, waiting to be processed'
+  },
+  CONFIRMED: {
+    color: 'bg-green-100 text-green-800 border-green-200',
+    icon: FaCheckCircle,
+    iconColor: 'text-green-500',
+    description: 'Payment confirmed, order being prepared'
+  },
+  SHIPPED: {
+    color: 'bg-purple-100 text-purple-800 border-purple-200',
+    icon: FaShippingFast,
+    iconColor: 'text-purple-500',
+    description: 'Order has been shipped and is in transit'
+  },
+  DELIVERED: {
+    color: 'bg-green-100 text-green-800 border-green-200',
+    icon: FaCheckCircle,
+    iconColor: 'text-green-500',
+    description: 'Order has been successfully delivered'
+  },
+  CANCELLED: {
+    color: 'bg-red-100 text-red-800 border-red-200',
+    icon: FaBan,
+    iconColor: 'text-red-500',
+    description: 'Order has been cancelled'
+  },
+  // Frontend statuses (title case) - for backward compatibility
   Pending: {
     color: 'bg-yellow-100 text-yellow-800 border-yellow-200',
     icon: FaClock,
@@ -48,13 +86,18 @@ function formatDate(date) {
 }
 
 function StatusBadge({ status }) {
-  const config = STATUS_CONFIG[status] || STATUS_CONFIG.Pending;
+  // Normalize status to handle both backend (uppercase) and frontend (title case) statuses
+  const normalizedStatus = status && typeof status === 'string' ? status.toUpperCase() : status;
+  const config = STATUS_CONFIG[status] || STATUS_CONFIG[normalizedStatus] || STATUS_CONFIG.PENDING;
   const IconComponent = config.icon;
+  
+  // Display the original status but use the normalized config
+  const displayStatus = status || 'Unknown';
   
   return (
     <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold border ${config.color}`}>
       <IconComponent className={`w-3 h-3 ${config.iconColor}`} />
-      {status}
+      {displayStatus}
     </span>
   );
 }
@@ -65,23 +108,24 @@ const DashboardSummary = ({ orders }) => {
   
   const pendingOrders = orders.filter(order => {
     const status = order.orderStatus || order.status || order.paymentStatus;
-    // Only count Pending orders that are not awaiting payment
-    return status === 'Pending' && status !== 'awaiting_payment' && status !== 'Awaiting Payment';
+    // Count both PENDING and DRAFT orders as pending
+    return status === 'PENDING' || status === 'Pending' || status === 'DRAFT';
   }).length;
   
   const processingOrders = orders.filter(order => {
     const status = order.orderStatus || order.status || order.paymentStatus;
-    return status === 'Processing';
+    // Count CONFIRMED orders as processing (payment confirmed, being prepared)
+    return status === 'CONFIRMED' || status === 'Processing';
   }).length;
   
   const shippedOrders = orders.filter(order => {
     const status = order.orderStatus || order.status || order.paymentStatus;
-    return status === 'Shipped';
+    return status === 'SHIPPED' || status === 'Shipped';
   }).length;
   
   const deliveredOrders = orders.filter(order => {
     const status = order.orderStatus || order.status || order.paymentStatus;
-    return status === 'Delivered';
+    return status === 'DELIVERED' || status === 'Delivered';
   }).length;
   
   const revenueToday = orders
@@ -92,14 +136,16 @@ const DashboardSummary = ({ orders }) => {
       
       // Only include orders that are:
       // 1. Created today
-      // 2. Not cancelled
+      // 2. Not cancelled (both CANCELLED and Cancelled)
       // 3. Not failed payments
-      // 4. Not awaiting payment
+      // 4. Not awaiting payment (DRAFT status)
+      // 5. Payment confirmed (CONFIRMED, PAID, or legacy statuses)
       return orderDate === today && 
-             status !== 'Cancelled' && 
+             status !== 'CANCELLED' && status !== 'Cancelled' && 
              !paymentStatus.includes('failed') &&
              !paymentStatus.includes('awaiting') &&
-             status !== 'Payment Failed';
+             status !== 'Payment Failed' &&
+             status !== 'DRAFT'; // Don't include draft orders in revenue
     })
     .reduce((sum, order) => {
       const total = order.totalAmount || order.total || order.totalPrice || order.amount || 0;
@@ -289,7 +335,12 @@ const ModernOrderCard = ({ order, onView, onStatusChange, onDelete }) => {
   const email = shipping?.email || order.shippingInfo?.email || order.email;
   const phone = shipping?.phone || order.shippingInfo?.phone || order.phone;
   const total = order.totalAmount || order.total || order.totalPrice || order.amount;
-  const payment = order.paymentStatus || order.paymentMethod;
+  // Format payment status consistently
+  const paymentStatus = order.paymentStatus || order.paymentMethod;
+  const payment = paymentStatus === 'PAID' ? 'PAID' : 
+                  paymentStatus === 'PENDING' ? 'PENDING' : 
+                  paymentStatus === 'FAILED' ? 'FAILED' : 
+                  paymentStatus || 'N/A';
   const status = order.orderStatus || order.status || order.paymentStatus;
   const placedAt = order.createdAt || order.placedAt;
   
@@ -340,16 +391,18 @@ const ModernOrderCard = ({ order, onView, onStatusChange, onDelete }) => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [showShippingModal, setShowShippingModal] = useState(false);
   const statusOptions = [
-    { label: '⏳ Pending', value: 'Pending', icon: FaClock },
+    { label: '📝 Draft', value: 'DRAFT', icon: FaClock },
+    { label: '⏳ Pending', value: 'PENDING', icon: FaClock },
+    { label: '✅ Confirmed', value: 'CONFIRMED', icon: FaCheckCircle },
     { label: '⚙️ Processing', value: 'Processing', icon: FaCog },
-    { label: '🚚 Shipped', value: 'Shipped', icon: FaShippingFast },
-    { label: '✅ Delivered', value: 'Delivered', icon: FaCheckCircle },
-    { label: '❌ Cancelled', value: 'Cancelled', icon: FaBan },
+    { label: '🚚 Shipped', value: 'SHIPPED', icon: FaShippingFast },
+    { label: '✅ Delivered', value: 'DELIVERED', icon: FaCheckCircle },
+    { label: '❌ Cancelled', value: 'CANCELLED', icon: FaBan },
   ];
 
   const handleStatusChange = (status) => {
     setShowDropdown(false);
-    if (status === 'Shipped') {
+    if (status === 'SHIPPED' || status === 'Shipped') {
       setShowShippingModal(true);
     } else {
       onStatusChange(order._id, status);
@@ -631,7 +684,12 @@ function OrderDetailsModal({ order, onClose, onStatusChange }) {
   const shipping = order.shippingInfo || order.shippingAddress || order.address;
   const items = order.items || order.cartItems || [];
   const total = order.totalAmount || order.total || order.totalPrice;
-  const payment = order.paymentStatus || order.paymentMethod;
+  // Format payment status consistently
+  const paymentStatus = order.paymentStatus || order.paymentMethod;
+  const payment = paymentStatus === 'PAID' ? 'PAID' : 
+                  paymentStatus === 'PENDING' ? 'PENDING' : 
+                  paymentStatus === 'FAILED' ? 'FAILED' : 
+                  paymentStatus || 'N/A';
   const status = order.orderStatus || order.status || order.paymentStatus;
   const placedAt = order.createdAt || order.placedAt;
   const coupon = order.couponUsed?.code || order.discount?.appliedCouponCode;
