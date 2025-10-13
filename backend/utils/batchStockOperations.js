@@ -254,9 +254,6 @@ export async function confirmBatchStockAtomic(cartItems, options = {}) {
           {
             $inc: {
               'sizes.$.reserved': -quantity  // Only reduce reserved, stock already deducted
-            },
-            $max: {
-              'sizes.$.reserved': 0  // Prevent negative reserved values
             }
           },
           { session: mongoSession }

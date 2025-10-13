@@ -125,9 +125,6 @@ export async function confirmStockReservationAtomic(productId, size, quantity, o
     const update = {
       $inc: { 
         'sizes.$[elem].reserved': -quantity  // Only reduce reserved, stock already deducted
-      },
-      $max: {
-        'sizes.$[elem].reserved': 0  // Prevent negative reserved values
       }
     };
 
@@ -189,9 +186,6 @@ export async function releaseStockReservationAtomic(productId, size, quantity, o
       $inc: { 
         'sizes.$[elem].stock': quantity,      // Restore stock
         'sizes.$[elem].reserved': -quantity   // Release reservation
-      },
-      $max: {
-        'sizes.$[elem].reserved': 0  // Prevent negative reserved values
       }
     };
 
