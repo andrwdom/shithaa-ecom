@@ -122,6 +122,7 @@ const orderSchema = new mongoose.Schema({
     stockConfirmed: { type: Boolean, default: false },
     stockConfirmedAt: { type: Date },
     stockReserved: { type: Boolean, default: false }, // Track if stock is temp-reserved
+    stockConfirmationErrors: [{ type: String }], // Track stock confirmation errors
     
     // Idempotency and reliability fields
     idempotencyKey: { type: String }, // For safe retries

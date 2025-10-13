@@ -244,17 +244,19 @@ export async function confirmBatchStockAtomic(cartItems, options = {}) {
       const { productId, size, quantity } = item;
       
       try {
+        // 🔑 SIMPLE ASS LOGIC: Payment success → Take from reserved stock only
+        // Stock was already decremented during reservation
         const result = await productModel.updateOne(
           {
             _id: productId,
-            'sizes.size': size,
-            'sizes.stock': { $gte: quantity },
-            'sizes.reserved': { $gte: quantity }
+            'sizes.size': size
           },
           {
             $inc: {
-              'sizes.$.stock': -quantity,
-              'sizes.$.reserved': -quantity
+              'sizes.$.reserved': -quantity  // Only reduce reserved, stock already deducted
+            },
+            $max: {
+              'sizes.$.reserved': 0  // Prevent negative reserved values
             }
           },
           { session: mongoSession }

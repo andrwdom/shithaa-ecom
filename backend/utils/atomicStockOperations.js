@@ -59,11 +59,18 @@ export async function reserveStockAtomic(productId, size, quantity, options = {}
       });
     }
 
-    // Atomic $inc using exact positional index path (no arrayFilters / $expr)
-    const incPath = `sizes.${idx}.reserved`;
+    // 🔑 SIMPLE ASS LOGIC: Reserve stock → Deduct from stock AND increment reserved
+    // This prevents overselling (stock is immediately reduced)
+    const stockPath = `sizes.${idx}.stock`;
+    const reservedPath = `sizes.${idx}.reserved`;
     const result = await productModel.updateOne(
       { _id: productId },
-      { $inc: { [incPath]: quantity } },
+      { 
+        $inc: { 
+          [stockPath]: -quantity,      // Deduct from available stock
+          [reservedPath]: quantity      // Track as reserved
+        } 
+      },
       { session }
     );
 
@@ -108,18 +115,19 @@ export async function confirmStockReservationAtomic(productId, size, quantity, o
   }
 
   try {
-    // 🚨 CRITICAL FIX: Atomic operation - deduct stock and reduce reserved
-    // We deduct from stock and reduce reserved (which may be 0 if no reservation)
+    // 🔑 SIMPLE ASS LOGIC: Payment success → Take from reserved stock (already set aside)
+    // Stock was already decremented during reservation, so we just reduce reserved count
     const query = {
       _id: productId,
-      'sizes.size': size,
-      'sizes.stock': { $gte: quantity }
+      'sizes.size': size
     };
 
     const update = {
       $inc: { 
-        'sizes.$[elem].stock': -quantity,
-        'sizes.$[elem].reserved': -quantity
+        'sizes.$[elem].reserved': -quantity  // Only reduce reserved, stock already deducted
+      },
+      $max: {
+        'sizes.$[elem].reserved': 0  // Prevent negative reserved values
       }
     };
 
@@ -127,8 +135,7 @@ export async function confirmStockReservationAtomic(productId, size, quantity, o
       session,
       arrayFilters: [
         { 
-          'elem.size': size, 
-          'elem.stock': { $gte: quantity }
+          'elem.size': size
         }
       ]
     };
@@ -171,21 +178,27 @@ export async function releaseStockReservationAtomic(productId, size, quantity, o
   }
 
   try {
-    // 🚨 CRITICAL FIX: Atomic operation - check reserved amount, then decrement
+    // 🔑 SIMPLE ASS LOGIC: Payment failed → Restore stock (release the reservation)
+    // Add back to stock and reduce reserved
     const query = {
       _id: productId,
-      'sizes.size': size,
-      'sizes.reserved': { $gte: quantity }
+      'sizes.size': size
     };
 
     const update = {
-      $inc: { 'sizes.$[elem].reserved': -quantity }
+      $inc: { 
+        'sizes.$[elem].stock': quantity,      // Restore stock
+        'sizes.$[elem].reserved': -quantity   // Release reservation
+      },
+      $max: {
+        'sizes.$[elem].reserved': 0  // Prevent negative reserved values
+      }
     };
 
     const updateOptions = {
       session,
       arrayFilters: [
-        { 'elem.size': size, 'elem.reserved': { $gte: quantity } }
+        { 'elem.size': size }
       ]
     };
 

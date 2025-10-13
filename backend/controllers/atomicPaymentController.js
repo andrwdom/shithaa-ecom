@@ -227,30 +227,60 @@ export const handleAtomicPaymentCallback = asyncHandler(async (req, res) => {
         if (paymentSuccessful) {
           console.log(`[${correlationId}] Payment successful for order: ${order.orderId}`);
 
-          // 4. ATOMIC: Deduct stock and confirm order
+          // 4. 🔑 CRITICAL FIX: Payment successful - ALWAYS confirm order first
+          await orderModel.findByIdAndUpdate(
+            order._id,
+            {
+              status: 'CONFIRMED',
+              orderStatus: 'CONFIRMED',
+              paymentStatus: 'PAID',
+              confirmedAt: new Date(),
+              paidAt: new Date(),
+              phonepeResponse: phonepeResponse,
+              updatedAt: new Date()
+            },
+            { session }
+          );
+
+          console.log(`[${correlationId}] Order ${order.orderId} confirmed - payment successful`);
+
+          // 5. Try to confirm stock (separate from payment confirmation)
+          let stockResult = null;
           try {
-            const stockResult = await atomicStockManager.confirmAndDeductStock(
+            stockResult = await atomicStockManager.confirmAndDeductStock(
               order.items,
               { session, correlationId }
             );
 
             console.log(`[${correlationId}] Stock deducted successfully:`, stockResult);
 
-            // 5. Update order to CONFIRMED
+            // Update stock confirmation status
             await orderModel.findByIdAndUpdate(
               order._id,
               {
-                status: 'CONFIRMED',
-                paymentStatus: 'PAID',
                 stockConfirmed: true,
                 stockConfirmedAt: new Date(),
-                confirmedAt: new Date(),
-                paidAt: new Date(),
-                phonepeResponse: phonepeResponse,
                 updatedAt: new Date()
               },
               { session }
             );
+
+          } catch (stockError) {
+            console.warn(`[${correlationId}] Stock confirmation failed for order ${order.orderId}, but payment was successful:`, stockError.message);
+            
+            // Update stock confirmation status as failed
+            await orderModel.findByIdAndUpdate(
+              order._id,
+              {
+                stockConfirmed: false,
+                stockConfirmationErrors: [stockError.message],
+                updatedAt: new Date()
+              },
+              { session }
+            );
+            
+            // Order is still CONFIRMED - stock issues are separate
+          }
 
             // 6. Update payment session
             await PaymentSession.findOneAndUpdate(

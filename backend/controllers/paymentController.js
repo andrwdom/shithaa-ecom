@@ -930,54 +930,84 @@ export const phonePeCallback = async (req, res) => {
           const createdOrder = order[0];
           console.log(`[${correlationId}] Order created atomically:`, createdOrder.orderId);
 
-          // 5. Confirm stock reservation atomically (deduct stock)
+          // 5. 🔑 CRITICAL FIX: Payment successful - ALWAYS confirm order first
+          await orderModel.findByIdAndUpdate(
+            createdOrder._id, 
+            { 
+              status: 'CONFIRMED',
+              orderStatus: 'CONFIRMED',
+              paymentStatus: 'PAID',
+              confirmedAt: new Date(),
+              paidAt: new Date(),
+              updatedAt: new Date(),
+              phonepeResponse: req.body
+            },
+            { session }
+          );
+
+          console.log(`[${correlationId}] Order ${createdOrder.orderId} confirmed - payment successful`);
+
+          // 6. Try to confirm stock reservation (separate from payment confirmation)
           const { confirmStockReservation } = await import('../utils/stock.js');
           const itemsToProcess = createdOrder.cartItems && createdOrder.cartItems.length > 0 
             ? createdOrder.cartItems 
             : createdOrder.items;
 
-          if (!itemsToProcess || itemsToProcess.length === 0) {
-            throw new Error('Order has no items to process');
-          }
+          if (itemsToProcess && itemsToProcess.length > 0) {
+            let stockConfirmationSuccess = true;
+            let stockConfirmationErrors = [];
 
-          // Process each item atomically
-          for (const item of itemsToProcess) {
-            const productId = item.productId || item._id || item.id || item.product;
-            
-            if (!productId || !item.size || !item.quantity) {
-              throw new Error(`Invalid item data: ${JSON.stringify(item)}`);
+            // Process each item for stock confirmation
+            for (const item of itemsToProcess) {
+              const productId = item.productId || item._id || item.id || item.product;
+              
+              if (!productId || !item.size || !item.quantity) {
+                stockConfirmationErrors.push(`Invalid item data: ${JSON.stringify(item)}`);
+                stockConfirmationSuccess = false;
+                continue;
+              }
+
+              console.log(`[${correlationId}] Attempting stock confirmation for:`, item.name, 'Product:', productId, 'Size:', item.size, 'Qty:', item.quantity);
+              
+              try {
+                const stockConfirmed = await confirmStockReservation(
+                  productId, 
+                  item.size, 
+                  item.quantity, 
+                  { session }
+                );
+                
+                if (!stockConfirmed) {
+                  stockConfirmationErrors.push(`Stock confirmation failed for ${item.name} (${item.size}) - insufficient stock or reservation`);
+                  stockConfirmationSuccess = false;
+                } else {
+                  console.log(`[${correlationId}] Stock confirmed for ${item.name} (${item.size})`);
+                }
+              } catch (stockError) {
+                stockConfirmationErrors.push(`Stock confirmation error for ${item.name} (${item.size}): ${stockError.message}`);
+                stockConfirmationSuccess = false;
+              }
             }
 
-            console.log(`[${correlationId}] Confirming stock for:`, item.name, 'Product:', productId, 'Size:', item.size, 'Qty:', item.quantity);
-            // 🚨 CRITICAL MITIGATION: Add structured logging for stock operations
-            console.log(`STOCK:PAYMENT:CONFIRM:START: productId=${productId}, size=${item.size}, quantity=${item.quantity}, correlationId=${correlationId}, timestamp=${new Date().toISOString()}`);
-            
-            const stockConfirmed = await confirmStockReservation(
-              productId, 
-              item.size, 
-              item.quantity, 
+            // Update stock confirmation status (order is already CONFIRMED)
+            await orderModel.findByIdAndUpdate(
+              createdOrder._id, 
+              { 
+                stockConfirmed: stockConfirmationSuccess,
+                stockConfirmedAt: stockConfirmationSuccess ? new Date() : null,
+                stockConfirmationErrors: stockConfirmationErrors.length > 0 ? stockConfirmationErrors : undefined,
+                updatedAt: new Date()
+              },
               { session }
             );
-            
-            if (!stockConfirmed) {
-              throw new Error(`Stock confirmation failed for ${item.name} (${item.size}) - insufficient stock or reservation`);
+
+            if (stockConfirmationSuccess) {
+              console.log(`[${correlationId}] Stock confirmed successfully for order ${createdOrder.orderId}`);
+            } else {
+              console.warn(`[${correlationId}] Stock confirmation failed for order ${createdOrder.orderId}, but payment was successful:`, stockConfirmationErrors);
+              // Order is still CONFIRMED - stock issues are separate
             }
           }
-
-          // 6. Mark order as stock confirmed AND CONFIRMED STATUS
-          await orderModel.findByIdAndUpdate(
-            createdOrder._id, 
-            { 
-              stockConfirmed: true,
-              stockConfirmedAt: new Date(),
-              status: 'CONFIRMED',
-              orderStatus: 'CONFIRMED',
-              paymentStatus: 'PAID',
-              confirmedAt: new Date(),
-              updatedAt: new Date()
-            },
-            { session }
-          );
 
           // 7. Update payment session status
           await PaymentSession.findByIdAndUpdate(

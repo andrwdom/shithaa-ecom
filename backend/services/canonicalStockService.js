@@ -198,22 +198,19 @@ class CanonicalStockService {
       for (const item of items) {
         const { productId, size, quantity, name } = item;
 
-        // ATOMIC: Check stock AND reserved >= quantity, then deduct both
+        // 🔑 SIMPLE ASS LOGIC: Payment success → Take from reserved stock only
+        // Stock was already decremented during reservation
         const result = await productModel.updateOne(
           {
             _id: mongoose.Types.ObjectId(productId),
-            sizes: {
-              $elemMatch: {
-                size: size,
-                stock: { $gte: quantity },
-                reserved: { $gte: quantity }
-              }
-            }
+            'sizes.size': size
           },
           {
             $inc: { 
-              'sizes.$.stock': -quantity,
-              'sizes.$.reserved': -quantity
+              'sizes.$.reserved': -quantity  // Only reduce reserved, stock already deducted
+            },
+            $max: {
+              'sizes.$.reserved': 0  // Prevent negative reserved values
             },
             $set: { 'updatedAt': new Date() }
           },
