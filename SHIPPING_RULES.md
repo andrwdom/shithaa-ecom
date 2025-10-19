@@ -7,7 +7,7 @@ This document outlines the comprehensive shipping rules implemented for Shithaa'
 
 ### 1. Maternity Feeding Wear
 
-#### Tamil Nadu
+#### Tamil Nadu (includes Puducherry/Pondicherry)
 - 1 dress = ₹39
 - 2 dresses = ₹49
 - 3 dresses = ₹59
@@ -24,7 +24,7 @@ This document outlines the comprehensive shipping rules implemented for Shithaa'
 
 ### 2. Lounge Wear (Zipless Feeding & Non-Feeding)
 
-#### Tamil Nadu
+#### Tamil Nadu (includes Puducherry/Pondicherry)
 - **FREE SHIPPING** for all quantities
 
 #### Other States
@@ -38,7 +38,7 @@ This document outlines the comprehensive shipping rules implemented for Shithaa'
 
 ### 3. Other Categories (Dupatta, etc.)
 
-#### Tamil Nadu
+#### Tamil Nadu (includes Puducherry/Pondicherry)
 - **FREE SHIPPING** for all quantities
 
 #### Other States
@@ -114,8 +114,11 @@ item.categorySlug === "maternity-feeding-wear"
 
 ## Location Detection
 
-- **Tamil Nadu**: Case-insensitive matching (`"tamil nadu"`, `"TAMIL NADU"`, etc.)
-- **Other States**: Any state not matching "Tamil Nadu"
+- **Tamil Nadu (includes Puducherry/Pondicherry)**: Case-insensitive matching with support for various spellings:
+  - Tamil Nadu: `"tamil nadu"`, `"TAMIL NADU"`, `"TamilNadu"`, `"tamil"`, etc.
+  - Puducherry: `"puducherry"`, `"PUDUCHERRY"`, `"Puducherry"`, etc.
+  - Pondicherry: `"pondicherry"`, `"PONDICHERRY"`, `"pondichery"`, `"Pondichery"`, etc.
+- **Other States**: Any state not matching Tamil Nadu or Puducherry/Pondicherry
 
 ## Shipping Messages
 

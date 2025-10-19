@@ -14,6 +14,8 @@ export const metadata: Metadata = {
     "Shithaa delivery",
     "shipping costs",
     "Tamil Nadu shipping",
+    "Puducherry shipping",
+    "Pondicherry shipping",
     "India shipping"
   ],
   openGraph: {
@@ -50,10 +52,10 @@ export default function ShippingInfoPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
-              <h3 className={styles.cardTitle}>Tamil Nadu Shipping</h3>
+              <h3 className={styles.cardTitle}>Tamil Nadu & Puducherry Shipping</h3>
             </div>
             <p className={styles.cardContent}>
-              <span className={styles.emphasis}>Free shipping</span> for most categories within Tamil Nadu. 
+              <span className={styles.emphasis}>Free shipping</span> for most categories within Tamil Nadu and Puducherry/Pondicherry. 
               Maternity Feeding Wear has tiered shipping costs based on quantity.
             </p>
           </div>
@@ -66,7 +68,7 @@ export default function ShippingInfoPage() {
               <h3 className={styles.cardTitle}>Other States Shipping</h3>
             </div>
             <p className={styles.cardContent}>
-              Shipping costs apply for all states outside Tamil Nadu. 
+              Shipping costs apply for all states outside Tamil Nadu and Puducherry. 
               Costs vary by product category and quantity.
             </p>
           </div>

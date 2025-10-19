@@ -74,7 +74,7 @@ shippingRuleSchema.statics.calculateShipping = function(category, quantity, stat
         .toLowerCase()
         .replace(/\s+/g, ''); // Remove all whitespace
       
-      const isTamilNadu = ['tamilnadu', 'tamilnaadu', 'tamil'].includes(normalizedState);
+      const isTamilNadu = ['tamilnadu', 'tamilnaadu', 'tamil', 'puducherry', 'pondicherry', 'pondichery', 'pudhucherry'].includes(normalizedState);
       const rules = isTamilNadu ? rule.rules.tamilNadu : rule.rules.otherStates;
       
       // Find the appropriate rule based on quantity

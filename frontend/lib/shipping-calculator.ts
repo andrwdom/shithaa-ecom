@@ -67,7 +67,7 @@ export function calculateShippingCost(
       .toLowerCase()
       .replace(/\s+/g, ''); // Remove all whitespace
 
-  const isTamilNadu = ['tamilnadu', 'tamilnaadu', 'tamil'].includes(normalizedState);
+  const isTamilNadu = ['tamilnadu', 'tamilnaadu', 'tamil', 'puducherry', 'pondicherry', 'pondichery', 'pudhucherry'].includes(normalizedState);
 
   // Helper function to identify ONLY paid shipping categories in Tamil Nadu
   const isPaidMaternityCategoryInTN = (item: any) => {
@@ -152,9 +152,9 @@ export function calculateShippingCost(
       isFreeShipping = true;
       const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
       if (totalItems > 0) {
-        shippingMessage = `Free shipping for ${totalItems} item${totalItems > 1 ? 's' : ''} within Tamil Nadu!`;
+        shippingMessage = `Free shipping for ${totalItems} item${totalItems > 1 ? 's' : ''} within Tamil Nadu & Puducherry!`;
       } else {
-        shippingMessage = "Free shipping within Tamil Nadu!";
+        shippingMessage = "Free shipping within Tamil Nadu & Puducherry!";
       }
     } else {
       // Other states - charge shipping based on total items that require shipping

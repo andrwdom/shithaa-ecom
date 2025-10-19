@@ -96,7 +96,7 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
             }}
           >
             <div className="banner-message">
-              ‼ FREE DELIVERY FOR LOUNGE WEAR WITHIN TAMIL NADU ‼
+              ‼ FREE DELIVERY FOR LOUNGE WEAR WITHIN TAMIL NADU & PUDUCHERRY ‼
             </div>
             <div className="banner-message">
               🔥 BUY 3 LOUNGE WEAR @1299RS 🔥
@@ -105,7 +105,7 @@ export default function Navbar({ onCategoriesClick }: NavbarProps) {
               🎉 PREMIUM MATERNITY WEAR - ELEGANT & COMFORTABLE 🎉
             </div>
             <div className="banner-message">
-              ‼ FREE DELIVERY FOR LOUNGE WEAR WITHIN TAMIL NADU ‼
+              ‼ FREE DELIVERY FOR LOUNGE WEAR WITHIN TAMIL NADU & PUDUCHERRY ‼
             </div>
           </div>
         </div>

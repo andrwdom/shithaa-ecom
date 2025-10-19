@@ -415,4 +415,33 @@ describe('Shipping Rules Edge Cases', () => {
         const result = await ShippingRules.calculateShipping('maternity-feeding-wear', 1, 'TAMIL NADU');
         expect(result.state).toBe('Tamil Nadu');
     });
+
+    test('should recognize Puducherry/Pondicherry as Tamil Nadu for free shipping', async () => {
+        const rule = new ShippingRules({
+            category: 'lounge-wear',
+            categoryName: 'Lounge Wear',
+            rules: {
+                tamilNadu: new Map([['1', 0]]),
+                otherStates: new Map([['1', 39]])
+            }
+        });
+        await rule.save();
+
+        // Test various Puducherry/Pondicherry spellings
+        const puducherry = await ShippingRules.calculateShipping('lounge-wear', 1, 'Puducherry');
+        expect(puducherry.state).toBe('Tamil Nadu');
+        expect(puducherry.shippingCost).toBe(0);
+
+        const pondicherry = await ShippingRules.calculateShipping('lounge-wear', 1, 'Pondicherry');
+        expect(pondicherry.state).toBe('Tamil Nadu');
+        expect(pondicherry.shippingCost).toBe(0);
+
+        const pondichery = await ShippingRules.calculateShipping('lounge-wear', 1, 'Pondichery');
+        expect(pondichery.state).toBe('Tamil Nadu');
+        expect(pondichery.shippingCost).toBe(0);
+
+        const upperCase = await ShippingRules.calculateShipping('lounge-wear', 1, 'PUDUCHERRY');
+        expect(upperCase.state).toBe('Tamil Nadu');
+        expect(upperCase.shippingCost).toBe(0);
+    });
 }); 

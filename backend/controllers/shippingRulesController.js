@@ -150,7 +150,7 @@ export const calculateShippingWithRules = async (req, res) => {
                     .toLowerCase()
                     .replace(/\s+/g, '') // Remove all whitespace
                     .replace(/[^a-z]/g, ''); // Remove non-alphabetic characters
-                const isTamilNadu = ['tamilnadu', 'tamilnaadu', 'tamil'].includes(normalizedState);
+                const isTamilNadu = ['tamilnadu', 'tamilnaadu', 'tamil', 'puducherry', 'pondicherry', 'pondichery', 'pudhucherry'].includes(normalizedState);
                 let fallbackCost = 0;
                 
                 if (isTamilNadu) {

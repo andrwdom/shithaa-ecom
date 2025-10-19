@@ -8,7 +8,17 @@ const testStates = [
     'Tamilnadu',
     'TAMILNADU',
     'tamil nadu',
-    'tamil'
+    'tamil',
+    'Puducherry',
+    'PUDUCHERRY',
+    'puducherry',
+    'Pondicherry',
+    'PONDICHERRY',
+    'pondicherry',
+    'Pondichery',
+    'pondichery',
+    'Pudhucherry',
+    'pudhucherry'
 ];
 
 const testProduct = {
@@ -18,7 +28,7 @@ const testProduct = {
 };
 
 async function testShippingCalculation() {
-    console.log('Testing shipping calculation for various Tamil Nadu state formats...\n');
+    console.log('Testing shipping calculation for various Tamil Nadu and Puducherry/Pondicherry state formats...\n');
 
     for (const state of testStates) {
         try {

@@ -68,7 +68,7 @@ export const calculateShipping = async (req, res) => {
             .toLowerCase()
             .replace(/\s+/g, ''); // Remove all whitespace
         
-        const isTamilNadu = ['tamilnadu', 'tamilnaadu', 'tamil'].includes(normalizedState);
+        const isTamilNadu = ['tamilnadu', 'tamilnaadu', 'tamil', 'puducherry', 'pondicherry', 'pondichery', 'pudhucherry'].includes(normalizedState);
 
         console.log('🔍 DEBUG - Shipping calculation:', {
             originalState: rawState,
@@ -262,9 +262,9 @@ export const calculateShipping = async (req, res) => {
                 shippingCost = 0;
                 isFreeShipping = true;
                 if (totalFreeShippingItems > 0) {
-                    shippingMessage = `Free shipping for ${totalFreeShippingItems} item${totalFreeShippingItems > 1 ? 's' : ''} within Tamil Nadu!`;
+                    shippingMessage = `Free shipping for ${totalFreeShippingItems} item${totalFreeShippingItems > 1 ? 's' : ''} within Tamil Nadu & Puducherry!`;
                 } else {
-                    shippingMessage = "Free shipping within Tamil Nadu!";
+                    shippingMessage = "Free shipping within Tamil Nadu & Puducherry!";
                 }
             } else {
                 // Other states - charge shipping
