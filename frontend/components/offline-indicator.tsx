@@ -6,34 +6,78 @@ import { AlertTriangle, Wifi, WifiOff } from 'lucide-react'
 export default function OfflineIndicator() {
   const [isOnline, setIsOnline] = useState(true)
   const [showOffline, setShowOffline] = useState(false)
+  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
 
   useEffect(() => {
     const checkOnlineStatus = async () => {
       try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://shithaa.in'
-        const response = await fetch(`${apiUrl}/api/health`, { 
-          method: 'GET',
-          mode: 'no-cors' // This will help detect if the server is reachable
-        })
-        setIsOnline(true)
-        setShowOffline(false)
-      } catch (error) {
-        setIsOnline(false)
-        setShowOffline(true)
         
-        // Hide the offline message after 10 seconds
-        setTimeout(() => setShowOffline(false), 10000)
+        // Retry up to 2 times before declaring offline
+        let lastError: any = null
+        let success = false
+        
+        for (let attempt = 0; attempt < 2; attempt++) {
+          try {
+            const controller = new AbortController()
+            const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+            
+            const response = await fetch(`${apiUrl}/api/health`, { 
+              method: 'GET',
+              headers: {
+                'Accept': 'application/json',
+              },
+              signal: controller.signal,
+              cache: 'no-store'
+            })
+            
+            clearTimeout(timeoutId)
+            
+            if (response.ok) {
+              success = true
+              break
+            }
+          } catch (err) {
+            lastError = err
+            // Wait 1 second before retry
+            if (attempt < 1) {
+              await new Promise(resolve => setTimeout(resolve, 1000))
+            }
+          }
+        }
+        
+        if (success) {
+          setConsecutiveFailures(0)
+          setIsOnline(true)
+          setShowOffline(false)
+        } else {
+          throw lastError || new Error('Health check failed')
+        }
+      } catch (error) {
+        // Increment failure count
+        const newFailureCount = consecutiveFailures + 1
+        setConsecutiveFailures(newFailureCount)
+        
+        // Only show offline banner after 2 consecutive failures
+        // This prevents false positives from temporary network blips
+        if (newFailureCount >= 2) {
+          setIsOnline(false)
+          setShowOffline(true)
+          
+          // Hide the offline message after 15 seconds (increased from 10)
+          setTimeout(() => setShowOffline(false), 15000)
+        }
       }
     }
 
     // Check immediately
     checkOnlineStatus()
 
-    // Check every 30 seconds
-    const interval = setInterval(checkOnlineStatus, 30000)
+    // Check every 60 seconds (increased from 30) to reduce server load
+    const interval = setInterval(checkOnlineStatus, 60000)
 
     return () => clearInterval(interval)
-  }, [])
+  }, [consecutiveFailures])
 
   if (!showOffline) return null
 

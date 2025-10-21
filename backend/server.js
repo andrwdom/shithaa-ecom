@@ -510,40 +510,84 @@ app.get('/api/cache/keys', async (req, res) => {
   }
 });
 
-// Health check endpoint - PRODUCTION OPTIMIZED WITH MONITORING
+// Health check endpoint - PRODUCTION OPTIMIZED WITH MONITORING AND RESILIENCE
 app.get('/api/health', async (req, res) => {
-  // Check MongoDB connection
-  const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
-  
-  // Check Redis connection
-  const redisStatus = redisService.isAvailable() ? 'connected' : 'disconnected';
-  const redisStats = await redisService.getStats();
-  
-  // Get comprehensive health status
-  const healthStatus = await getHealthStatus();
-  
-  // Check memory usage
-  const memUsage = process.memoryUsage();
-  const memUsageMB = {
-    rss: Math.round(memUsage.rss / 1024 / 1024),
-    heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024),
-    heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024),
-    external: Math.round(memUsage.external / 1024 / 1024)
-  };
-  
-  const status = healthStatus && healthStatus.healthScore && healthStatus.healthScore >= 90 ? 'ok' : 'warning';
+  try {
+    // Set response timeout to prevent hanging
+    req.setTimeout(5000);
+    
+    // Check MongoDB connection
+    const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+    
+    // Check Redis connection with timeout protection
+    let redisStatus = 'unknown';
+    let redisStats = null;
+    try {
+      redisStatus = redisService.isAvailable() ? 'connected' : 'disconnected';
+      // Use Promise.race to timeout Redis stats check after 2 seconds
+      redisStats = await Promise.race([
+        redisService.getStats(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Redis stats timeout')), 2000))
+      ]).catch(() => null);
+    } catch (error) {
+      console.warn('Redis health check warning:', error.message);
+      redisStatus = 'degraded';
+    }
+    
+    // Get comprehensive health status with timeout protection
+    let healthStatus = null;
+    try {
+      healthStatus = await Promise.race([
+        getHealthStatus(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Health status timeout')), 3000))
+      ]).catch(() => null);
+    } catch (error) {
+      console.warn('Health status check warning:', error.message);
+    }
+    
+    // Check memory usage
+    const memUsage = process.memoryUsage();
+    const memUsageMB = {
+      rss: Math.round(memUsage.rss / 1024 / 1024),
+      heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024),
+      heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024),
+      external: Math.round(memUsage.external / 1024 / 1024)
+    };
+    
+    // Determine status - be more lenient to avoid false positives
+    // As long as DB is connected, consider the API healthy
+    let status = 'ok';
+    if (dbStatus !== 'connected') {
+      status = 'critical';
+    } else if (healthStatus && healthStatus.healthScore && healthStatus.healthScore < 70) {
+      status = 'warning';
+    } else if (redisStatus === 'disconnected') {
+      status = 'degraded'; // Redis down is degraded, not critical
+    }
 
-  res.json({ 
-    status: status,
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    database: dbStatus,
-    redis: redisStatus,
-    memory: memUsageMB,
-    environment: process.env.NODE_ENV || 'development',
-    monitoring: healthStatus,
-    cache: redisStats,
-  });
+    res.json({ 
+      status: status,
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      database: dbStatus,
+      redis: redisStatus,
+      memory: memUsageMB,
+      environment: process.env.NODE_ENV || 'development',
+      monitoring: healthStatus,
+      cache: redisStats,
+    });
+  } catch (error) {
+    console.error('Health check endpoint error:', error);
+    // Even if health check fails, return 200 OK with error status
+    // This prevents the frontend from showing false "API Unavailable" messages
+    res.status(200).json({
+      status: 'degraded',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      error: error.message,
+      message: 'Health check encountered an error but API is still responding'
+    });
+  }
 });
 
 // Cart system health check endpoint
