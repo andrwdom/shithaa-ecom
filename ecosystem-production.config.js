@@ -169,7 +169,7 @@ module.exports = {
     },
     {
       name: 'shithaa-reconciliation-worker',
-      script: 'backend/scripts/reconcileMissingOrders.js',
+      script: 'backend/jobs/reconcileDrafts.js', // ✅ FIXED: Use persistent worker instead of one-time script
       cwd: '/var/www/shithaa-ecom',
       instances: 1,
       exec_mode: 'fork',
@@ -185,11 +185,11 @@ module.exports = {
       log_file: './backend/logs/reconciliation-worker-combined.log',
       time: true,
       // Process management
-      min_uptime: '10s',
-      max_restarts: 3,
-      restart_delay: 30000,
-      // Run every 30 minutes
-      cron_restart: '*/30 * * * *'
+      min_uptime: '60s', // ✅ FIXED: Increased from 10s to 60s for stability
+      max_restarts: 10, // ✅ FIXED: Increased from 3 to 10 for better recovery
+      restart_delay: 30000
+      // ✅ FIXED: Removed cron_restart - worker manages its own 60s schedule internally
+      // cron_restart: '*/30 * * * *'
     }
   ],
   
