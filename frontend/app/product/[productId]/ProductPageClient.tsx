@@ -224,14 +224,12 @@ export default function ProductPageClient({ productId }: ProductPageClientProps)
   // Safety check - ensure product exists before rendering
   if (loading) {
     return (
-      <PageLoading loadingMessage="Loading Product Details...">
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-[#473C66] mx-auto"></div>
-            <p className="mt-4 text-lg text-gray-600">Loading product details...</p>
-          </div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-[#473C66] mx-auto"></div>
+          <p className="mt-4 text-lg text-gray-600">Loading product details...</p>
         </div>
-      </PageLoading>
+      </div>
     )
   }
 
