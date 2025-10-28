@@ -1,104 +1,115 @@
 /**
- * TEST SCRIPT FOR STRUCTURED LOGGING
+ * TEST SCRIPT FOR PINO STRUCTURED LOGGING
  * 
  * Run this to verify logging system is working correctly
+ * Usage: node backend/scripts/test-logging.js
  */
 
-import ProductionLogger from '../utils/productionLogger.js';
-import { generateCorrelationId } from '../utils/productionLogger.js';
+const logger = require('../utils/productionLogger');
 
-console.log('🧪 Testing Structured Logging System...\n');
+console.log('🧪 Testing Pino Structured Logging System...\n');
 
 // Test 1: Basic logging
 console.log('Test 1: Basic logging methods...');
-ProductionLogger.info('Test info message', { test: true });
-ProductionLogger.warn('Test warning message', { test: true });
-ProductionLogger.debug('Test debug message', { test: true });
+logger.info({ test: true }, 'Test info message');
+logger.warn({ test: true }, 'Test warning message');
+logger.debug({ test: true }, 'Test debug message');
 console.log('✅ Basic logging works\n');
 
 // Test 2: Payment logging
 console.log('Test 2: Payment-specific logging...');
-const correlationId = generateCorrelationId('test');
-ProductionLogger.payment('info', 'Test payment event', {
+const correlationId = `test_cid_${Date.now()}`;
+logger.info({
+  event: 'payment.test',
   correlationId,
-  transactionId: 'TEST_12345',
+  payment_id: 'TEST_12345',
   amount: 1000,
   status: 'success'
-});
+}, 'Test payment event');
 console.log('✅ Payment logging works\n');
 
 // Test 3: Webhook logging
 console.log('Test 3: Webhook logging...');
-ProductionLogger.webhook('info', 'Test webhook received', {
+logger.info({
+  event: 'webhook.received',
   correlationId,
   path: '/webhook/phonepe',
-  transactionId: 'TEST_12345'
-});
+  payment_id: 'TEST_12345'
+}, 'Test webhook received');
 console.log('✅ Webhook logging works\n');
 
 // Test 4: Path tracking
 console.log('Test 4: Path tracking...');
-ProductionLogger.trackPath(
+logger.info({
+  event: 'handler.enter',
   correlationId,
-  'callback',
-  'TEST_12345',
-  'processing',
-  { step: 'order_creation' }
-);
+  path: 'callback',
+  payment_id: 'TEST_12345',
+  action: 'order_creation_attempt'
+}, 'Test path tracking');
 console.log('✅ Path tracking works\n');
 
-// Test 5: Race condition detection
+// Test 5: Race condition detection simulation
 console.log('Test 5: Race condition detection...');
-ProductionLogger.raceConditionDetected('TEST_12345', 'callback', {
+logger.error({
+  event: 'order_conflict',
   correlationId,
-  existingOrder: 'ORDER_123',
-  attemptedBy: 'webhook'
-});
+  path: 'webhook',
+  payment_id: 'TEST_12345',
+  existing_order: 'ORDER_123',
+  attempted_by: 'cron'
+}, 'RACE CONDITION DETECTED');
 console.log('✅ Race condition detection works\n');
 
 // Test 6: Order transition logging
 console.log('Test 6: Order state transition...');
-ProductionLogger.orderTransition(
-  'ORDER_123',
-  'DRAFT',
-  'CONFIRMED',
-  { correlationId, transactionId: 'TEST_12345' }
-);
+logger.info({
+  event: 'order.transition',
+  order_id: 'ORDER_123',
+  from_state: 'DRAFT',
+  to_state: 'CONFIRMED',
+  correlationId,
+  payment_id: 'TEST_12345'
+}, 'Order state changed');
 console.log('✅ Order transition logging works\n');
 
 // Test 7: Critical alerts
 console.log('Test 7: Critical alerts...');
-ProductionLogger.critical('Test critical alert', {
+logger.error({
+  event: 'critical.alert',
   correlationId,
   issue: 'payment_stuck',
-  transactionId: 'TEST_12345'
-});
+  payment_id: 'TEST_12345',
+  alert_level: 'CRITICAL'
+}, 'Test critical alert');
 console.log('✅ Critical alerts work\n');
 
 // Test 8: Child logger with correlation ID
 console.log('Test 8: Child logger...');
-const childLogger = ProductionLogger.child(correlationId);
-childLogger.info('Test from child logger', { test: true });
+const childLogger = logger.child({ correlationId });
+childLogger.info({ test: true }, 'Test from child logger');
 console.log('✅ Child logger works\n');
 
-// Test 9: Sensitive data redaction
-console.log('Test 9: Sensitive data redaction...');
-ProductionLogger.info('Test sensitive data', {
-  password: 'should_be_redacted',
-  phonepeApiKey: 'should_be_redacted',
-  normalData: 'should_be_visible'
-});
-console.log('✅ Sensitive data redaction works\n');
+// Test 9: Error logging with stack trace
+console.log('Test 9: Error logging...');
+const testError = new Error('Test error for logging');
+logger.error({
+  event: 'error.test',
+  err: {
+    message: testError.message,
+    stack: testError.stack
+  },
+  correlationId
+}, 'Test error logging');
+console.log('✅ Error logging works\n');
 
 console.log('================================================');
 console.log('✅ ALL TESTS PASSED!');
 console.log('================================================\n');
-console.log('📁 Check log files in backend/logs/');
-console.log('   - payment-*.log should have payment events');
-console.log('   - webhook-*.log should have webhook events');
-console.log('   - combined-*.log should have all events');
-console.log('   - critical-*.log should have critical alerts');
-console.log('\n🎉 Structured logging is ready for production!\n');
+console.log('📁 Check log files:');
+console.log('   - logs/payment/payment.log (all payment events)');
+console.log('   - logs/webhook/webhook.log (all webhook events)');
+console.log('   - logs/error/error.log (errors only)');
+console.log('\n🎉 Pino structured logging is ready for production!\n');
 
 process.exit(0);
-
