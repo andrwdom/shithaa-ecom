@@ -1,6 +1,6 @@
 // backend/utils/productionLogger.js (ESM)
 import pino from 'pino';
-import rfs from 'rotating-file-stream';
+import { createRequire } from 'module';
 import path from 'path';
 import os from 'os';
 import { fileURLToPath } from 'url';
@@ -11,6 +11,10 @@ const __dirname = path.dirname(__filename);
 const logDir = process.env.LOG_DIR || path.join(__dirname, '../../logs');
 const service = process.env.SERVICE_NAME || 'payment-service';
 const level = process.env.LOG_LEVEL || 'info';
+
+// rotating-file-stream is CommonJS; require via createRequire for ESM compat
+const require = createRequire(import.meta.url);
+const rfs = require('rotating-file-stream');
 
 // rotating streams example (daily rotation)
 const paymentStream = rfs.createStream('payment.log', {
