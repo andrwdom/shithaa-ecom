@@ -97,14 +97,25 @@ export const expireOldReservations = async () => {
         try {
           // 🔧 CRITICAL FIX: Check if there's a draft order with this session
           // If there is, DON'T release stock because the order owns it now
+          // Check multiple possible linking fields
           const draftOrder = await orderModel.findOne({ 
-            checkoutSessionId: session.sessionId,
+            $or: [
+              { checkoutSessionId: session.sessionId },
+              { 'metadata.checkoutSessionId': session.sessionId },
+              { phonepeTransactionId: session.phonepeTransactionId },
+              { 'metadata.phonepeTransactionId': session.phonepeTransactionId }
+            ],
             status: { $in: ['DRAFT', 'PENDING', 'CONFIRMED'] }
           });
           
           if (draftOrder) {
-            console.log(`[${correlationId}] ⚠️ Draft order ${draftOrder.orderId} exists for session ${session.sessionId} - NOT releasing stock`);
-            console.log(`[${correlationId}] Order status: ${draftOrder.status}, stockReserved: ${draftOrder.stockReserved}`);
+            console.log(`[${correlationId}] ⚠️ Order ${draftOrder.orderId} (status: ${draftOrder.status}) exists for session ${session.sessionId} - NOT releasing stock`);
+            console.log(`[${correlationId}] Order linked by: checkoutSessionId=${draftOrder.checkoutSessionId}, metadata=${draftOrder.metadata?.checkoutSessionId}`);
+            
+            // 🚨 CRITICAL: If order is already CONFIRMED, DEFINITELY don't release stock
+            if (draftOrder.status === 'CONFIRMED' || draftOrder.paymentStatus === 'PAID') {
+              console.log(`[${correlationId}] ✅ Order is CONFIRMED/PAID - stock was already deducted, NOT releasing`);
+            }
             
             // Just mark session as expired, but DON'T release stock
             session.status = 'expired';
