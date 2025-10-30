@@ -12,6 +12,8 @@ import PaymentSession from '../models/PaymentSession.js';
 import CheckoutSession from '../models/CheckoutSession.js';
 import { confirmStockReservation } from '../utils/stock.js';
 import EnhancedLogger from '../utils/enhancedLogger.js';
+import redisService from '../services/redisService.js';
+import crypto from 'crypto';
 
 class BulletproofPaymentProcessor {
   constructor() {
@@ -24,8 +26,34 @@ class BulletproofPaymentProcessor {
    */
   async processPayment(transactionId, paymentData, source = 'unknown', correlationId = 'SYSTEM') {
     const startTime = Date.now();
+    const lockKey = `lock:payment:${transactionId}`;
+    const lockToken = crypto.randomUUID();
+    let lockAcquired = false;
     
     try {
+      // Distributed lock to prevent parallel processing across multiple paths/workers
+      if (redisService && redisService.client) {
+        try {
+          // NX PX 30000 → acquire for 30s, best-effort
+          const setResp = await redisService.client.set(lockKey, lockToken, { NX: true, PX: 30000 });
+          lockAcquired = setResp === 'OK';
+        } catch {}
+      }
+
+      if (!lockAcquired) {
+        EnhancedLogger.webhookLog('WARN', 'Payment processing skipped due to active lock', {
+          correlationId,
+          transactionId,
+          source
+        });
+        return {
+          success: true,
+          action: 'locked_skip',
+          transactionId,
+          message: 'Another worker is processing this payment'
+        };
+      }
+
       EnhancedLogger.webhookLog('INFO', 'Bulletproof payment processing started', {
         correlationId,
         transactionId,
@@ -70,6 +98,16 @@ class BulletproofPaymentProcessor {
       
       // Try emergency recovery
       return await this.emergencyRecovery(transactionId, paymentData, source, correlationId, error);
+    } finally {
+      // Release lock if we own it (best-effort compare and delete)
+      if (lockAcquired && redisService && redisService.client) {
+        try {
+          const current = await redisService.client.get(lockKey);
+          if (current === lockToken) {
+            await redisService.client.del(lockKey);
+          }
+        } catch {}
+      }
     }
   }
 
