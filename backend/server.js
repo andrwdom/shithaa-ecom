@@ -177,6 +177,8 @@ app.use(rawWebhookRouter);
 // Structured logging with correlation IDs for all requests (before routes)
 app.use(correlationId);
 app.use(pinoHttp({ logger: pinoAppLogger }));
+// Emit a boot log to verify payment log stream is writable
+pinoAppLogger.info({ event: 'logger_boot', path: 'server', env: process.env.NODE_ENV }, 'pino logger initialized');
 
 // Initialize Sentry properly
 if (process.env.NODE_ENV === 'production' && process.env.SENTRY_DSN) {
