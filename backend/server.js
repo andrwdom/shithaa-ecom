@@ -67,12 +67,12 @@ import Category from './models/Category.js'
 import productModel from './models/productModel.js'
 import { randomBytes } from 'crypto'
 import { createRequire } from 'module'
+import correlationId from './middleware/correlationId.js'
+import pinoAppLogger from './utils/productionLogger.js'
 
-// Integrate Pino logger (CommonJS) into ESM server
+// express-pino-logger is CommonJS
 const require = createRequire(import.meta.url)
 const pinoHttp = require('express-pino-logger')
-const pinoAppLogger = require('./utils/productionLogger.js')
-const correlationId = require('./middleware/correlationId.js')
 
 // App Config
 const app = express()
