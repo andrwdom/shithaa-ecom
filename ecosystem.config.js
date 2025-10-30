@@ -12,7 +12,10 @@ module.exports = {
       env_file: '/var/www/shithaa-ecom/backend/.env',
       env: {
         NODE_ENV: 'production',
-        PORT: 4000
+        PORT: 4000,
+        LOG_LEVEL: 'info',
+        LOG_DIR: '/var/log/shithaa',
+        SERVICE_NAME: 'payment-service'
       },
       error_file: './backend/logs/backend-err.log',
       out_file: './backend/logs/backend-out.log',
