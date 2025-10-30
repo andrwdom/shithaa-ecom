@@ -5,7 +5,7 @@
  * Usage: node backend/scripts/test-logging.js
  */
 
-const logger = require('../utils/productionLogger');
+import logger from '../utils/productionLogger.js';
 
 console.log('🧪 Testing Pino Structured Logging System...\n');
 
