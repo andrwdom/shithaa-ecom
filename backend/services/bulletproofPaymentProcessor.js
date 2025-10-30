@@ -29,29 +29,43 @@ class BulletproofPaymentProcessor {
     const lockKey = `lock:payment:${transactionId}`;
     const lockToken = crypto.randomUUID();
     let lockAcquired = false;
+    const redisEnabled = !!(redisService && redisService.client);
     
     try {
       // Distributed lock to prevent parallel processing across multiple paths/workers
-      if (redisService && redisService.client) {
+      if (redisEnabled) {
         try {
           // NX PX 30000 → acquire for 30s, best-effort
           const setResp = await redisService.client.set(lockKey, lockToken, { NX: true, PX: 30000 });
           lockAcquired = setResp === 'OK';
-        } catch {}
-      }
 
-      if (!lockAcquired) {
-        EnhancedLogger.webhookLog('WARN', 'Payment processing skipped due to active lock', {
-          correlationId,
-          transactionId,
-          source
-        });
-        return {
-          success: true,
-          action: 'locked_skip',
-          transactionId,
-          message: 'Another worker is processing this payment'
-        };
+          if (!lockAcquired) {
+            // Only skip if a real lock exists
+            const existing = await redisService.client.get(lockKey);
+            if (existing) {
+              EnhancedLogger.webhookLog('WARN', 'Payment processing skipped due to active lock', {
+                correlationId,
+                transactionId,
+                source
+              });
+              return {
+                success: true,
+                action: 'locked_skip',
+                transactionId,
+                message: 'Another worker is processing this payment'
+              };
+            } else {
+              // No actual lock present, proceed without lock
+              lockAcquired = false;
+            }
+          }
+        } catch {
+          // Redis issue - proceed without lock (do not impact payment flow)
+          lockAcquired = false;
+        }
+      } else {
+        // Redis not available - proceed without lock
+        lockAcquired = false;
       }
 
       EnhancedLogger.webhookLog('INFO', 'Bulletproof payment processing started', {
@@ -100,7 +114,7 @@ class BulletproofPaymentProcessor {
       return await this.emergencyRecovery(transactionId, paymentData, source, correlationId, error);
     } finally {
       // Release lock if we own it (best-effort compare and delete)
-      if (lockAcquired && redisService && redisService.client) {
+      if (lockAcquired && redisEnabled) {
         try {
           const current = await redisService.client.get(lockKey);
           if (current === lockToken) {
