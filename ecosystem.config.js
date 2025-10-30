@@ -112,27 +112,6 @@ module.exports = {
       out_file: './backend/logs/reservation-expiry-worker-out.log',
       log_file: './backend/logs/reservation-expiry-worker-combined.log',
       time: true
-    },
-    {
-      name: 'shithaa-webhook-processor',
-      script: 'backend/jobs/processRawWebhooks.js',
-      cwd: '/var/www/shithaa-ecom',
-      instances: 1,
-      exec_mode: 'fork',
-      autorestart: false, // Don't auto-restart, let cron handle it
-      watch: false,
-      max_memory_restart: '500M',
-      env_file: '/var/www/shithaa-ecom/backend/.env',
-      env: {
-        NODE_ENV: 'production'
-      },
-      error_file: './backend/logs/webhook-processor-err.log',
-      out_file: './backend/logs/webhook-processor-out.log',
-      log_file: './backend/logs/webhook-processor-combined.log',
-      time: true,
-      cron_restart: '*/2 * * * *', // Restart every 2 minutes to process webhooks
-      max_restarts: 5, // Limit restarts
-      min_uptime: '10s' // Must run for 10 seconds to be considered stable
     }
     // REMOVED: shithaa-reconcile-payments to avoid conflict with existing shithaa-reconciliation-worker
   ]

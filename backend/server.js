@@ -66,6 +66,13 @@ import orderModel from './models/orderModel.js'
 import Category from './models/Category.js'
 import productModel from './models/productModel.js'
 import { randomBytes } from 'crypto'
+import { createRequire } from 'module'
+
+// Integrate Pino logger (CommonJS) into ESM server
+const require = createRequire(import.meta.url)
+const pinoHttp = require('express-pino-logger')
+const pinoAppLogger = require('./utils/productionLogger.js')
+const correlationId = require('./middleware/correlationId.js')
 
 // App Config
 const app = express()
@@ -166,6 +173,10 @@ import rawWebhookRouter from './routes/rawWebhook.js';
 app.use(rawWebhookRouter);
 
 // Webhook handling is done via payment routes at /api/payment/phonepe/webhook
+
+// Structured logging with correlation IDs for all requests (before routes)
+app.use(correlationId);
+app.use(pinoHttp({ logger: pinoAppLogger }));
 
 // Initialize Sentry properly
 if (process.env.NODE_ENV === 'production' && process.env.SENTRY_DSN) {
