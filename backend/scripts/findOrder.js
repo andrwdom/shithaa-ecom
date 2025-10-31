@@ -21,10 +21,14 @@ async function findOrder(searchTerm) {
   console.log('🔍 Searching for order...\n');
 
   try {
-    // Try by orderId first
+    // Try exact match first (case insensitive)
     let orders = await orderModel.find({
-      orderId: { $regex: searchTerm, $options: 'i' }
-    }).limit(10);
+      $or: [
+        { orderId: searchTerm.toUpperCase() },
+        { orderId: searchTerm },
+        { orderId: { $regex: searchTerm, $options: 'i' } }
+      ]
+    }).limit(20);
 
     if (orders.length === 0) {
       // Try by email
@@ -50,15 +54,24 @@ async function findOrder(searchTerm) {
       }).limit(10);
     }
 
-    // Also try recent orders (last 24 hours)
+    // Also try recent orders (last 48 hours) to see what's in the database
     if (orders.length === 0) {
-      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const twoDaysAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
       orders = await orderModel.find({
-        createdAt: { $gte: oneDayAgo }
-      }).sort({ createdAt: -1 }).limit(10);
+        createdAt: { $gte: twoDaysAgo }
+      }).sort({ createdAt: -1 }).limit(20);
       
       if (orders.length > 0) {
-        console.log('⚠️  No exact match found. Showing recent orders instead:\n');
+        console.log(`⚠️  No exact match found. Showing ${orders.length} recent orders from last 48 hours:\n`);
+      } else {
+        // Show ALL recent orders regardless of date
+        orders = await orderModel.find({})
+          .sort({ createdAt: -1 })
+          .limit(20);
+        
+        if (orders.length > 0) {
+          console.log(`⚠️  Showing ${orders.length} most recent orders in database:\n`);
+        }
       }
     }
 
