@@ -12,7 +12,15 @@ import orderModel from '../models/orderModel.js';
 import CheckoutSession from '../models/CheckoutSession.js';
 import productModel from '../models/productModel.js';
 
-const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/shithaa-ecom';
+// Load environment variables
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+dotenv.config({ path: join(__dirname, '../.env') });
+
+const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/shitha_maternity_db';
 
 async function verifyOrderProtection(orderIdArg) {
   const orderId = orderIdArg || process.argv[2];
