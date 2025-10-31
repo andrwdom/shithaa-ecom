@@ -129,7 +129,7 @@ const cleanupAbandonedOrders = async () => {
             console.log(`[${correlationId}] ⚠️ Order ${draftOrder.orderId} (status: ${draftOrder.status}) exists for session ${checkoutSession.sessionId} - NOT releasing stock`);
             console.log(`[${correlationId}] Order linked by: checkoutSessionId=${draftOrder.checkoutSessionId}, metadata=${draftOrder.metadata?.checkoutSessionId}`);
             
-            // 🚨 CRITICAL: If order is already CONFIRMED, DEFINITELY don't release stock
+            // 🚨 CRITICAL: If order is already CONFIRMED/PAID, DEFINITELY don't release stock
             if (draftOrder.status === 'CONFIRMED' || draftOrder.paymentStatus === 'PAID') {
               console.log(`[${correlationId}] ✅ Order is CONFIRMED/PAID - stock was already deducted, NOT releasing`);
             }
@@ -148,15 +148,44 @@ const cleanupAbandonedOrders = async () => {
             continue; // Skip to next session
           }
           
-          // No draft order exists, safe to release stock
-          console.log(`[${correlationId}] No draft order found for session ${checkoutSession.sessionId} - releasing stock`);
+          // 🚨 CRITICAL FIX: Also check for PAID/CONFIRMED orders (not just DRAFT/PENDING)
+          const paidOrder = await orderModel.findOne({ 
+            $or: [
+              { checkoutSessionId: checkoutSession.sessionId },
+              { 'metadata.checkoutSessionId': checkoutSession.sessionId },
+              { phonepeTransactionId: checkoutSession.phonepeTransactionId }
+            ],
+            $or: [
+              { status: 'CONFIRMED' },  // ✅ Check status field
+              { orderStatus: 'CONFIRMED' },  // ✅ Check orderStatus field
+              { paymentStatus: 'PAID' }  // ✅ Check paymentStatus field
+            ]
+          }).session(session);
+          
+          if (paidOrder) {
+            console.log(`[${correlationId}] 🚨 Order ${paidOrder.orderId} is PAID/CONFIRMED for session ${checkoutSession.sessionId} - NOT releasing stock`);
+            await CheckoutSession.findByIdAndUpdate(
+              checkoutSession._id,
+              {
+                status: 'expired',
+                stockReserved: true,
+                expiredAt: new Date(),
+                updatedAt: new Date()
+              },
+              { session }
+            );
+            continue; // Skip to next session
+          }
+          
+          // No paid order exists, safe to release stock
+          console.log(`[${correlationId}] No paid order found for session ${checkoutSession.sessionId} - releasing stock`);
           
           // Get associated payment session
           const paymentSession = await PaymentSession.findOne({
             sessionId: checkoutSession.sessionId
           }).session(session);
           
-          // Release stock for each item atomically
+          // Release stock for each item atomically (atomic function will verify reserved > 0)
           if (checkoutSession.items && checkoutSession.items.length > 0) {
             for (const item of checkoutSession.items) {
               const released = await releaseStockReservation(
@@ -167,7 +196,8 @@ const cleanupAbandonedOrders = async () => {
               );
               
               if (!released) {
-                console.error(`[${correlationId}] Failed to release stock for item in session ${checkoutSession.sessionId}`);
+                // If release failed, it likely means no reserved stock (already confirmed)
+                console.log(`[${correlationId}] Stock release skipped for ${item.productId} size ${item.size} - likely already confirmed`);
                 continue;
               }
             }

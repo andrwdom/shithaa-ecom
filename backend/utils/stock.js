@@ -437,25 +437,56 @@ export async function cleanupExpiredReservations() {
         
         try {
             await session.withTransaction(async () => {
+                // Import orderModel to check for paid orders
+                const orderModel = (await import('../models/orderModel.js')).default;
+                
                 for (const reservation of expiredReservations) {
                     console.log(`🔄 Releasing expired reservation: ${reservation._id}`);
                     
-                    // Release stock for each item in the reservation
-                    for (const item of reservation.items) {
-                        try {
-                            const released = await releaseStockReservation(
-                                item.productId,
-                                item.size,
-                                item.quantity,
-                                { session }
-                            );
-                            
-                            if (released) {
-                                totalReleasedItems++;
-                                console.log(`✅ Released ${item.quantity} units of ${item.productId} size ${item.size}`);
+                    // 🚨 CRITICAL FIX: Check if there's a paid/confirmed order linked to this reservation
+                    const checkoutSessionId = reservation.checkoutSessionId;
+                    let hasPaidOrder = false;
+                    
+                    if (checkoutSessionId) {
+                        const paidOrder = await orderModel.findOne({
+                            $or: [
+                                { checkoutSessionId: checkoutSessionId },
+                                { 'metadata.checkoutSessionId': checkoutSessionId }
+                            ],
+                            $or: [
+                                { status: 'CONFIRMED' },  // ✅ Check status field
+                                { orderStatus: 'CONFIRMED' },  // ✅ Check orderStatus field
+                                { paymentStatus: 'PAID' }  // ✅ Check paymentStatus field
+                            ]
+                        }).session(session);
+                        
+                        if (paidOrder) {
+                            console.log(`🚨 SKIPPING stock release for reservation ${reservation._id} - Order ${paidOrder.orderId} is PAID/CONFIRMED`);
+                            hasPaidOrder = true;
+                        }
+                    }
+                    
+                    if (!hasPaidOrder) {
+                        // Only release stock if no paid order exists
+                        // The atomic release function will also verify reserved > 0
+                        for (const item of reservation.items) {
+                            try {
+                                const released = await releaseStockReservation(
+                                    item.productId,
+                                    item.size,
+                                    item.quantity,
+                                    { session }
+                                );
+                                
+                                if (released) {
+                                    totalReleasedItems++;
+                                    console.log(`✅ Released ${item.quantity} units of ${item.productId} size ${item.size}`);
+                                } else {
+                                    console.log(`ℹ️ Stock release skipped for ${item.productId} size ${item.size} - likely already confirmed`);
+                                }
+                            } catch (error) {
+                                console.log(`ℹ️ Stock release skipped for ${item.productId} size ${item.size}: ${error.message}`);
                             }
-                        } catch (error) {
-                            console.error(`❌ Failed to release stock for item:`, error);
                         }
                     }
                     

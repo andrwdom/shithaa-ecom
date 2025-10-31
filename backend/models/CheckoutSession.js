@@ -153,6 +153,9 @@ checkoutSessionSchema.methods.extend = function(minutes = 5) {
 
 // Static method to clean expired sessions and release stock
 checkoutSessionSchema.statics.cleanExpired = async function() {
+  // Import orderModel to check for paid orders
+  const orderModel = (await import('../models/orderModel.js')).default;
+  
   // Find expired sessions that have reserved stock
   const expiredSessions = await this.find({
     expiresAt: { $lt: new Date() },
@@ -164,10 +167,34 @@ checkoutSessionSchema.statics.cleanExpired = async function() {
   // Release stock for each expired session
   for (const session of expiredSessions) {
     try {
+      // 🚨 CRITICAL FIX: Check if there's a paid/confirmed order for this session
+      // If order is paid, stock was already confirmed and should NOT be released
+      const paidOrder = await orderModel.findOne({
+        $or: [
+          { checkoutSessionId: session.sessionId },
+          { 'metadata.checkoutSessionId': session.sessionId },
+          { phonepeTransactionId: session.phonepeTransactionId },
+          { 'metadata.phonepeTransactionId': session.phonepeTransactionId }
+        ],
+        $or: [
+          { status: 'CONFIRMED' },  // ✅ Check status field (uppercase enum)
+          { orderStatus: 'CONFIRMED' },  // ✅ Check orderStatus field (uppercase enum)
+          { paymentStatus: 'PAID' }  // ✅ Check paymentStatus field (uppercase enum)
+        ]
+      });
+      
+      if (paidOrder) {
+        console.log(`🚨 SKIPPING stock release for expired session ${session.sessionId} - Order ${paidOrder.orderId} is PAID/CONFIRMED`);
+        // Just mark session as expired, but DON'T release stock
+        session.status = 'expired';
+        await session.save();
+        continue; // Skip to next session
+      }
+      
       // Import stock utilities
       const { releaseStockReservation } = await import('../utils/stock.js');
       
-      // Release stock for all items in the session
+      // Release stock for all items in the session (only if not paid)
       const releasePromises = session.items.map(item =>
         releaseStockReservation(item.productId, item.size, item.quantity).catch(error => {
           console.error(`Failed to release stock for product ${item.productId} size ${item.size}:`, error);

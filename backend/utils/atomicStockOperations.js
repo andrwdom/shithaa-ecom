@@ -175,11 +175,16 @@ export async function releaseStockReservationAtomic(productId, size, quantity, o
   }
 
   try {
-    // 🔑 SIMPLE ASS LOGIC: Payment failed → Restore stock (release the reservation)
-    // Add back to stock and reduce reserved
+    // 🚨 CRITICAL FIX: Only release if stock is actually reserved (reserved >= quantity)
+    // This prevents releasing stock that was already confirmed/sold
     const query = {
       _id: productId,
-      'sizes.size': size
+      'sizes': {
+        $elemMatch: {
+          size: size,
+          reserved: { $gte: quantity }  // ✅ Only release if reserved >= quantity
+        }
+      }
     };
 
     const update = {
@@ -192,7 +197,10 @@ export async function releaseStockReservationAtomic(productId, size, quantity, o
     const updateOptions = {
       session,
       arrayFilters: [
-        { 'elem.size': size }
+        { 
+          'elem.size': size,
+          'elem.reserved': { $gte: quantity }  // ✅ Atomic validation: must have reserved >= quantity
+        }
       ]
     };
 
@@ -203,7 +211,8 @@ export async function releaseStockReservationAtomic(productId, size, quantity, o
     if (success) {
       console.log(`STOCK:RELEASE:ATOMIC:SUCCESS: productId=${productId}, size=${size}, quantity=${quantity}, correlationId=${correlationId}, timestamp=${new Date().toISOString()}`);
     } else {
-      console.log(`STOCK:RELEASE:ATOMIC:FAILED: productId=${productId}, size=${size}, quantity=${quantity}, correlationId=${correlationId}, timestamp=${new Date().toISOString()}`);
+      // Log why release failed - likely no reserved stock to release
+      console.log(`STOCK:RELEASE:ATOMIC:FAILED: productId=${productId}, size=${size}, quantity=${quantity}, correlationId=${correlationId}, reason=NO_RESERVED_STOCK, timestamp=${new Date().toISOString()}`);
     }
 
     return success;

@@ -51,9 +51,37 @@ export const expireOldReservations = async () => {
       try {
         console.log(`[${correlationId}] Processing expired reservation: ${reservation.reservationId}`);
         
-        // Release stock for all items in this reservation
+        // 🚨 CRITICAL FIX: Check if there's a paid/confirmed order linked to this reservation
+        const checkoutSessionId = reservation.checkoutSessionId;
+        if (checkoutSessionId) {
+          const paidOrder = await orderModel.findOne({
+            $or: [
+              { checkoutSessionId: checkoutSessionId },
+              { 'metadata.checkoutSessionId': checkoutSessionId }
+            ],
+            $or: [
+              { status: 'CONFIRMED' },  // ✅ Check status field
+              { orderStatus: 'CONFIRMED' },  // ✅ Check orderStatus field
+              { paymentStatus: 'PAID' }  // ✅ Check paymentStatus field
+            ]
+          });
+          
+          if (paidOrder) {
+            console.log(`[${correlationId}] 🚨 SKIPPING stock release for reservation ${reservation.reservationId} - Order ${paidOrder.orderId} is PAID/CONFIRMED`);
+            // Mark reservation as expired but DON'T release stock
+            await reservation.expire();
+            processedCount++;
+            continue; // Skip to next reservation
+          }
+        }
+        
+        // Only release stock if no paid order exists
+        // The atomic release function will also verify reserved > 0
         const releasePromises = reservation.items.map(item =>
-          releaseStockReservation(item.productId, item.size, item.quantity)
+          releaseStockReservation(item.productId, item.size, item.quantity).catch(error => {
+            // If release fails (e.g., no reserved stock), it's okay - just log it
+            console.log(`[${correlationId}] Stock release skipped for ${item.productId} size ${item.size}: ${error.message}`);
+          })
         );
         
         await Promise.all(releasePromises);
@@ -123,13 +151,34 @@ export const expireOldReservations = async () => {
             continue; // Skip to next session
           }
           
-          // No draft order exists, safe to release stock
-          console.log(`[${correlationId}] No draft order found for session ${session.sessionId} - releasing stock`);
+          // 🚨 CRITICAL FIX: Also check if order is PAID/CONFIRMED (not just DRAFT/PENDING)
+          const paidOrder = await orderModel.findOne({ 
+            $or: [
+              { checkoutSessionId: session.sessionId },
+              { 'metadata.checkoutSessionId': session.sessionId },
+              { phonepeTransactionId: session.phonepeTransactionId }
+            ],
+            $or: [
+              { status: 'CONFIRMED' },  // ✅ Check status field
+              { orderStatus: 'CONFIRMED' },  // ✅ Check orderStatus field
+              { paymentStatus: 'PAID' }  // ✅ Check paymentStatus field
+            ]
+          });
           
-          // Force release stock
+          if (paidOrder) {
+            console.log(`[${correlationId}] 🚨 Order ${paidOrder.orderId} is PAID/CONFIRMED for session ${session.sessionId} - NOT releasing stock`);
+            session.status = 'expired';
+            await session.save();
+            continue; // Skip to next session
+          }
+          
+          // No paid order exists, safe to release stock
+          console.log(`[${correlationId}] No paid order found for session ${session.sessionId} - releasing stock`);
+          
+          // Force release stock (atomic function will verify reserved > 0)
           const releasePromises = session.items.map(item =>
             releaseStockReservation(item.productId, item.size, item.quantity).catch(error => {
-              console.error(`Failed to force release stock for product ${item.productId} size ${item.size}:`, error);
+              console.log(`[${correlationId}] Stock release skipped for ${item.productId} size ${item.size}: ${error.message}`);
             })
           );
           
@@ -180,13 +229,34 @@ export const expireOldReservations = async () => {
             continue; // Skip to next session
           }
           
-          // No draft order exists, safe to release stock
-          console.log(`[${correlationId}] No draft order found for stuck session ${session.sessionId} - releasing stock`);
+          // 🚨 CRITICAL FIX: Also check if order is PAID/CONFIRMED
+          const paidOrder = await orderModel.findOne({ 
+            $or: [
+              { checkoutSessionId: session.sessionId },
+              { 'metadata.checkoutSessionId': session.sessionId },
+              { phonepeTransactionId: session.phonepeTransactionId }
+            ],
+            $or: [
+              { status: 'CONFIRMED' },  // ✅ Check status field
+              { orderStatus: 'CONFIRMED' },  // ✅ Check orderStatus field
+              { paymentStatus: 'PAID' }  // ✅ Check paymentStatus field
+            ]
+          });
           
-          // Force release stock
+          if (paidOrder) {
+            console.log(`[${correlationId}] 🚨 Order ${paidOrder.orderId} is PAID/CONFIRMED for stuck session ${session.sessionId} - NOT releasing stock`);
+            session.status = 'expired';
+            await session.save();
+            continue; // Skip to next session
+          }
+          
+          // No paid order exists, safe to release stock
+          console.log(`[${correlationId}] No paid order found for stuck session ${session.sessionId} - releasing stock`);
+          
+          // Force release stock (atomic function will verify reserved > 0)
           const releasePromises = session.items.map(item =>
             releaseStockReservation(item.productId, item.size, item.quantity).catch(error => {
-              console.error(`Failed to force release stuck stock for product ${item.productId} size ${item.size}:`, error);
+              console.log(`[${correlationId}] Stock release skipped for ${item.productId} size ${item.size}: ${error.message}`);
             })
           );
           
