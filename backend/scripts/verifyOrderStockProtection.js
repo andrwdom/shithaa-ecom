@@ -32,13 +32,13 @@ async function verifyOrderProtection(orderIdArg) {
   console.log('✅ Connected to MongoDB\n');
 
   try {
-    // Find the order
-    const order = await orderModel.findOne({
-      $or: [
-        { orderId: orderId },
-        { _id: orderId }
-      ]
-    });
+    // Find the order by orderId first (human-readable), then try _id if that fails
+    let order = await orderModel.findOne({ orderId: orderId });
+    
+    // If not found by orderId, try as MongoDB _id (only if it's a valid ObjectId)
+    if (!order && mongoose.Types.ObjectId.isValid(orderId)) {
+      order = await orderModel.findById(orderId);
+    }
 
     if (!order) {
       console.log(`❌ Order ${orderId} not found in database`);
