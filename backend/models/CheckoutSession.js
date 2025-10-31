@@ -185,6 +185,7 @@ checkoutSessionSchema.statics.cleanExpired = async function() {
       
       if (paidOrder) {
         console.log(`🚨 SKIPPING stock release for expired session ${session.sessionId} - Order ${paidOrder.orderId} is PAID/CONFIRMED`);
+        console.log(`✅ STOCK RELEASE FIX: Prevents double release for paid order - Order Status: ${paidOrder.status || paidOrder.orderStatus}, Payment: ${paidOrder.paymentStatus}`);
         // Just mark session as expired, but DON'T release stock
         session.status = 'expired';
         await session.save();

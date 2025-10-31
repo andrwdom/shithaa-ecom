@@ -212,7 +212,8 @@ export async function releaseStockReservationAtomic(productId, size, quantity, o
       console.log(`STOCK:RELEASE:ATOMIC:SUCCESS: productId=${productId}, size=${size}, quantity=${quantity}, correlationId=${correlationId}, timestamp=${new Date().toISOString()}`);
     } else {
       // Log why release failed - likely no reserved stock to release
-      console.log(`STOCK:RELEASE:ATOMIC:FAILED: productId=${productId}, size=${size}, quantity=${quantity}, correlationId=${correlationId}, reason=NO_RESERVED_STOCK, timestamp=${new Date().toISOString()}`);
+      // 🚨 THIS IS EXPECTED FOR PAID ORDERS - Stock was already confirmed, reserved = 0
+      console.log(`STOCK:RELEASE:ATOMIC:FAILED: productId=${productId}, size=${size}, quantity=${quantity}, correlationId=${correlationId}, reason=NO_RESERVED_STOCK (likely already confirmed), timestamp=${new Date().toISOString()}`);
     }
 
     return success;

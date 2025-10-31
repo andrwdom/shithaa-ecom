@@ -68,6 +68,7 @@ export const expireOldReservations = async () => {
           
           if (paidOrder) {
             console.log(`[${correlationId}] 🚨 SKIPPING stock release for reservation ${reservation.reservationId} - Order ${paidOrder.orderId} is PAID/CONFIRMED`);
+            console.log(`[${correlationId}] ✅ STOCK RELEASE FIX: Prevents double release - Order Status: ${paidOrder.status || paidOrder.orderStatus}, Payment: ${paidOrder.paymentStatus}`);
             // Mark reservation as expired but DON'T release stock
             await reservation.expire();
             processedCount++;
