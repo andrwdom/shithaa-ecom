@@ -9,13 +9,13 @@ module.exports = {
       autorestart: true,
       watch: false,
       max_memory_restart: '1G',
-      env_file: '/var/www/shithaa-ecom/backend/.env',
       env: {
         NODE_ENV: 'production',
         PORT: 4000,
         LOG_LEVEL: 'info',
         LOG_DIR: '/var/log/shithaa',
         SERVICE_NAME: 'payment-service'
+        // Note: env_file is not supported by PM2 - server.js loads .env directly
       },
       error_file: './backend/logs/backend-err.log',
       out_file: './backend/logs/backend-out.log',
@@ -72,9 +72,9 @@ module.exports = {
       autorestart: true,
       watch: false,
       max_memory_restart: '500M',
-      env_file: '/var/www/shithaa-ecom/backend/.env',
       env: {
         NODE_ENV: 'production'
+        // Note: env_file is not supported by PM2 - worker loads .env directly
       },
       error_file: './backend/logs/stock-cleanup-worker-err.log',
       out_file: './backend/logs/stock-cleanup-worker-out.log',
@@ -90,9 +90,9 @@ module.exports = {
       autorestart: true,
       watch: false,
       max_memory_restart: '500M',
-      env_file: '/var/www/shithaa-ecom/backend/.env',
       env: {
         NODE_ENV: 'production'
+        // Note: env_file is not supported by PM2 - worker loads .env directly
       },
       error_file: './backend/logs/reservation-expiry-worker-err.log',
       out_file: './backend/logs/reservation-expiry-worker-out.log',
