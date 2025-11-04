@@ -16,15 +16,8 @@ const createToken = (payload, expiresIn = '24h') => {
 // GET /api/auth/profile - Get current user profile
 export const getProfile = async (req, res) => {
     try {
-        console.log('🔍 [getProfile] Request received:', {
-            hasUser: !!req.user,
-            userId: req.user?.id,
-            userEmail: req.user?.email
-        });
-
         // If no user is authenticated, return 200 with no data
         if (!req.user) {
-            console.log('🔍 [getProfile] No user authenticated, returning null');
             return res.status(200).json({
                 success: true,
                 data: null,
@@ -32,32 +25,13 @@ export const getProfile = async (req, res) => {
             });
         }
         
-        console.log('🔍 [getProfile] Looking up user in database:', req.user.id);
         const user = await userModel.findById(req.user.id).select('-password');
-        
         if (!user) {
-            console.error('🔍 [getProfile] User not found in database:', {
-                userId: req.user.id,
-                email: req.user.email,
-                tokenId: req.user.id
-            });
-            // Return 200 with null data instead of 404 - this is a valid state
-            return res.status(200).json({
-                success: true,
-                data: null,
-                message: 'User not found in database'
-            });
+            return errorResponse(res, 404, 'User not found');
         }
-        
-        console.log('🔍 [getProfile] User found:', {
-            id: user._id,
-            email: user.email,
-            name: user.name
-        });
-        
         successResponse(res, user, 'Profile fetched successfully');
     } catch (error) {
-        console.error('🔍 [getProfile] Error:', error);
+        console.error('Get Profile Error:', error);
         errorResponse(res, 500, error.message);
     }
 };

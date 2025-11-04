@@ -22,16 +22,7 @@ userRouter.post('/logout', logout); // POST /api/user/logout
 userRouter.post('/admin', adminLogin); // POST /api/user/admin
 
 // Profile routes - 🔧 FIX: Corrected route path to match frontend expectations
-userRouter.get('/auth/profile', optionalAuth, (req, res, next) => {
-    console.log('🔍 [DEBUG] /api/user/auth/profile route hit!', {
-        method: req.method,
-        url: req.url,
-        path: req.path,
-        hasUser: !!req.user,
-        userId: req.user?.id
-    });
-    next();
-}, getProfile); // GET /api/user/auth/profile
+userRouter.get('/auth/profile', optionalAuth, getProfile); // GET /api/user/auth/profile
 userRouter.put('/auth/profile', verifyToken, updateProfile); // PUT /api/user/auth/profile
 userRouter.get('/info', verifyToken, getUserInfo); // GET /api/user/info
 userRouter.get('/public-profile', getPublicProfile); // GET /api/user/public-profile

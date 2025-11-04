@@ -1,6 +1,5 @@
 import fs from "fs";
 import path from "path";
-import mongoose from "mongoose";
 import imageOptimizer from '../utils/imageOptimizer.js';
 import productModel from '../models/productModel.js';
 import Category from '../models/Category.js';
@@ -117,8 +116,7 @@ export const getAllProducts = async (req, res) => {
             filter.sleeveType = sleeveType;
         }
         
-        // 🔍 DEBUG: Log the complete filter after all conditions
-        console.log('🔍 [getAllProducts] Complete filter object:', JSON.stringify(filter, null, 2));
+        // Debug logging removed for production performance
         
         // --- Sorting logic update for displayOrder ---
         const sortField = req.query.sortBy || 'createdAt';
@@ -139,51 +137,6 @@ export const getAllProducts = async (req, res) => {
                 .limit(limitNum)
                 .lean()
         ]);
-        
-        // 🔍 DEBUG: Log query results
-        console.log('🔍 [getAllProducts] Query results:', {
-            total,
-            productsFound: products.length,
-            categorySlug: filter.categorySlug,
-            filter: filter,
-            sort: sort
-        });
-        
-        // 🔍 DEBUG: Check which database we're actually using
-        const dbName = mongoose.connection.db?.databaseName;
-        const totalProductsInDb = await productModel.countDocuments({});
-        console.log('🔍 [getAllProducts] Database check:', {
-            databaseName: dbName,
-            totalProductsInDatabase: totalProductsInDb,
-            filterApplied: filter,
-            productsFound: total
-        });
-        
-        // 🔍 DEBUG: If no products found, check what categorySlugs exist
-        if (total === 0 && filter.categorySlug) {
-            const sampleProducts = await productModel.find({}).limit(5).select('name categorySlug category').lean();
-            console.log('🔍 [getAllProducts] Sample products in DB (first 5):', 
-                sampleProducts.map(p => ({ name: p.name, categorySlug: p.categorySlug, category: p.category }))
-            );
-            
-            // Check for similar categorySlugs
-            const allCategorySlugs = await productModel.distinct('categorySlug');
-            console.log('🔍 [getAllProducts] All unique categorySlugs in DB:', allCategorySlugs);
-            
-            // Try case-insensitive search
-            const caseInsensitiveMatch = await productModel.countDocuments({
-                categorySlug: { $regex: new RegExp(`^${filter.categorySlug}$`, 'i') }
-            });
-            console.log('🔍 [getAllProducts] Case-insensitive match count:', caseInsensitiveMatch);
-            
-            // 🔍 CRITICAL: Check if we're in the wrong database
-            if (totalProductsInDb === 0) {
-                console.error('🚨 [getAllProducts] CRITICAL ERROR: Database has NO products at all!');
-                console.error('🚨 [getAllProducts] Connected to database:', dbName);
-                console.error('🚨 [getAllProducts] Expected: shitha_maternity_db (has 152 products)');
-                console.error('🚨 [getAllProducts] MONGODB_URI from env:', process.env.MONGODB_URI?.replace(/\/\/.*@/, '//***@'));
-            }
-        }
             
         // Always include customId and calculate available stock in the response
         const productsWithCustomId = products.map(p => {
