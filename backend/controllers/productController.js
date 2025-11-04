@@ -116,7 +116,8 @@ export const getAllProducts = async (req, res) => {
             filter.sleeveType = sleeveType;
         }
         
-        // Debug logging removed for production performance
+        // 🔍 DEBUG: Log the complete filter after all conditions
+        console.log('🔍 [getAllProducts] Complete filter object:', JSON.stringify(filter, null, 2));
         
         // --- Sorting logic update for displayOrder ---
         const sortField = req.query.sortBy || 'createdAt';
@@ -137,6 +138,33 @@ export const getAllProducts = async (req, res) => {
                 .limit(limitNum)
                 .lean()
         ]);
+        
+        // 🔍 DEBUG: Log query results
+        console.log('🔍 [getAllProducts] Query results:', {
+            total,
+            productsFound: products.length,
+            categorySlug: filter.categorySlug,
+            filter: filter,
+            sort: sort
+        });
+        
+        // 🔍 DEBUG: If no products found, check what categorySlugs exist
+        if (total === 0 && filter.categorySlug) {
+            const sampleProducts = await productModel.find({}).limit(5).select('name categorySlug category').lean();
+            console.log('🔍 [getAllProducts] Sample products in DB (first 5):', 
+                sampleProducts.map(p => ({ name: p.name, categorySlug: p.categorySlug, category: p.category }))
+            );
+            
+            // Check for similar categorySlugs
+            const allCategorySlugs = await productModel.distinct('categorySlug');
+            console.log('🔍 [getAllProducts] All unique categorySlugs in DB:', allCategorySlugs);
+            
+            // Try case-insensitive search
+            const caseInsensitiveMatch = await productModel.countDocuments({
+                categorySlug: { $regex: new RegExp(`^${filter.categorySlug}$`, 'i') }
+            });
+            console.log('🔍 [getAllProducts] Case-insensitive match count:', caseInsensitiveMatch);
+        }
             
         // Always include customId and calculate available stock in the response
         const productsWithCustomId = products.map(p => {
