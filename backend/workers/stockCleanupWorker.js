@@ -5,6 +5,9 @@
  * This worker runs every 5 minutes and cleans up abandoned orders
  */
 
+import dotenv from 'dotenv';
+dotenv.config({ path: './backend/.env' });
+
 import mongoose from 'mongoose';
 import Order from '../models/orderModel.js';
 import Product from '../models/productModel.js';
@@ -52,7 +55,7 @@ async function runWorker() {
 
                 await session.commitTransaction();
                 console.log(`[${workerId}] Order ${order._id} cancelled and stock restored.`);
-            } catch (error) {
+        } catch (error) {
                 await session.abortTransaction();
                 console.error(`[${workerId}] Error processing order ${order._id}:`, error);
             } finally {

@@ -1,3 +1,6 @@
+import dotenv from 'dotenv';
+dotenv.config({ path: './backend/.env' });
+
 import cron from 'node-cron';
 import mongoose from 'mongoose';
 import Reservation from '../models/Reservation.js';
@@ -69,7 +72,7 @@ async function runWorker() {
 
                     await session.commitTransaction();
                     console.log(`[${workerId}] Reservation ${reservation._id} expired and stock released for SKU ${reservation.sku}`);
-                } catch (error) {
+        } catch (error) {
                     await session.abortTransaction();
                     console.error(`[${workerId}] Error processing reservation ${reservation._id}:`, error);
                 } finally {
@@ -79,7 +82,7 @@ async function runWorker() {
         } else {
             console.log(`[${workerId}] No expired reservations to process`);
         }
-    } catch (error) {
+  } catch (error) {
         console.error(`[${workerId}] Error in reservation expiry worker:`, error);
     } finally {
         // We no longer close the connection, as it's shared.
