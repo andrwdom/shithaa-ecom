@@ -6,10 +6,29 @@ let eventHandlersRegistered = false;
 
 const connectDB = async () => {
     try {
+        // Get the expected database name from URI
+        const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/shitha-maternity';
+        const expectedDbName = uri.split('/').pop().split('?')[0]; // Extract database name from URI
+        
         // Check if already connected
         if (mongoose.connection.readyState === 1) {
-            console.log("MongoDB already connected");
-            return;
+            const currentDbName = mongoose.connection.db?.databaseName;
+            
+            // 🔍 CRITICAL: Check if we're connected to the wrong database
+            if (currentDbName && currentDbName !== expectedDbName) {
+                console.error(`🚨 [MongoDB] CRITICAL: Connected to wrong database!`);
+                console.error(`🚨 [MongoDB] Current: ${currentDbName}`);
+                console.error(`🚨 [MongoDB] Expected: ${expectedDbName}`);
+                console.error(`🚨 [MongoDB] Disconnecting and reconnecting to correct database...`);
+                
+                // Disconnect and reconnect to the correct database
+                await mongoose.disconnect();
+                // Wait a moment for cleanup
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            } else {
+                console.log(`MongoDB already connected to: ${currentDbName || 'unknown'}`);
+                return;
+            }
         }
 
         // Check if already connecting
@@ -59,12 +78,10 @@ const connectDB = async () => {
             }
         };
 
-        // Construct MongoDB URI based on environment
-        const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/shitha-maternity';
-        
         // 🔍 DEBUG: Log connection info (without credentials)
         const uriForLog = uri.replace(/\/\/.*@/, '//***@');
         console.log('🔍 [MongoDB] Connecting to:', uriForLog);
+        console.log('🔍 [MongoDB] Expected database:', expectedDbName);
         console.log('🔍 [MongoDB] Using MONGODB_URI from .env:', !!process.env.MONGODB_URI);
         
         // Connect with retry mechanism
@@ -73,6 +90,16 @@ const connectDB = async () => {
         // 🔍 DEBUG: Log which database we connected to
         const connectedDb = mongoose.connection.db.databaseName;
         console.log('🔍 [MongoDB] Connected to database:', connectedDb);
+        
+        // 🔍 CRITICAL: Verify we're connected to the correct database
+        if (connectedDb !== expectedDbName) {
+            console.error(`🚨 [MongoDB] CRITICAL ERROR: Connected to wrong database!`);
+            console.error(`🚨 [MongoDB] Connected to: ${connectedDb}`);
+            console.error(`🚨 [MongoDB] Expected: ${expectedDbName}`);
+            console.error(`🚨 [MongoDB] Disconnecting and will retry...`);
+            await mongoose.disconnect();
+            throw new Error(`Wrong database connected: ${connectedDb} instead of ${expectedDbName}`);
+        }
         
         // 🔍 DEBUG: Quick check - count products in connected database
         try {
@@ -85,7 +112,7 @@ const connectDB = async () => {
                 console.error('⚠️  [MongoDB] This might be the wrong database!');
                 console.error('⚠️  [MongoDB] Expected: shitha_maternity_db (has 152 products)');
             } else {
-                console.log('✅ [MongoDB] Database has products, connection looks correct!');
+                console.log(`✅ [MongoDB] Database "${connectedDb}" has ${productCount} products - connection correct!`);
             }
         } catch (err) {
             console.error('🔍 [MongoDB] Error checking products:', err.message);
