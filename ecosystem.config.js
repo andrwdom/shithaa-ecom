@@ -65,8 +65,8 @@ module.exports = {
     
     {
       name: 'shithaa-stock-cleanup-worker',
-      script: './workers/stockCleanupWorker.js',
-      cwd: '/var/www/shithaa-ecom/backend/',
+      script: 'workers/stockCleanupWorker.js',
+      cwd: '/var/www/shithaa-ecom/backend',
       interpreter: 'node',
       watch: false,
       max_memory_restart: '500M',
@@ -81,8 +81,8 @@ module.exports = {
     },
     {
       name: 'shithaa-reservation-expiry-worker',
-      script: './workers/reservationExpiryWorker.js',
-      cwd: '/var/www/shithaa-ecom/backend/',
+      script: 'workers/reservationExpiryWorker.js',
+      cwd: '/var/www/shithaa-ecom/backend',
       interpreter: 'node',
       watch: false,
       max_memory_restart: '500M',

@@ -5,9 +5,6 @@
  * This worker runs every 5 minutes and cleans up abandoned orders
  */
 
-import dotenv from 'dotenv';
-dotenv.config({ path: '.env' });
-
 import mongoose from 'mongoose';
 import Order from '../models/orderModel.js';
 import Product from '../models/productModel.js';

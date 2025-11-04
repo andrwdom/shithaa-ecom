@@ -1,6 +1,3 @@
-import dotenv from 'dotenv';
-dotenv.config({ path: '.env' });
-
 import cron from 'node-cron';
 import mongoose from 'mongoose';
 import Reservation from '../models/Reservation.js';
