@@ -1,4 +1,17 @@
 import mongoose from 'mongoose';
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+// Load environment variables from backend/.env
+const __filename = fileURLToPath(import.meta.url);
+// This worker is in backend/workers, so we need to go up two levels to the project root, then to backend/.env
+const __dirname = dirname(dirname(__filename)); // D:\...\shithaa-ecom-F1\backend
+const envPath = join(__dirname, '.env');
+
+console.log(`[Reservation Expiry Worker] Loading .env from: ${envPath}`);
+dotenv.config({ path: envPath });
+
 import Reservation from '../models/Reservation.js';
 import CheckoutSession from '../models/CheckoutSession.js';
 import orderModel from '../models/orderModel.js'; // 🔧 NEW: Import orderModel
