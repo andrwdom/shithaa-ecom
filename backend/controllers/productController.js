@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import mongoose from "mongoose";
 import imageOptimizer from '../utils/imageOptimizer.js';
 import productModel from '../models/productModel.js';
 import Category from '../models/Category.js';
@@ -148,6 +149,16 @@ export const getAllProducts = async (req, res) => {
             sort: sort
         });
         
+        // 🔍 DEBUG: Check which database we're actually using
+        const dbName = mongoose.connection.db?.databaseName;
+        const totalProductsInDb = await productModel.countDocuments({});
+        console.log('🔍 [getAllProducts] Database check:', {
+            databaseName: dbName,
+            totalProductsInDatabase: totalProductsInDb,
+            filterApplied: filter,
+            productsFound: total
+        });
+        
         // 🔍 DEBUG: If no products found, check what categorySlugs exist
         if (total === 0 && filter.categorySlug) {
             const sampleProducts = await productModel.find({}).limit(5).select('name categorySlug category').lean();
@@ -164,6 +175,14 @@ export const getAllProducts = async (req, res) => {
                 categorySlug: { $regex: new RegExp(`^${filter.categorySlug}$`, 'i') }
             });
             console.log('🔍 [getAllProducts] Case-insensitive match count:', caseInsensitiveMatch);
+            
+            // 🔍 CRITICAL: Check if we're in the wrong database
+            if (totalProductsInDb === 0) {
+                console.error('🚨 [getAllProducts] CRITICAL ERROR: Database has NO products at all!');
+                console.error('🚨 [getAllProducts] Connected to database:', dbName);
+                console.error('🚨 [getAllProducts] Expected: shitha_maternity_db (has 152 products)');
+                console.error('🚨 [getAllProducts] MONGODB_URI from env:', process.env.MONGODB_URI?.replace(/\/\/.*@/, '//***@'));
+            }
         }
             
         // Always include customId and calculate available stock in the response
