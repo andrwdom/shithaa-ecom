@@ -26,8 +26,8 @@ module.exports = {
     },
     {
       name: 'shithaa-frontend',
-      script: 'npm',
-      args: 'start',
+      script: 'node_modules/.bin/next',
+      args: 'start -p 3000',
       cwd: '/var/www/shithaa-ecom/frontend',
       instances: 1,
       exec_mode: 'fork',
