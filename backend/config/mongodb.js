@@ -1,18 +1,51 @@
 import mongoose from "mongoose";
 
+// Track if we're already attempting to reconnect to prevent multiple simultaneous attempts
+let isReconnecting = false;
+let eventHandlersRegistered = false;
+
 const connectDB = async () => {
     try {
-        mongoose.connection.on('connected', () => {
-            console.log("MongoDB Connected Successfully");
-        });
+        // Check if already connected
+        if (mongoose.connection.readyState === 1) {
+            console.log("MongoDB already connected");
+            return;
+        }
 
-        mongoose.connection.on('error', (err) => {
-            console.error('MongoDB Connection Error:', err);
-        });
+        // Check if already connecting
+        if (mongoose.connection.readyState === 2) {
+            console.log("MongoDB connection already in progress");
+            return;
+        }
 
-        mongoose.connection.on('disconnected', () => {
-            console.log('MongoDB Disconnected. Attempting to reconnect...');
-        });
+        // Register event handlers only once
+        if (!eventHandlersRegistered) {
+            mongoose.connection.on('connected', () => {
+                console.log("MongoDB Connected Successfully");
+                isReconnecting = false;
+            });
+
+            mongoose.connection.on('error', (err) => {
+                console.error('MongoDB Connection Error:', err);
+                isReconnecting = false;
+            });
+
+            mongoose.connection.on('disconnected', () => {
+                console.log('MongoDB Disconnected. Attempting to reconnect...');
+                // Only reconnect if not already reconnecting
+                if (!isReconnecting && mongoose.connection.readyState === 0) {
+                    isReconnecting = true;
+                    setTimeout(() => {
+                        connectDB().catch(err => {
+                            console.error('Reconnection attempt failed:', err);
+                            isReconnecting = false;
+                        });
+                    }, 5000);
+                }
+            });
+            
+            eventHandlersRegistered = true;
+        }
 
         const options = {
             serverSelectionTimeoutMS: 5000,
@@ -33,11 +66,17 @@ const connectDB = async () => {
         await mongoose.connect(uri, options);
     } catch (error) {
         console.error('Failed to connect to MongoDB:', error);
-        // Retry connection after 5 seconds
-        setTimeout(() => {
-            console.log('Retrying MongoDB connection...');
-            connectDB();
-        }, 5000);
+        isReconnecting = false;
+        
+        // Only retry if not already connected/connecting
+        if (mongoose.connection.readyState === 0) {
+            setTimeout(() => {
+                console.log('Retrying MongoDB connection...');
+                connectDB().catch(err => {
+                    console.error('Retry failed:', err);
+                });
+            }, 5000);
+        }
     }
 };
 
