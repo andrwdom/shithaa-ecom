@@ -21,6 +21,15 @@ export class PhonePeSDK {
       const saltIndex = parseInt(process.env.PHONEPE_SALT_INDEX || '1', 10);
       const env = this.environment === 'PRODUCTION' ? Env.PRODUCTION : Env.SANDBOX;
 
+      // ---- START DEBUGGING LOGS ----
+      console.log('--- PHONEPE SDK INITIALIZATION ---');
+      console.log(`Environment: ${this.environment}`);
+      console.log(`Merchant ID: ${merchantId}`);
+      console.log(`API Key: ${apiKey ? '********' + apiKey.slice(-4) : 'MISSING'}`);
+      console.log(`Salt Index: ${saltIndex}`);
+      console.log('---------------------------------');
+      // ---- END DEBUGGING LOGS ----
+
       if (!merchantId || !apiKey) {
         console.error('PhonePe credentials missing:', {
           merchantId: merchantId ? 'SET' : 'MISSING',
