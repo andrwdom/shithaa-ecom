@@ -94,7 +94,18 @@ module.exports = {
       out_file: './backend/logs/reservation-expiry-worker-out.log',
       log_file: './backend/logs/reservation-expiry-worker-combined.log',
       time: true
-    }
-    // REMOVED: shithaa-reconcile-payments to avoid conflict with existing shithaa-reconciliation-worker
+    },
+    {
+      name: "RESERVATION_CLEANUP",
+      module: "RESERVATION_CLEANUP_SERVICE",
+      script: "./backend/jobs/cleanupReservations.js",
+      instances: 1,
+      autorestart: true,
+      watch: false,
+      max_memory_restart: "1G",
+      env: {
+        NODE_ENV: "production",
+      },
+    },
   ]
 };

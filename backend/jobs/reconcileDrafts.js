@@ -415,6 +415,21 @@ class DraftReconciliationJob {
         reason: paymentStatus.status
       });
 
+      // Release the reserved stock
+      if (order.items && order.items.length > 0) {
+        const { batchReleaseStock } = await import('../utils/transactionManager.js');
+        await batchReleaseStock(order.items.map(item => ({
+          productId: item.productId || item._id,
+          size: item.size,
+          quantity: item.quantity
+        })), { correlationId, source: 'reconciliation_cancel' });
+        EnhancedLogger.webhookLog('INFO', 'Stock released for cancelled draft order', {
+            correlationId,
+            orderId: order.orderId,
+            itemCount: order.items.length
+        });
+      }
+
       // Update order status
       await orderModel.findByIdAndUpdate(order._id, {
         status: 'CANCELLED',

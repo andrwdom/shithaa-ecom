@@ -1538,7 +1538,7 @@ export const verifyPhonePePayment = async (req, res) => {
         status: paymentStatus?.state || paymentStatus?.status,
         paymentState: paymentStatus?.state || paymentStatus?.status,
         message: paymentStatus?.responseMessage || paymentStatus?.message,
-        amount: paymentStatus?.amount ? paymentStatus.amount / 100 : null,
+        amount: paymentStatus?.amount,
         transactionId: paymentStatus?.transactionId || paymentStatus?.orderId,
         phonepeResponse: paymentStatus
       },
