@@ -1,12 +1,23 @@
 // backend/config.js
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import { existsSync } from 'fs';
+import dotenv from 'dotenv';
 
-// Debug: Log environment variables (commented out for security)
-// console.log('🔍 DEBUG: Environment variables loaded:', {
-//     PHONEPE_ENV: process.env.PHONEPE_ENV,
-//     PHONEPE_MERCHANT_ID: process.env.PHONEPE_MERCHANT_ID ? 'SET' : 'MISSING',
-//     PHONEPE_API_KEY: process.env.PHONEPE_API_KEY ? 'SET' : 'MISSING',
-//     PHONEPE_SALT_INDEX: process.env.PHONEPE_SALT_INDEX
-// });
+// --- START RELIABILITY FIX ---
+// Load .env file from the correct path FIRST to ensure all variables are available.
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const envPath = join(__dirname, '.env');
+
+if (existsSync(envPath)) {
+  console.log('✅ [config.js] Loading environment variables from:', envPath);
+  dotenv.config({ path: envPath });
+} else {
+  console.error('❌ CRITICAL [config.js] .env file not found at:', envPath);
+}
+// --- END RELIABILITY FIX ---
+
 
 // CRITICAL: Read the JWT_SECRET once and export it for consistency.
 const JWT_SECRET = process.env.JWT_SECRET;
