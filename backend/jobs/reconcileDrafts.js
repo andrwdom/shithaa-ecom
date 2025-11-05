@@ -416,9 +416,16 @@ class DraftReconciliationJob {
       });
 
       // Release the reserved stock
-      if (order.items && order.items.length > 0) {
+      // 🔧 CRITICAL FIX: Handle both cartItems and items arrays
+      const itemsToRelease = (order.cartItems && order.cartItems.length > 0) 
+        ? order.cartItems 
+        : (order.items && order.items.length > 0) 
+          ? order.items 
+          : [];
+      
+      if (itemsToRelease.length > 0) {
         const { batchReleaseStock } = await import('../utils/transactionManager.js');
-        await batchReleaseStock(order.items.map(item => ({
+        await batchReleaseStock(itemsToRelease.map(item => ({
           productId: item.productId || item._id,
           size: item.size,
           quantity: item.quantity
@@ -426,7 +433,7 @@ class DraftReconciliationJob {
         EnhancedLogger.webhookLog('INFO', 'Stock released for cancelled draft order', {
             correlationId,
             orderId: order.orderId,
-            itemCount: order.items.length
+            itemCount: itemsToRelease.length
         });
       }
 

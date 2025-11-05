@@ -137,7 +137,7 @@ const releaseStockOnPaymentFailure = async (paymentSession, correlationId) => {
             { 
               $inc: { 
                 'sizes.$.reserved': -item.quantity,
-                'sizes.$.available': item.quantity
+                'sizes.$.stock': item.quantity
               }
             },
             { session }
@@ -277,8 +277,13 @@ const processPaymentWithoutTransaction = async (paymentSession, merchantTransact
     await orderModel.findByIdAndUpdate(
       createdOrder._id, 
       { 
+        status: 'CONFIRMED',
+        orderStatus: 'CONFIRMED',
+        paymentStatus: 'PAID',
         stockConfirmed: true,
         stockConfirmedAt: new Date(),
+        confirmedAt: new Date(),
+        paidAt: new Date(),
         updatedAt: new Date()
       }
     );
