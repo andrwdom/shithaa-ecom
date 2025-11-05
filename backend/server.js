@@ -2,6 +2,23 @@ import express from 'express'
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { existsSync } from 'fs';
+import dotenv from 'dotenv';
+
+// --- START RELIABILITY FIX ---
+// Load .env file from the correct path FIRST to ensure all variables are available.
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const envPath = join(__dirname, '.env');
+
+if (existsSync(envPath)) {
+  console.log('✅ Loading environment variables from:', envPath);
+  dotenv.config({ path: envPath });
+} else {
+  console.error('❌ CRITICAL: .env file not found at:', envPath);
+  // In a real production scenario, you might want to exit if the .env file is critical
+  // process.exit(1); 
+}
+// --- END RELIABILITY FIX ---
 
 // Initialize Sentry for error monitoring (non-intrusive)
 let Sentry = null;
