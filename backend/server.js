@@ -2,18 +2,6 @@ import express from 'express'
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { existsSync } from 'fs';
-import dotenv from 'dotenv';
-
-// Load .env file from the correct path FIRST
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const envPath = join(__dirname, '.env');
-
-console.log('🔧 Loading .env from:', envPath);
-console.log('🔧 .env file exists:', existsSync(envPath));
-
-// Load environment variables
-dotenv.config({ path: envPath });
 
 // Initialize Sentry for error monitoring (non-intrusive)
 let Sentry = null;

@@ -141,4 +141,33 @@ router.get('/overview', asyncHandler(async (req, res) => {
   res.json(createSuccessResponse(overview, 'System overview'));
 }));
 
+/**
+ * Temporary debug endpoint to check environment variables
+ * SECURE: Requires a secret key to access
+ */
+router.get('/debug/env', (req, res) => {
+  const DEBUG_API_KEY = process.env.DEBUG_API_KEY || 'shithaa-secret-debug-key';
+  const providedKey = req.query.apiKey;
+
+  if (providedKey !== DEBUG_API_KEY) {
+    return res.status(401).json({ success: false, message: 'Unauthorized' });
+  }
+
+  // Sanitize sensitive values
+  const sanitizedEnv = {};
+  for (const key in process.env) {
+    if (key.includes('PASSWORD') || key.includes('SECRET') || key.includes('API_KEY')) {
+      sanitizedEnv[key] = '********';
+    } else {
+      sanitizedEnv[key] = process.env[key];
+    }
+  }
+
+  res.json({
+    success: true,
+    message: 'Server Environment Variables',
+    env: sanitizedEnv
+  });
+});
+
 export default router;
