@@ -3,13 +3,13 @@ module.exports = {
     {
       name: 'shithaa-backend',
       script: 'backend/server.js',
+      interpreter_args: '--env-file=/var/www/shithaa-ecom/backend/.env',
       cwd: '/var/www/shithaa-ecom',
       instances: 1,
       exec_mode: 'fork',
       autorestart: true,
       watch: false,
       max_memory_restart: '1G',
-      env_file: '/var/www/shithaa-ecom/backend/.env',
       env: {
         NODE_ENV: 'production',
         PORT: 4000
