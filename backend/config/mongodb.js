@@ -1,17 +1,35 @@
 import mongoose from "mongoose";
 
+let isConnected = false;
+
 const connectDB = async () => {
+    // Check if we are already connected
+    if (isConnected) {
+        console.log("MongoDB is already connected.");
+        return;
+    }
+    
+    // Prevent multiple connections during connection attempts
+    if (mongoose.connection.readyState === 1) {
+        isConnected = true;
+        console.log("MongoDB is already connected via readyState.");
+        return;
+    }
+
     try {
         mongoose.connection.on('connected', () => {
             console.log("MongoDB Connected Successfully");
+            isConnected = true;
         });
 
         mongoose.connection.on('error', (err) => {
             console.error('MongoDB Connection Error:', err);
+            isConnected = false;
         });
 
         mongoose.connection.on('disconnected', () => {
-            console.log('MongoDB Disconnected. Attempting to reconnect...');
+            console.log('MongoDB Disconnected.');
+            isConnected = false;
         });
 
         const options = {
@@ -20,24 +38,21 @@ const connectDB = async () => {
             family: 4,
             maxPoolSize: 50,
             retryWrites: true,
-            auth: process.env.MONGODB_USER && {
-                username: process.env.MONGODB_USER,
-                password: process.env.MONGODB_PASSWORD
-            }
         };
 
-        // Construct MongoDB URI based on environment
-        const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/shitha-maternity';
+        const uri = process.env.MONGODB_URI;
+        if (!uri) {
+            throw new Error("MONGODB_URI is not defined in the environment variables.");
+        }
         
-        // Connect with retry mechanism
         await mongoose.connect(uri, options);
+        isConnected = true;
+
     } catch (error) {
         console.error('Failed to connect to MongoDB:', error);
-        // Retry connection after 5 seconds
-        setTimeout(() => {
-            console.log('Retrying MongoDB connection...');
-            connectDB();
-        }, 5000);
+        isConnected = false;
+        // In production, you might want to exit the process if the DB connection fails
+        // process.exit(1);
     }
 };
 

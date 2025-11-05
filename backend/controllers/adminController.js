@@ -1,7 +1,7 @@
 import { successResponse, errorResponse } from '../utils/response.js';
 import { cleanupStockReservations, checkStockAvailability } from '../utils/stock.js';
 import CheckoutSession from '../models/CheckoutSession.js';
-import { expireOldReservations } from '../workers/reservationExpiryWorker.js';
+import { runWorker as expireOldReservations } from '../workers/reservationExpiryWorker.js';
 import productModel from '../models/productModel.js';
 import Reservation from '../models/Reservation.js';
 
