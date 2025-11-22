@@ -683,6 +683,23 @@ export const createPhonePeSession = async (req, res) => {
       throw new Error('Draft order not found after creation');
     }
 
+    // 🔑 QUICK FIX: Create a PaymentSession document so the callback can find it
+    console.log(`[${correlationId}] Creating PaymentSession for transaction: ${phonepeTransactionId}`);
+    const paymentSession = new PaymentSession({
+      sessionId: checkoutSessionId,
+      orderPayload: { ...draftOrder.toObject() }, // Save a snapshot of the draft order
+      phonepeTransactionId: phonepeTransactionId,
+      amount: checkoutSession.total,
+      status: 'pending',
+      correlationId: correlationId,
+      userId: checkoutSession.userId,
+      userEmail: checkoutSession.userEmail,
+      createdAt: new Date(),
+      expiresAt: new Date(Date.now() + 20 * 60 * 1000) // 20 min expiry
+    });
+    await paymentSession.save();
+    console.log(`[${correlationId}] PaymentSession created successfully with ID: ${paymentSession._id}`);
+
     // Create PhonePe payment request
     const redirectUrl = `${process.env.FRONTEND_URL || 'https://shithaa.in'}/payment/phonepe/callback?merchantTransactionId=${phonepeTransactionId}`;
     
